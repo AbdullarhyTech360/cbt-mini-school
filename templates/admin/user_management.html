@@ -1,0 +1,493 @@
+{% extends 'admin/base.html' %}
+
+{% block title %}User Management{% endblock %}
+
+{% block sidebar_nav %}
+{{ super() }}
+{% endblock %}
+
+{% block content %}
+<script src="{{ url_for('static', filename='js/components/modal.js') }}" defer></script>
+<script src="{{ url_for('static', filename='js/admin/user_management.js') }}" defer></script>
+<!-- Header -->
+<div class="mb-8">
+	<div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+		<div>
+			<h1 class="text-3xl font-bold text-gray-900 dark:text-white mb-2">User Management</h1>
+			<p class="text-gray-600 dark:text-gray-400">Manage and monitor all users in the system.</p>
+		</div>
+		<div class="flex items-center gap-3">
+			<button onclick="openAddUserModal()" class="flex items-center gap-2 h-11 px-5 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white rounded-lg shadow-md hover:shadow-lg hover:scale-105 transition-all duration-200">
+				<span class="material-symbols-outlined text-xl">add</span>
+				<span class="text-sm font-bold">Add New User</span>
+			</button>
+			<div class="text-sm text-gray-600 dark:text-gray-400">
+				<span class="font-semibold">Total:</span> {{ users|length }} users
+			</div>
+		</div>
+	</div>
+</div>
+
+<!-- Search and Filters -->
+<div class="mb-6 bg-white dark:bg-gray-800 rounded-xl shadow-md p-4 border border-gray-100 dark:border-gray-700">
+	<div class="flex flex-col lg:flex-row gap-4">
+		<!-- Search Bar -->
+		<div class="relative flex-1">
+			<span class="material-symbols-outlined absolute left-4 top-3 text-gray-400">search</span>
+			<input type="text" id="searchInput" placeholder="Search by name, email, or username..."
+				class="w-full pl-12 pr-4 py-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition placeholder:text-gray-400" />
+		</div>
+		
+		<!-- Filters -->
+		<div class="flex flex-wrap gap-3">
+			<select id="roleFilter"
+				class="px-4 py-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-800 dark:text-white rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition cursor-pointer">
+				<option value="">All Roles</option>
+				<option value="admin">Admin</option>
+				<option value="teacher">Teacher</option>
+				<option value="staff">Staff</option>
+				<option value="student">Student</option>
+			</select>
+			
+			<select id="statusFilter"
+				class="px-4 py-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-800 dark:text-white rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition cursor-pointer">
+				<option value="">All Status</option>
+				<option value="active">Active</option>
+				<option value="inactive">Inactive</option>
+			</select>
+			
+			<select id="sortBy"
+				class="px-4 py-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-800 dark:text-white rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition cursor-pointer">
+				<option value="name">Sort by Name</option>
+				<option value="created">Sort by Created Date</option>
+				<option value="username">Sort by Username</option>
+			</select>
+		</div>
+	</div>
+</div>
+<!-- Stats Cards -->
+<section class="grid gap-6 sm:grid-cols-2 lg:grid-cols-4 mb-8">
+	<div
+		class="relative overflow-hidden bg-gradient-to-br from-blue-500 to-blue-600 p-6 rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 hover:scale-105">
+		<div class="absolute top-0 right-0 w-20 h-20 bg-white/10 rounded-full -mr-10 -mt-10"></div>
+		<div class="relative z-10">
+			<div class="flex items-center justify-between mb-3">
+				<div class="h-12 w-12 rounded-xl bg-white/20 flex items-center justify-center backdrop-blur-sm">
+					<span class="material-symbols-outlined text-2xl text-white">group</span>
+				</div>
+				<span class="text-white/80 text-xs font-semibold">+5%</span>
+			</div>
+			<p class="text-white/90 text-sm font-medium mb-1">Total Users</p>
+			<h2 class="text-3xl font-bold text-white">{{ users|length }}</h2>
+		</div>
+	</div>
+
+	<div
+		class="relative overflow-hidden bg-gradient-to-br from-green-500 to-green-600 p-6 rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 hover:scale-105">
+		<div class="absolute top-0 right-0 w-20 h-20 bg-white/10 rounded-full -mr-10 -mt-10"></div>
+		<div class="relative z-10">
+			<div class="flex items-center justify-between mb-3">
+				<div class="h-12 w-12 rounded-xl bg-white/20 flex items-center justify-center backdrop-blur-sm">
+					<span class="material-symbols-outlined text-2xl text-white">check_circle</span>
+				</div>
+				<span class="text-white/80 text-xs font-semibold">+3%</span>
+			</div>
+			<p class="text-white/90 text-sm font-medium mb-1">Active Users</p>
+			<h2 class="text-3xl font-bold text-white">{{ users|selectattr('role')|list|length }}</h2>
+		</div>
+	</div>
+
+	<div
+		class="relative overflow-hidden bg-gradient-to-br from-purple-500 to-purple-600 p-6 rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 hover:scale-105">
+		<div class="absolute top-0 right-0 w-20 h-20 bg-white/10 rounded-full -mr-10 -mt-10"></div>
+		<div class="relative z-10">
+			<div class="flex items-center justify-between mb-3">
+				<div class="h-12 w-12 rounded-xl bg-white/20 flex items-center justify-center backdrop-blur-sm">
+					<span class="material-symbols-outlined text-2xl text-white">school</span>
+				</div>
+				<span class="text-white/80 text-xs font-semibold">+8%</span>
+			</div>
+			<p class="text-white/90 text-sm font-medium mb-1">Students</p>
+			<h2 class="text-3xl font-bold text-white">{{ users|selectattr('role', 'equalto', 'student')|list|length }}</h2>
+		</div>
+	</div>
+
+	<div
+		class="relative overflow-hidden bg-gradient-to-br from-orange-500 to-orange-600 p-6 rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 hover:scale-105">
+		<div class="absolute top-0 right-0 w-20 h-20 bg-white/10 rounded-full -mr-10 -mt-10"></div>
+		<div class="relative z-10">
+			<div class="flex items-center justify-between mb-3">
+				<div class="h-12 w-12 rounded-xl bg-white/20 flex items-center justify-center backdrop-blur-sm">
+					<span class="material-symbols-outlined text-2xl text-white">group</span>
+				</div>
+				<span class="text-white/80 text-xs font-semibold">+2%</span>
+			</div>
+			<p class="text-white/90 text-sm font-medium mb-1">Staff & Teachers</p>
+			<h2 class="text-3xl font-bold text-white">{{ users|selectattr('role', 'equalto', 'teacher')|list|length + users|selectattr('role', 'equalto', 'staff')|list|length }}</h2>
+		</div>
+	</div>
+</section>
+<!-- Users Table -->
+<div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 border border-gray-100 dark:border-gray-700">
+	<div class="flex flex-wrap items-center justify-between gap-4 mb-6">
+		<h2 class="text-xl font-bold text-gray-800 dark:text-white">All Users</h2>
+		<div class="text-sm text-gray-600 dark:text-gray-400">
+			<span class="font-semibold">Showing:</span> <span id="filteredCount">{{ users|length }}</span> of {{ users|length }} users
+		</div>
+	</div>
+	<div class="overflow-x-auto">
+		<table class="w-full text-left" id="usersTable">
+			<thead class="text-sm text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-gray-700">
+				<tr>
+					<th class="p-4">Profile</th>
+					<th class="p-4">User ID</th>
+					<th class="p-4">Username</th>
+					<th class="p-4">Full Name</th>
+					<th class="p-4">Email</th>
+					<th class="p-4">Class</th>
+					<th class="p-4">Role</th>
+					<th class="p-4">Status</th>
+					<th class="p-4">Created At</th>
+					<th class="p-4 text-center">Actions</th>
+				</tr>
+			</thead>
+			<tbody class="text-gray-800 dark:text-white" id="usersTableBody">
+				{% for user in users %}
+				<tr class="border-t border-gray-200 dark:border-gray-700 user-row" 
+					data-username="{{ user.username }}"
+					data-fullname="{{ user.full_name() }}"
+					data-email="{{ user.email or '' }}"
+					data-role="{{ user.role }}"
+					data-status="{{ 'active' if user.is_active else 'inactive' }}"
+					data-created="{{ user.created_at.timestamp() }}">
+					<td class="p-4">
+						<img class="h-10 w-10 rounded-full object-cover" 
+							alt="User avatar"
+							src="{{ user.image if user.image else 'https://ui-avatars.com/api/?name=' + user.first_name + '+' + user.last_name + '&background=random' }}" />
+					</td>
+					<td class="p-4">
+						<span class="font-mono text-sm bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded">{{ user.id }}</span>
+					</td>
+					<td class="p-4">
+						<span class="font-mono text-sm bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded">{{ user.username }}</span>
+					</td>
+					<td class="p-4">{{ user.full_name() }}</td>
+					<td class="p-4">
+						<span class="text-sm text-gray-600 dark:text-gray-400">{{ user.email or 'N/A' }}</span>
+					</td>
+					<td class="p-4">{{ user.class_room.class_room_name if user.class_room else 'N/A' }}</td>
+					<td class="p-4">
+						{% if user.role == 'admin' %}
+							<span class="px-2 py-1 text-xs font-semibold rounded-full bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300">Administrator</span>
+						{% elif user.role == 'teacher' %}
+							<span class="px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300">Teacher</span>
+						{% elif user.role == 'staff' %}
+							<span class="px-2 py-1 text-xs font-semibold rounded-full bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300">Staff</span>
+						{% elif user.role == 'student' %}
+							<span class="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300">Student</span>
+						{% else %}
+							<span class="px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 dark:bg-gray-900/30 text-gray-700 dark:text-gray-300">{{ user.role.title() }}</span>
+						{% endif %}
+					</td>
+					<td class="p-4">
+						{% if user.is_active %}
+							<span class="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300">Active</span>
+						{% else %}
+							<span class="px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 dark:bg-gray-900/30 text-gray-700 dark:text-gray-300">Inactive</span>
+						{% endif %}
+					</td>
+					<td class="p-4">
+						<span class="text-sm">{{ user.created_at.strftime('%Y-%m-%d') }}</span>
+						<span class="text-xs text-gray-500 dark:text-gray-400 block">{{ user.created_at.strftime('%H:%M:%S') }}</span>
+					</td>
+					<td class="p-4 text-center">
+						<div class="flex items-center justify-center gap-2">
+							<button onclick="openEditUserModal('{{ user.id }}')" class="text-gray-500 hover:text-primary dark:text-gray-400 dark:hover:text-primary transition" title="Edit User"
+								data-user-id="{{ user.id }}"
+								data-username="{{ user.username }}"
+								data-first-name="{{ user.first_name }}"
+								data-last-name="{{ user.last_name }}"
+								data-email="{{ user.email or '' }}"
+								data-gender="{{ user.gender }}"
+								data-dob="{{ user.dob.strftime('%Y-%m-%d') }}"
+								data-class-room-id="{{ user.class_room_id or '' }}"
+								data-register-number="{{ user.register_number or '' }}"
+								data-role="{{ user.role }}">
+								<span class="material-symbols-outlined">edit</span>
+							</button>
+							<button onclick="toggleUserStatus('{{ user.id }}', {% if user.is_active %}true{% else %}false{% endif %})" 
+								class="text-gray-500 hover:text-orange-500 dark:text-gray-400 dark:hover:text-orange-500 transition" 
+								title="Toggle Status"
+								id="toggleBtn-{{ user.id }}">
+								<span class="material-symbols-outlined">{% if user.is_active %}toggle_on{% else %}toggle_off{% endif %}</span>
+							</button>
+							<button class="text-gray-500 hover:text-red-500 dark:text-gray-400 dark:hover:text-red-500 transition"
+								data-modal-toggle="deleteUserModal" data-user-name="{{ user.full_name() }}" data-user-id="{{ user.id }}"
+								title="Delete User">
+								<span class="material-symbols-outlined">delete</span>
+							</button>
+						</div>
+					</td>
+				</tr>
+				{% endfor %}
+			</tbody>
+		</table>
+		
+		<!-- No Results Message -->
+		<div id="noResults" class="hidden text-center py-12">
+			<span class="material-symbols-outlined text-6xl text-gray-300 dark:text-gray-600 mb-4">search_off</span>
+			<p class="text-gray-500 dark:text-gray-400 text-lg">No users found matching your criteria</p>
+		</div>
+	</div>
+</div>
+<!-- Recent Activity -->
+<div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 border border-gray-100 dark:border-gray-700 mt-6">
+	<h3 class="text-xl font-bold text-gray-800 dark:text-white mb-6 flex items-center gap-2">
+		<span class="material-symbols-outlined text-primary">history</span>
+		Recent Activity
+	</h3>
+	<ul class="space-y-4">
+		<li
+			class="flex items-start gap-4 p-4 rounded-xl bg-gray-50 dark:bg-gray-700/50 hover:shadow-md transition-all border border-gray-100 dark:border-gray-600">
+			<div
+				class="h-12 w-12 flex items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex-shrink-0">
+				<span class="material-symbols-outlined text-white">person_add</span>
+			</div>
+			<div class="flex-1 min-w-0">
+				<p class="font-semibold text-gray-800 dark:text-white text-sm mb-1">New User Added</p>
+				<p class="text-sm text-gray-600 dark:text-gray-400">John Doe (Teacher) was added to the system</p>
+				<div class="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400 mt-2">
+					<span class="material-symbols-outlined text-sm">schedule</span>
+					<span>2 hours ago</span>
+				</div>
+			</div>
+		</li>
+		<li
+			class="flex items-start gap-4 p-4 rounded-xl bg-gray-50 dark:bg-gray-700/50 hover:shadow-md transition-all border border-gray-100 dark:border-gray-600">
+			<div
+				class="h-12 w-12 flex items-center justify-center rounded-full bg-gradient-to-br from-purple-500 to-purple-600 flex-shrink-0">
+				<span class="material-symbols-outlined text-white">manage_accounts</span>
+			</div>
+			<div class="flex-1 min-w-0">
+				<p class="font-semibold text-gray-800 dark:text-white text-sm mb-1">Role Updated</p>
+				<p class="text-sm text-gray-600 dark:text-gray-400">Jane Smith's role was changed to Student</p>
+				<div class="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400 mt-2">
+					<span class="material-symbols-outlined text-sm">schedule</span>
+					<span>1 day ago</span>
+				</div>
+			</div>
+		</li>
+		<li
+			class="flex items-start gap-4 p-4 rounded-xl bg-gray-50 dark:bg-gray-700/50 hover:shadow-md transition-all border border-gray-100 dark:border-gray-600">
+			<div
+				class="h-12 w-12 flex items-center justify-center rounded-full bg-gradient-to-br from-red-500 to-red-600 flex-shrink-0">
+				<span class="material-symbols-outlined text-white">person_remove</span>
+			</div>
+			<div class="flex-1 min-w-0">
+				<p class="font-semibold text-gray-800 dark:text-white text-sm mb-1">User Deactivated</p>
+				<p class="text-sm text-gray-600 dark:text-gray-400">Peter Jones was deactivated from the system</p>
+				<div class="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400 mt-2">
+					<span class="material-symbols-outlined text-sm">schedule</span>
+					<span>3 days ago</span>
+				</div>
+			</div>
+		</li>
+	</ul>
+</div>
+
+<!-- Add User Modal -->
+<div id="addUserModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+	<div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+		<div class="p-6 border-b border-gray-200 dark:border-gray-700">
+			<div class="flex items-center justify-between">
+				<h3 class="text-2xl font-bold text-gray-800 dark:text-white">Add New User</h3>
+				<button onclick="closeAddUserModal()" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+					<span class="material-symbols-outlined text-3xl">close</span>
+				</button>
+			</div>
+		</div>
+		<form id="addUserForm" class="p-6 space-y-4">
+			<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+				<div>
+					<label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">First Name *</label>
+					<input type="text" name="first_name" required
+						class="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none" />
+				</div>
+				<div>
+					<label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Last Name *</label>
+					<input type="text" name="last_name" required
+						class="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none" />
+				</div>
+			</div>
+			
+			<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+				<div>
+					<label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Role *</label>
+					<select name="role" id="addUserRole" required onchange="handleRoleChange('add')"
+						class="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none cursor-pointer">
+						<option value="">Select Role</option>
+						<option value="student">Student</option>
+						<option value="staff">Staff</option>
+						<option value="admin">Admin</option>
+					</select>
+				</div>
+				<div>
+					<label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Gender</label>
+					<select name="gender"
+						class="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none cursor-pointer">
+						<option value="Male">Male</option>
+						<option value="Female">Female</option>
+						<option value="Other">Other</option>
+					</select>
+				</div>
+			</div>
+			
+			<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+				<div>
+					<label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Date of Birth *</label>
+					<input type="date" name="dob" required
+						class="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none" />
+				</div>
+				<div id="addEmailField">
+					<label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Email <span id="addEmailRequired" class="text-red-500 hidden">*</span></label>
+					<input type="email" name="email" id="addEmailInput"
+						class="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none" />
+				</div>
+			</div>
+			
+			<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+				<div id="addClassField" class="hidden">
+					<label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Class <span class="text-red-500">*</span></label>
+					<select name="class_room_id" id="addClassRoomSelect"
+						class="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none cursor-pointer">
+						<option value="">Select Class</option>
+						{% for class_room in class_rooms %}
+						<option value="{{ class_room.class_room_id }}">{{ class_room.class_room_name }}</option>
+						{% endfor %}
+					</select>
+				</div>
+				<div id="addRegisterField" class="hidden">
+					<label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Register Number <span class="text-red-500">*</span></label>
+					<input type="text" name="register_number" id="addRegisterNumberInput"
+						class="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none" />
+				</div>
+			</div>
+			
+			<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+				<div>
+					<label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Password *</label>
+					<input type="password" name="password" id="addPasswordInput" required minlength="4"
+						placeholder="Minimum 4 characters"
+						class="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none" />
+				</div>
+				<div>
+					<label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Confirm Password *</label>
+					<input type="password" name="confirm_password" id="addConfirmPasswordInput" required minlength="4"
+						placeholder="Re-enter password"
+						class="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none" />
+				</div>
+			</div>
+			
+			<div class="flex justify-end gap-3 pt-4">
+				<button type="button" onclick="closeAddUserModal()"
+					class="px-6 py-2 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition">
+					Cancel
+				</button>
+				<button type="submit"
+					class="px-6 py-2 rounded-lg bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white transition">
+					Add User
+				</button>
+			</div>
+		</form>
+	</div>
+</div>
+
+<!-- Edit User Modal -->
+<div id="editUserModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+	<div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+		<div class="p-6 border-b border-gray-200 dark:border-gray-700">
+			<div class="flex items-center justify-between">
+				<h3 class="text-2xl font-bold text-gray-800 dark:text-white">Edit User</h3>
+				<button onclick="closeEditUserModal()" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+					<span class="material-symbols-outlined text-3xl">close</span>
+				</button>
+			</div>
+		</div>
+		<form id="editUserForm" class="p-6 space-y-4">
+			<input type="hidden" name="user_id" id="editUserId" />
+			
+			<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+				<div>
+					<label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">First Name *</label>
+					<input type="text" name="first_name" id="editFirstName" required
+						class="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none" />
+				</div>
+				<div>
+					<label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Last Name *</label>
+					<input type="text" name="last_name" id="editLastName" required
+						class="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none" />
+				</div>
+			</div>
+			
+			<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+				<div>
+					<label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Username</label>
+					<input type="text" id="editUsername" disabled
+						class="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-900 text-gray-500 dark:text-gray-400 cursor-not-allowed" />
+				</div>
+				<div>
+					<label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Gender</label>
+					<select name="gender" id="editGender"
+						class="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none cursor-pointer">
+						<option value="Male">Male</option>
+						<option value="Female">Female</option>
+						<option value="Other">Other</option>
+					</select>
+				</div>
+			</div>
+			
+			<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+				<div>
+					<label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Date of Birth *</label>
+					<input type="date" name="dob" id="editDob" required
+						class="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none" />
+				</div>
+				<div id="editEmailField">
+					<label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Email <span id="editEmailRequired" class="text-red-500 hidden">*</span></label>
+					<input type="email" name="email" id="editEmail"
+						class="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none" />
+				</div>
+			</div>
+			
+			<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+				<div id="editClassField">
+					<label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Class <span id="editClassRequired" class="text-red-500 hidden">*</span></label>
+					<select name="class_room_id" id="editClassRoom"
+						class="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none cursor-pointer">
+						<option value="">Select Class</option>
+						{% for class_room in class_rooms %}
+						<option value="{{ class_room.class_room_id }}">{{ class_room.class_room_name }}</option>
+						{% endfor %}
+					</select>
+				</div>
+				<div id="editRegisterField">
+					<label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Register Number <span id="editRegisterRequired" class="text-red-500 hidden">*</span></label>
+					<input type="text" name="register_number" id="editRegisterNumber"
+						class="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none" />
+				</div>
+			</div>
+			
+			<div class="flex justify-end gap-3 pt-4">
+				<button type="button" onclick="closeEditUserModal()"
+					class="px-6 py-2 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition">
+					Cancel
+				</button>
+				<button type="submit"
+					class="px-6 py-2 rounded-lg bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white transition">
+					Update User
+				</button>
+			</div>
+		</form>
+	</div>
+</div>
+{% endblock %}

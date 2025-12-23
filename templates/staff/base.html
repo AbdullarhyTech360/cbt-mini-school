@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html class="light" lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>{% block title %}Staff Portal{% endblock %}</title>
+    <link href="{{ url_for('static', filename='dist/output.css') }}" rel="stylesheet">
+    <!-- Removed preload tags to prevent warnings about unused preloaded resources -->
+    <!-- <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet" /> -->
+    <style>
+        .material-symbols-outlined,
+        .material-symbols-rounded,
+        .material-symbols-sharp {
+            font-variation-settings:
+                "FILL" 0,
+                "wght" 400,
+                "GRAD" 0,
+                "opsz" 24;
+        }
+        body {
+            min-height: max(884px, 100dvh);
+        }
+        /* Rotate animation for the arrow icon */
+        .rotate-90 {
+            transform: rotate(90deg);
+        }
+        .transition-transform {
+            transition: transform 0.2s ease-in-out;
+        }
+    </style>
+</head>
+<body class="font-display bg-background-light dark:bg-background-dark">
+    <!-- Mobile Top Navbar -->
+    <nav class="md:hidden fixed top-0 left-0 right-0 z-50 bg-white dark:bg-[#1a1f2e] border-b border-gray-200 dark:border-gray-700 shadow-sm">
+        <div class="flex items-center justify-between px-4 py-3">
+            <button id="sidebarToggle" class="text-gray-600 dark:text-gray-300 hover:text-primary transition">
+                <span class="material-symbols-outlined text-2xl">menu</span>
+            </button>
+            <div class="flex items-center gap-2">
+                <span class="material-symbols-outlined text-primary text-2xl">school</span>
+                <p class="text-gray-800 dark:text-white text-lg font-bold">CBT School</p>
+            </div>
+            <button id="mobileThemeToggle" class="text-gray-600 dark:text-gray-300 hover:text-primary transition">
+                <span class="material-symbols-outlined text-2xl">dark_mode</span>
+            </button>
+        </div>
+    </nav>
+
+    <div class="relative flex h-auto min-h-screen w-full flex-col bg-gray-50 dark:bg-[#0f1419] overflow-x-hidden pt-16 md:pt-0">
+        <!-- Sidebar Overlay -->
+        <div id="sidebarOverlay" class="fixed inset-0 bg-black/50 z-40 hidden md:hidden"></div>
+
+        <div class="flex">
+            <!-- Sidebar -->
+            <aside id="sidebar"
+                class="fixed left-0 top-0 md:top-0 z-50 flex h-full w-72 flex-col bg-white dark:bg-[#1a1f2e] border-r border-gray-200 dark:border-gray-700 shadow-xl transition-transform duration-300 -translate-x-full md:translate-x-0 overflow-hidden">
+                <div class="flex items-center justify-between px-6 py-5 border-b border-gray-100 dark:border-gray-700">
+                    <div class="flex items-center gap-3 overflow-hidden">
+                        <div class="h-10 w-10 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center shadow-lg flex-shrink-0">
+                            <span class="material-symbols-outlined text-white text-2xl">person</span>
+                        </div>
+                        <div class="sidebar-text transition-all duration-300">
+                            <p class="text-gray-800 dark:text-white text-lg font-bold whitespace-nowrap">CBT School</p>
+                            <p class="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">Staff Portal</p>
+                        </div>
+                    </div>
+                    <button id="sidebarCollapse" class="hidden md:flex items-center justify-center h-8 w-8 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition flex-shrink-0">
+                        <span class="material-symbols-outlined text-xl">menu_open</span>
+                    </button>
+                </div>
+                <div id="staffCard" class="flex items-center gap-3 px-6 py-4 bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-700 mx-4 mt-4 rounded-xl shadow-sm border border-gray-200 dark:border-gray-600 transition-all duration-300">
+                    <div class="relative flex-shrink-0">
+                        <img id="staffAvatar" class="h-12 w-12 rounded-full object-cover ring-2 ring-primary/20" data-alt="Staff avatar"
+                            src="https://lh3.googleusercontent.com/aida-public/AB6AXuAZx9wH3s7WLF7tI5V03nO7WDimNcyeOP0-ojFyb8k-eSfCqL5TPczJ1S6aPg61FLqenBL6x1wAquVE_gzaC3Uc4fqAWhc_eqnGM0_fQYaSWabREemao-VEkcs1qQ1JruP_ykQGdrgTHou8Ffpk_IqyNIQcKjk62hYlkfL8RNm8FYH2eU0eNTJi5-232xAxzrGyvljODTVj8PE1ceTrs-TdrK1rcmap-1O_MSB8orpHYaorm5wVuzfkkPD55-JWr6mOv_yimZ3Du-o" />
+                        <span class="absolute bottom-0 right-0 h-3 w-3 bg-green-500 rounded-full ring-2 ring-white dark:ring-gray-800"></span>
+                    </div>
+                    <div class="flex-1 min-w-0 sidebar-text transition-all duration-300">
+                        <p class="text-gray-800 dark:text-white text-sm font-bold truncate">{{ current_user.full_name() if current_user else 'Staff Name' }}</p>
+                        <p class="text-gray-500 dark:text-gray-400 text-xs truncate">{{ current_user.role.title() if current_user else 'Teacher' }}</p>
+                    </div>
+                </div>
+                <nav class="flex-1 overflow-y-auto px-4 mt-6">
+                    <ul class="flex flex-col gap-1">
+                        {% block sidebar_nav %}
+                        <li><a class="flex h-11 items-center gap-3 rounded-lg px-4 {% if request.endpoint == 'staff_dashboard' %}bg-gradient-to-r from-primary to-blue-600 text-white shadow-md{% else %}text-gray-600 dark:text-gray-400 hover:bg-gradient-to-r hover:from-primary/10 hover:to-primary/5 hover:text-primary dark:hover:text-primary{% endif %} transition-all group" href="/staff/dashboard/{{ current_user.id }}">
+                            <span class="material-symbols-outlined text-xl flex-shrink-0">dashboard</span>
+                            <p class="text-sm font-semibold leading-tight truncate sidebar-text">Dashboard</p>
+                        </a></li>
+                        <li class="relative">
+                            <button id="inputScoresToggle" class="flex h-11 w-full items-center gap-3 rounded-lg px-4 {% if request.endpoint == 'input_scores' %}bg-gradient-to-r from-primary to-blue-600 text-white shadow-md{% else %}text-gray-600 dark:text-gray-400 hover:bg-gradient-to-r hover:from-primary/10 hover:to-primary/5 hover:text-primary dark:hover:text-primary{% endif %} transition-all group text-left">
+                                <span class="material-symbols-outlined text-xl group-hover:scale-110 transition-transform flex-shrink-0">edit_note</span>
+                                <p class="text-sm font-semibold leading-tight truncate sidebar-text">Input Scores</p>
+                                <span id="inputScoresArrow" class="material-symbols-outlined text-xl ml-auto transition-transform group-hover:translate-x-1">arrow_forward_ios</span>
+                            </button>
+                            <ul data-current-user="{{ current_user.id }}" id="inputScoresSubmenu" class="ml-8 mt-1 space-y-1 hidden">
+                            </ul>
+                        </li>
+                        <li><a class="flex h-11 items-center gap-3 rounded-lg px-4 {% if request.endpoint == 'attendance' %}bg-gradient-to-r from-primary to-blue-600 text-white shadow-md{% else %}text-gray-600 dark:text-gray-400 hover:bg-gradient-to-r hover:from-primary/10 hover:to-primary/5 hover:text-primary dark:hover:text-primary{% endif %} transition-all group" href="/staff/attendance/{{ current_user.id }}">
+                            <span class="material-symbols-outlined text-xl group-hover:scale-110 transition-transform flex-shrink-0">checklist</span>
+                            <p class="text-sm font-semibold leading-tight truncate sidebar-text">Attendance</p>
+                        </a></li>
+                        <li><a class="flex h-11 items-center gap-3 rounded-lg px-4 {% if request.endpoint == 'staff_upload_questions' %}bg-gradient-to-r from-primary to-blue-600 text-white shadow-md{% else %}text-gray-600 dark:text-gray-400 hover:bg-gradient-to-r hover:from-primary/10 hover:to-primary/5 hover:text-primary dark:hover:text-primary{% endif %} transition-all group" href="/staff/upload_questions/{{ current_user.id }}">
+                            <span class="material-symbols-outlined text-xl group-hover:scale-110 transition-transform flex-shrink-0">upload_file</span>
+                            <p class="text-sm font-semibold leading-tight truncate sidebar-text">Upload Questions</p>
+                        </a></li>
+                        <li><a class="flex h-11 items-center gap-3 rounded-lg px-4 {% if request.endpoint == 'staff_profile' %}bg-gradient-to-r from-primary to-blue-600 text-white shadow-md{% else %}text-gray-600 dark:text-gray-400 hover:bg-gradient-to-r hover:from-primary/10 hover:to-primary/5 hover:text-primary dark:hover:text-primary{% endif %} transition-all group" href="/staff/profile/{{ current_user.id }}">
+                            <span class="material-symbols-outlined text-xl group-hover:scale-110 transition-transform flex-shrink-0">person</span>
+                            <p class="text-sm font-semibold leading-tight truncate sidebar-text">My Profile</p>
+                        </a></li>
+                        <li><a class="flex h-11 items-center gap-3 rounded-lg px-4 {% if request.endpoint == 'staff_classes' %}bg-gradient-to-r from-primary to-blue-600 text-white shadow-md{% else %}text-gray-600 dark:text-gray-400 hover:bg-gradient-to-r hover:from-primary/10 hover:to-primary/5 hover:text-primary dark:hover:text-primary{% endif %} transition-all group" href="/staff/classes/{{ current_user.id }}">
+                            <span class="material-symbols-outlined text-xl group-hover:scale-110 transition-transform flex-shrink-0">groups</span>
+                            <p class="text-sm font-semibold leading-tight truncate sidebar-text">My Classes</p>
+                        </a></li>
+                        {% endblock %}
+                    </ul>
+                </nav>
+                <div class="mt-auto p-4 border-t border-gray-200 dark:border-gray-700">
+                    <form method="POST" action="{{ url_for('logout') }}" class="inline-block w-full">
+                        <button type="submit" class="flex items-center justify-center gap-2 h-11 px-4 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white rounded-lg shadow-md hover:shadow-lg transition-all duration-200 group w-full">
+                            <span class="material-symbols-outlined text-xl group-hover:rotate-12 transition-transform flex-shrink-0">logout</span>
+                            <span class="text-sm font-bold sidebar-text">Logout</span>
+                        </button>
+                    </form>
+                </div>
+            </aside>
+            <!-- Main Content -->
+            <main class="w-full md:ml-72 p-2 sm:p-4 md:p-6 lg:p-8 min-h-screen overflow-x-auto">
+                {% block content %}{% endblock %}
+            </main>
+        </div>
+    </div>
+    <script>
+        // Dark Mode Toggle
+        const html = document.documentElement;
+        if (localStorage.theme === "dark") html.classList.add("dark");
+
+        const themeToggle = document.createElement("button");
+        themeToggle.id = "themeToggle";
+        themeToggle.className = "flex items-center justify-center h-10 w-10 rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:shadow-lg transition-all duration-200 text-gray-600 dark:text-gray-300";
+        themeToggle.innerHTML = '<span class="material-symbols-outlined text-xl">dark_mode</span>';
+
+        const main = document.querySelector("main");
+        const existingHeader = main.querySelector("header");
+        if (existingHeader) {
+            existingHeader.appendChild(themeToggle);
+        } else {
+            const header = document.createElement("header");
+            header.className = "flex flex-wrap items-center justify-between gap-4 mb-8";
+            header.appendChild(themeToggle);
+            main.insertBefore(header, main.firstChild);
+        }
+
+        themeToggle.addEventListener("click", () => {
+            html.classList.toggle("dark");
+            localStorage.theme = html.classList.contains("dark") ? "dark" : "light";
+            updateThemeIcon();
+        });
+
+        const mobileThemeToggle = document.getElementById("mobileThemeToggle");
+        if (mobileThemeToggle) {
+            mobileThemeToggle.addEventListener("click", () => {
+                html.classList.toggle("dark");
+                localStorage.theme = html.classList.contains("dark") ? "dark" : "light";
+                updateThemeIcon();
+            });
+        }
+
+        function updateThemeIcon() {
+            const icon = html.classList.contains("dark") ? "light_mode" : "dark_mode";
+            themeToggle.innerHTML = `<span class="material-symbols-outlined text-xl">${icon}</span>`;
+            if (mobileThemeToggle) {
+                mobileThemeToggle.innerHTML = `<span class="material-symbols-outlined text-2xl">${icon}</span>`;
+            }
+        }
+        updateThemeIcon();
+
+        // Sidebar Toggle for Mobile
+        const sidebar = document.getElementById("sidebar");
+        const sidebarToggle = document.getElementById("sidebarToggle");
+        const sidebarOverlay = document.getElementById("sidebarOverlay");
+        const sidebarCollapse = document.getElementById("sidebarCollapse");
+
+        function toggleSidebar() {
+            sidebar.classList.toggle("-translate-x-full");
+            sidebarOverlay.classList.toggle("hidden");
+        }
+
+        if (sidebarToggle) {
+            sidebarToggle.addEventListener("click", toggleSidebar);
+        }
+
+        if (sidebarOverlay) {
+            sidebarOverlay.addEventListener("click", toggleSidebar);
+        }
+
+        if (sidebarCollapse) {
+            sidebarCollapse.addEventListener("click", () => {
+                const isExpanded = sidebar.classList.contains("w-72");
+                const sidebarTexts = document.querySelectorAll(".sidebar-text");
+                const mainContent = document.querySelector("main");
+                const collapseIcon = sidebarCollapse.querySelector(".material-symbols-outlined");
+                const staffCard = document.getElementById("staffCard");
+                const staffAvatar = document.getElementById("staffAvatar");
+
+                if (isExpanded) {
+                    // Collapse
+                    sidebar.classList.remove("w-72");
+                    sidebar.classList.add("w-20");
+                    mainContent.classList.remove("md:ml-72");
+                    mainContent.classList.add("md:ml-20");
+                    sidebarTexts.forEach(el => {
+                        el.style.opacity = "0";
+                        el.style.width = "0";
+                        el.style.overflow = "hidden";
+                    });
+                    // Staff card compaction
+                    if (staffCard) {
+                        staffCard.style.marginLeft = "0.5rem";
+                        staffCard.style.marginRight = "0.5rem";
+                        staffCard.style.paddingLeft = "0.5rem";
+                        staffCard.style.paddingRight = "0.5rem";
+                        staffCard.style.justifyContent = "center";
+                        staffCard.style.gap = "0.5rem";
+                    }
+                    if (staffAvatar) {
+                        staffAvatar.classList.remove("h-12","w-12");
+                        staffAvatar.classList.add("h-10","w-10");
+                    }
+                    collapseIcon.textContent = "menu";
+                } else {
+                    // Expand
+                    sidebar.classList.remove("w-20");
+                    sidebar.classList.add("w-72");
+                    mainContent.classList.remove("md:ml-20");
+                    mainContent.classList.add("md:ml-72");
+                    sidebarTexts.forEach(el => {
+                        el.style.opacity = "1";
+                        el.style.width = "auto";
+                        el.style.overflow = "visible";
+                    });
+                    if (staffCard) {
+                        staffCard.style.marginLeft = "1rem";
+                        staffCard.style.marginRight = "1rem";
+                        staffCard.style.paddingLeft = "1.5rem";
+                        staffCard.style.paddingRight = "1.5rem";
+                        staffCard.style.justifyContent = "flex-start";
+                        staffCard.style.gap = "0.75rem";
+                    }
+                    if (staffAvatar) {
+                        staffAvatar.classList.remove("h-10","w-10");
+                        staffAvatar.classList.add("h-12","w-12");
+                    }
+                    collapseIcon.textContent = "menu_open";
+                }
+            });
+        }
+
+        // Input Scores Menu Toggle
+        const inputScoresToggle = document.getElementById("inputScoresToggle");
+        const inputScoresSubmenu = document.getElementById("inputScoresSubmenu");
+        const inputScoresArrow = document.getElementById("inputScoresArrow");
+
+        if (inputScoresToggle && inputScoresSubmenu && inputScoresArrow) {
+            // Function to load and display subject-class combinations
+            function loadSubjectClassCombinations() {
+                // Clear existing content
+                inputScoresSubmenu.innerHTML = '';
+
+                // Load the teacher subjects for the selected class
+                const currentUserId = inputScoresSubmenu.getAttribute("data-current-user");
+                console.log("Current User ID:", currentUserId);
+
+                fetch(`/staff/subjects/${currentUserId}`)
+                    .then(response => response.json())
+                    .then(result => {
+                        if (result.success) {
+                            const subjects = result.subjects;
+                            console.log("Subjects:", subjects);
+                            // Check if subjects data exists and is an array
+                            if (Array.isArray(subjects) && subjects.length > 0) {
+                                // Get current subject and class IDs from URL parameters
+                                const urlParams = new URLSearchParams(window.location.search);
+                                const currentSubjectId = urlParams.get('subject_id');
+                                const currentClassId = urlParams.get('class_id');
+
+                                subjects.forEach(subject => {
+                                    const subjectOption = document.createElement("li");
+                                    const isActive = currentSubjectId === subject.subject_id && currentClassId === subject.class_room_id;
+                                    
+                                    subjectOption.className = `flex items-center gap-3 p-3 rounded-lg transition-all ${
+                                        isActive 
+                                            ? 'bg-gradient-to-r from-primary/20 to-blue-600/20 dark:from-primary/30 dark:to-blue-600/30'
+                                            : 'hover:bg-gray-50 dark:hover:bg-gray-700'
+                                    }`;
+                                    subjectOption.innerHTML = `
+                                        <a href="/staff/input_scores/${currentUserId}?subject_id=${subject.subject_id}&class_id=${subject.class_room_id}" 
+                                           class="flex items-center gap-3 w-full transition-all text-sm ${
+                                               isActive
+                                                   ? 'text-primary dark:text-primary font-semibold'
+                                                   : 'text-gray-600 dark:text-gray-400 hover:text-primary dark:hover:text-primary'
+                                           }">
+                                            <span class="material-symbols-outlined text-base">chevron_right</span>
+                                            <span class="truncate">${subject.display_name}</span>
+                                        </a>
+                                    `;
+                                    inputScoresSubmenu.appendChild(subjectOption);
+                                });
+                            } else {
+                                // Handle case where no subjects are available
+                                const noSubjects = document.createElement("li");
+                                noSubjects.className = "flex h-10 items-center px-4 text-gray-500 dark:text-gray-500 text-sm italic";
+                                noSubjects.textContent = "No subjects assigned";
+                                inputScoresSubmenu.appendChild(noSubjects);
+                            }
+                        } else {
+                            console.error('Error:', result.message);
+                            // Show error message
+                            const errorElement = document.createElement("li");
+                            errorElement.className = "flex h-10 items-center px-4 text-red-500 dark:text-red-400 text-sm";
+                            errorElement.textContent = "Error loading subjects";
+                            inputScoresSubmenu.appendChild(errorElement);
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        // Show error message
+                        const errorElement = document.createElement("li");
+                        errorElement.className = "flex h-10 items-center px-4 text-red-500 dark:text-red-400 text-sm";
+                        errorElement.textContent = "Failed to load subjects";
+                        inputScoresSubmenu.appendChild(errorElement);
+                    });
+            }
+
+            inputScoresToggle.addEventListener("click", function() {
+                const isExpanded = !inputScoresSubmenu.classList.contains("hidden");
+                
+                if (isExpanded) {
+                    // Collapse
+                    inputScoresSubmenu.classList.add("hidden");
+                    inputScoresArrow.textContent = "arrow_forward_ios";
+                    inputScoresArrow.classList.remove("rotate-90");
+                } else {
+                    // Expand and load data
+                    inputScoresSubmenu.classList.remove("hidden");
+                    inputScoresArrow.textContent = "arrow_forward_ios";
+                    inputScoresArrow.classList.add("rotate-90");
+                    
+                    // Load subject-class combinations
+                    loadSubjectClassCombinations();
+                }
+            });
+            
+            // Auto-expand the submenu if we're on the input scores page
+            if (window.location.pathname.includes("/staff/input_scores")) {
+                // Check if there's a class_id parameter or if we're on the main input scores page
+                if (window.location.search.includes("class_id=") || window.location.search === "") {
+                    // Expand the submenu
+                    inputScoresSubmenu.classList.remove("hidden");
+                    inputScoresArrow.textContent = "arrow_forward_ios";
+                    inputScoresArrow.classList.add("rotate-90");
+                    
+                    // Load subject-class combinations
+                    loadSubjectClassCombinations();
+                }
+            }
+        }
+
+    </script>
+</body>
+</html>

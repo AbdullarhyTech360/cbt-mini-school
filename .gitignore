@@ -1,0 +1,20 @@
+.venv/
+.vscode/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.db
+*.sqlite3
+*.log
+
+/School keep
+/.env
+
+/node_modules
+/designs
+
+# Uploaded files (keep directory structure but ignore uploaded content)
+static/uploads/*
+!static/uploads/.gitkeep
+!static/uploads/school_logos/.gitkeep

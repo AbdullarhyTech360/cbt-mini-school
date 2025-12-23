@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Flask Mini App</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='dist/output.css') }}">
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&amp;display=swap"
+    rel="stylesheet" />
+  <!-- Material Icons - Using local fonts instead of CDN -->
+  <!-- <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet"> -->
+  <!-- Removed preload tags to prevent warnings about unused preloaded resources -->
+  <style>
+    .material-symbols-outlined,
+    .material-symbols-rounded,
+    .material-symbols-sharp {
+      font-variation-settings:
+        'FILL' 0,
+        'wght' 400,
+        'GRAD' 0,
+        'opsz' 24
+    }
+  </style>
+</head>
+
+<body class="bg-gray-100 text-gray-900">
+  <nav class="bg-blue-600 text-white p-4">
+    <div class="container mx-auto">
+      <a href="{{ url_for('index') }}" class="font-bold">Home</a> |
+      <a href="{{ url_for('login') }}">Login</a>
+    </div>
+  </nav>
+
+  <main class="p-6">
+    {% block content %}{% endblock %}
+  </main>
+</body>
+
+</html>

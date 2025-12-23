@@ -1,0 +1,355 @@
+
+{% extends "staff/base.html" %}
+{% block title %}My Classes{% endblock %}
+
+{% block sidebar_nav %} 
+{{ super() }}
+{% endblock %}
+{% block content %}
+<!-- Header Section -->
+<div class="mb-6 md:mb-8">
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+            <h1 class="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white mb-2">My Classes</h1>
+            <p class="text-gray-600 dark:text-gray-400 text-sm md:text-base">Manage and overview all your assigned classes.</p>
+        </div>
+        <div class="flex items-center gap-3">
+            <button class="flex items-center gap-2 px-3 py-2 md:px-4 md:py-2 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white rounded-lg shadow-md hover:shadow-lg transition-all duration-200 text-sm md:text-base">
+                <span class="material-symbols-outlined text-lg">add</span>
+                <span class="font-semibold">Create Class</span>
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Class Overview Stats -->
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-6 md:mb-8">
+    <div class="bg-gradient-to-br from-blue-500 to-blue-600 p-4 md:p-6 rounded-2xl shadow-lg">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-white/90 text-xs md:text-sm font-medium mb-1">Total Classes</p>
+                <p class="text-xl md:text-3xl font-bold text-white">3</p>
+            </div>
+            <div class="h-10 w-10 md:h-12 md:w-12 rounded-xl bg-white/20 flex items-center justify-center">
+                <span class="material-symbols-outlined text-white text-lg md:text-2xl">school</span>
+            </div>
+        </div>
+    </div>
+    <div class="bg-gradient-to-br from-green-500 to-green-600 p-4 md:p-6 rounded-2xl shadow-lg">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-white/90 text-xs md:text-sm font-medium mb-1">Total Students</p>
+                <p class="text-xl md:text-3xl font-bold text-white">78</p>
+            </div>
+            <div class="h-10 w-10 md:h-12 md:w-12 rounded-xl bg-white/20 flex items-center justify-center">
+                <span class="material-symbols-outlined text-white text-lg md:text-2xl">groups</span>
+            </div>
+        </div>
+    </div>
+    <div class="bg-gradient-to-br from-purple-500 to-purple-600 p-4 md:p-6 rounded-2xl shadow-lg">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-white/90 text-xs md:text-sm font-medium mb-1">Avg. Attendance</p>
+                <p class="text-xl md:text-3xl font-bold text-white">94%</p>
+            </div>
+            <div class="h-10 w-10 md:h-12 md:w-12 rounded-xl bg-white/20 flex items-center justify-center">
+                <span class="material-symbols-outlined text-white text-lg md:text-2xl">trending_up</span>
+            </div>
+        </div>
+    </div>
+    <div class="bg-gradient-to-br from-orange-500 to-orange-600 p-4 md:p-6 rounded-2xl shadow-lg">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-white/90 text-xs md:text-sm font-medium mb-1">Assignments Due</p>
+                <p class="text-xl md:text-3xl font-bold text-white">5</p>
+            </div>
+            <div class="h-10 w-10 md:h-12 md:w-12 rounded-xl bg-white/20 flex items-center justify-center">
+                <span class="material-symbols-outlined text-white text-lg md:text-2xl">assignment</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Search and Filter -->
+<div class="mb-6 md:mb-8">
+    <div class="flex flex-col lg:flex-row gap-4">
+        <div class="flex-1 relative">
+            <span class="material-symbols-outlined absolute left-4 top-3.5 text-gray-400">search</span>
+            <input type="text" placeholder="Search classes..."
+                class="w-full pl-12 pr-4 py-3.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition shadow-sm hover:shadow-md placeholder:text-gray-400 dark:placeholder:text-gray-500 text-sm md:text-base" />
+        </div>
+        <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+            <select aria-label="Filter by Subject" class="w-full sm:w-auto px-4 py-3.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition shadow-sm hover:shadow-md text-sm md:text-base">
+                <option>All Subjects</option>
+                <option>Mathematics</option>
+                <option>Physics</option>
+                <option>Computer Science</option>
+            </select>
+            <button class="flex items-center justify-center gap-2 px-4 py-3.5 bg-gradient-to-r from-primary to-blue-600 hover:from-primary/90 hover:to-blue-600/90 text-white rounded-xl shadow-md hover:shadow-lg transition-all duration-200 text-sm md:text-base font-semibold">
+                <span class="material-symbols-outlined text-lg">filter_list</span>
+                <span>Filter</span>
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Classes Grid -->
+<div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-6 mb-6 md:mb-8">
+    <!-- Class 1 -->
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-100 dark:border-gray-700 overflow-hidden hover:shadow-xl transition-all duration-200 group">
+        <div class="p-4 md:p-6 border-b border-gray-100 dark:border-gray-700">
+            <div class="flex items-center justify-between mb-4">
+                <div class="h-10 w-10 md:h-12 md:w-12 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center">
+                    <span class="material-symbols-outlined text-white text-lg md:text-xl">calculate</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button class="p-2 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
+                        <span class="material-symbols-outlined text-lg">edit</span>
+                    </button>
+                    <button class="p-2 text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-colors">
+                        <span class="material-symbols-outlined text-lg">delete</span>
+                    </button>
+                </div>
+            </div>
+            <h3 class="text-lg md:text-xl font-bold text-gray-800 dark:text-white mb-2">Mathematics</h3>
+            <p class="text-gray-600 dark:text-gray-400 text-xs md:text-sm mb-3">Advanced Algebra & Calculus</p>
+            <div class="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-xs md:text-sm text-gray-600 dark:text-gray-400">
+                <span class="flex items-center gap-1">
+                    <span class="material-symbols-outlined text-base">groups</span>
+                    26 students
+                </span>
+                <span class="flex items-center gap-1">
+                    <span class="material-symbols-outlined text-base">schedule</span>
+                    Grade 10A
+                </span>
+            </div>
+        </div>
+        <div class="p-4 md:p-6 space-y-3 md:space-y-4">
+            <div class="flex items-center justify-between">
+                <span class="text-xs md:text-sm font-medium text-gray-600 dark:text-gray-400">Attendance Rate</span>
+                <span class="text-xs md:text-sm font-semibold text-green-600 dark:text-green-400">96%</span>
+            </div>
+            <div class="flex items-center justify-between">
+                <span class="text-xs md:text-sm font-medium text-gray-600 dark:text-gray-400">Avg. Score</span>
+                <span class="text-xs md:text-sm font-semibold text-blue-600 dark:text-blue-400">87%</span>
+            </div>
+            <div class="flex items-center justify-between">
+                <span class="text-xs md:text-sm font-medium text-gray-600 dark:text-gray-400">Next Class</span>
+                <span class="text-xs md:text-sm font-semibold text-purple-600 dark:text-purple-400">Tomorrow 9:00 AM</span>
+            </div>
+        </div>
+        <div class="px-4 md:px-6 pb-4 md:pb-6">
+            <button class="w-full flex items-center justify-center gap-2 px-3 py-2 md:px-4 md:py-3 bg-gradient-to-r from-primary to-blue-600 hover:from-primary/90 hover:to-blue-600/90 text-white rounded-xl shadow-md hover:shadow-lg transition-all duration-200 font-semibold text-sm md:text-base">
+                <span class="material-symbols-outlined text-base md:text-lg">visibility</span>
+                View Details
+            </button>
+        </div>
+    </div>
+
+    <!-- Class 2 -->
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-100 dark:border-gray-700 overflow-hidden hover:shadow-xl transition-all duration-200 group">
+        <div class="p-4 md:p-6 border-b border-gray-100 dark:border-gray-700">
+            <div class="flex items-center justify-between mb-4">
+                <div class="h-10 w-10 md:h-12 md:w-12 rounded-xl bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center">
+                    <span class="material-symbols-outlined text-white text-lg md:text-xl">experiment</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button class="p-2 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
+                        <span class="material-symbols-outlined text-lg">edit</span>
+                    </button>
+                    <button class="p-2 text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-colors">
+                        <span class="material-symbols-outlined text-lg">delete</span>
+                    </button>
+                </div>
+            </div>
+            <h3 class="text-lg md:text-xl font-bold text-gray-800 dark:text-white mb-2">Physics</h3>
+            <p class="text-gray-600 dark:text-gray-400 text-xs md:text-sm mb-3">Mechanics & Thermodynamics</p>
+            <div class="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-xs md:text-sm text-gray-600 dark:text-gray-400">
+                <span class="flex items-center gap-1">
+                    <span class="material-symbols-outlined text-base">groups</span>
+                    24 students
+                </span>
+                <span class="flex items-center gap-1">
+                    <span class="material-symbols-outlined text-base">schedule</span>
+                    Grade 11B
+                </span>
+            </div>
+        </div>
+        <div class="p-4 md:p-6 space-y-3 md:space-y-4">
+            <div class="flex items-center justify-between">
+                <span class="text-xs md:text-sm font-medium text-gray-600 dark:text-gray-400">Attendance Rate</span>
+                <span class="text-xs md:text-sm font-semibold text-green-600 dark:text-green-400">91%</span>
+            </div>
+            <div class="flex items-center justify-between">
+                <span class="text-xs md:text-sm font-medium text-gray-600 dark:text-gray-400">Avg. Score</span>
+                <span class="text-xs md:text-sm font-semibold text-blue-600 dark:text-blue-400">82%</span>
+            </div>
+            <div class="flex items-center justify-between">
+                <span class="text-xs md:text-sm font-medium text-gray-600 dark:text-gray-400">Next Class</span>
+                <span class="text-xs md:text-sm font-semibold text-purple-600 dark:text-purple-400">Today 2:00 PM</span>
+            </div>
+        </div>
+        <div class="px-4 md:px-6 pb-4 md:pb-6">
+            <button class="w-full flex items-center justify-center gap-2 px-3 py-2 md:px-4 md:py-3 bg-gradient-to-r from-primary to-blue-600 hover:from-primary/90 hover:to-blue-600/90 text-white rounded-xl shadow-md hover:shadow-lg transition-all duration-200 font-semibold text-sm md:text-base">
+                <span class="material-symbols-outlined text-base md:text-lg">visibility</span>
+                View Details
+            </button>
+        </div>
+    </div>
+
+    <!-- Class 3 -->
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-100 dark:border-gray-700 overflow-hidden hover:shadow-xl transition-all duration-200 group">
+        <div class="p-4 md:p-6 border-b border-gray-100 dark:border-gray-700">
+            <div class="flex items-center justify-between mb-4">
+                <div class="h-10 w-10 md:h-12 md:w-12 rounded-xl bg-gradient-to-br from-green-500 to-green-600 flex items-center justify-center">
+                    <span class="material-symbols-outlined text-white text-lg md:text-xl">computer</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button class="p-2 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
+                        <span class="material-symbols-outlined text-lg">edit</span>
+                    </button>
+                    <button class="p-2 text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-colors">
+                        <span class="material-symbols-outlined text-lg">delete</span>
+                    </button>
+                </div>
+            </div>
+            <h3 class="text-lg md:text-xl font-bold text-gray-800 dark:text-white mb-2">Computer Science</h3>
+            <p class="text-gray-600 dark:text-gray-400 text-xs md:text-sm mb-3">Programming & Algorithms</p>
+            <div class="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-xs md:text-sm text-gray-600 dark:text-gray-400">
+                <span class="flex items-center gap-1">
+                    <span class="material-symbols-outlined text-base">groups</span>
+                    28 students
+                </span>
+                <span class="flex items-center gap-1">
+                    <span class="material-symbols-outlined text-base">schedule</span>
+                    Grade 9C
+                </span>
+            </div>
+        </div>
+        <div class="p-4 md:p-6 space-y-3 md:space-y-4">
+            <div class="flex items-center justify-between">
+                <span class="text-xs md:text-sm font-medium text-gray-600 dark:text-gray-400">Attendance Rate</span>
+                <span class="text-xs md:text-sm font-semibold text-green-600 dark:text-green-400">98%</span>
+            </div>
+            <div class="flex items-center justify-between">
+                <span class="text-xs md:text-sm font-medium text-gray-600 dark:text-gray-400">Avg. Score</span>
+                <span class="text-xs md:text-sm font-semibold text-blue-600 dark:text-blue-400">89%</span>
+            </div>
+            <div class="flex items-center justify-between">
+                <span class="text-xs md:text-sm font-medium text-gray-600 dark:text-gray-400">Next Class</span>
+                <span class="text-xs md:text-sm font-semibold text-purple-600 dark:text-purple-400">Friday 10:00 AM</span>
+            </div>
+        </div>
+        <div class="px-4 md:px-6 pb-4 md:pb-6">
+            <button class="w-full flex items-center justify-center gap-2 px-3 py-2 md:px-4 md:py-3 bg-gradient-to-r from-primary to-blue-600 hover:from-primary/90 hover:to-blue-600/90 text-white rounded-xl shadow-md hover:shadow-lg transition-all duration-200 font-semibold text-sm md:text-base">
+                <span class="material-symbols-outlined text-base md:text-lg">visibility</span>
+                View Details
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Activity -->
+<div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-4 md:p-6 border border-gray-100 dark:border-gray-700">
+    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
+        <h2 class="text-lg md:text-xl font-bold text-gray-800 dark:text-white flex items-center gap-2">
+            <span class="material-symbols-outlined text-primary">history</span>
+            Recent Class Activity
+        </h2>
+        <button class="text-primary font-semibold text-xs md:text-sm hover:underline">View All</button>
+    </div>
+    <div class="space-y-3 md:space-y-4">
+        <div class="flex items-start gap-3 md:gap-4 p-3 md:p-4 bg-gray-50 dark:bg-gray-700/50 rounded-xl border border-gray-100 dark:border-gray-600">
+            <div class="h-8 w-8 md:h-10 md:w-10 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center flex-shrink-0">
+                <span class="material-symbols-outlined text-white text-sm md:text-lg">edit_note</span>
+            </div>
+            <div class="flex-1 min-w-0">
+                <p class="font-semibold text-gray-800 dark:text-white text-sm mb-1">Updated scores for Mathematics quiz</p>
+                <p class="text-xs md:text-sm text-gray-600 dark:text-gray-400">Grade 10A • 2 hours ago</p>
+            </div>
+            <span class="px-2 py-1 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 text-xs font-semibold flex-shrink-0">Updated</span>
+        </div>
+
+        <div class="flex items-start gap-3 md:gap-4 p-3 md:p-4 bg-gray-50 dark:bg-gray-700/50 rounded-xl border border-gray-100 dark:border-gray-600">
+            <div class="h-8 w-8 md:h-10 md:w-10 rounded-lg bg-gradient-to-br from-green-500 to-green-600 flex items-center justify-center flex-shrink-0">
+                <span class="material-symbols-outlined text-white text-sm md:text-lg">checklist</span>
+            </div>
+            <div class="flex-1 min-w-0">
+                <p class="font-semibold text-gray-800 dark:text-white text-sm mb-1">Marked attendance for Physics class</p>
+                <p class="text-xs md:text-sm text-gray-600 dark:text-gray-400">Grade 11B • Yesterday</p>
+            </div>
+            <span class="px-2 py-1 rounded-full bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 text-xs font-semibold flex-shrink-0">Completed</span>
+        </div>
+
+        <div class="flex items-start gap-3 md:gap-4 p-3 md:p-4 bg-gray-50 dark:bg-gray-700/50 rounded-xl border border-gray-100 dark:border-gray-600">
+            <div class="h-8 w-8 md:h-10 md:w-10 rounded-lg bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center flex-shrink-0">
+                <span class="material-symbols-outlined text-white text-sm md:text-lg">upload_file</span>
+            </div>
+            <div class="flex-1 min-w-0">
+                <p class="font-semibold text-gray-800 dark:text-white text-sm mb-1">Uploaded new programming assignment</p>
+                <p class="text-xs md:text-sm text-gray-600 dark:text-gray-400">Computer Science Grade 9C • 3 days ago</p>
+            </div>
+            <span class="px-2 py-1 rounded-full bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 text-xs font-semibold flex-shrink-0">Uploaded</span>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Actions -->
+<div class="mt-6 md:mt-8 bg-gradient-to-r from-primary/5 to-blue-600/5 dark:from-primary/10 dark:to-blue-600/10 rounded-2xl p-4 md:p-6 border border-primary/20 dark:border-primary/30">
+    <div class="flex items-center justify-between mb-6">
+        <div>
+            <h2 class="text-lg md:text-xl font-bold text-gray-800 dark:text-white flex items-center gap-2">
+                <span class="material-symbols-outlined text-primary">flash_on</span>
+                Quick Actions
+            </h2>
+            <p class="text-xs md:text-sm text-gray-600 dark:text-gray-400 mt-1">Common tasks and shortcuts</p>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
+        <button class="flex flex-col items-center gap-2 md:gap-3 p-3 md:p-4 bg-white dark:bg-gray-800 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors border border-gray-100 dark:border-gray-600">
+            <div class="h-10 w-10 md:h-12 md:w-12 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center">
+                <span class="material-symbols-outlined text-white text-lg md:text-xl">edit_note</span>
+            </div>
+            <span class="text-xs md:text-sm font-semibold text-gray-800 dark:text-white">Input Scores</span>
+        </button>
+
+        <button class="flex flex-col items-center gap-2 md:gap-3 p-3 md:p-4 bg-white dark:bg-gray-800 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors border border-gray-100 dark:border-gray-600">
+            <div class="h-10 w-10 md:h-12 md:w-12 rounded-xl bg-gradient-to-br from-green-500 to-green-600 flex items-center justify-center">
+                <span class="material-symbols-outlined text-white text-lg md:text-xl">checklist</span>
+            </div>
+            <span class="text-xs md:text-sm font-semibold text-gray-800 dark:text-white">Mark Attendance</span>
+        </button>
+
+        <button class="flex flex-col items-center gap-2 md:gap-3 p-3 md:p-4 bg-white dark:bg-gray-800 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors border border-gray-100 dark:border-gray-600">
+            <div class="h-10 w-10 md:h-12 md:w-12 rounded-xl bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center">
+                <span class="material-symbols-outlined text-white text-lg md:text-xl">upload_file</span>
+            </div>
+            <span class="text-xs md:text-sm font-semibold text-gray-800 dark:text-white">Upload Content</span>
+        </button>
+
+        <button class="flex flex-col items-center gap-2 md:gap-3 p-3 md:p-4 bg-white dark:bg-gray-800 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors border border-gray-100 dark:border-gray-600">
+            <div class="h-10 w-10 md:h-12 md:w-12 rounded-xl bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center">
+                <span class="material-symbols-outlined text-white text-lg md:text-xl">assignment</span>
+            </div>
+            <span class="text-xs md:text-sm font-semibold text-gray-800 dark:text-white">Create Assignment</span>
+        </button>
+    </div>
+</div>
+
+<!-- Action Buttons -->
+<div class="mt-6 md:mt-8 flex flex-col sm:flex-row gap-3 md:gap-4">
+    <button class="flex-1 flex items-center justify-center gap-2 px-4 py-2 md:px-6 md:py-3 bg-white dark:bg-gray-700 text-primary dark:text-white border-2 border-primary dark:border-primary hover:bg-primary hover:text-white dark:hover:bg-primary dark:hover:text-white rounded-xl shadow-md hover:shadow-lg transition-all duration-200 font-semibold text-sm md:text-base">
+        <span class="material-symbols-outlined text-base md:text-lg">download</span>
+        Export Class Data
+    </button>
+    <button class="flex-1 flex items-center justify-center gap-2 px-4 py-2 md:px-6 md:py-3 bg-gradient-to-r from-primary to-blue-600 hover:from-primary/90 hover:to-blue-600/90 text-white rounded-xl shadow-md hover:shadow-lg transition-all duration-200 font-semibold text-sm md:text-base">
+        <span class="material-symbols-outlined text-base md:text-lg">analytics</span>
+        View Analytics
+    </button>
+    <button class="flex-1 flex items-center justify-center gap-2 px-4 py-2 md:px-6 md:py-3 bg-gray-100 dark:bg-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-500 rounded-xl shadow-md hover:shadow-lg transition-all duration-200 font-semibold text-sm md:text-base">
+        <span class="material-symbols-outlined text-base md:text-lg">settings</span>
+        Class Settings
+    </button>
+</div>
+{% endblock %}

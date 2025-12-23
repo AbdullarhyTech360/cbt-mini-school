@@ -1,0 +1,906 @@
+<!DOCTYPE html>
+{% extends "admin/base.html" %}
+
+{% block title %}Manage Subjects - Admin Panel{% endblock %}
+
+{% block sidebar_nav %}
+{{ super() }}
+{% endblock %}
+
+{% block content %}
+<!-- Initialize class data for JavaScript -->
+<script>
+    // Store class data organized by section for dynamic filtering
+    window.classDataBySection = {};
+    {% for class in classes %}
+    (function () {
+        const sectionId = '{{ class.section_id }}';
+        if (!window.classDataBySection[sectionId]) {
+            window.classDataBySection[sectionId] = [];
+        }
+        window.classDataBySection[sectionId].push({
+            id: '{{ class.class_room_id }}',
+            name: '{{ class.class_room_name }}'
+        });
+    })();
+    {% endfor %}
+</script>
+<!-- Load modal.js first -->
+<script src="{{ url_for('static', filename='js/components/modal.js') }}" defer></script>
+<script src="{{ url_for('static', filename='js/admin/subject.js') }}" defer></script>
+<!-- Header Section -->
+<div class="mb-6 md:mb-8">
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+            <h1 class="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white mb-2">Subject Management</h1>
+            <p class="text-gray-600 dark:text-gray-400 text-sm md:text-base">Manage subjects, curriculum, and academic
+                programs across the school.</p>
+        </div>
+        <div class="flex items-center gap-3">
+            <button
+                class="flex items-center gap-2 px-3 py-2 md:px-4 md:py-2 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white rounded-lg shadow-md hover:shadow-lg transition-all duration-200 text-sm md:text-base"
+                data-modal-target="createSubjectModal">
+                <span class="material-symbols-outlined text-lg">add</span>
+                <span class="font-semibold">Create Subject</span>
+            </button>
+            <button
+                class="flex items-center gap-2 px-3 py-2 md:px-4 md:py-2 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-lg shadow-md hover:shadow-lg transition-all duration-200 text-sm md:text-base"
+                data-modal-target="curriculumModal">
+                <span class="material-symbols-outlined text-lg">menu_book</span>
+                <span class="font-semibold">Manage Curriculum</span>
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- School Overview Stats-->
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-6 md:mb-8">
+    <div class="bg-gradient-to-br from-blue-500 to-blue-600 p-4 md:p-6 rounded-2xl shadow-lg">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-white/90 text-xs md:text-sm font-medium mb-1">Total Subjects</p>
+                <p class="text-xl md:text-3xl font-bold text-white">{{ subjects|length }}</p>
+            </div>
+            <div class="h-10 w-10 md:h-12 md:w-12 rounded-xl bg-white/20 flex items-center justify-center">
+                <span class="material-symbols-outlined text-white text-lg md:text-2xl">menu_book</span>
+            </div>
+        </div>
+    </div>
+    <div class="bg-gradient-to-br from-green-500 to-green-600 p-4 md:p-6 rounded-2xl shadow-lg">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-white/90 text-xs md:text-sm font-medium mb-1">Active Programs</p>
+                <p class="text-xl md:text-3xl font-bold text-white">6</p>
+            </div>
+            <div class="h-10 w-10 md:h-12 md:w-12 rounded-xl bg-white/20 flex items-center justify-center">
+                <span class="material-symbols-outlined text-white text-lg md:text-2xl">school</span>
+            </div>
+        </div>
+    </div>
+    <div class="bg-gradient-to-br from-purple-500 to-purple-600 p-4 md:p-6 rounded-2xl shadow-lg">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-white/90 text-xs md:text-sm font-medium mb-1">Curriculum Coverage</p>
+                <p class="text-xl md:text-3xl font-bold text-white">94%</p>
+            </div>
+            <div class="h-10 w-10 md:h-12 md:w-12 rounded-xl bg-white/20 flex items-center justify-center">
+                <span class="material-symbols-outlined text-white text-lg md:text-2xl">percent</span>
+            </div>
+        </div>
+    </div>
+    <div class="bg-gradient-to-br from-orange-500 to-orange-600 p-4 md:p-6 rounded-2xl shadow-lg">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-white/90 text-xs md:text-sm font-medium mb-1">Total Classes</p>
+                <p class="text-xl md:text-3xl font-bold text-white">{{ classes|length }}</p>
+            </div>
+            <div class="h-10 w-10 md:h-12 md:w-12 rounded-xl bg-white/20 flex items-center justify-center">
+                <span class="material-symbols-outlined text-white text-lg md:text-2xl">groups</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Search and Filter -->
+<div class="mb-6 md:mb-8">
+    <div class="flex flex-col lg:flex-row gap-4">
+        <div class="flex-1 relative">
+            <span class="material-symbols-outlined absolute left-4 top-3.5 text-gray-400">search</span>
+            <input id="searchSubjects" type="text" placeholder="Search subjects, curriculum, or programs..."
+                class="w-full pl-12 pr-4 py-3.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition shadow-sm hover:shadow-md placeholder:text-gray-400 dark:placeholder:text-gray-500 text-sm md:text-base" />
+        </div>
+        <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+            <select id="subjectClassSelect"
+                class="w-full sm:w-auto px-4 py-3.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition shadow-sm hover:shadow-md text-sm md:text-base">
+                <option id="all" value="all">All Classes</option>
+                {% for class in classes %}
+                <option id="{{ class.class_room_id }}" value="{{ class.class_room_id }}">{{ class.class_room_name }}
+                </option>
+                {% endfor %}
+            </select>
+            <select id="subjectSectionSelect"
+                class="w-full sm:w-auto px-4 py-3.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition shadow-sm hover:shadow-md text-sm md:text-base">
+                <option value="all">All Sections</option>
+                {% for section in sections %}
+                <option id="{{ section.section_id }}" value="{{ section.abbreviation }}">{{ section.name }}</option>
+                {% endfor %}
+            </select>
+            <select id="subjectCategorySelect"
+                class="w-full sm:w-auto px-4 py-3.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition shadow-sm hover:shadow-md text-sm md:text-base">
+                <option value="all">All Categories</option>
+                <option value="core subject">Core Subjects</option>
+                <option value="science">Science</option>
+                <option value="technology">Technology</option>
+                <option value="arts">Arts</option>
+                <option value="elective">Electives</option>
+                <option value="general">General</option>
+                <option value="social science">Social Science</option>
+                <option value="political science">Political Science</option>
+                <option value="humanities">Humanities</option>
+            </select>
+            <button
+                class="flex items-center justify-center gap-2 px-4 py-3.5 bg-gradient-to-r from-primary to-blue-600 hover:from-primary/90 hover:to-blue-600/90 text-white rounded-xl shadow-md hover:shadow-lg transition-all duration-200 text-sm md:text-base font-semibold">
+                <span class="material-symbols-outlined text-lg">filter_list</span>
+                <span>Filter</span>
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Update the subject card section to include teacher assignment information -->
+<!-- Replace the existing subject card section with this updated version -->
+<!-- Subjects Management Cards -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 mb-6 md:mb-8">
+    <!-- Load subjects -->
+    {% for subject in subjects %}
+    <div
+        class="subject-card bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-100 dark:border-gray-700 overflow-hidden hover:shadow-xl transition-all duration-200 group"
+        data-category="{{ subject.subject_category | lower }}"
+        data-classes='{{ subject.classes | map(attribute="class_room_id") | list | tojson }}'
+        data-name="{{ subject.subject_name | lower }}"
+        data-description="{{ subject.description | lower }}">
+        <div class="p-4 md:p-6 border-b border-gray-100 dark:border-gray-700">
+            <div class="flex items-center justify-between mb-4">
+                <!-- Parse category colors from JSON -->
+                {% set category_colors = (subject.category_colors or '{}') | from_json %}
+                <div
+                    class="h-12 w-12 rounded-xl bg-gradient-to-br {{ category_colors.from | default('from-blue-500') }} {{ category_colors.to | default('to-blue-600') }} flex items-center justify-center">
+                    <span class="material-symbols-outlined text-white text-xl">{{ subject.icon_name }}</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button data-edit-id="{{ subject.subject_id }}" data-subject-code="{{ subject.subject_code or '' }}"
+                        data-subject-head-id="{{ subject.subject_head_id or '' }}"
+                        data-class-names='{{ subject.classes | map(attribute="class_room_name") | list | tojson }}'
+                        data-category="{{ subject.subject_category }}" data-icon="{{ subject.icon_name }}"
+                        data-description="{{ subject.description }}"
+                        data-color='{{ subject.category_colors | default({}) | tojson }}'
+                        data-subject-name="{{ subject.subject_name }}"
+                        class="p-2 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors edit-subject-btn"
+                        title="Edit subject">
+                        <span class="material-symbols-outlined text-lg">edit</span>
+                    </button>
+                    <button data-delete-id="{{ subject.subject_id }}" data-subject-name="{{ subject.subject_name }}"
+                        class="p-2 text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-colors delete-subject-btn"
+                        title="Delete subject">
+                        <span class="material-symbols-outlined text-lg">delete</span>
+                    </button>
+                </div>
+            </div>
+            <h3 class="subject-name text-lg font-bold text-gray-800 dark:text-white mb-2">{{ subject.subject_name }}
+            </h3>
+            {# subject category #}
+            <div class="flex flex-wrap gap-2 mb-3">
+                <span class="px-2 py-1 text-white">
+                    {{ subject.subject_category }}</span>
+            </div>
+            <p class="subject-description text-gray-600 dark:text-gray-400 text-sm mb-3">{{ subject.description }}</p>
+            <div class="subject-class flex flex-wrap gap-2 mb-3">
+                <span
+                    class="px-2 py-1 text-xs {{ category_colors.badge | default('bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300') }} rounded-full">{{
+                    subject.subject_category }}</span>
+                {% for class_room in subject.classes %}
+                <span
+                    class="px-2 py-1 text-xs bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded-full">{{
+                    class_room.class_room_name }}</span>
+                {% endfor %}
+            </div>
+            <div class="space-y-2 text-sm text-gray-600 dark:text-gray-400">
+                <div class="flex justify-between">
+                    <span>Classes:</span>
+                    <span class="font-semibold">{{ subject.classes|length }}</span>
+                </div>
+                <div class="flex justify-between">
+                    <span>Students:</span>
+                    <span class="font-semibold">112</span>
+                </div>
+                <div class="flex justify-between">
+                    <span>Teacher:</span>
+                    <span class="font-semibold">
+                        {% if subject.subject_head %}
+                        {{ subject.subject_head.first_name }} {{ subject.subject_head.last_name }}
+                        {% else %}
+                        <span class="text-red-500">Not assigned</span>
+                        {% endif %}
+                    </span>
+                </div>
+            </div>
+        </div>
+        <div class="px-4 md:px-6 pb-4 md:pb-6">
+            <div class="flex gap-2">
+                <button data-assign-id="{{ subject.subject_id }}" data-subject-name="{{ subject.subject_name }}"
+                    data-subject-code="{{ subject.subject_code or 'N/A' }}"
+                    class="flex-1 flex items-center justify-center gap-2 px-3 py-2 md:px-4 md:py-3 bg-gradient-to-r from-primary to-blue-600 hover:from-primary/90 hover:to-blue-600/90 text-white rounded-xl shadow-md hover:shadow-lg transition-all duration-200 font-semibold text-sm md:text-base assign-teacher-btn">
+                    <span class="material-symbols-outlined text-base md:text-lg">person</span>
+                    <span class="hidden sm:inline">Subject Head</span>
+                    <span class="sm:hidden">Head</span>
+                </button>
+                <button data-view-id="{{ subject.subject_id }}" data-subject-code="{{ subject.subject_code or 'N/A' }}"
+                    class="flex items-center justify-center gap-2 px-3 py-2 md:px-4 md:py-3 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-xl shadow-md hover:shadow-lg transition-all duration-200 font-semibold text-sm md:text-base view-subject-btn">
+                    <span class="material-symbols-outlined text-base md:text-lg">visibility</span>
+                    <span class="hidden sm:inline">View Details</span>
+                    <span class="sm:hidden">View</span>
+                </button>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Curriculum Overview -->
+<div
+    class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-100 dark:border-gray-700 overflow-hidden mb-6 md:mb-8">
+    <div class="p-4 md:p-6 border-b border-gray-100 dark:border-gray-700">
+        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <h2 class="text-lg md:text-xl font-bold text-gray-800 dark:text-white flex items-center gap-2">
+                <span class="material-symbols-outlined text-primary">menu_book</span>
+                Curriculum Overview
+            </h2>
+            <button
+                class="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-primary to-blue-600 hover:from-primary/90 hover:to-blue-600/90 text-white rounded-lg shadow-md hover:shadow-lg transition-all duration-200 text-sm">
+                <span class="material-symbols-outlined text-lg">download</span>
+                Export Report
+            </button>
+        </div>
+    </div>
+
+    <div class="p-4 md:p-6">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <!-- Grade Distribution -->
+            <div>
+                <h3 class="text-lg font-semibold text-gray-800 dark:text-white mb-4">Subjects by Grade Level</h3>
+                <div class="space-y-3">
+                    <div class="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                        <div class="flex items-center gap-3">
+                            <div class="h-8 w-8 rounded-lg bg-blue-500 flex items-center justify-center">
+                                <span class="text-white text-sm font-bold">9</span>
+                            </div>
+                            <span class="text-sm font-semibold text-gray-800 dark:text-white">Grade 9</span>
+                        </div>
+                        <div class="flex gap-2">
+                            <span
+                                class="px-2 py-1 text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full">Math</span>
+                            <span
+                                class="px-2 py-1 text-xs bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded-full">CS</span>
+                            <span
+                                class="px-2 py-1 text-xs bg-rose-100 dark:bg-rose-900/30 text-rose-700 dark:text-rose-300 rounded-full">English</span>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                        <div class="flex items-center gap-3">
+                            <div class="h-8 w-8 rounded-lg bg-green-500 flex items-center justify-center">
+                                <span class="text-white text-sm font-bold">10</span>
+                            </div>
+                            <span class="text-sm font-semibold text-gray-800 dark:text-white">Grade 10</span>
+                        </div>
+                        <div class="flex gap-2">
+                            <span
+                                class="px-2 py-1 text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full">Math</span>
+                            <span
+                                class="px-2 py-1 text-xs bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 rounded-full">Biology</span>
+                            <span
+                                class="px-2 py-1 text-xs bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded-full">CS</span>
+                            <span
+                                class="px-2 py-1 text-xs bg-rose-100 dark:bg-rose-900/30 text-rose-700 dark:text-rose-300 rounded-full">English</span>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                        <div class="flex items-center gap-3">
+                            <div class="h-8 w-8 rounded-lg bg-purple-500 flex items-center justify-center">
+                                <span class="text-white text-sm font-bold">11</span>
+                            </div>
+                            <span class="text-sm font-semibold text-gray-800 dark:text-white">Grade 11</span>
+                        </div>
+                        <div class="flex gap-2">
+                            <span
+                                class="px-2 py-1 text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full">Math</span>
+                            <span
+                                class="px-2 py-1 text-xs bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded-full">Physics</span>
+                            <span
+                                class="px-2 py-1 text-xs bg-cyan-100 dark:bg-cyan-900/30 text-cyan-700 dark:text-cyan-300 rounded-full">Chemistry</span>
+                            <span
+                                class="px-2 py-1 text-xs bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded-full">CS</span>
+                            <span
+                                class="px-2 py-1 text-xs bg-rose-100 dark:bg-rose-900/30 text-rose-700 dark:text-rose-300 rounded-full">English</span>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                        <div class="flex items-center gap-3">
+                            <div class="h-8 w-8 rounded-lg bg-orange-500 flex items-center justify-center">
+                                <span class="text-white text-sm font-bold">12</span>
+                            </div>
+                            <span class="text-sm font-semibold text-gray-800 dark:text-white">Grade 12</span>
+                        </div>
+                        <div class="flex gap-2">
+                            <span
+                                class="px-2 py-1 text-xs bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded-full">Physics</span>
+                            <span
+                                class="px-2 py-1 text-xs bg-cyan-100 dark:bg-cyan-900/30 text-cyan-700 dark:text-cyan-300 rounded-full">Chemistry</span>
+                            <span
+                                class="px-2 py-1 text-xs bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded-full">CS</span>
+                            <span
+                                class="px-2 py-1 text-xs bg-rose-100 dark:bg-rose-900/30 text-rose-700 dark:text-rose-300 rounded-full">English</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Subject Categories -->
+            <div>
+                <h3 class="text-lg font-semibold text-gray-800 dark:text-white mb-4">Subject Categories</h3>
+                <div class="space-y-4">
+                    <div class="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                        <div class="flex items-center gap-3">
+                            <div class="h-8 w-8 rounded-lg bg-blue-500 flex items-center justify-center">
+                                <span class="material-symbols-outlined text-white text-sm">book</span>
+                            </div>
+                            <div>
+                                <p class="text-sm font-semibold text-gray-800 dark:text-white">Core Subjects</p>
+                                <p class="text-xs text-gray-500 dark:text-gray-400">Essential academic subjects</p>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-sm font-bold text-gray-900 dark:text-white">2</p>
+                            <p class="text-xs text-gray-500 dark:text-gray-400">subjects</p>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                        <div class="flex items-center gap-3">
+                            <div class="h-8 w-8 rounded-lg bg-purple-500 flex items-center justify-center">
+                                <span class="material-symbols-outlined text-white text-sm">experiment</span>
+                            </div>
+                            <div>
+                                <p class="text-sm font-semibold text-gray-800 dark:text-white">Science</p>
+                                <p class="text-xs text-gray-500 dark:text-gray-400">Scientific disciplines</p>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-sm font-bold text-gray-900 dark:text-white">3</p>
+                            <p class="text-xs text-gray-500 dark:text-gray-400">subjects</p>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                        <div class="flex items-center gap-3">
+                            <div class="h-8 w-8 rounded-lg bg-green-500 flex items-center justify-center">
+                                <span class="material-symbols-outlined text-white text-sm">computer</span>
+                            </div>
+                            <div>
+                                <p class="text-sm font-semibold text-gray-800 dark:text-white">Technology</p>
+                                <p class="text-xs text-gray-500 dark:text-gray-400">Technical and digital skills</p>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-sm font-bold text-gray-900 dark:text-white">1</p>
+                            <p class="text-xs text-gray-500 dark:text-gray-400">subject</p>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                        <div class="flex items-center gap-3">
+                            <div class="h-8 w-8 rounded-lg bg-rose-500 flex items-center justify-center">
+                                <span class="material-symbols-outlined text-white text-sm">palette</span>
+                            </div>
+                            <div>
+                                <p class="text-sm font-semibold text-gray-800 dark:text-white">Arts & Humanities</p>
+                                <p class="text-xs text-gray-500 dark:text-gray-400">Creative and cultural subjects</p>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-sm font-bold text-gray-900 dark:text-white">1</p>
+                            <p class="text-xs text-gray-500 dark:text-gray-400">subject</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Actions Panel -->
+<div
+    class="bg-gradient-to-r from-primary/5 to-blue-600/5 dark:from-primary/10 dark:to-blue-600/10 rounded-2xl p-4 md:p-6 border border-primary/20 dark:border-primary/30">
+    <div class="flex items-center justify-between mb-6">
+        <div>
+            <h2 class="text-lg md:text-xl font-bold text-gray-800 dark:text-white flex items-center gap-2">
+                <span class="material-symbols-outlined text-primary">flash_on</span>
+                Quick Actions
+            </h2>
+            <p class="text-xs md:text-sm text-gray-600 dark:text-gray-400 mt-1">Common subject management tasks</p>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
+        <button
+            class="flex flex-col items-center gap-2 md:gap-3 p-3 md:p-4 bg-white dark:bg-gray-800 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors border border-gray-100 dark:border-gray-600">
+            <div
+                class="h-10 w-10 md:h-12 md:w-12 rounded-xl bg-gradient-to-br from-green-500 to-green-600 flex items-center justify-center">
+                <span class="material-symbols-outlined text-white text-lg md:text-xl">add</span>
+            </div>
+            <span class="text-xs md:text-sm font-semibold text-gray-800 dark:text-white">Create Subject</span>
+        </button>
+
+        <button
+            class="flex flex-col items-center gap-2 md:gap-3 p-3 md:p-4 bg-white dark:bg-gray-800 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors border border-gray-100 dark:border-gray-600">
+            <div
+                class="h-10 w-10 md:h-12 md:w-12 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center">
+                <span class="material-symbols-outlined text-white text-lg md:text-xl">menu_book</span>
+            </div>
+            <span class="text-xs md:text-sm font-semibold text-gray-800 dark:text-white">Manage Curriculum</span>
+        </button>
+
+        <button
+            class="flex flex-col items-center gap-2 md:gap-3 p-3 md:p-4 bg-white dark:bg-gray-800 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors border border-gray-100 dark:border-gray-600">
+            <div
+                class="h-10 w-10 md:h-12 md:w-12 rounded-xl bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center">
+                <span class="material-symbols-outlined text-white text-lg md:text-xl">assignment</span>
+            </div>
+            <span class="text-xs md:text-sm font-semibold text-gray-800 dark:text-white">Assign Teachers</span>
+        </button>
+
+        <button
+            class="flex flex-col items-center gap-2 md:gap-3 p-3 md:p-4 bg-white dark:bg-gray-800 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors border border-gray-100 dark:border-gray-600">
+            <div
+                class="h-10 w-10 md:h-12 md:w-12 rounded-xl bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center">
+                <span class="material-symbols-outlined text-white text-lg md:text-xl">analytics</span>
+            </div>
+            <span class="text-xs md:text-sm font-semibold text-gray-800 dark:text-white">Subject Analytics</span>
+        </button>
+    </div>
+</div>
+
+<!-- Create Subject Modal -->
+<div id="createSubjectModal" class="modal fixed inset-0 bg-black/50 z-50 hidden items-center justify-center p-4">
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+        <div class="p-6 border-b border-gray-200 dark:border-gray-700">
+            <div class="flex items-center justify-between">
+                <h2 class="text-xl font-bold text-gray-900 dark:text-white">Create New Subject</h2>
+                <button class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                    onclick="closeModal('createSubjectModal')">
+                    <span class="material-symbols-outlined text-2xl">close</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Create subject form -->
+        <form id="createSubjectForm" class="p-6 space-y-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <label for="subjectName"
+                        class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Subject Name</label>
+                    <input type="text" id="subjectName" name="subject_name" required placeholder="Mathematics"
+                        class="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition">
+                </div>
+                <div>
+                    <label for="subjectSection"
+                        class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Subject
+                        Section</label>
+                    <select id="subjectSection" name="subject_section" required
+                        class="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition">
+                        <option selected disabled value="">Select a section...</option>
+                        <option value="all">All Sections</option>
+                        {% for section in sections %}
+                        <option value="{{ section.section_id }}">{{ section.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label for="subjectCode"
+                        class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Subject Code <span
+                            class="text-gray-400 text-xs">(Optional)</span></label>
+                    <input type="text" id="subjectCode" name="subject_code" placeholder="MATH101"
+                        class="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition">
+                </div>
+                <div>
+                    <label for="category"
+                        class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Category</label>
+                    <select id="category" name="category" required
+                        class="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition">
+                        <option value="Core Subject">Core Subject</option>
+                        <option value="Science">Science</option>
+                        <option value="Technology">Technology</option>
+                        <option value="Arts">Arts</option>
+                        <option value="Elective">Elective</option>
+                        <option value="General">General</option>
+                        <option value="Social Science">Social Science</option>
+                        <option value="Political Science">Political Science</option>
+                        <option value="Humanities">Humanities</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Class
+                        Levels</label>
+                    <div id="classLevelsContainer" class="flex flex-wrap gap-2">
+                        <p class="text-sm text-gray-500 dark:text-gray-400">Select a section first to see available
+                            class levels</p>
+                    </div>
+                </div>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <label for="subject_head"
+                        class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Subject Head</label>
+                    <select id="subject_head" name="subject_head"
+                        class="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition">
+                        <option selected disabled value="">Choose the head of Subject</option>
+                        {% for user in users %}
+                        <option value="{{ user.id }}">{{ user.first_name }} {{ user.last_name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Color</label>
+                    <div id="colorPalette" class="flex flex-wrap gap-2">
+                        <!-- Color options will be populated by JavaScript -->
+                    </div>
+                    <input type="hidden" id="selectedColor" name="selected_color">
+                </div>
+                <div class="relative">
+                    <label for="iconSelect"
+                        class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Icon</label>
+                    <select id="iconSelect" name="icon_name"
+                        class="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition appearance-none">
+                        <option selected disabled value="">Choose an icon</option>
+                        {% for icon_dict in icons %}
+                        {% for icon_value, icon_name in icon_dict.items() %}
+                        <option value="{{ icon_value }}">{{ icon_name }} ({{ icon_value }})</option>
+                        {% endfor %}
+                        {% endfor %}
+                    </select>
+                    <div
+                        class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700 dark:text-gray-300 mt-6">
+                        <span class="material-symbols-outlined">expand_more</span>
+                    </div>
+                </div>
+            </div>
+            <!-- subject preview container -->
+            <div
+                class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-100 dark:border-gray-700 overflow-hidden hover:shadow-xl transition-all duration-200 group">
+                <div class="p-4 md:p-6 border-b border-gray-100 dark:border-gray-700">
+                    <div class="flex items-center justify-between mb-4">
+                        <div id="previewIconContainer"
+                            class="h-12 w-12 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center">
+                            <span id="previewIcon" class="material-symbols-outlined text-white text-xl">calculate</span>
+                        </div>
+                    </div>
+                    <h3 id="previewTitle" class="text-lg font-bold text-gray-800 dark:text-white mb-2">Subject Name</h3>
+                    <p id="previewDescription" class="text-gray-600 dark:text-gray-400 text-sm mb-3">Subject description
+                        will appear here...</p>
+                    <div class="flex flex-wrap gap-2 mb-3">
+                        <span id="previewCategory"
+                            class="px-2 py-1 text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full">Core
+                            Subject</span>
+                        <span id="previewGradeLevels"
+                            class="px-2 py-1 text-xs bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded-full">Grade
+                            Levels</span>
+                    </div>
+                </div>
+            </div>
+            <div>
+                <label for="description"
+                    class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Description</label>
+                <textarea id="description" name="description" rows="3" required
+                    placeholder="Brief description of the subject and learning objectives..."
+                    class="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition resize-none"></textarea>
+            </div>
+
+            <div>
+                <label for="learningOutcomes"
+                    class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Learning Outcomes
+                    (Optional)</label>
+                <textarea id="learningOutcomes" name="learning_outcomes" rows="3"
+                    placeholder="Key learning outcomes and competencies..."
+                    class="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition resize-none"></textarea>
+            </div>
+
+            <div class="flex flex-col sm:flex-row gap-3 pt-4">
+                <button type="submit"
+                    class="flex-1 bg-gradient-to-r from-primary to-blue-600 hover:from-primary/90 hover:to-blue-600/90 text-white font-semibold py-3 px-6 rounded-xl shadow-md hover:shadow-lg transition-all duration-200">
+                    Create Subject
+                </button>
+                <button type="button" onclick="closeModal('createSubjectModal')"
+                    class="flex-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-semibold py-3 px-6 rounded-xl hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
+                    Cancel
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Edit Subject Modal -->
+<div id="editSubjectModal" class="modal fixed inset-0 bg-black/50 z-50 hidden items-center justify-center p-4">
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+        <div class="p-6 border-b border-gray-200 dark:border-gray-700">
+            <div class="flex items-center justify-between">
+                <h2 class="text-xl font-bold text-gray-900 dark:text-white">Edit Subject</h2>
+                <button class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                    onclick="closeModal('editSubjectModal')">
+                    <span class="material-symbols-outlined text-2xl">close</span>
+                </button>
+            </div>
+        </div>
+
+        <form id="editSubjectForm" class="p-6 space-y-6">
+            <input type="hidden" id="editSubjectId" name="subject_id">
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <label for="editSubjectName"
+                        class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Subject Name</label>
+                    <input type="text" id="editSubjectName" name="subject_name" required
+                        class="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition">
+                </div>
+                <div>
+                    <label for="editSubjectCode"
+                        class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Subject Code <span
+                            class="text-gray-400 text-xs">(Optional)</span></label>
+                    <input type="text" id="editSubjectCode" name="subject_code" placeholder="MATH101"
+                        class="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition">
+                </div>
+                <div>
+                    <label for="editCategory"
+                        class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Category</label>
+                    <select id="editCategory" name="category" required
+                        class="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition">
+                        <option value="Core Subject">Core Subject</option>
+                        <option value="Science">Science</option>
+                        <option value="Technology">Technology</option>
+                        <option value="Arts">Arts</option>
+                        <option value="Elective">Elective</option>
+                        <option value="General">General</option>
+                        <option value="Social Science">Social Science</option>
+                        <option value="Political Science">Political Science</option>
+                        <option value="Humanities">Humanities</option>
+                    </select>
+                </div>
+                <div class="relative">
+                    <label for="editIconSelect"
+                        class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Icon</label>
+                    <select id="editIconSelect" name="icon_name"
+                        class="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition appearance-none">
+                        {% for icon_dict in icons %}
+                        {% for icon_value, icon_name in icon_dict.items() %}
+                        <option value="{{ icon_value }}">{{ icon_name }} ({{ icon_value }})</option>
+                        {% endfor %}
+                        {% endfor %}
+                    </select>
+                    <div
+                        class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700 dark:text-gray-300 mt-6">
+                        <span class="material-symbols-outlined">expand_more</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <label for="editSubjectSection"
+                        class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Subject
+                        Section</label>
+                    <select id="editSubjectSection" name="subject_section"
+                        class="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition">
+                        <option value="all">All Sections</option>
+                        {% for section in sections %}
+                        <option value="{{ section.section_id }}">{{ section.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Class
+                        Levels</label>
+                    <div id="editClassLevelsContainer" class="flex flex-wrap gap-2">
+                        <p class="text-sm text-gray-500 dark:text-gray-400">Select a section first to see available
+                            class levels</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <label for="editSubjectHead"
+                        class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Subject Head</label>
+                    <select id="editSubjectHead" name="subject_head"
+                        class="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition">
+                        <option value="">No Subject Head</option>
+                        {% for user in users %}
+                        <option value="{{ user.id }}">{{ user.first_name }} {{ user.last_name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Color</label>
+                    <div id="editColorPalette" class="flex flex-wrap gap-2">
+                        <!-- Color options will be populated by JavaScript -->
+                    </div>
+                    <input type="hidden" id="editSelectedColor" name="selected_color">
+                </div>
+
+                <div>
+                    <label for="editDescription"
+                        class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Description</label>
+                    <textarea id="editDescription" name="description" rows="3" required
+                        class="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition resize-none"></textarea>
+                </div>
+
+                <div class="flex flex-col sm:flex-row gap-3 pt-4">
+                    <button type="submit"
+                        class="flex-1 bg-gradient-to-r from-primary to-blue-600 hover:from-primary/90 hover:to-blue-600/90 text-white font-semibold py-3 px-6 rounded-xl shadow-md hover:shadow-lg transition-all duration-200">
+                        Update Subject
+                    </button>
+                    <button type="button" onclick="closeModal('editSubjectModal')"
+                        class="flex-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-semibold py-3 px-6 rounded-xl hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
+                        Cancel
+                    </button>
+                </div>
+        </form>
+    </div>
+</div>
+
+<!-- View Subject Details Modal -->
+<div id="viewSubjectModal" class="modal fixed inset-0 bg-black/50 z-50 hidden items-center justify-center p-4">
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
+        <div class="p-6 border-b border-gray-200 dark:border-gray-700">
+            <div class="flex items-center justify-between">
+                <h2 class="text-xl font-bold text-gray-900 dark:text-white">Subject Details</h2>
+                <button class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                    onclick="closeModal('viewSubjectModal')">
+                    <span class="material-symbols-outlined text-2xl">close</span>
+                </button>
+            </div>
+        </div>
+
+        <div class="p-6 space-y-6">
+            <!-- Subject Header -->
+            <div class="flex items-start gap-4">
+                <div id="viewIconContainer"
+                    class="h-16 w-16 rounded-2xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center flex-shrink-0">
+                    <span id="viewIcon" class="material-symbols-outlined text-white text-3xl">calculate</span>
+                </div>
+                <div class="flex-1">
+                    <h3 id="viewSubjectName" class="text-2xl font-bold text-gray-900 dark:text-white mb-2">Subject Name
+                    </h3>
+                    <div class="flex flex-wrap gap-2 mb-3">
+                        <span id="viewCategory"
+                            class="px-3 py-1 text-sm bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full font-semibold">Category</span>
+                        <span id="viewSubjectCode"
+                            class="px-3 py-1 text-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-full font-semibold">CODE</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Description -->
+            <div class="bg-gray-50 dark:bg-gray-700/50 rounded-xl p-4">
+                <h4 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Description</h4>
+                <p id="viewDescription" class="text-gray-600 dark:text-gray-400">Subject description...</p>
+            </div>
+
+            <!-- Stats Grid -->
+            <div class="grid grid-cols-3 gap-4">
+                <div class="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-4 text-center">
+                    <div class="text-2xl font-bold text-blue-600 dark:text-blue-400" id="viewClasses">0</div>
+                    <div class="text-sm text-gray-600 dark:text-gray-400 mt-1">Classes</div>
+                </div>
+                <div class="bg-green-50 dark:bg-green-900/20 rounded-xl p-4 text-center">
+                    <div class="text-2xl font-bold text-green-600 dark:text-green-400" id="viewStudents">0</div>
+                    <div class="text-sm text-gray-600 dark:text-gray-400 mt-1">Students</div>
+                </div>
+                <div class="bg-purple-50 dark:bg-purple-900/20 rounded-xl p-4 text-center">
+                    <div class="text-2xl font-bold text-purple-600 dark:text-purple-400" id="viewTeachers">0</div>
+                    <div class="text-sm text-gray-600 dark:text-gray-400 mt-1">Teachers</div>
+                </div>
+            </div>
+
+            <!-- Grade Levels -->
+            <div>
+                <h4 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Grade Levels</h4>
+                <div id="viewGradeLevels" class="flex flex-wrap gap-2">
+                    <!-- Grade levels will be inserted here -->
+                </div>
+            </div>
+
+            <!-- Learning Outcomes -->
+            <div id="viewLearningOutcomesContainer" class="hidden">
+                <h4 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Learning Outcomes</h4>
+                <div class="bg-gray-50 dark:bg-gray-700/50 rounded-xl p-4">
+                    <p id="viewLearningOutcomes" class="text-gray-600 dark:text-gray-400"></p>
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="flex gap-3 pt-4">
+                <button id="viewEditBtn" onclick="closeModal('viewSubjectModal')"
+                    class="flex-1 flex items-center justify-center gap-2 bg-gradient-to-r from-primary to-blue-600 hover:from-primary/90 hover:to-blue-600/90 text-white font-semibold py-3 px-6 rounded-xl shadow-md hover:shadow-lg transition-all duration-200">
+                    <span class="material-symbols-outlined">edit</span>
+                    <span>Edit Subject</span>
+                </button>
+                <button onclick="closeModal('viewSubjectModal')"
+                    class="px-6 py-3 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-semibold rounded-xl hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
+                    Close
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Assign Teacher Modal -->
+<div id="assignTeacherModal" class="modal hidden fixed inset-0 z-50 items-center justify-center p-4 bg-black/50">
+    <div
+        class="modal-content relative bg-white dark:bg-gray-800 rounded-2xl shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto">
+        <div class="p-6">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-xl font-bold text-gray-900 dark:text-white">Assign Subject Headship</h3>
+                <button onclick="closeModal('assignTeacherModal')"
+                    class="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300">
+                    <span class="material-symbols-outlined text-2xl">close</span>
+                </button>
+            </div>
+            <form id="assignTeacherForm">
+                <input type="hidden" id="assignSubjectId" name="subject_id">
+                <div class="mb-4">
+                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Subject</label>
+                    <div id="assignSubjectInfo" class="px-4 py-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                        <p class="font-semibold text-gray-900 dark:text-white" id="assignSubjectName"></p>
+                        <p class="text-sm text-gray-600 dark:text-gray-400" id="assignSubjectCode"></p>
+                    </div>
+                </div>
+                <div class="mb-4">
+                    <label for="assignClassSelect"
+                        class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Select Class</label>
+                    <select id="assignClassSelect" name="class_room_id" required
+                        class="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition">
+                        <option value="">Select a class</option>
+                        {% for class in classes %}
+                        <option value="{{ class.class_room_id }}">{{ class.class_room_name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="mb-4">
+                    <label for="assignTeacherSelect"
+                        class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Select Teacher</label>
+                    <select id="assignTeacherSelect" name="teacher_id" required
+                        class="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition">
+                        <option value="">Select a teacher</option>
+                        {% for teacher in users %}
+                        <option value="{{ teacher.id }}">{{ teacher.first_name }} {{ teacher.last_name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="flex gap-3 pt-4">
+                    <button type="button" onclick="closeModal('assignTeacherModal')"
+                        class="flex-1 px-4 py-3 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-semibold rounded-xl hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
+                        Cancel
+                    </button>
+                    <button type="submit"
+                        class="flex-1 px-4 py-3 bg-gradient-to-r from-primary to-blue-600 hover:from-primary/90 hover:to-blue-600/90 text-white font-semibold rounded-xl shadow-md hover:shadow-lg transition-all duration-200">
+                        Assign Teacher
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

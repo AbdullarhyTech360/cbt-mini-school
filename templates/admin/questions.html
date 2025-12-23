@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+{% extends "admin/base.html" %}
+
+{% block title %}Question Management - Admin Panel{% endblock %}
+
+{% block content %}
+<script src="{{ url_for('static', filename='js/components/modal.js') }}" defer></script>
+<script src="{{ url_for('static', filename='js/admin/questions.js') }}" defer></script>
+
+<!-- Header -->
+<div class="mb-6">
+    <h1 class="text-3xl font-bold text-gray-900 dark:text-white mb-2">Question Bank Management</h1>
+    <p class="text-gray-600 dark:text-gray-400">View, edit, and manage questions for exams</p>
+</div>
+
+<!-- Filters -->
+<div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-100 dark:border-gray-700 p-6 mb-6">
+    <h2 class="text-lg font-bold text-gray-900 dark:text-white mb-4">Filter Questions</h2>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Subject</label>
+            <select id="filterSubject" class="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none">
+                <option value="">Select Subject</option>
+                {% for subject in subjects %}
+                <option value="{{ subject.subject_id }}">{{ subject.subject_name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Class</label>
+            <select id="filterClass" class="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none">
+                <option value="">Select Class</option>
+                {% for class_room in class_rooms %}
+                <option value="{{ class_room.class_room_id }}">{{ class_room.class_room_name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Term</label>
+            <select id="filterTerm" class="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none">
+                <option value="">Select Term</option>
+                {% for term in school_terms %}
+                <option value="{{ term.term_id }}">{{ term.term_name }} - {{ term.academic_session }}</option>
+                {% endfor %}
+            </select>
+        </div>
+    </div>
+    <div class="mt-4 flex gap-3">
+        <button id="loadQuestionsBtn" class="px-6 py-3 bg-gradient-to-r from-primary to-blue-600 hover:from-primary/90 hover:to-blue-600/90 text-white font-semibold rounded-xl shadow-md hover:shadow-lg transition-all">
+            <span class="flex items-center gap-2">
+                <span class="material-symbols-outlined">search</span>
+                Load Questions
+            </span>
+        </button>
+        <button id="deleteAllBtn" class="px-6 py-3 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white font-semibold rounded-xl shadow-md hover:shadow-lg transition-all hidden">
+            <span class="flex items-center gap-2">
+                <span class="material-symbols-outlined">delete_sweep</span>
+                Delete All Questions
+            </span>
+        </button>
+    </div>
+</div>
+
+<!-- Questions List -->
+<div id="questionsContainer" class="hidden">
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-100 dark:border-gray-700 overflow-hidden">
+        <div class="p-6 border-b border-gray-200 dark:border-gray-700">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h2 class="text-xl font-bold text-gray-900 dark:text-white">Questions</h2>
+                    <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                        <span id="questionCount">0</span> questions found
+                    </p>
+                </div>
+                <div class="flex items-center gap-2">
+                    <input type="text" id="searchQuestions" placeholder="Search questions..." class="px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-white focus:ring-2 focus:ring-primary/20 outline-none">
+                </div>
+            </div>
+        </div>
+        <div id="questionsList" class="divide-y divide-gray-200 dark:divide-gray-700">
+            <!-- Questions will be loaded here -->
+        </div>
+    </div>
+</div>
+
+<!-- Empty State -->
+<div id="emptyState" class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-100 dark:border-gray-700 p-12 text-center">
+    <div class="flex flex-col items-center">
+        <div class="h-20 w-20 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center mb-4">
+            <span class="material-symbols-outlined text-gray-400 text-4xl">quiz</span>
+        </div>
+        <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-2">No Questions Loaded</h3>
+        <p class="text-gray-600 dark:text-gray-400">Select a subject, class, and term, then click "Load Questions"</p>
+    </div>
+</div>
+
+<!-- Edit Question Modal -->
+<div id="editQuestionModal" class="modal hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+        <div class="p-6 border-b border-gray-200 dark:border-gray-700">
+            <h2 class="text-xl font-bold text-gray-900 dark:text-white">Edit Question</h2>
+        </div>
+        <div class="p-6">
+            <input type="hidden" id="editQuestionId">
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Question Text</label>
+                <textarea id="editQuestionText" rows="4" class="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-white focus:ring-2 focus:ring-primary/20 outline-none"></textarea>
+            </div>
+            <div id="editOptionsContainer" class="space-y-3 mb-4">
+                <!-- Options will be loaded here -->
+            </div>
+        </div>
+        <div class="p-6 border-t border-gray-200 dark:border-gray-700 flex gap-3">
+            <button id="saveQuestionBtn" class="flex-1 bg-gradient-to-r from-primary to-blue-600 hover:from-primary/90 hover:to-blue-600/90 text-white font-semibold py-3 px-6 rounded-xl shadow-md hover:shadow-lg transition-all">
+                Save Changes
+            </button>
+            <button id="cancelEditBtn" class="flex-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-semibold py-3 px-6 rounded-xl hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
+                Cancel
+            </button>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

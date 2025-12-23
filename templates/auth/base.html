@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+  <title>{% block title %}CBT Minischool{% endblock %}</title>
+  <link href="{{ url_for('static', filename='dist/output.css') }}" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&amp;display=swap" rel="stylesheet" />
+  <!-- Removed Google Fonts CDN for Material Symbols -->
+  <!-- <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet" /> -->
+  <!-- Removed preload tags to prevent warnings about unused preloaded resources -->
+  <!-- <link rel="preload" href="{{ url_for('static', filename='dist/material-symbols-outlined.woff2') }}" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="{{ url_for('static', filename='dist/material-symbols-rounded.woff2') }}" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="{{ url_for('static', filename='dist/material-symbols-sharp.woff2') }}" as="font" type="font/woff2" crossorigin> -->
+  <style>
+    .material-symbols-outlined,
+    .material-symbols-rounded,
+    .material-symbols-sharp {
+      font-variation-settings:
+        'FILL' 0,
+        'wght' 400,
+        'GRAD' 0,
+        'opsz' 24
+    }
+  </style>
+</head>
+
+<body class="bg-white dark:bg-[#0f1419] font-display">
+  <div class="relative flex h-auto min-h-screen w-full flex-col bg-white dark:bg-[#0f1419] group/design-root overflow-x-hidden">
+    {% block content %}
+    {% endblock %}
+  </div>
+
+  {% block scripts %}
+  {% endblock %}
+
+</body>
+
+</html>

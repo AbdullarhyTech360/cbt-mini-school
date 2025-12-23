@@ -1,0 +1,190 @@
+{% extends "admin/base.html" %}
+
+{% block title %}Bulk Upload Questions - Admin Panel{% endblock %}
+
+{% block content %}
+<!-- Load modal.js first -->
+<script src="{{ url_for('static', filename='js/components/modal.js') }}" defer></script>
+<script src="{{ url_for('static', filename='js/admin/bulk_upload_questions.js') }}" defer></script>
+
+<style>
+    :root {
+        --radio-dot-svg: url('data:image/svg+xml,%3csvg viewBox=%270 0 16 16%27 fill=%27rgb(17,114,212)%27 xmlns=%27http://www.w3.org/2000/svg%27%3e%3ccircle cx=%278%27 cy=%278%27 r=%273%27/%3e%3c/svg%3e');
+    }
+</style>
+
+<div class="mb-6 md:mb-8">
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+            <h1 class="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white mb-2">Bulk Upload Questions</h1>
+            <p class="text-gray-600 dark:text-gray-400 text-sm md:text-base">Upload multiple questions at once using CSV or JSON format.</p>
+        </div>
+    </div>
+</div>
+
+<!-- Bulk Upload Instructions -->
+<div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-2xl shadow-sm p-6 mb-6">
+    <h2 class="text-lg font-semibold text-blue-800 dark:text-blue-200 mb-3">How to Bulk Upload</h2>
+    <ol class="list-decimal list-inside space-y-2 text-blue-700 dark:text-blue-300">
+        <li>Prepare your questions in CSV or JSON format (see template below)</li>
+        <li>Select the file using the file picker</li>
+        <li>Click "Upload Questions" to process your file</li>
+        <li>Review the results and fix any errors if needed</li>
+    </ol>
+</div>
+
+<!-- Bulk Upload Form -->
+<div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-100 dark:border-gray-700 p-6">
+    <h2 class="text-xl font-bold text-gray-900 dark:text-white mb-6">Upload Questions File</h2>
+    
+    <form id="bulkUploadForm" class="space-y-6">
+        <!-- Subject Selection -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+                <label for="subject" class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Subject</label>
+                <select id="subject" name="subject_id" required
+                    class="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition">
+                    <option value="">Select a subject</option>
+                    {% for subject in subjects %}
+                    <option value="{{ subject.subject_id }}">{{ subject.subject_name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div>
+                <label for="classRoom" class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Class</label>
+                <select id="classRoom" name="class_room_id" required
+                    class="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition">
+                    <option value="">Select a class</option>
+                    {% for class in classes %}
+                    <option value="{{ class.class_room_id }}">{{ class.class_room_name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+                <label for="term" class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Term</label>
+                <select id="term" name="term_id" required
+                    class="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition">
+                    <option value="">Select a term</option>
+                    {% for term in school_terms %}
+                    <option value="{{ term.term_id }}" {% if current_term_id and term.term_id == current_term_id %}selected{% endif %}>{{ term.term_name }} - {{ term.academic_session }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+        
+        <div>
+            <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">File Format</label>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="border border-gray-200 dark:border-gray-700 rounded-xl p-4">
+                    <div class="flex items-center gap-3 mb-3">
+                        <span class="material-symbols-outlined text-primary text-2xl">table_chart</span>
+                        <h3 class="font-semibold text-gray-900 dark:text-white">CSV Format</h3>
+                    </div>
+                    <p class="text-sm text-gray-600 dark:text-gray-400 mb-3">Comma-separated values file</p>
+                    <button type="button" id="downloadCsvTemplate" class="text-xs px-3 py-1.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
+                        Download CSV Template
+                    </button>
+                </div>
+                
+                <div class="border border-gray-200 dark:border-gray-700 rounded-xl p-4">
+                    <div class="flex items-center gap-3 mb-3">
+                        <span class="material-symbols-outlined text-primary text-2xl">code</span>
+                        <h3 class="font-semibold text-gray-900 dark:text-white">JSON Format</h3>
+                    </div>
+                    <p class="text-sm text-gray-600 dark:text-gray-400 mb-3">JavaScript Object Notation file</p>
+                    <button type="button" id="downloadJsonTemplate" class="text-xs px-3 py-1.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
+                        Download JSON Template
+                    </button>
+                </div>
+                
+                <div class="border border-gray-200 dark:border-gray-700 rounded-xl p-4">
+                    <div class="flex items-center gap-3 mb-3">
+                        <span class="material-symbols-outlined text-primary text-2xl">description</span>
+                        <h3 class="font-semibold text-gray-900 dark:text-white">DOCX Format</h3>
+                    </div>
+                    <p class="text-sm text-gray-600 dark:text-gray-400 mb-3">Microsoft Word document</p>
+                    <button type="button" id="downloadDocxTemplate" class="text-xs px-3 py-1.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
+                        Download DOCX Template
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <div>
+            <label for="bulkFile" class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Select File</label>
+            <div class="flex items-center gap-3">
+                <input type="file" id="bulkFile" accept=".csv,.json,.docx" required
+                    class="flex-1 px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition">
+                <button type="button" id="previewFileBtn"
+                    class="px-4 py-3 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-semibold rounded-xl hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
+                    Preview
+                </button>
+            </div>
+            <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">Supported formats: CSV, JSON (Max file size: 5MB)</p>
+        </div>
+        
+        <div class="flex gap-3 pt-4">
+            <button type="button" id="validateFileBtn"
+                class="px-6 py-3 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-semibold rounded-xl hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
+                Validate File
+            </button>
+            <button type="submit"
+                class="flex-1 bg-gradient-to-r from-primary to-blue-600 hover:from-primary/90 hover:to-blue-600/90 text-white font-semibold py-3 px-6 rounded-xl shadow-md hover:shadow-lg transition-all duration-200">
+                Upload Questions
+            </button>
+        </div>
+    </form>
+</div>
+
+<!-- File Preview Section -->
+<div id="filePreviewSection" class="hidden bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-100 dark:border-gray-700 p-6 mt-6">
+    <div class="flex items-center justify-between mb-6">
+        <h2 class="text-xl font-bold text-gray-900 dark:text-white">File Preview</h2>
+        <button id="closePreviewBtn" class="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300">
+            <span class="material-symbols-outlined text-2xl">close</span>
+        </button>
+    </div>
+    
+    <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+            <thead class="bg-gray-50 dark:bg-gray-700">
+                <tr>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Question Text</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Type</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Subject</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Class</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Status</th>
+                </tr>
+            </thead>
+            <tbody id="previewTableBody" class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                <!-- Preview rows will be added here dynamically -->
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Upload Results Section -->
+<div id="uploadResultsSection" class="hidden bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-100 dark:border-gray-700 p-6 mt-6">
+    <div class="flex items-center justify-between mb-6">
+        <h2 class="text-xl font-bold text-gray-900 dark:text-white">Upload Results</h2>
+        <button id="closeResultsBtn" class="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300">
+            <span class="material-symbols-outlined text-2xl">close</span>
+        </button>
+    </div>
+    
+    <div id="resultsSummary" class="mb-6 p-4 rounded-xl bg-gray-50 dark:bg-gray-700">
+        <!-- Results summary will be added here dynamically -->
+    </div>
+    
+    <div id="resultsDetails" class="hidden">
+        <h3 class="font-semibold text-gray-900 dark:text-white mb-3">Detailed Results</h3>
+        <div id="resultsList" class="space-y-2">
+            <!-- Results details will be added here dynamically -->
+        </div>
+    </div>
+</div>
+{% endblock %}

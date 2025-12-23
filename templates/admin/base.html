@@ -1,0 +1,442 @@
+<!doctype html>
+<html class="light" lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>{% block title %}Admin Panel{% endblock %}</title>
+    <link href="{{ url_for('static', filename='dist/output.css') }}" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&amp;display=swap"
+        rel="stylesheet" />
+    <style>
+        .material-symbols-outlined,
+        .material-symbols-rounded,
+        .material-symbols-sharp {
+            font-variation-settings:
+                "FILL" 0,
+                "wght" 400,
+                "GRAD" 0,
+                "opsz" 24;
+        }
+
+        body {
+            min-height: max(884px, 100dvh);
+        }
+    </style>
+</head>
+
+<body class="font-display bg-background-light dark:bg-background-dark">
+    <!-- Mobile Top Navbar -->
+    <nav
+        class="md:hidden fixed top-0 left-0 right-0 z-50 bg-white dark:bg-[#1a1f2e] border-b border-gray-200 dark:border-gray-700 shadow-sm">
+        <div class="flex items-center justify-between px-3 py-3">
+            <button id="sidebarToggle" class="text-gray-600 dark:text-gray-300 hover:text-primary transition p-1">
+                <span class="material-symbols-outlined text-2xl">menu</span>
+            </button>
+            <div class="flex items-center gap-2">
+                <span class="material-symbols-outlined text-primary text-2xl">school</span>
+                <p class="text-gray-800 dark:text-white text-base md:text-lg font-bold">
+                    CBT School
+                </p>
+            </div>
+            <button id="mobileThemeToggle" class="text-gray-600 dark:text-gray-300 hover:text-primary transition p-1">
+                <span class="material-symbols-outlined text-2xl">dark_mode</span>
+            </button>
+        </div>
+    </nav>
+
+    <div
+        class="relative flex h-auto min-h-screen w-full flex-col bg-gray-50 dark:bg-[#0f1419] overflow-x-hidden pt-16 md:pt-0">
+        <!-- Sidebar Overlay -->
+        <div id="sidebarOverlay" class="fixed inset-0 bg-black/50 z-40 hidden md:hidden"></div>
+
+        <div class="flex">
+            <!-- Sidebar -->
+            <aside id="sidebar"
+                class="fixed left-0 top-0 md:top-0 z-50 flex h-full w-72 flex-col bg-white dark:bg-[#1a1f2e] border-r border-gray-200 dark:border-gray-700 shadow-xl transition-transform duration-300 -translate-x-full md:translate-x-0 overflow-hidden">
+                <div class="flex items-center justify-between px-6 py-5 border-b border-gray-100 dark:border-gray-700">
+                    <div class="flex items-center gap-3 overflow-hidden">
+                        <div
+                            class="h-10 w-10 rounded-lg bg-gradient-to-br from-primary to-blue-600 flex items-center justify-center shadow-lg flex-shrink-0">
+                            <span class="material-symbols-outlined text-white text-2xl">school</span>
+                        </div>
+                        <div class="sidebar-text transition-all duration-300">
+                            <p class="text-gray-800 dark:text-white text-lg font-bold whitespace-nowrap">
+                                CBT School
+                            </p>
+                            <p class="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
+                                Admin Portal
+                            </p>
+                        </div>
+                    </div>
+                    <button id="sidebarCollapse"
+                        class="hidden md:flex items-center justify-center h-8 w-8 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition flex-shrink-0">
+                        <span class="material-symbols-outlined text-xl">menu_open</span>
+                    </button>
+                </div>
+                <div id="adminCard"
+                    class="flex items-center gap-3 px-6 py-4 bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-700 mx-4 mt-4 rounded-xl shadow-sm border border-gray-200 dark:border-gray-600 transition-all duration-300">
+                    <div class="relative flex-shrink-0">
+                        <img id="adminAvatar" class="h-12 w-12 rounded-full object-cover ring-2 ring-primary/20"
+                            data-alt="Admin avatar"
+                            src="https://lh3.googleusercontent.com/aida-public/AB6AXuD47A1V744h8kErGl6cIX6ZGxhIp4eo2JkxLPf0b2C8Em6LEm5cRjxEmXwQvpPrupcySlDAJ0ZPcWzgyxSy6n6GunY49FE9AMeSAguaa14NkHtKQw4dHvCUoUriWfGGzYXGKvWpiLTAdbQpHbLiD_ou-7fOXFrvVX0znvzWYBxW6HsN663YDUseUP08xOl-9wMCaxXZ4RzmesNjV5BBnYnJ3mvTBql9PUkH6arEP07ZZLhxwhacnuEavvwP1nYYkrKUrw-ubIAiL6M" />
+                        <span
+                            class="absolute bottom-0 right-0 h-3 w-3 bg-green-500 rounded-full ring-2 ring-white dark:ring-gray-800"></span>
+                    </div>
+                    <div class="flex-1 min-w-0 sidebar-text transition-all duration-300">
+                        <p class="text-gray-800 dark:text-white text-sm font-bold truncate">
+                            {{ current_user.full_name() if current_user else
+                            'Admin Name' }}
+                        </p>
+                        <p class="text-gray-500 dark:text-gray-400 text-xs truncate">
+                            {{ current_user.role.title() if current_user
+                            else 'Administrator' }}
+                        </p>
+                    </div>
+                </div>
+                <nav class="flex-1 overflow-y-auto px-4 mt-6">
+                    <ul class="flex flex-col gap-1">
+                        {% block sidebar_nav %}
+                        <li>
+                            <a class="flex h-11 items-center gap-3 rounded-lg px-4 {% if request.endpoint == 'admin_dashboard' %}bg-gradient-to-r from-primary to-blue-600 text-white shadow-md{% else %}text-gray-600 dark:text-gray-400 hover:bg-gradient-to-r hover:from-primary/10 hover:to-primary/5 hover:text-primary dark:hover:text-primary{% endif %} transition-all group"
+                                href="/admin/dashboard/{{ current_user.id }}">
+                                <span class="material-symbols-outlined text-xl flex-shrink-0">dashboard</span>
+                                <p class="text-sm font-semibold leading-tight truncate sidebar-text">
+                                    Dashboard
+                                </p>
+                            </a>
+                        </li>
+
+                        <!-- Academic Management Section -->
+                        <li class="mb-2">
+                            <div
+                                class="px-4 py-2 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                Academic Management
+                            </div>
+                        </li>
+                        <li>
+                            <a class="flex h-11 items-center gap-3 rounded-lg px-4 {% if request.endpoint == 'class_management' %}bg-gradient-to-r from-primary to-blue-600 text-white shadow-md{% else %}text-gray-600 dark:text-gray-400 hover:bg-gradient-to-r hover:from-primary/10 hover:to-primary/5 hover:text-primary dark:hover:text-primary{% endif %} transition-all group"
+                                href="/admin/classes">
+                                <span
+                                    class="material-symbols-outlined text-xl group-hover:scale-110 transition-transform flex-shrink-0">school</span>
+                                <p class="text-sm font-semibold leading-tight truncate sidebar-text">
+                                    Manage Classes
+                                </p>
+                            </a>
+                        </li>
+                        <li>
+                            <a class="flex h-11 items-center gap-3 rounded-lg px-4 {% if request.endpoint == 'teacher_management' %}bg-gradient-to-r from-primary to-blue-600 text-white shadow-md{% else %}text-gray-600 dark:text-gray-400 hover:bg-gradient-to-r hover:from-primary/10 hover:to-primary/5 hover:text-primary dark:hover:text-primary{% endif %} transition-all group"
+                                href="/admin/teachers">
+                                <span
+                                    class="material-symbols-outlined text-xl group-hover:scale-110 transition-transform flex-shrink-0">group</span>
+                                <p class="text-sm font-semibold leading-tight truncate sidebar-text">
+                                    Manage Teachers
+                                </p>
+                            </a>
+                        </li>
+                        <li>
+                            <a class="flex h-11 items-center gap-3 rounded-lg px-4 {% if request.endpoint == 'student_management' %}bg-gradient-to-r from-primary to-blue-600 text-white shadow-md{% else %}text-gray-600 dark:text-gray-400 hover:bg-gradient-to-r hover:from-primary/10 hover:to-primary/5 hover:text-primary dark:hover:text-primary{% endif %} transition-all group"
+                                href="/admin/students">
+                                <span
+                                    class="material-symbols-outlined text-xl group-hover:scale-110 transition-transform flex-shrink-0">groups</span>
+                                <p class="text-sm font-semibold leading-tight truncate sidebar-text">
+                                    Manage Students
+                                </p>
+                            </a>
+                        </li>
+                        <li>
+                            <a class="flex h-11 items-center gap-3 rounded-lg px-4 {% if request.endpoint == 'subject_management' %}bg-gradient-to-r from-primary to-blue-600 text-white shadow-md{% else %}text-gray-600 dark:text-gray-400 hover:bg-gradient-to-r hover:from-primary/10 hover:to-primary/5 hover:text-primary dark:hover:text-primary{% endif %} transition-all group"
+                                href="/admin/subjects">
+                                <span
+                                    class="material-symbols-outlined text-xl group-hover:scale-110 transition-transform flex-shrink-0">menu_book</span>
+                                <p class="text-sm font-semibold leading-tight truncate sidebar-text">
+                                    Manage Subjects
+                                </p>
+                            </a>
+                        </li>
+                        <li>
+                            <a class="flex h-11 items-center gap-3 rounded-lg px-4 {% if request.endpoint == 'exam_management' %}bg-gradient-to-r from-primary to-blue-600 text-white shadow-md{% else %}text-gray-600 dark:text-gray-400 hover:bg-gradient-to-r hover:from-primary/10 hover:to-primary/5 hover:text-primary dark:hover:text-primary{% endif %} transition-all group"
+                                href="/admin/exams">
+                                <span
+                                    class="material-symbols-outlined text-xl group-hover:scale-110 transition-transform flex-shrink-0">assignment</span>
+                                <p class="text-sm font-semibold leading-tight truncate sidebar-text">
+                                    Manage Exams
+                                </p>
+                            </a>
+                        </li>
+
+                        <!-- System Management Section -->
+                        <li class="mb-2 mt-6">
+                            <div
+                                class="px-4 py-2 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                System Management
+                            </div>
+                        </li>
+                        <li>
+                            <a class="flex h-11 items-center gap-3 rounded-lg px-4 {% if request.endpoint == 'user_management' %}bg-gradient-to-r from-primary to-blue-600 text-white shadow-md{% else %}text-gray-600 dark:text-gray-400 hover:bg-gradient-to-r hover:from-primary/10 hover:to-primary/5 hover:text-primary dark:hover:text-primary{% endif %} transition-all group"
+                                href="/admin/user_management">
+                                <span
+                                    class="material-symbols-outlined text-xl group-hover:scale-110 transition-transform flex-shrink-0">manage_accounts</span>
+                                <p class="text-sm font-semibold leading-tight truncate sidebar-text">
+                                    User Management
+                                </p>
+                            </a>
+                        </li>
+                        <li>
+                            <a class="flex h-11 items-center gap-3 rounded-lg px-4 {% if request.endpoint == 'upload_questions' %}bg-gradient-to-r from-primary to-blue-600 text-white shadow-md{% else %}text-gray-600 dark:text-gray-400 hover:bg-gradient-to-r hover:from-primary/10 hover:to-primary/5 hover:text-primary dark:hover:text-primary{% endif %} transition-all group"
+                                href="/admin/upload_questions">
+                                <span
+                                    class="material-symbols-outlined text-xl group-hover:scale-110 transition-transform flex-shrink-0">upload_file</span>
+                                <p class="text-sm font-semibold leading-tight truncate sidebar-text">
+                                    Upload Questions
+                                </p>
+                            </a>
+                        </li>
+                        <li>
+                            <a class="flex h-11 items-center gap-3 rounded-lg px-4 {% if request.endpoint == 'questions_management' %}bg-gradient-to-r from-primary to-blue-600 text-white shadow-md{% else %}text-gray-600 dark:text-gray-400 hover:bg-gradient-to-r hover:from-primary/10 hover:to-primary/5 hover:text-primary dark:hover:text-primary{% endif %} transition-all group"
+                                href="/admin/questions">
+                                <span
+                                    class="material-symbols-outlined text-xl group-hover:scale-110 transition-transform flex-shrink-0">quiz</span>
+                                <p class="text-sm font-semibold leading-tight truncate sidebar-text">
+                                    Manage Questions
+                                </p>
+                            </a>
+                        </li>
+                        <li>
+                            <a class="flex h-11 items-center gap-3 rounded-lg px-4 {% if 'report.report_config_page' in request.endpoint %}bg-gradient-to-r from-primary to-blue-600 text-white shadow-md{% else %}text-gray-600 dark:text-gray-400 hover:bg-gradient-to-r hover:from-primary/10 hover:to-primary/5 hover:text-primary dark:hover:text-primary{% endif %} transition-all group"
+                                href="/reports/config">
+                                <span
+                                    class="material-symbols-outlined text-xl group-hover:scale-110 transition-transform flex-shrink-0">settings</span>
+                                <p class="text-sm font-semibold leading-tight truncate sidebar-text">
+                                    Report Config
+                                </p>
+                            </a>
+                        </li>
+                        <li>
+                            <a class="flex h-11 items-center gap-3 rounded-lg px-4 {% if 'grade_scales' in request.endpoint %}bg-gradient-to-r from-primary to-blue-600 text-white shadow-md{% else %}text-gray-600 dark:text-gray-400 hover:bg-gradient-to-r hover:from-primary/10 hover:to-primary/5 hover:text-primary dark:hover:text-primary{% endif %} transition-all group"
+                                href="/reports/grade-scales">
+                                <span
+                                    class="material-symbols-outlined text-xl group-hover:scale-110 transition-transform flex-shrink-0">scale</span>
+                                <p class="text-sm font-semibold leading-tight truncate sidebar-text">
+                                    Grade Scales
+                                </p>
+                            </a>
+                        </li>
+                        <li>
+                            <a class="flex h-11 items-center gap-3 rounded-lg px-4 {% if 'report.generate_report_page' in request.endpoint %}bg-gradient-to-r from-primary to-blue-600 text-white shadow-md{% else %}text-gray-600 dark:text-gray-400 hover:bg-gradient-to-r hover:from-primary/10 hover:to-primary/5 hover:text-primary dark:hover:text-primary{% endif %} transition-all group"
+                                href="/reports/generate">
+                                <span
+                                    class="material-symbols-outlined text-xl group-hover:scale-110 transition-transform flex-shrink-0">assessment</span>
+                                <p class="text-sm font-semibold leading-tight truncate sidebar-text">
+                                    Generate Reports
+                                </p>
+                            </a>
+                        </li>
+                        <li>
+                            <a class="flex h-11 items-center gap-3 rounded-lg px-4 {% if request.endpoint == 'settings' %}bg-gradient-to-r from-primary to-blue-600 text-white shadow-md{% else %}text-gray-600 dark:text-gray-400 hover:bg-gradient-to-r hover:from-primary/10 hover:to-primary/5 hover:text-primary dark:hover:text-primary{% endif %} transition-all group"
+                                href="/admin/settings">
+                                <span
+                                    class="material-symbols-outlined text-xl group-hover:scale-110 transition-transform flex-shrink-0">settings</span>
+                                <p class="text-sm font-semibold leading-tight truncate sidebar-text">
+                                    System Settings
+                                </p>
+                            </a>
+                        </li>
+                        {% endblock %}
+                    </ul>
+                </nav>
+                <div class="mt-auto p-4 border-t border-gray-200 dark:border-gray-700">
+                    <form method="POST" action="{{ url_for('logout') }}" class="inline-block w-full">
+                        <button type="submit"
+                            class="flex items-center justify-center gap-2 h-11 px-4 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white rounded-lg shadow-md hover:shadow-lg transition-all duration-200 group w-full">
+                            <span
+                                class="material-symbols-outlined text-xl group-hover:rotate-12 transition-transform flex-shrink-0">logout</span>
+                            <span class="text-sm font-bold sidebar-text">Logout</span>
+                        </button>
+                    </form>
+                </div>
+            </aside>
+            <!-- Main Content -->
+            <main class="w-full md:ml-72 min-h-screen max-w-full overflow-x-hidden p-4 md:p-6 lg:p-8">
+                {% block content %}{% endblock %}
+            </main>
+        </div>
+    </div>
+    <script>
+        // Dark Mode Toggle
+        const html = document.documentElement;
+        if (localStorage.theme === "dark") html.classList.add("dark");
+
+        const themeToggle = document.createElement("button");
+        themeToggle.id = "themeToggle";
+        themeToggle.className =
+            "flex items-center justify-center h-10 w-10 rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:shadow-lg transition-all duration-200 text-gray-600 dark:text-gray-300";
+        themeToggle.innerHTML =
+            '<span class="material-symbols-outlined text-xl">dark_mode</span>';
+
+        const main = document.querySelector("main");
+        const existingHeader = main.querySelector("header");
+        if (existingHeader) {
+            existingHeader.appendChild(themeToggle);
+        } else {
+            const header = document.createElement("header");
+            header.className =
+                "flex flex-wrap items-center justify-between gap-4";
+            header.appendChild(themeToggle);
+            main.insertBefore(header, main.firstChild);
+        }
+
+        themeToggle.addEventListener("click", () => {
+            html.classList.toggle("dark");
+            localStorage.theme = html.classList.contains("dark")
+                ? "dark"
+                : "light";
+            updateThemeIcon();
+        });
+
+        const mobileThemeToggle =
+            document.getElementById("mobileThemeToggle");
+        if (mobileThemeToggle) {
+            mobileThemeToggle.addEventListener("click", () => {
+                html.classList.toggle("dark");
+                localStorage.theme = html.classList.contains("dark")
+                    ? "dark"
+                    : "light";
+                updateThemeIcon();
+            });
+        }
+
+        function updateThemeIcon() {
+            const icon = html.classList.contains("dark")
+                ? "light_mode"
+                : "dark_mode";
+            themeToggle.innerHTML = `<span class="material-symbols-outlined text-xl">${icon}</span>`;
+            if (mobileThemeToggle) {
+                mobileThemeToggle.innerHTML = `<span class="material-symbols-outlined text-2xl">${icon}</span>`;
+            }
+        }
+        updateThemeIcon();
+
+        // Sidebar Toggle for Mobile
+        const sidebar = document.getElementById("sidebar");
+        const sidebarToggle = document.getElementById("sidebarToggle");
+        const sidebarOverlay = document.getElementById("sidebarOverlay");
+        const sidebarCollapse = document.getElementById("sidebarCollapse");
+
+        function toggleSidebar() {
+            sidebar.classList.toggle("-translate-x-full");
+            sidebarOverlay.classList.toggle("hidden");
+        }
+
+        if (sidebarToggle) {
+            sidebarToggle.addEventListener("click", toggleSidebar);
+        }
+
+        if (sidebarOverlay) {
+            sidebarOverlay.addEventListener("click", toggleSidebar);
+        }
+
+        if (sidebarCollapse) {
+            sidebarCollapse.addEventListener("click", () => {
+                const isExpanded = sidebar.classList.contains("w-72");
+                const sidebarTexts =
+                    document.querySelectorAll(".sidebar-text");
+                const mainContent = document.querySelector("main");
+                const collapseIcon = sidebarCollapse.querySelector(
+                    ".material-symbols-outlined",
+                );
+                const adminCard = document.getElementById("adminCard");
+                const adminAvatar = document.getElementById("adminAvatar");
+
+                if (isExpanded) {
+                    // Collapse
+                    sidebar.classList.remove("w-72");
+                    sidebar.classList.add("w-20");
+                    mainContent.classList.remove("md:ml-72");
+                    mainContent.classList.add("md:ml-20");
+                    sidebarTexts.forEach((el) => {
+                        el.style.opacity = "0";
+                        el.style.width = "0";
+                        el.style.overflow = "hidden";
+                    });
+                    // Admin card compaction
+                    if (adminCard) {
+                        adminCard.style.marginLeft = "0.5rem"; // mx-2
+                        adminCard.style.marginRight = "0.5rem";
+                        adminCard.style.paddingLeft = "0.5rem";
+                        adminCard.style.paddingRight = "0.5rem";
+                        adminCard.style.justifyContent = "center";
+                        adminCard.style.gap = "0.5rem";
+                    }
+                    if (adminAvatar) {
+                        adminAvatar.classList.remove("h-12", "w-12");
+                        adminAvatar.classList.add("h-10", "w-10");
+                    }
+                    collapseIcon.textContent = "menu";
+                } else {
+                    // Expand
+                    sidebar.classList.remove("w-20");
+                    sidebar.classList.add("w-72");
+                    mainContent.classList.remove("md:ml-20");
+                    mainContent.classList.add("md:ml-72");
+                    sidebarTexts.forEach((el) => {
+                        el.style.opacity = "1";
+                        el.style.width = "auto";
+                        el.style.overflow = "visible";
+                    });
+                    if (adminCard) {
+                        adminCard.style.marginLeft = "1rem"; // mx-4
+                        adminCard.style.marginRight = "1rem";
+                        adminCard.style.paddingLeft = "1.5rem"; // px-6
+                        adminCard.style.paddingRight = "1.5rem";
+                        adminCard.style.justifyContent = "flex-start";
+                        adminCard.style.gap = "0.75rem"; // gap-3
+                    }
+                    if (adminAvatar) {
+                        adminAvatar.classList.remove("h-10", "w-10");
+                        adminAvatar.classList.add("h-12", "w-12");
+                    }
+                    collapseIcon.textContent = "menu_open";
+                }
+            });
+        }
+
+        // Ensure admin profile link exists in the sidebar (persistent)
+        // This adds a "My Profile" entry if it's not already present.
+        (function ensureAdminProfileLink() {
+            try {
+                const navList = document.querySelector("#sidebar nav ul");
+                if (!navList) return;
+
+                // If there's already a link to /admin/profile, do nothing
+                if (navList.querySelector('a[href="/admin/profile"]'))
+                    return;
+
+                // Build the list item
+                const li = document.createElement("li");
+                li.innerHTML =
+                    "" +
+                    '<a class="flex h-11 items-center gap-3 rounded-lg px-4 text-gray-600 dark:text-gray-400 hover:bg-gradient-to-r hover:from-primary/10 hover:to-primary/5 hover:text-primary dark:hover:text-primary transition-all group" href="/admin/profile">' +
+                    '<span class="material-symbols-outlined text-xl flex-shrink-0">person</span>' +
+                    '<p class="text-sm font-semibold leading-tight truncate sidebar-text">My Profile</p>' +
+                    "</a>";
+
+                // Prefer inserting before Settings link for visibility
+                const settingsLi = navList.querySelector(
+                    'a[href="/admin/settings"]',
+                )?.parentElement;
+                if (settingsLi && settingsLi.parentElement) {
+                    settingsLi.parentElement.insertBefore(li, settingsLi);
+                } else {
+                    navList.appendChild(li);
+                }
+            } catch (e) {
+                // don't break the rest of the sidebar functionality
+                console.error("ensureAdminProfileLink error:", e);
+            }
+        })();
+    </script>
+    <script src="{{ url_for('static', filename='js/components/modal.js') }}"></script>
+</body>
+
+</html>

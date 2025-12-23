@@ -1,0 +1,1006 @@
+<!DOCTYPE html>
+{% extends "admin/base.html" %}
+
+{% block title %}Exam Management - Admin Panel{% endblock %}
+
+{% block sidebar_nav %}
+{{ super() }}
+{% endblock %}
+
+{% block content %}
+<!-- Load modal.js first -->
+<script src="{{ url_for('static', filename='js/components/modal.js') }}" defer></script>
+
+<!-- Students data for autocomplete -->
+<script>
+    window.studentsData = [
+        {% for student in students %}
+    {
+        id: "{{ student.id }}",
+        username: "{{ student.username }}",
+        firstName: "{{ student.first_name }}",
+        lastName: "{{ student.last_name }}",
+        fullName: "{{ student.first_name }} {{ student.last_name }}"
+    } {% if not loop.last %}, {% endif %}
+    {% endfor %}
+    ];
+</script>
+
+<script src="{{ url_for('static', filename='js/admin/exams.js') }}" defer></script>
+
+<style>
+    .exam-section {
+        display: block;
+    }
+
+    .exam-section.hidden {
+        display: none;
+    }
+
+    .exam-tab {
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+</style>
+
+<!-- Header Section -->
+<div class="mb-6 md:mb-8">
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+            <h1 class="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white mb-2">Exam Management</h1>
+            <p class="text-gray-600 dark:text-gray-400 text-sm md:text-base">Create and manage exams, tests, and
+                assessments across the school.</p>
+        </div>
+        <div class="flex items-center gap-3">
+            <button
+                class="flex items-center gap-2 px-3 py-2 md:px-4 md:py-2 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white rounded-lg shadow-md hover:shadow-lg transition-all duration-200 text-sm md:text-base"
+                data-modal-target="createExamModal">
+                <span class="material-symbols-outlined text-lg">add</span>
+                <span class="font-semibold">Create Exam</span>
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Tabs -->
+<div class="mb-6">
+    <div class="flex gap-2 md:gap-4 p-1 bg-gray-100 dark:bg-gray-800 rounded-xl">
+        <button id="active-exams-tab"
+            class="exam-tab flex-1 py-3 px-4 md:px-6 rounded-lg text-center font-semibold transition-all duration-200 bg-white dark:bg-gray-700 text-primary shadow-sm">
+            Active Exams
+        </button>
+        <button id="finished-exams-tab"
+            class="exam-tab flex-1 py-3 px-4 md:px-6 rounded-lg text-center font-semibold transition-all duration-200 text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700/50">
+            Finished Exams
+        </button>
+        <button id="reset-exams-tab"
+            class="exam-tab flex-1 py-3 px-4 md:px-6 rounded-lg text-center font-semibold transition-all duration-200 text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700/50">
+            Reset Exams
+        </button>
+    </div>
+</div>
+
+<!-- Stats Overview -->
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-6 md:mb-8">
+    <div class="bg-gradient-to-br from-blue-500 to-blue-600 p-4 md:p-6 rounded-2xl shadow-lg">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-white/90 text-xs md:text-sm font-medium mb-1">Total Exams</p>
+                <p class="text-xl md:text-3xl font-bold text-white">{{ exams|length }}</p>
+            </div>
+            <div class="h-10 w-10 md:h-12 md:w-12 rounded-xl bg-white/20 flex items-center justify-center">
+                <span class="material-symbols-outlined text-white text-lg md:text-2xl">assignment</span>
+            </div>
+        </div>
+    </div>
+    <div class="bg-gradient-to-br from-green-500 to-green-600 p-4 md:p-6 rounded-2xl shadow-lg">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-white/90 text-xs md:text-sm font-medium mb-1">CA Tests</p>
+                <p class="text-xl md:text-3xl font-bold text-white">{{ exams | selectattr('exam_type', 'equalto', 'CA')
+                    | list | length }}</p>
+            </div>
+            <div class="h-10 w-10 md:h-12 md:w-12 rounded-xl bg-white/20 flex items-center justify-center">
+                <span class="material-symbols-outlined text-white text-lg md:text-2xl">quiz</span>
+            </div>
+        </div>
+    </div>
+    <div class="bg-gradient-to-br from-purple-500 to-purple-600 p-4 md:p-6 rounded-2xl shadow-lg">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-white/90 text-xs md:text-sm font-medium mb-1">Term Exams</p>
+                <p class="text-xl md:text-3xl font-bold text-white">{{ exams | selectattr('exam_type', 'equalto', 'Term
+                    Exam') | list | length }}</p>
+            </div>
+            <div class="h-10 w-10 md:h-12 md:w-12 rounded-xl bg-white/20 flex items-center justify-center">
+                <span class="material-symbols-outlined text-white text-lg md:text-2xl">school</span>
+            </div>
+        </div>
+    </div>
+    <div class="bg-gradient-to-br from-gray-500 to-gray-600 p-4 md:p-6 rounded-2xl shadow-lg">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-white/90 text-xs md:text-sm font-medium mb-1">Finished Exams</p>
+                <p class="text-xl md:text-3xl font-bold text-white">{{ exams | selectattr('is_finished', 'equalto',
+                    True) | list | length }}</p>
+            </div>
+            <div class="h-10 w-10 md:h-12 md:w-12 rounded-xl bg-white/20 flex items-center justify-center">
+                <span class="material-symbols-outlined text-white text-lg md:text-2xl">check_circle</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+
+<!-- Active Exams Table -->
+<div id="active-exams-section" class="exam-section pt-4">
+    <div
+        class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-100 dark:border-gray-700 overflow-hidden">
+        <!-- Search and Filter for Active Exams -->
+        <div class="search-and-filter-container p-6 border-b border-gray-200 dark:border-gray-700">
+            <div class="flex flex-col lg:flex-row gap-4">
+                <div class="flex-1 relative">
+                    <span class="material-symbols-outlined absolute left-4 top-3.5 text-gray-400">search</span>
+                    <input type="text" id="searchExams" placeholder="Search exams by name, subject, or type..."
+                        class="w-full pl-12 pr-4 py-3.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition shadow-sm hover:shadow-md placeholder:text-gray-400 dark:placeholder:text-gray-500 text-sm md:text-base" />
+                </div>
+                <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+                    <select id="filterExamType"
+                        class="w-full sm:w-auto px-4 py-3.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition shadow-sm hover:shadow-md text-sm md:text-base">
+                        <option value="">All Exam Types</option>
+                        <option value="CA">CA Tests</option>
+                        <option value="Term Exam">Term Exams</option>
+                    </select>
+                    <select id="filterTerm"
+                        class="w-full sm:w-auto px-4 py-3.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition shadow-sm hover:shadow-md text-sm md:text-base">
+                        <option value="">All Terms</option>
+                        {% for term in school_terms %}
+                        <option value="{{ term.term_id }}">{{ term.term_name }} - {{ term.academic_session }}</option>
+                        {% endfor %}
+                    </select>
+                    <select id="filterClass"
+                        class="w-full sm:w-auto px-4 py-3.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition shadow-sm hover:shadow-md text-sm md:text-base">
+                        <option value="">All Classes</option>
+                        {% for class_room in class_rooms %}
+                        <option value="{{ class_room.class_room_id }}">{{ class_room.class_room_name }}</option>
+                        {% endfor %}
+                    </select>
+                    <select id="filterStatus"
+                        class="w-full sm:w-auto px-4 py-3.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition shadow-sm hover:shadow-md text-sm md:text-base">
+                        <option value="">All Status</option>
+                        <option value="active">Active</option>
+                        <option value="inactive">Inactive</option>
+                    </select>
+                    <select id="filterDate"
+                        class="w-full sm:w-auto px-4 py-3.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition shadow-sm hover:shadow-md text-sm md:text-base">
+                        <option value="">All Dates</option>
+                        <option value="today">Today</option>
+                        <option value="yesterday">Yesterday</option>
+                        <option value="this-week">This Week</option>
+                        <option value="this-month">This Month</option>
+                        <option value="last-month">Last Month</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full">
+                <thead class="bg-gray-50 dark:bg-gray-700/50 border-b border-gray-200 dark:border-gray-700">
+                    <tr>
+                        <th
+                            class="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
+                            Exam Name</th>
+                        <th
+                            class="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
+                            Type</th>
+                        <th
+                            class="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
+                            Class</th>
+                        <th
+                            class="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
+                            Subject</th>
+                        <th
+                            class="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
+                            Term</th>
+                        <th
+                            class="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
+                            Date</th>
+                        <th
+                            class="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
+                            Duration</th>
+                        <th
+                            class="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
+                            Max Score</th>
+                        <th
+                            class="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
+                            Invigilator</th>
+                        <th
+                            class="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
+                            Status</th>
+                        <th
+                            class="px-6 py-4 text-right text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
+                            Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200 dark:divide-gray-700" id="examsTableBody">
+                    {% set active_exams = exams | selectattr('is_finished', 'equalto', False) | list %}
+                    {% if active_exams | length == 0 %}
+                    <tr class="no-exams-row">
+                        <td colspan="11" class="px-6 py-12 text-center">
+                            <div class="flex flex-col items-center justify-center">
+                                <div
+                                    class="h-16 w-16 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center mb-4">
+                                    <span class="material-symbols-outlined text-gray-400 text-3xl">assignment</span>
+                                </div>
+                                <h3 class="text-gray-600 dark:text-gray-400 font-medium text-lg">No active exams yet
+                                </h3>
+                                <p class="text-sm text-gray-500 dark:text-gray-500 mt-1 max-w-md">Create your first exam
+                                    to get started. Active exams will appear here.</p>
+                                <button
+                                    class="mt-4 flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white rounded-lg shadow-md hover:shadow-lg transition-all duration-200 text-sm font-semibold"
+                                    data-modal-target="createExamModal">
+                                    <span class="material-symbols-outlined text-lg">add</span>
+                                    Create Exam
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% else %}
+                    {% for exam in exams %}
+                    {% if not exam.is_finished %}
+                    <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors exam-row"
+                        data-exam-type="{{ exam.exam_type }}" data-term-id="{{ exam.school_term_id }}"
+                        data-class-id="{{ exam.class_room_id }}"
+                        data-is-active="{{ 'true' if exam.is_active else 'false' }}"
+                        data-exam-date="{{ exam.date.strftime('%Y-%m-%d') if exam.date else '' }}"
+                        data-search="{{ exam.name.lower() }} {{ exam.subject.subject_name.lower() }} {{ exam.exam_type.lower() }} {{ exam.school_term.term_name.lower() }} {{ exam.class_room.class_room_name.lower() }}">
+                        <td class="px-6 py-4">
+                            <div class="flex items-center gap-3">
+                                <div
+                                    class="h-10 w-10 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center flex-shrink-0">
+                                    <span class="material-symbols-outlined text-white text-lg">assignment</span>
+                                </div>
+                                <div>
+                                    <p class="font-semibold text-gray-900 dark:text-white">{{ exam.name }}</p>
+                                    <p class="text-xs text-gray-500 dark:text-gray-400">{{ exam.date.strftime('%b %d,
+                                        %Y') }}</p>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="px-6 py-4">
+                            <span
+                                class="px-3 py-1 text-xs font-semibold rounded-full
+                            {% if 'CA' in exam.exam_type %}bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300
+                            {% else %}bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300{% endif %}">
+                                {{ exam.exam_type }}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4">
+                            <div>
+                                <p class="text-gray-900 dark:text-white font-medium">{{ exam.class_room.class_room_name
+                                    }}</p>
+                                <p class="text-xs text-gray-500 dark:text-gray-400">{{ exam.class_room.section if
+                                    exam.class_room.section else 'N/A' }}</p>
+                            </div>
+                        </td>
+                        <td class="px-6 py-4">
+                            <p class="text-gray-900 dark:text-white font-medium">{{ exam.subject.subject_name }}</p>
+                            <p class="text-xs text-gray-500 dark:text-gray-400">{{ exam.subject.subject_code }}</p>
+                        </td>
+                        <td class="px-6 py-4">
+                            <div>
+                                <p class="text-gray-900 dark:text-white font-medium">{{ exam.school_term.term_name }}
+                                </p>
+                                <p class="text-xs text-gray-500 dark:text-gray-400">{{ exam.school_term.academic_session
+                                    }}</p>
+                            </div>
+                        </td>
+                        <td class="px-6 py-4">
+                            <p class="text-gray-900 dark:text-white">{{ exam.date.strftime('%b %d, %Y') }}</p>
+                        </td>
+                        <td class="px-6 py-4">
+                            <p class="text-gray-900 dark:text-white">
+                                {% set hours = exam.duration.seconds // 3600 %}
+                                {% set minutes = (exam.duration.seconds % 3600) // 60 %}
+                                {% if hours > 0 %}{{ hours }}h {% endif %}{% if minutes > 0 %}{{ minutes }}m{% endif %}
+                            </p>
+                        </td>
+                        <td class="px-6 py-4">
+                            <p class="text-gray-900 dark:text-white font-semibold">{{ exam.max_score }}</p>
+                        </td>
+                        <td class="px-6 py-4">
+                            <p class="text-gray-900 dark:text-white">
+                                {% if exam.invigilator %}
+                                {{ exam.invigilator.first_name }} {{ exam.invigilator.last_name }}
+                                {% else %}
+                                <span class="text-gray-400">Not assigned</span>
+                                {% endif %}
+                            </p>
+                        </td>
+                        <td class="px-6 py-4">
+                            <div class="flex flex-col gap-2">
+                                {% if exam.is_finished %}
+                                <span
+                                    class="px-3 py-1 text-xs font-semibold rounded-full bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 inline-flex items-center gap-1">
+                                    <span class="material-symbols-outlined text-sm">check_circle</span>
+                                    Finished
+                                </span>
+                                {% else %}
+                                <!-- Toggle Switch -->
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" class="sr-only peer toggle-active-switch"
+                                        data-exam-id="{{ exam.id }}" {% if exam.is_active %}checked{% endif %}>
+                                    <div
+                                        class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-green-600">
+                                    </div>
+                                    <span class="ms-2 text-xs font-medium text-gray-900 dark:text-gray-300">
+                                        {% if exam.is_active %}Active{% else %}Inactive{% endif %}
+                                    </span>
+                                </label>
+                                {% endif %}
+                            </div>
+                        </td>
+                        <td class="px-6 py-4">
+                            <div class="flex items-center justify-end gap-2">
+                                {% if not exam.is_finished %}
+                                <button data-finish-id="{{ exam.id }}" data-exam-name="{{ exam.name }}"
+                                    class="px-3 py-1.5 text-xs font-semibold bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 hover:bg-orange-200 dark:hover:bg-orange-900/50 rounded-lg transition-colors finish-exam-btn inline-flex items-center gap-1"
+                                    title="Mark as finished">
+                                    <span class="material-symbols-outlined text-sm">flag</span>
+                                    Finish
+                                </button>
+                                {% endif %}
+                                <button data-edit-id="{{ exam.id }}"
+                                    class="p-2 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors edit-exam-btn"
+                                    title="Edit exam">
+                                    <span class="material-symbols-outlined text-lg">edit</span>
+                                </button>
+                                <button data-delete-id="{{ exam.id }}" data-exam-name="{{ exam.name }}"
+                                    class="p-2 text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-colors delete-exam-btn"
+                                    title="Delete exam">
+                                    <span class="material-symbols-outlined text-lg">delete</span>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endif %}
+                    {% endfor %}
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Finished Exams Section -->
+<div id="finished-exams-section" class="exam-section hidden pt-4">
+    <div
+        class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-100 dark:border-gray-700 overflow-hidden">
+
+        <!-- Search and Filter for Finished Exams -->
+        <div class="search-and-filter-container p-6 border-b border-gray-200 dark:border-gray-700">
+            <div class="flex flex-col lg:flex-row gap-4">
+                <div class="flex-1 relative">
+                    <span class="material-symbols-outlined absolute left-4 top-3.5 text-gray-400">search</span>
+                    <input type="text" id="searchFinishedExams"
+                        placeholder="Search finished exams by name, subject, or type..."
+                        class="w-full pl-12 pr-4 py-3.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition shadow-sm hover:shadow-md placeholder:text-gray-400 dark:placeholder:text-gray-500 text-sm md:text-base" />
+                </div>
+                <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+                    <select id="filterFinishedExamType"
+                        class="w-full sm:w-auto px-4 py-3.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition shadow-sm hover:shadow-md text-sm md:text-base">
+                        <option value="">All Exam Types</option>
+                        <option value="CA">CA Tests</option>
+                        <option value="Term Exam">Term Exams</option>
+                    </select>
+                    <select id="filterFinishedTerm"
+                        class="w-full sm:w-auto px-4 py-3.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition shadow-sm hover:shadow-md text-sm md:text-base">
+                        <option value="">All Terms</option>
+                        {% for term in school_terms %}
+                        <option value="{{ term.term_id }}">{{ term.term_name }} - {{ term.academic_session }}</option>
+                        {% endfor %}
+                    </select>
+                    <select id="filterFinishedClass"
+                        class="w-full sm:w-auto px-4 py-3.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition shadow-sm hover:shadow-md text-sm md:text-base">
+                        <option value="">All Classes</option>
+                        {% for class_room in class_rooms %}
+                        <option value="{{ class_room.class_room_id }}">{{ class_room.class_room_name }}</option>
+                        {% endfor %}
+                    </select>
+                    <select id="filterFinishedDate"
+                        class="w-full sm:w-auto px-4 py-3.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition shadow-sm hover:shadow-md text-sm md:text-base">
+                        <option value="">All Dates</option>
+                        <option value="today">Today</option>
+                        <option value="yesterday">Yesterday</option>
+                        <option value="this-week">This Week</option>
+                        <option value="this-month">This Month</option>
+                        <option value="last-month">Last Month</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full">
+                <thead class="bg-gray-50 dark:bg-gray-700/50 border-b border-gray-200 dark:border-gray-700">
+                    <tr>
+                        <th
+                            class="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
+                            Exam Name</th>
+                        <th
+                            class="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
+                            Type</th>
+                        <th
+                            class="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
+                            Class</th>
+                        <th
+                            class="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
+                            Subject</th>
+                        <th
+                            class="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
+                            Date</th>
+                        <th
+                            class="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
+                            Finished On</th>
+                        <th
+                            class="px-6 py-4 text-right text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
+                            Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
+                    {% set finished_exams = exams | selectattr('is_finished', 'equalto', True) | list %}
+                    {% if finished_exams | length == 0 %}
+                    <tr class="no-exams-row">
+                        <td colspan="7" class="px-6 py-12 text-center">
+                            <div class="flex flex-col items-center justify-center">
+                                <div
+                                    class="h-16 w-16 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center mb-4">
+                                    <span class="material-symbols-outlined text-gray-400 text-3xl">check_circle</span>
+                                </div>
+                                <h3 class="text-gray-600 dark:text-gray-400 font-medium text-lg">No finished exams yet
+                                </h3>
+                                <p class="text-sm text-gray-500 dark:text-gray-500 mt-1 max-w-md">Exams marked as
+                                    finished will appear here. Finish active exams to see them in this section.</p>
+                            </div>
+                        </td>
+                    </tr>
+                    {% else %}
+                    {% for exam in exams %}
+                    {% if exam.is_finished %}
+                    <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors finished-exam-row"
+                        data-exam-type="{{ exam.exam_type }}" data-term-id="{{ exam.school_term_id }}"
+                        data-class-id="{{ exam.class_room_id }}"
+                        data-exam-date="{{ exam.date.strftime('%Y-%m-%d') if exam.date else '' }}"
+                        data-search="{{ exam.name.lower() }} {{ exam.subject.subject_name.lower() }} {{ exam.exam_type.lower() }} {{ exam.school_term.term_name.lower() }} {{ exam.class_room.class_room_name.lower() }}">
+                        <td class="px-6 py-4">
+                            <div class="flex items-center gap-3">
+                                <div
+                                    class="h-10 w-10 rounded-lg bg-gradient-to-br from-gray-400 to-gray-500 flex items-center justify-center flex-shrink-0">
+                                    <span class="material-symbols-outlined text-white text-lg">check_circle</span>
+                                </div>
+                                <div>
+                                    <p class="font-semibold text-gray-900 dark:text-white">{{ exam.name }}</p>
+                                    <p class="text-xs text-gray-500 dark:text-gray-400">{{ exam.date.strftime('%b %d,
+                                        %Y') }}</p>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="px-6 py-4">
+                            <span
+                                class="px-3 py-1 text-xs font-semibold rounded-full bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300">
+                                {{ exam.exam_type }}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4">
+                            <p class="text-gray-900 dark:text-white font-medium">{{ exam.class_room.class_room_name }}
+                            </p>
+                        </td>
+                        <td class="px-6 py-4">
+                            <p class="text-gray-900 dark:text-white font-medium">{{ exam.subject.subject_name }}</p>
+                        </td>
+                        <td class="px-6 py-4">
+                            <p class="text-gray-900 dark:text-white">{{ exam.date.strftime('%b %d, %Y') }}</p>
+                        </td>
+                        <td class="px-6 py-4">
+                            <p class="text-gray-500 dark:text-gray-400">{{ exam.updated_at.strftime('%b %d, %Y') if
+                                exam.updated_at else 'N/A' }}</p>
+                        </td>
+                        <td class="px-6 py-4">
+                            <div class="flex items-center justify-end gap-2">
+                                <button data-unfinish-id="{{ exam.id }}" data-exam-name="{{ exam.name }}"
+                                    class="px-3 py-1.5 text-xs font-semibold bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-900/50 rounded-lg transition-colors unfinish-exam-btn inline-flex items-center gap-1"
+                                    title="Unfinish exam">
+                                    <span class="material-symbols-outlined text-sm">restart_alt</span>
+                                    Unfinish
+                                </button>
+                                <button data-delete-id="{{ exam.id }}" data-exam-name="{{ exam.name }}"
+                                    class="p-2 text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-colors delete-finished-exam-btn"
+                                    title="Delete exam">
+                                    <span class="material-symbols-outlined text-lg">delete</span>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endif %}
+                    {% endfor %}
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Reset Exams Section -->
+<div id="reset-exams-section" class="exam-section hidden pt-4">
+    <div
+        class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-100 dark:border-gray-700 overflow-hidden p-6">
+        <div class="mb-6">
+            <h2 class="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+                Reset Student Exam
+            </h2>
+            <p class="text-gray-600 dark:text-gray-400">
+                Allow students to retake exams by resetting their submission. This will delete their previous attempt
+                and score.
+            </p>
+        </div>
+
+        <!-- Reset Exams Form -->
+        <form id="reset-exam-form" class="space-y-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Student Selection with Autocomplete -->
+                <div>
+                    <label for="reset-student-search"
+                        class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Search Student <span class="text-red-500">*</span>
+                    </label>
+                    <div class="relative">
+                        <input type="text" id="reset-student-search" name="student_search" autocomplete="off"
+                            placeholder="Type username or name..." required
+                            class="w-full px-4 py-3 pr-10 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition" />
+                        <div
+                            class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-gray-500 dark:text-gray-400">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                            </svg>
+                        </div>
+                        <!-- Autocomplete dropdown -->
+                        <div id="student-autocomplete"
+                            class="hidden absolute z-50 w-full mt-1 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                            <!-- Results will be populated here -->
+                        </div>
+                    </div>
+                    <input type="hidden" id="reset-student-id" name="student_id" />
+                    <p id="selected-student-info" class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                        Start typing to search students
+                    </p>
+                </div>
+
+                <!-- Exam Selection -->
+                <div>
+                    <label for="reset-exam-select"
+                        class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Select Exam <span class="text-red-500">*</span>
+                    </label>
+                    <div class="relative">
+                        <select id="reset-exam-select" name="exam_id" required disabled
+                            class="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition appearance-none disabled:opacity-50 disabled:cursor-not-allowed">
+                            <option value="">Select student first...</option>
+                        </select>
+                        <div
+                            class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-gray-500 dark:text-gray-400">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M19 9l-7 7-7-7"></path>
+                            </svg>
+                        </div>
+                    </div>
+                    <p id="exam-load-status" class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                        Only completed exams will be shown
+                    </p>
+                </div>
+            </div>
+
+            <!-- Exam Details Preview -->
+            <div id="reset-exam-details"
+                class="hidden p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                <h3 class="text-sm font-semibold text-blue-900 dark:text-blue-300 mb-2">Exam Details</h3>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                    <div>
+                        <span class="text-gray-600 dark:text-gray-400">Student:</span>
+                        <p id="detail-student" class="font-medium text-gray-900 dark:text-white"></p>
+                    </div>
+                    <div>
+                        <span class="text-gray-600 dark:text-gray-400">Exam:</span>
+                        <p id="detail-exam" class="font-medium text-gray-900 dark:text-white"></p>
+                    </div>
+                    <div>
+                        <span class="text-gray-600 dark:text-gray-400">Score:</span>
+                        <p id="detail-score" class="font-medium text-gray-900 dark:text-white"></p>
+                    </div>
+                    <div>
+                        <span class="text-gray-600 dark:text-gray-400">Status:</span>
+                        <p id="detail-status" class="font-medium text-gray-900 dark:text-white"></p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Warning Message -->
+            <div
+                class="p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
+                <div class="flex items-start gap-3">
+                    <svg class="w-5 h-5 text-yellow-600 dark:text-yellow-400 flex-shrink-0 mt-0.5" fill="currentColor"
+                        viewBox="0 0 20 20">
+                        <path fill-rule="evenodd"
+                            d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
+                            clip-rule="evenodd"></path>
+                    </svg>
+                    <div>
+                        <h4 class="text-sm font-semibold text-yellow-900 dark:text-yellow-300">Warning</h4>
+                        <p class="text-sm text-yellow-800 dark:text-yellow-400 mt-1">
+                            Resetting an exam will permanently delete the student's previous attempt, including their
+                            score and answers. This action cannot be undone.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="flex items-center gap-4">
+                <button type="submit" id="reset-exam-btn" disabled
+                    class="px-6 py-3 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white rounded-lg font-semibold shadow-md hover:shadow-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:shadow-md">
+                    <span class="flex items-center gap-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15">
+                            </path>
+                        </svg>
+                        Reset Exam
+                    </span>
+                </button>
+                <button type="button" id="reset-form-clear"
+                    class="px-6 py-3 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-lg font-semibold transition-all duration-200">
+                    Clear Form
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Create Exam Modal -->
+<div id="createExamModal" class="modal hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+        <div
+            class="sticky top-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4 flex items-center justify-between z-10">
+            <h2 class="text-2xl font-bold text-gray-900 dark:text-white">Create New Exam</h2>
+            <button onclick="closeModal('createExamModal')"
+                class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
+                <span class="material-symbols-outlined text-gray-600 dark:text-gray-400">close</span>
+            </button>
+        </div>
+
+        <form id="createExamForm" class="p-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Exam Type -->
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Exam Type*</label>
+                    <select name="exam_type" id="examType" required
+                        class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition">
+                        <option value="">Select Type</option>
+                        {% for assessment in assessment_types %}
+                        <option value="{{ assessment.name }}">
+                            {{ assessment.name }} ({{ assessment.max_score|int }} marks)
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- Subject -->
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Subject*</label>
+                    <select name="subject_id" id="subjectSelect" required
+                        class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition">
+                        <option value="">Select Subject</option>
+                        {% for subject in subjects %}
+                        <option value="{{ subject.subject_id }}">{{ subject.subject_name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- Class (populated dynamically based on subject) -->
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Class*</label>
+                    <select name="class_room_id" id="classSelect" required disabled
+                        class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition disabled:opacity-50 disabled:cursor-not-allowed">
+                        <option value="">Select subject first</option>
+                    </select>
+                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Only classes offering the selected subject
+                        will appear</p>
+                    <!-- Question count display -->
+                    <div class="mt-2 flex items-center gap-2">
+                        <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Available Questions:</span>
+                        <span id="questionCount" class="text-sm font-semibold">0</span>
+                    </div>
+                    <!-- Warning message when no questions -->
+                    <div id="questionWarning" class="mt-2 hidden">
+                        <p class="text-sm text-red-600 dark:text-red-400 flex items-center gap-1">
+                            <span class="material-symbols-outlined text-base">warning</span>
+                            No questions available for this subject and class. Please add questions before creating an
+                            exam.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Auto-generated Exam Name (Read-only) -->
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Exam Name
+                        (Auto-generated)</label>
+                    <input type="text" id="examNamePreview" readonly
+                        class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-900 text-gray-700 dark:text-gray-400 outline-none cursor-not-allowed"
+                        placeholder="Select class, subject, and type to generate name">
+                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Format: Class-Subject-Type</p>
+                </div>
+
+                <!-- School Term -->
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">School
+                        Term*</label>
+                    <select name="school_term_id" required
+                        class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition">
+                        <option value="">Select Term</option>
+                        {% for term in school_terms %}
+                        <option value="{{ term.term_id }}" {% if current_term_id and term.term_id==current_term_id
+                            %}selected{% endif %}>{{ term.term_name }} - {{ term.academic_session }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- Exam Date -->
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Exam Date*</label>
+                    <input type="date" name="date" required
+                        class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition">
+                </div>
+
+                <!-- Duration -->
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Duration*</label>
+                    <div class="flex gap-3">
+                        <div class="flex-1">
+                            <input type="number" name="duration_hours" min="0" max="12" placeholder="Hours"
+                                class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition">
+                        </div>
+                        <div class="flex-1">
+                            <input type="number" name="duration_minutes" min="0" max="59" placeholder="Minutes"
+                                class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Maximum Score -->
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Maximum
+                        Score*</label>
+                    <input type="number" name="max_score" min="0" step="0.01" required
+                        class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition"
+                        placeholder="e.g., 100">
+                </div>
+
+                <!-- Number of Questions -->
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Number of
+                        Questions</label>
+                    <input type="number" name="number_of_questions" id="numberOfQuestions" min="1" step="1"
+                        class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition"
+                        placeholder="Leave empty for all questions">
+                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                        <span id="questionLimitHint">Questions will be randomly selected if specified</span>
+                    </p>
+                </div>
+
+                <!-- Invigilator -->
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Invigilator
+                        (Optional)</label>
+                    <select name="invigilator_id"
+                        class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition">
+                        <option value="">Select Invigilator</option>
+                        {% for teacher in teachers %}
+                        <option value="{{ teacher.id }}">{{ teacher.first_name }} {{ teacher.last_name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- Description -->
+                <div class="md:col-span-2">
+                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Description
+                        (Optional)</label>
+                    <textarea name="description" rows="3"
+                        class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition resize-none"
+                        placeholder="Add any additional information about this exam..."></textarea>
+                </div>
+            </div>
+
+            <div class="flex justify-end gap-3 mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
+                <button type="button" onclick="closeModal('createExamModal')"
+                    class="px-6 py-3 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors font-semibold">
+                    Cancel
+                </button>
+                <button type="submit"
+                    class="px-6 py-3 rounded-xl bg-gradient-to-r from-primary to-blue-600 hover:from-primary/90 hover:to-blue-600/90 text-white shadow-md hover:shadow-lg transition-all duration-200 font-semibold">
+                    Create Exam
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Edit Exam Modal -->
+<div id="editExamModal" class="modal hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+        <div
+            class="sticky top-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4 flex items-center justify-between z-10">
+            <h2 class="text-2xl font-bold text-gray-900 dark:text-white">Edit Exam</h2>
+            <button onclick="closeModal('editExamModal')"
+                class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
+                <span class="material-symbols-outlined text-gray-600 dark:text-gray-400">close</span>
+            </button>
+        </div>
+
+        <form id="editExamForm" class="p-6">
+            <input type="hidden" id="editExamId" name="exam_id">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Exam Type -->
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Exam Type*</label>
+                    <select name="exam_type" id="editExamType" required
+                        class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition">
+                        <option value="">Select Type</option>
+                        {% for assessment in assessment_types %}
+                        <option value="{{ assessment.name }}">
+                            {{ assessment.name }} ({{ assessment.max_score|int }} marks)
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- Subject -->
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Subject*</label>
+                    <select name="subject_id" id="editSubjectSelect" required disabled
+                        class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition">
+                        <option value="">Loading subjects...</option>
+                    </select>
+                </div>
+
+                <!-- Class (populated dynamically based on subject) -->
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Class*</label>
+                    <select name="class_room_id" id="editClassSelect" required disabled
+                        class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition disabled:opacity-50 disabled:cursor-not-allowed">
+                        <option value="">Select subject first</option>
+                    </select>
+                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Only classes offering the selected subject
+                        will appear</p>
+                    <!-- Question count display -->
+                    <div class="mt-2 flex items-center gap-2">
+                        <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Available Questions:</span>
+                        <span id="editQuestionCount" class="text-sm font-semibold">0</span>
+                    </div>
+                    <!-- Warning message when no questions -->
+                    <div id="editQuestionWarning" class="mt-2 hidden">
+                        <p class="text-sm text-red-600 dark:text-red-400 flex items-center gap-1">
+                            <span class="material-symbols-outlined text-base">warning</span>
+                            No questions available for this subject and class. Please add questions before creating an
+                            exam.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Auto-generated Exam Name (Read-only) -->
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Exam Name
+                        (Auto-generated)</label>
+                    <input type="text" id="editExamNamePreview" readonly
+                        class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-900 text-gray-700 dark:text-gray-400 outline-none cursor-not-allowed"
+                        placeholder="Select class, subject, and type to generate name">
+                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Format: Class-Subject-Type</p>
+                </div>
+
+                <!-- School Term -->
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">School
+                        Term*</label>
+                    <select name="school_term_id" id="editSchoolTerm" required
+                        class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition">
+                        <option value="">Select Term</option>
+                        {% for term in school_terms %}
+                        <option value="{{ term.term_id }}" {% if current_term_id and term.term_id==current_term_id
+                            %}selected{% endif %}>{{ term.term_name }} - {{ term.academic_session }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- Exam Date -->
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Exam Date*</label>
+                    <input type="date" name="date" id="editExamDate" required
+                        class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition">
+                </div>
+
+                <!-- Duration -->
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Duration*</label>
+                    <div class="flex gap-3">
+                        <div class="flex-1">
+                            <input type="number" name="duration_hours" id="editDurationHours" min="0" max="12"
+                                placeholder="Hours"
+                                class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition">
+                        </div>
+                        <div class="flex-1">
+                            <input type="number" name="duration_minutes" id="editDurationMinutes" min="0" max="59"
+                                placeholder="Minutes"
+                                class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Maximum Score -->
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Maximum
+                        Score*</label>
+                    <input type="number" name="max_score" id="editMaxScore" min="0" step="0.01" required
+                        class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition"
+                        placeholder="e.g., 100">
+                </div>
+
+                <!-- Number of Questions -->
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Number of
+                        Questions</label>
+                    <input type="number" name="number_of_questions" id="editNumberOfQuestions" min="1" step="1"
+                        class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition"
+                        placeholder="Leave empty for all questions">
+                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                        <span id="editQuestionLimitHint">Questions will be randomly selected if specified</span>
+                    </p>
+                </div>
+
+                <!-- Invigilator -->
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Invigilator
+                        (Optional)</label>
+                    <select name="invigilator_id" id="editInvigilator"
+                        class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition">
+                        <option value="">Select Invigilator</option>
+                        {% for teacher in teachers %}
+                        <option value="{{ teacher.id }}">{{ teacher.first_name }} {{ teacher.last_name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- Description -->
+                <div class="md:col-span-2">
+                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Description
+                        (Optional)</label>
+                    <textarea name="description" id="editDescription" rows="3"
+                        class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition resize-none"
+                        placeholder="Add any additional information about this exam..."></textarea>
+                </div>
+            </div>
+
+            <div class="flex justify-end gap-3 mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
+                <button type="button" onclick="closeModal('editExamModal')"
+                    class="px-6 py-3 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors font-semibold">
+                    Cancel
+                </button>
+                <button type="submit"
+                    class="px-6 py-3 rounded-xl bg-gradient-to-r from-primary to-blue-600 hover:from-primary/90 hover:to-blue-600/90 text-white shadow-md hover:shadow-lg transition-all duration-200 font-semibold">
+                    Update Exam
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% endblock %}

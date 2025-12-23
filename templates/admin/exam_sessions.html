@@ -1,0 +1,174 @@
+{% extends "admin/base.html" %}
+
+{% block title %}Exam Sessions Monitor{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <!-- Header -->
+    <div class="mb-8">
+        <h1 class="text-3xl font-bold text-gray-900 mb-2">Exam Sessions Monitor</h1>
+        <p class="text-gray-600">Monitor active exam sessions and track student progress in real-time</p>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        <div class="bg-white rounded-lg shadow p-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm font-medium text-gray-600">Active Sessions</p>
+                    <p class="text-3xl font-bold text-blue-600">{{ active_sessions|length }}</p>
+                </div>
+                <div class="bg-blue-100 rounded-full p-3">
+                    <span class="material-symbols-outlined text-blue-600">schedule</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-lg shadow p-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm font-medium text-gray-600">Completed Today</p>
+                    <p class="text-3xl font-bold text-green-600">{{ completed_today }}</p>
+                </div>
+                <div class="bg-green-100 rounded-full p-3">
+                    <span class="material-symbols-outlined text-green-600">check_circle</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-lg shadow p-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm font-medium text-gray-600">Auto-Save</p>
+                    <p class="text-lg font-bold text-purple-600">Every 30s</p>
+                </div>
+                <div class="bg-purple-100 rounded-full p-3">
+                    <span class="material-symbols-outlined text-purple-600">save</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-lg shadow p-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm font-medium text-gray-600">Status</p>
+                    <p class="text-lg font-bold text-green-600">Active</p>
+                </div>
+                <div class="bg-green-100 rounded-full p-3">
+                    <span class="material-symbols-outlined text-green-600">cloud_done</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Active Sessions Table -->
+    <div class="bg-white rounded-lg shadow overflow-hidden">
+        <div class="px-6 py-4 border-b border-gray-200">
+            <h2 class="text-xl font-semibold text-gray-900">Active Exam Sessions</h2>
+        </div>
+        
+        {% if active_sessions %}
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Student
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Exam
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Progress
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Time Left
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Last Activity
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Status
+                        </th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    {% for exam_session in active_sessions %}
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="flex items-center">
+                                <div class="flex-shrink-0 h-10 w-10 bg-blue-100 rounded-full flex items-center justify-center">
+                                    <span class="text-blue-600 font-semibold">{{ exam_session.student.username[0].upper() }}</span>
+                                </div>
+                                <div class="ml-4">
+                                    <div class="text-sm font-medium text-gray-900">{{ exam_session.student.username }}</div>
+                                    <div class="text-sm text-gray-500">ID: {{ exam_session.student.id[:8] }}</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="px-6 py-4">
+                            <div class="text-sm text-gray-900">{{ exam_session.exam.name }}</div>
+                            <div class="text-sm text-gray-500">{{ exam_session.exam.subject.subject_name }}</div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="text-sm text-gray-900">
+                                Question {{ exam_session.current_question_index + 1 }}
+                            </div>
+                            <div class="text-sm text-gray-500">
+                                {{ exam_session.get_answers()|length }} answered
+                            </div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="text-sm text-gray-900">
+                                {{ (exam_session.time_remaining // 60) }} min
+                            </div>
+                            <div class="text-sm text-gray-500">
+                                {{ (exam_session.time_remaining % 60) }} sec
+                            </div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {{ exam_session.last_activity.strftime('%H:%M:%S') }}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                                Active
+                            </span>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="px-6 py-12 text-center">
+            <span class="material-symbols-outlined text-gray-400 text-6xl mb-4">event_busy</span>
+            <p class="text-gray-500 text-lg">No active exam sessions at the moment</p>
+            <p class="text-gray-400 text-sm mt-2">Sessions will appear here when students are taking exams</p>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Info Section -->
+    <div class="mt-8 bg-blue-50 border border-blue-200 rounded-lg p-6">
+        <div class="flex items-start">
+            <span class="material-symbols-outlined text-blue-600 mr-3">info</span>
+            <div>
+                <h3 class="text-lg font-semibold text-blue-900 mb-2">About Session Persistence</h3>
+                <ul class="text-sm text-blue-800 space-y-1">
+                    <li>• Progress is automatically saved every 30 seconds</li>
+                    <li>• Students can resume exams if they experience network issues</li>
+                    <li>• All answers, time remaining, and question order are preserved</li>
+                    <li>• Sessions are marked as completed when exams are submitted</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Auto-refresh every 30 seconds
+setInterval(function() {
+    location.reload();
+}, 30000);
+</script>
+{% endblock %}

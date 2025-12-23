@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>CBT Test Diagnostic</title>
+</head>
+<body>
+    <h1>CBT Test Page Diagnostic</h1>
+    
+    <h2>Instructions:</h2>
+    <ol>
+        <li>Make sure you're accessing the correct URL: <code>/student/exam/&lt;exam_id&gt;/start</code></li>
+        <li>NOT the API endpoint: <code>/student/exam/&lt;exam_id&gt;/questions</code></li>
+        <li>Open browser DevTools (F12) and check the Console tab for errors</li>
+        <li>Check the Network tab to see if JavaScript files are loading</li>
+    </ol>
+    
+    <h2>Common Issues:</h2>
+    <ul>
+        <li><strong>Seeing raw JSON?</strong> You're on the API endpoint, not the test page</li>
+        <li><strong>JavaScript not loading?</strong> Check browser console for errors</li>
+        <li><strong>MathJax not rendering?</strong> Wait a few seconds for MathJax to load</li>
+    </ul>
+    
+    <h2>Quick Fix:</h2>
+    <p>Clear your browser cache (Ctrl+Shift+Delete) and hard refresh (Ctrl+F5)</p>
+</body>
+</html>

@@ -1,0 +1,182 @@
+{% extends 'auth/base.html' %}
+{% import "components/modal.html" as modal with context %}
+{% block title %}Register{% endblock %}
+{% block scripts %}
+<script>
+  // Pass Flask URL to JavaScript
+  const LOGIN_URL = "{{ url_for('login') }}";
+  console.log('JavaScript loaded successfully');
+  console.log('Modal functions available:', typeof openModal, typeof closeModal);
+</script>
+<script src="{{ url_for('static', filename='js/register.js') }}"></script>
+<script src="{{ url_for('static', filename='js/components/modal.js') }}"></script>
+{% endblock %}
+{% block content %}
+<div class="relative overflow-hidden">
+  <div
+    class="absolute -top-16 -right-16 h-56 w-56 rounded-full blur-3xl opacity-30 bg-gradient-to-br from-primary to-blue-600">
+  </div>
+  <div
+    class="absolute top-24 -left-12 h-40 w-40 rounded-full blur-3xl opacity-20 bg-gradient-to-br from-purple-500 to-pink-500">
+  </div>
+  <div
+    class="flex items-center bg-white/80 dark:bg-gray-900/60 backdrop-blur p-4 pb-2 justify-between border-b border-gray-200 dark:border-gray-700">
+    <div class="text-gray-800 dark:text-gray-300 cursor-pointer flex size-12 shrink-0 items-center"
+      data-icon="ArrowLeft" data-size="24px" role="button" data-weight="regular" onclick="window.history.back()">
+      <span class="material-symbols-outlined">arrow_back</span>
+    </div>
+    <h2 class="text-gray-800 dark:text-white text-lg font-bold leading-tight tracking-[-0.015em] flex-1 text-center">
+      Join {{ school_info.name }} Today
+    </h2>
+    <div class="size-12 shrink-0"></div>
+  </div>
+</div>
+<form id="register_form" class="flex flex-col gap-4 p-4 items-center">
+  <div class="w-full max-w-sm">
+    <label class="flex flex-col min-w-40 flex-1">
+      <p class="text-text-light dark:text-gray-300 text-base font-medium leading-normal pb-2">First Name</p>
+      <input id="first_name"
+        class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-text-light dark:text-white border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 focus:border-primary focus:ring-2 focus:ring-primary/20 h-14 placeholder:text-gray-400 dark:placeholder:text-gray-500 p-[15px] text-base font-normal leading-normal outline-none transition"
+        placeholder="Enter your first name" value="" />
+    </label>
+    <p id="first_name_status" class="text-red-500 error"></p>
+  </div>
+  <div class="w-full max-w-sm">
+    <label class="flex flex-col min-w-40 flex-1">
+      <p class="text-text-light dark:text-gray-300 text-base font-medium leading-normal pb-2">Last Name</p>
+      <input id="last_name"
+        class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-text-light dark:text-white border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 focus:border-primary focus:ring-2 focus:ring-primary/20 h-14 placeholder:text-gray-400 dark:placeholder:text-gray-500 p-[15px] text-base font-normal leading-normal outline-none transition"
+        placeholder="Enter your last name" value="" />
+    </label>
+    <p id="last_name_status" class="text-red-500 error"></p>
+  </div>
+  <div class="w-full max-w-sm">
+    <label class="flex flex-col min-w-40 flex-1">
+      <p class="text-text-light dark:text-gray-300 text-base font-medium leading-normal pb-2">Gender</p>
+      <select id="gender"
+        class="form-select flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-text-light dark:text-white border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 focus:border-primary focus:ring-2 focus:ring-primary/20 h-14 placeholder:text-gray-400 dark:placeholder:text-gray-500 p-[15px] text-base font-normal leading-normal appearance-none outline-none transition"
+        style="--select-button-svg: url('data:image/svg+xml,%3csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%2724px%27 height=%2724px%27 fill=%27rgb(107, 114, 128)%27 viewBox=%270 0 256 256%27%3e%3cpath d=%27M215.39,92.61a8,8,0,0,0-11.32,0L128,168.69,51.93,92.61a8,8,0,0,0-11.32,11.32l82.07,82.06a8,8,0,0,0,11.32,0l82.07-82.06a8,8,0,0,0,0-11.32Z%27%3e%3c/path%3e%3c/svg%3e'); background-image: var(--select-button-svg); background-repeat: no-repeat; background-position: right 0.75rem center;">
+        <option disabled="" selected="" value="">Select your gender</option>
+        <option value="male">Male</option>
+        <option value="female">Female</option>
+        <option value="other">Other</option>
+      </select>
+    </label>
+    <p id="gender_status" class="text-red-500 error"></p>
+  </div>
+  <div class="w-full max-w-sm">
+    <label class="flex flex-col min-w-40 flex-1">
+      <p class="text-text-light dark:text-gray-300 text-base font-medium leading-normal pb-2">Date of Birth</p>
+      <input id="dob"
+        class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-text-light dark:text-white border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 focus:border-primary focus:ring-2 focus:ring-primary/20 h-14 placeholder:text-gray-400 dark:placeholder:text-gray-500 p-[15px] text-base font-normal leading-normal outline-none transition"
+        type="date" />
+    </label>
+    <p id="dob_status" class="text-red-500 error"></p>
+  </div>
+  <div class="w-full max-w-sm">
+    <label class="flex flex-col min-w-40 flex-1">
+      <p class="text-text-light dark:text-gray-300 text-base font-medium leading-normal pb-2">Profile Image (Optional)
+      </p>
+      <input id="image" type="file" accept="image/*"
+        class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-text-light dark:text-white border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 focus:border-primary focus:ring-2 focus:ring-primary/20 h-14 p-[10px] text-base font-normal leading-normal outline-none transition" />
+    </label>
+  </div>
+  <div class="w-full max-w-sm">
+    <label class="flex flex-col min-w-40 flex-1">
+      <p class="text-text-light dark:text-gray-300 text-base font-medium leading-normal pb-2">Role</p>
+      <select id="role"
+        class="form-select flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-text-light dark:text-white border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 focus:border-primary focus:ring-2 focus:ring-primary/20 h-14 placeholder:text-gray-400 dark:placeholder:text-gray-500 p-[15px] text-base font-normal leading-normal appearance-none outline-none transition"
+        style="--select-button-svg: url('data:image/svg+xml,%3csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%2724px%27 height=%2724px%27 fill=%27rgb(107, 114, 128)%27 viewBox=%270 0 256 256%27%3e%3cpath d=%27M215.39,92.61a8,8,0,0,0-11.32,0L128,168.69,51.93,92.61a8,8,0,0,0-11.32,11.32l82.07,82.06a8,8,0,0,0,11.32,0l82.07-82.06a8,8,0,0,0,0-11.32Z%27%3e%3c/path%3e%3c/svg%3e'); background-image: var(--select-button-svg); background-repeat: no-repeat; background-position: right 0.75rem center;">
+        <option disabled="" selected="" value="">Select role</option>
+        <option value="student">Student</option>
+        <option value="staff">Staff</option>
+        <option value="admin">Admin</option>
+      </select>
+    </label>
+    <p id="role_status" class="text-red-500 error"></p>
+  </div>
+  <div id="email_div" class="w-full max-w-sm hidden">
+    <label class="flex flex-col min-w-40 flex-1">
+      <p class="text-text-light dark:text-gray-300 text-base font-medium leading-normal pb-2">Email</p>
+      <input id="email" type="email"
+        class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-text-light dark:text-white border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 focus:border-primary focus:ring-2 focus:ring-primary/20 h-14 placeholder:text-gray-400 dark:placeholder:text-gray-500 p-[15px] text-base font-normal leading-normal outline-none transition"
+        placeholder="Enter your email" value="" />
+    </label>
+    <p id="email_status" class="text-red-500 error"></p>
+  </div>
+  <div id="class_div" class="w-full max-w-sm">
+    <label class="flex flex-col min-w-40 flex-1">
+      <p class="text-text-light dark:text-gray-300 text-base font-medium leading-normal pb-2">Class</p>
+      <select id="class_room"
+        class="form-select flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-text-light dark:text-white border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 focus:border-primary focus:ring-2 focus:ring-primary/20 h-14 placeholder:text-gray-400 dark:placeholder:text-gray-500 p-[15px] text-base font-normal leading-normal appearance-none outline-none transition"
+        style="--select-button-svg: url('data:image/svg+xml,%3csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%2724px%27 height=%2724px%27 fill=%27rgb(107, 114, 128)%27 viewBox=%270 0 256 256%27%3e%3cpath d=%27M215.39,92.61a8,8,0,0,0-11.32,0L128,168.69,51.93,92.61a8,8,0,0,0-11.32,11.32l82.07,82.06a8,8,0,0,0,11.32,0l82.07-82.06a8,8,0,0,0,0-11.32Z%27%3e%3c/path%3e%3c/svg%3e'); background-image: var(--select-button-svg); background-repeat: no-repeat; background-position: right 0.75rem center;">
+        <option disabled="" selected="" value="">Select your class</option>
+        {% for class_room in class_rooms %}
+        {% if class_room.class_room_name != 'default class' %}
+        <option value="{{ class_room.class_room_name }}">{{ class_room.class_room_name }}</option>
+        {% endif %}
+        {% endfor %}
+      </select>
+    </label>
+    <p id="class_room_status" class="text-red-500 error"></p>
+  </div>
+  <div id="register_number_div" class="w-full max-w-sm">
+    <label class="flex flex-col min-w-40 flex-1">
+      <p class="text-text-light dark:text-gray-300 text-base font-medium leading-normal pb-2">Register Number</p>
+      <input id="register_number"
+        class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-text-light dark:text-white border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 focus:border-primary focus:ring-2 focus:ring-primary/20 h-14 placeholder:text-gray-400 dark:placeholder:text-gray-500 p-[15px] text-base font-normal leading-normal pr-12 outline-none transition"
+        placeholder="Enter your register number" type="number" value="" />
+    </label>
+    <p id="register_number_status" class="text-red-500 error"></p>
+  </div>
+  <div class="w-full max-w-sm">
+    <label class="flex flex-col min-w-40 flex-1 relative">
+      <p class="text-text-light dark:text-gray-300 text-base font-medium leading-normal pb-2">Password</p>
+      <input id="password"
+        class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-text-light dark:text-white border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 focus:border-primary focus:ring-2 focus:ring-primary/20 h-14 placeholder:text-gray-400 dark:placeholder:text-gray-500 p-[15px] text-base font-normal leading-normal pr-12 outline-none transition"
+        placeholder="Enter your password" type="password" value="" />
+      <button type="button" class="absolute right-4 top-11 text-gray-400 hover:text-gray-300">
+        <span class="material-symbols-outlined">visibility</span>
+      </button>
+    </label>
+    <p id="password_status" class="text-red-500 error"></p>
+  </div>
+  <div class="w-full max-w-sm">
+    <label class="flex flex-col min-w-40 flex-1 relative">
+      <p class="text-text-light dark:text-gray-300 text-base font-medium leading-normal pb-2">Confirm Password</p>
+      <input id="confirm_password"
+        class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-text-light dark:text-white border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 focus:border-primary focus:ring-2 focus:ring-primary/20 h-14 placeholder:text-gray-400 dark:placeholder:text-gray-500 p-[15px] text-base font-normal leading-normal pr-12 outline-none transition"
+        placeholder="Confirm your password" type="password" value="" />
+      <button type="button" class="absolute right-4 top-11 text-gray-400 hover:text-gray-300">
+        <span class="material-symbols-outlined">visibility_off</span>
+      </button>
+      <p id="confirm_password_status" class="text-red-500 error"></p>
+    </label>
+  </div>
+  <div class="w-full max-w-sm mt-4">
+    <button
+      class="w-full bg-gradient-to-r from-primary to-blue-600 text-white font-bold py-4 rounded-xl hover:shadow-lg hover:scale-[1.02] active:scale-[0.98] transition-all duration-200"
+      type="submit">
+      Register
+    </button>
+  </div>
+  <div class="w-full max-w-sm">
+    <p class="text-center text-gray-500 dark:text-gray-400 mt-4">
+      Already have an account? <a class="text-primary font-semibold" href="{{ url_for('login') }}">Login</a>
+    </p>
+  </div>
+</form>
+{% call modal.modal(modal_id="alert", modal_title="Registration Successful") %}
+<div class="mb-4">
+  <p class="text-gray-700 dark:text-gray-300 mb-2">Dear <span class="font-semibold" id="alert_name"></span>,</p>
+  <p class="text-gray-600 dark:text-gray-400" id="alert_content">Your account has been created successfully, your
+    username is <span class="font-semibold " id="alert_username"></span>. Please login to <a
+      href="{{ url_for('login') }}" class="text-primary font-semibold underline">access your account.</a></p>
+</div>
+<button type="button" id="close_alert"
+  class="close-modal bg-primary text-white font-semibold py-3 px-6 rounded-lg hover:bg-primary/90 hover:shadow-lg hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 w-full"
+  data-modal="alert">
+  Ok
+</button>
+{% endcall %}
+{% endblock %}

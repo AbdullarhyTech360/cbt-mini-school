@@ -1,0 +1,6 @@
+Admin Creating sections, levels, groups
+othe functionalities of Admin ations management
+use keyboard to do test
+groq:[REMOVED FOR SECURITY]
+load only relevant data Example: Subjects assigned to a primary teacher will loads when the primary section is selected
+student to subject issue

@@ -1,0 +1,25 @@
+{
+  "scripts": {
+    "build:css": "npx tailwindcss -i ./app/static/css/input.css -o ./static/dist/output.css",
+    "watch:css": "npx tailwindcss -i ./app/static/css/input.css -o ./static/dist/output.css --watch",
+    "copy:fonts": "node -e \"require('fs').copyFileSync('node_modules/material-symbols/material-symbols-outlined.woff2', 'static/dist/material-symbols-outlined.woff2'); require('fs').copyFileSync('node_modules/material-symbols/material-symbols-rounded.woff2', 'static/dist/material-symbols-rounded.woff2'); require('fs').copyFileSync('node_modules/material-symbols/material-symbols-sharp.woff2', 'static/dist/material-symbols-sharp.woff2')\"",
+    "copy:mathjax": "node scripts/copy-mathjax.js",
+    "watch:fonts": "node scripts/watch-fonts.js",
+    "build": "npm run copy:fonts && npm run copy:mathjax && npm run build:css",
+    "dev": "npm run copy:fonts && npm run copy:mathjax && concurrently \"npm run watch:css\" \"npm run watch:fonts\"",
+    "watch": "npm run dev"
+  },
+  "dependencies": {
+    "@tailwindcss/cli": "^4.1.14",
+    "html2canvas": "^1.4.1",
+    "jspdf": "^3.0.4",
+    "material-icons": "^1.13.14",
+    "material-symbols": "^0.39.1",
+    "mathjax": "^3.2.2",
+    "tailwindcss": "^4.1.14"
+  },
+  "devDependencies": {
+    "chokidar": "^3.6.0",
+    "concurrently": "^9.2.1"
+  }
+}

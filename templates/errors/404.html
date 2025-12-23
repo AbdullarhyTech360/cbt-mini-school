@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Page Not Found - {{ app_name }}</title>
+    <link href="{{ url_for('static', filename='dist/output.css') }}" rel="stylesheet">
+</head>
+<body class="bg-gray-100 min-h-screen flex items-center justify-center">
+    <div class="max-w-md mx-auto text-center">
+        <div class="mb-8">
+            <h1 class="text-9xl font-bold text-gray-300">404</h1>
+        </div>
+        <div class="mb-8">
+            <h2 class="text-2xl font-semibold text-gray-800 mb-2">Page Not Found</h2>
+            <p class="text-gray-600">
+                The page you are looking for might have been removed, had its name changed,
+                or is temporarily unavailable.
+            </p>
+        </div>
+        <div class="space-y-4">
+            <a href="{{ url_for('index') }}"
+               class="inline-block bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-6 rounded-lg transition duration-200">
+                Go Home
+            </a>
+            <div>
+                <button onclick="history.back()"
+                        class="text-blue-600 hover:text-blue-800 font-medium">
+                    ← Go Back
+                </button>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
