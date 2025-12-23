@@ -1,0 +1,433 @@
+{% extends "admin/base.html" %} {% block title %}Report Configuration{% endblock
+%} {% block content %}
+<div class="mb-6 md:mb-8">
+  <div
+    class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
+  >
+    <div>
+      <h1
+        class="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white mb-2"
+      >
+        Report Configuration
+      </h1>
+      <p class="text-gray-600 dark:text-gray-400 text-sm md:text-base">
+        Manage report card layouts and configurations
+      </p>
+    </div>
+    <button
+      onclick="openConfigModal()"
+      class="flex items-center gap-2 px-4 py-2 md:px-5 md:py-2.5 bg-gradient-to-r from-primary to-blue-600 hover:from-primary/90 hover:to-blue-700 text-white rounded-lg shadow-md hover:shadow-lg transition-all duration-200 text-sm md:text-base font-semibold"
+    >
+      <span class="material-symbols-outlined text-lg">add</span>
+      <span>New Configuration</span>
+    </button>
+  </div>
+</div>
+
+<!-- Stats Cards -->
+<div
+  class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-6 md:mb-8"
+>
+  <div
+    class="bg-gradient-to-br from-blue-500 to-blue-600 p-4 md:p-6 rounded-2xl shadow-lg"
+  >
+    <div class="flex items-center justify-between">
+      <div>
+        <p class="text-white/90 text-xs md:text-sm font-medium mb-1">
+          Total Configurations
+        </p>
+        <p class="text-xl md:text-3xl font-bold text-white" id="totalConfigs">
+          0
+        </p>
+      </div>
+      <div
+        class="h-10 w-10 md:h-12 md:w-12 rounded-xl bg-white/20 flex items-center justify-center"
+      >
+        <span class="material-symbols-outlined text-white text-lg md:text-2xl"
+          >settings</span
+        >
+      </div>
+    </div>
+  </div>
+  <div
+    class="bg-gradient-to-br from-green-500 to-green-600 p-4 md:p-6 rounded-2xl shadow-lg"
+  >
+    <div class="flex items-center justify-between">
+      <div>
+        <p class="text-white/90 text-xs md:text-sm font-medium mb-1">
+          Active Configurations
+        </p>
+        <p class="text-xl md:text-3xl font-bold text-white" id="activeConfigs">
+          0
+        </p>
+      </div>
+      <div
+        class="h-10 w-10 md:h-12 md:w-12 rounded-xl bg-white/20 flex items-center justify-center"
+      >
+        <span class="material-symbols-outlined text-white text-lg md:text-2xl"
+          >check_circle</span
+        >
+      </div>
+    </div>
+  </div>
+  <div
+    class="bg-gradient-to-br from-purple-500 to-purple-600 p-4 md:p-6 rounded-2xl shadow-lg"
+  >
+    <div class="flex items-center justify-between">
+      <div>
+        <p class="text-white/90 text-xs md:text-sm font-medium mb-1">
+          Merge Rules
+        </p>
+        <p
+          class="text-xl md:text-3xl font-bold text-white"
+          id="totalMergeRules"
+        >
+          0
+        </p>
+      </div>
+      <div
+        class="h-10 w-10 md:h-12 md:w-12 rounded-xl bg-white/20 flex items-center justify-center"
+      >
+        <span class="material-symbols-outlined text-white text-lg md:text-2xl"
+          >merge</span
+        >
+      </div>
+    </div>
+  </div>
+  <div
+    class="bg-gradient-to-br from-orange-500 to-orange-600 p-4 md:p-6 rounded-2xl shadow-lg"
+  >
+    <div class="flex items-center justify-between">
+      <div>
+        <p class="text-white/90 text-xs md:text-sm font-medium mb-1">
+          Grade Scales
+        </p>
+        <p
+          class="text-xl md:text-3xl font-bold text-white"
+          id="totalGradeScales"
+        >
+          0
+        </p>
+      </div>
+      <div
+        class="h-10 w-10 md:h-12 md:w-12 rounded-xl bg-white/20 flex items-center justify-center"
+      >
+        <span class="material-symbols-outlined text-white text-lg md:text-2xl"
+          >grading</span
+        >
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Configurations List -->
+<div
+  class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-100 dark:border-gray-700 overflow-hidden"
+>
+  <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+    <h2 class="text-lg md:text-xl font-bold text-gray-800 dark:text-white">
+      Configurations
+    </h2>
+  </div>
+  <div id="configsList" class="p-6">
+    <!-- Configurations will be loaded here -->
+  </div>
+</div>
+
+<!-- Configuration Modal -->
+<div
+  id="configModal"
+  class="modal-overlay fixed inset-0 bg-black/50 z-50 hidden items-center justify-center p-4"
+>
+  <div
+    class="bg-white dark:bg-gray-800 rounded-2xl shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto"
+  >
+    <div class="p-6">
+      <div class="flex justify-between items-center mb-6">
+        <h2
+          class="text-xl font-bold text-gray-800 dark:text-white"
+          id="modalTitle"
+        >
+          New Report Configuration
+        </h2>
+        <button
+          onclick="closeConfigModal()"
+          class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 rounded-full p-2 hover:bg-gray-100 dark:hover:bg-gray-700 transition"
+        >
+          <span class="material-symbols-outlined text-xl">close</span>
+        </button>
+      </div>
+
+      <form id="configForm" class="space-y-6">
+        <input type="hidden" id="configId" name="config_id" />
+
+        <!-- Basic Info -->
+        <div class="bg-gray-50 dark:bg-gray-700/30 rounded-xl p-5">
+          <h3
+            class="text-lg font-semibold text-gray-800 dark:text-white mb-4 flex items-center"
+          >
+            <span class="material-symbols-outlined mr-2 text-primary">info</span
+            >Basic Information
+          </h3>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label
+                class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+              >
+                Configuration Name *
+              </label>
+              <input
+                type="text"
+                id="configName"
+                name="configName"
+                required
+                class="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition shadow-sm hover:shadow-md placeholder:text-gray-400 dark:placeholder:text-gray-500"
+              />
+            </div>
+
+            <div>
+              <label
+                class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+              >
+                Term *
+              </label>
+              <select
+                id="termId"
+                name="termId"
+                required
+                class="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition shadow-sm hover:shadow-md"
+              >
+                <option value="">Select Term</option>
+              </select>
+            </div>
+
+            <div>
+              <label
+                class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+              >
+                Class (Optional)
+              </label>
+              <select
+                id="classRoomId"
+                name="classRoomId"
+                class="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition shadow-sm hover:shadow-md"
+              >
+                <option value="">All Classes</option>
+              </select>
+            </div>
+
+            <div>
+              <label
+                class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+              >
+                Grade Scale
+              </label>
+              <select
+                id="gradeScaleId"
+                name="gradeScaleId"
+                class="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition shadow-sm hover:shadow-md"
+              >
+                <option value="">Default Scale</option>
+              </select>
+            </div>
+
+            <div>
+              <label
+                class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+              >
+                Resumption Date (Optional)
+              </label>
+              <input
+                type="date"
+                id="resumptionDate"
+                name="resumptionDate"
+                class="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition shadow-sm hover:shadow-md"
+              />
+            </div>
+
+            <div class="flex items-end">
+              <label class="flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  id="isDefault"
+                  name="isDefault"
+                  class="sr-only peer"
+                />
+                <div
+                  class="relative w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-primary"
+                ></div>
+                <span
+                  class="ms-3 text-sm font-medium text-gray-700 dark:text-gray-300"
+                  >Set as Default Configuration</span
+                >
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <!-- Display Settings -->
+        <div class="bg-gray-50 dark:bg-gray-700/30 rounded-xl p-5">
+          <h3
+            class="text-lg font-semibold text-gray-800 dark:text-white mb-4 flex items-center"
+          >
+            <span class="material-symbols-outlined mr-2 text-primary"
+              >visibility</span
+            >Display Settings
+          </h3>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <label
+              class="flex items-center p-4 border border-gray-200 dark:border-gray-700 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer transition"
+            >
+              <input
+                type="checkbox"
+                id="showLogo"
+                name="showLogo"
+                checked
+                class="sr-only peer"
+              />
+              <div
+                class="relative w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-primary mr-3"
+              ></div>
+              <span class="text-sm text-gray-700 dark:text-gray-300"
+                >Show School Logo</span
+              >
+            </label>
+            <label
+              class="flex items-center p-4 border border-gray-200 dark:border-gray-700 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer transition"
+            >
+              <input
+                type="checkbox"
+                id="showStudentImage"
+                name="showStudentImage"
+                checked
+                class="sr-only peer"
+              />
+              <div
+                class="relative w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-primary mr-3"
+              ></div>
+              <span class="text-sm text-gray-700 dark:text-gray-300"
+                >Show Student Image</span
+              >
+            </label>
+            <label
+              class="flex items-center p-4 border border-gray-200 dark:border-gray-700 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer transition"
+            >
+              <input
+                type="checkbox"
+                id="showPosition"
+                name="showPosition"
+                checked
+                class="sr-only peer"
+              />
+              <div
+                class="relative w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-primary mr-3"
+              ></div>
+              <span class="text-sm text-gray-700 dark:text-gray-300"
+                >Show Class Position</span
+              >
+            </label>
+            <label
+              class="flex items-center p-4 border border-gray-200 dark:border-gray-700 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer transition"
+            >
+              <input
+                type="checkbox"
+                id="treatTotalAsPercentage"
+                name="treatTotalAsPercentage"
+                class="sr-only peer"
+              />
+              <div
+                class="relative w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-primary mr-3"
+              ></div>
+              <span class="text-sm text-gray-700 dark:text-gray-300"
+                >Treat Total Score as Percentage (Scale to 100)</span
+              >
+            </label>
+          </div>
+        </div>
+
+        <!-- Active Assessments -->
+        <div class="bg-gray-50 dark:bg-gray-700/30 rounded-xl p-5">
+          <h3
+            class="text-lg font-semibold text-gray-800 dark:text-white mb-4 flex items-center"
+          >
+            <span class="material-symbols-outlined mr-2 text-primary"
+              >checklist</span
+            >Active Assessments
+          </h3>
+          <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">
+            Select which assessments to include in the report
+          </p>
+          <div
+            id="assessmentsList"
+            class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3"
+          >
+            <!-- Assessment checkboxes will be loaded here -->
+          </div>
+        </div>
+
+        <!-- Exam Merging -->
+        <div class="bg-gray-50 dark:bg-gray-700/30 rounded-xl p-5">
+          <h3
+            class="text-lg font-semibold text-gray-800 dark:text-white mb-4 flex items-center"
+          >
+            <span class="material-symbols-outlined mr-2 text-primary"
+              >merge</span
+            >Exam Merging
+          </h3>
+          <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">
+            Combine multiple assessments into one. For example: merge "CBT" +
+            "Exam" and display as "Final Exam"
+          </p>
+
+          <div
+            class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-4 mb-5"
+          >
+            <p class="text-xs text-blue-800 dark:text-blue-300">
+              <span class="material-symbols-outlined mr-1 align-middle text-sm"
+                >info</span
+              >
+              <strong>How it works:</strong> Select which assessments to
+              combine, give the merged result a name, and choose how it appears
+              on the report. The component scores will be added together.
+            </p>
+          </div>
+
+          <div id="mergeRulesList" class="space-y-4 mb-4">
+            <!-- Merge rules will be added here -->
+          </div>
+
+          <button
+            type="button"
+            onclick="addMergeRule()"
+            class="flex items-center gap-2 px-4 py-2.5 bg-green-100 hover:bg-green-200 dark:bg-green-900/30 dark:hover:bg-green-900/50 text-green-700 dark:text-green-300 rounded-lg text-sm font-medium transition"
+          >
+            <span class="material-symbols-outlined">add</span>Add Merge Rule
+          </button>
+        </div>
+
+        <!-- Actions -->
+        <div
+          class="flex flex-col sm:flex-row justify-end gap-3 pt-4 border-t border-gray-200 dark:border-gray-700"
+        >
+          <button
+            type="button"
+            onclick="closeConfigModal()"
+            class="px-5 py-2.5 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700 transition font-medium"
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            class="px-5 py-2.5 bg-gradient-to-r from-primary to-blue-600 hover:from-primary/90 hover:to-blue-700 text-white rounded-lg shadow transition flex items-center justify-center font-medium"
+          >
+            <span class="material-symbols-outlined mr-2">save</span>Save
+            Configuration
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script src="{{ url_for('static', filename='js/admin/report_config.js') }}"></script>
+{% endblock %}

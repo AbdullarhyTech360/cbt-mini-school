@@ -1,0 +1,77 @@
+{% extends 'admin/base.html' %}
+
+{% block title %}Reset Exams - Admin Panel{% endblock %}
+
+{% block sidebar_nav %}
+{{ super() }}
+{% endblock %}
+
+{% block content %}
+<!-- Header -->
+<div class="mb-8">
+    <div
+        class="flex flex-col md:flex-row md:items-center md:justify-between gap-4"
+    >
+        <div>
+            <h1 class="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+                Reset Exams
+            </h1>
+            <p class="text-gray-600 dark:text-gray-400">
+                Reset exams for students to give them a chance to re-take them.
+            </p>
+        </div>
+    </div>
+</div>
+
+<!-- Reset Exams Form -->
+<div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 border border-gray-100 dark:border-gray-700">
+    <div class="mb-4">
+        <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-3">
+            Reset Exams
+        </h3>
+        <p class="text-sm text-gray-600 dark:text-gray-400">
+            Reset exams for students to give them a chance to re-take them.
+        </p>
+    </div>
+    <form action="" method="POST">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Student Username
+                </label>
+                <!-- use search input for autocomplete -->
+                <input
+                    type="search"
+                    name="username"
+                    id="username"
+                    class="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition"
+                    placeholder="Enter username"
+                />
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Select Exam
+                </label>
+                <input
+                    type="search"
+                    name="exam_name"
+                    id="exam_id"
+                    class="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition"
+                    placeholder="Enter exam ID"
+                />
+            </div>
+            <div>
+                <button
+                    type="submit"
+                    class="px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-lg font-semibold hover:shadow-lg transition-all duration-200"
+                >
+                    Reset Exam
+                </button>
+            </div>
+        </div>
+    </form>
+</div>
+
+<script src="{{ url_for('static', filename='js/components/modal.js') }}" defer></script>
+<script src="{{ url_for('static', filename='js/admin/reset_exams.js') }}" defer></script>
+{% endblock %}

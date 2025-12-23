@@ -1,0 +1,1552 @@
+{% extends 'staff/base.html' %}
+
+{% block title %}Input Scores{% endblock %}
+
+{% block content %}
+<!-- Fixed Header Section -->
+<div id="fixedHeader" class="fixed top-16 md:top-0 left-0 right-0 bg-white dark:bg-gray-800 shadow-md z-30 p-4 border-b border-gray-200 dark:border-gray-700 transition-all duration-300">
+    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div>
+            <h1 class="text-xl font-bold text-gray-900 dark:text-white">Input Student Scores</h1>
+            <p class="text-gray-600 dark:text-gray-400 text-sm">Record and manage student grades</p>
+        </div>
+        <div class="flex items-center gap-3">
+            <button id="syncCBTBtn" class="flex items-center gap-2 px-3 py-1.5 bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white rounded-lg shadow-md hover:shadow-lg transition-all duration-200 text-sm min-h-[44px]">
+                <span class="material-symbols-outlined text-base">sync</span>
+                <span class="font-semibold">Sync CBT</span>
+            </button>
+            <button class="flex items-center gap-2 px-3 py-1.5 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white rounded-lg shadow-md hover:shadow-lg transition-all duration-200 text-sm min-h-[44px]">
+                <span class="material-symbols-outlined text-base">download</span>
+                <span class="font-semibold">Export</span>
+            </button>
+        </div>
+    </div>
+    
+    <!-- Mobile: Combined Teacher/Subject/Class Information -->
+    <div class="md:hidden mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
+        <div class="grid grid-cols-1 gap-3">
+            <div class="flex items-center gap-3 p-3 rounded-xl bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-900/30 dark:to-blue-800/30 border border-blue-200 dark:border-blue-700/50">
+                <div class="h-10 w-10 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-lg flex-shrink-0">
+                    <span class="material-symbols-outlined text-white text-lg">person</span>
+                </div>
+                <div>
+                    <p class="text-xs text-blue-600 dark:text-blue-300 font-semibold uppercase tracking-wide">Teacher</p>
+                    <p class="text-gray-900 dark:text-white font-bold text-sm truncate">{{ current_user.full_name() if current_user else 'Unknown Teacher' }}</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-3 p-3 rounded-xl bg-gradient-to-r from-purple-50 to-purple-100 dark:from-purple-900/30 dark:to-purple-800/30 border border-purple-200 dark:border-purple-700/50">
+                <div class="h-10 w-10 rounded-xl bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center shadow-lg flex-shrink-0">
+                    <span class="material-symbols-outlined text-white text-lg">menu_book</span>
+                </div>
+                <div>
+                    <p class="text-xs text-purple-600 dark:text-purple-300 font-semibold uppercase tracking-wide">Subject</p>
+                    <p class="text-gray-900 dark:text-white font-bold text-sm truncate">{{ selected_subject.subject_name if selected_subject else 'Unknown Subject' }}</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-3 p-3 rounded-xl bg-gradient-to-r from-green-50 to-green-100 dark:from-green-900/30 dark:to-green-800/30 border border-green-200 dark:border-green-700/50">
+                <div class="h-10 w-10 rounded-xl bg-gradient-to-br from-green-500 to-green-600 flex items-center justify-center shadow-lg flex-shrink-0">
+                    <span class="material-symbols-outlined text-white text-lg">groups</span>
+                </div>
+                <div>
+                    <p class="text-xs text-green-600 dark:text-green-300 font-semibold uppercase tracking-wide">Class</p>
+                    <p class="text-gray-900 dark:text-white font-bold text-sm truncate">{{ selected_class.class_room_name if selected_class else 'Unknown Class' }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Desktop: Separate Teacher/Subject/Class Information Card -->
+<div id="fixedInfoCard" class="fixed top-32 md:top-20 left-0 right-0 bg-white dark:bg-gray-800 shadow-lg p-4 border-b border-l border-r border-gray-100 dark:border-gray-700 z-20 transition-all duration-300 hidden md:block">
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-7xl mx-auto">
+        <div class="flex items-center gap-3 p-3 rounded-xl bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-900/30 dark:to-blue-800/30 border border-blue-200 dark:border-blue-700/50">
+            <div class="h-12 w-12 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-lg flex-shrink-0">
+                <span class="material-symbols-outlined text-white text-xl">person</span>
+            </div>
+            <div>
+                <p class="text-xs text-blue-600 dark:text-blue-300 font-semibold uppercase tracking-wide">Teacher</p>
+                <p class="text-gray-900 dark:text-white font-bold text-base truncate">{{ current_user.full_name() if current_user else 'Unknown Teacher' }}</p>
+            </div>
+        </div>
+        <div class="flex items-center gap-3 p-3 rounded-xl bg-gradient-to-r from-purple-50 to-purple-100 dark:from-purple-900/30 dark:to-purple-800/30 border border-purple-200 dark:border-purple-700/50">
+            <div class="h-12 w-12 rounded-xl bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center shadow-lg flex-shrink-0">
+                <span class="material-symbols-outlined text-white text-xl">menu_book</span>
+            </div>
+            <div>
+                <p class="text-xs text-purple-600 dark:text-purple-300 font-semibold uppercase tracking-wide">Subject</p>
+                <p class="text-gray-900 dark:text-white font-bold text-base truncate">{{ selected_subject.subject_name if selected_subject else 'Unknown Subject' }}</p>
+            </div>
+        </div>
+        <div class="flex items-center gap-3 p-3 rounded-xl bg-gradient-to-r from-green-50 to-green-100 dark:from-green-900/30 dark:to-green-800/30 border border-green-200 dark:border-green-700/50">
+            <div class="h-12 w-12 rounded-xl bg-gradient-to-br from-green-500 to-green-600 flex items-center justify-center shadow-lg flex-shrink-0">
+                <span class="material-symbols-outlined text-white text-xl">groups</span>
+            </div>
+            <div>
+                <p class="text-xs text-green-600 dark:text-green-300 font-semibold uppercase tracking-wide">Class</p>
+                <p class="text-gray-900 dark:text-white font-bold text-base truncate">{{ selected_class.class_room_name if selected_class else 'Unknown Class' }}</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Spacer to account for fixed elements -->
+<div class="h-96 md:h-60"></div>
+
+<!-- CBT Info Banner -->
+{% if cbt_grades %}
+<div class="mb-6 animate-fade-in">
+    <div class="bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20 rounded-xl p-4 border border-blue-200 dark:border-blue-700 shadow-sm">
+        <div class="flex items-start gap-3">
+            <div class="h-10 w-10 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow flex-shrink-0">
+                <span class="material-symbols-outlined text-white text-lg">info</span>
+            </div>
+            <div class="flex-1">
+                <p class="text-sm font-semibold text-gray-900 dark:text-white mb-1">CBT Exam Scores Detected</p>
+                <p class="text-xs text-gray-600 dark:text-gray-400">
+                    Scores marked with <span class="inline-flex items-center px-1.5 py-0.5 rounded bg-blue-500 text-white text-xs font-bold">CBT</span> were automatically recorded from computer-based tests. These scores are editable and can be adjusted if needed. Original CBT scores are preserved in the system for audit purposes.
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Search and Filter Section -->
+<div class="mb-6">
+    <div class="flex flex-col md:flex-row gap-4">
+        <div class="flex-1 relative">
+            <span class="material-symbols-outlined absolute left-3 top-3 text-gray-400 text-sm">search</span>
+            <input type="text" id="studentSearch" placeholder="Search for a student..."
+                class="w-full pl-10 pr-4 py-2.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition shadow-sm hover:shadow-md placeholder:text-gray-400 dark:placeholder:text-gray-500 text-sm" />
+        </div>
+        <div class="flex items-center gap-2">
+            <button id="clearAllBtn" class="flex items-center gap-1 px-3 py-2.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg shadow-md hover:shadow-lg transition-all duration-200 text-sm">
+                <span class="material-symbols-outlined text-base">clear_all</span>
+                <span class="font-semibold">Clear All</span>
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Academic Term Card (Moved to bottom) -->
+{% if current_term %}
+<div class="mb-6 animate-fade-in">
+    <div class="bg-gradient-to-r from-indigo-50 to-blue-50 dark:from-indigo-900/20 dark:to-blue-900/20 rounded-2xl p-4 border border-indigo-200 dark:border-indigo-700 shadow-sm">
+        <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+            <div class="flex items-center gap-3">
+                <div class="h-12 w-12 rounded-xl bg-gradient-to-br from-indigo-500 to-indigo-600 flex items-center justify-center shadow">
+                    <span class="material-symbols-outlined text-white text-xl">calendar_month</span>
+                </div>
+                <div>
+                    <p class="text-xs text-gray-600 dark:text-gray-400 font-medium">Academic Term</p>
+                    <p class="text-gray-900 dark:text-white font-bold text-base">{{ current_term.term_name }} - {{ current_term.academic_session }}</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-2">
+                <span class="px-3 py-1.5 rounded-full bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 text-xs font-semibold flex items-center gap-1 shadow-sm">
+                    <span class="material-symbols-outlined text-base">check_circle</span>
+                    <span>Active Term</span>
+                </span>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Clear All Confirmation Modal -->
+<div id="clearAllModal" class="fixed inset-0 bg-black/50 z-50 hidden items-center justify-center p-4 modal-overlay" aria-modal="true" role="dialog">
+    <div class="relative w-full max-w-md">
+        <div class="relative rounded-lg bg-white p-6 shadow-lg dark:bg-gray-800">
+            <div class="flex items-center mb-4">
+                <span class="material-symbols-outlined text-orange-500 text-3xl mr-2">warning</span>
+                <span class="text-xl font-semibold text-gray-900 dark:text-white">Clear All Scores</span>
+            </div>
+            <div class="mt-2">
+                <p class="text-gray-600 dark:text-gray-400 mb-6">
+                    Are you sure you want to clear all entered scores? This action cannot be undone.
+                </p>
+                <div class="flex gap-3">
+                    <button id="cancelClearBtn" class="flex-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-semibold py-3 px-6 rounded-xl hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
+                        Cancel
+                    </button>
+                    <button id="confirmClearBtn" class="flex-1 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white font-semibold py-3 px-6 rounded-xl shadow-md hover:shadow-lg transition-all duration-200">
+                        Clear All
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Score Moderation Modal -->
+<div id="moderationModal" class="fixed inset-0 bg-black/50 z-50 hidden items-center justify-center p-4 modal-overlay" aria-modal="true" role="dialog">
+    <div class="relative w-full max-w-lg">
+        <div class="relative rounded-lg bg-white p-6 shadow-lg dark:bg-gray-800">
+            <div class="flex items-center justify-between mb-4">
+                <div class="flex items-center">
+                    <span class="material-symbols-outlined text-blue-500 text-3xl mr-2">tune</span>
+                    <span class="text-xl font-semibold text-gray-900 dark:text-white">Moderate Scores</span>
+                </div>
+                <button id="closeModerationBtn" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                    <span class="material-symbols-outlined">close</span>
+                </button>
+            </div>
+            <div class="mt-4 space-y-4">
+                <div class="bg-yellow-50 dark:bg-yellow-900/20 rounded-lg p-3 border border-yellow-200 dark:border-yellow-700">
+                    <div class="flex items-start gap-2">
+                        <span class="material-symbols-outlined text-yellow-600 dark:text-yellow-400 text-sm mt-0.5">info</span>
+                        <p class="text-yellow-800 dark:text-yellow-200 text-xs">
+                            <strong>Important:</strong> Moderation works on saved grades. Make sure to save scores first using "Save All Scores" button before moderating.
+                        </p>
+                    </div>
+                </div>
+                <p class="text-gray-600 dark:text-gray-400 text-sm">
+                    Add bonus points to scores based on criteria. Useful for handling mass failures or adjusting difficult assessments.
+                </p>
+                
+                <!-- Assessment Type Selection -->
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Assessment Type</label>
+                    <select id="moderationAssessment" class="w-full px-4 py-2.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition">
+                        <option value="">Select assessment type...</option>
+                        {% if assessment_types %}
+                            {% for assessment in assessment_types %}
+                            <option value="{{ assessment.code }}">{{ assessment.name }} (Max: {{ assessment.max_score|int }})</option>
+                            {% endfor %}
+                        {% endif %}
+                    </select>
+                </div>
+                
+                <!-- Bonus Points -->
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Bonus Points to Add</label>
+                    <input type="number" id="moderationValue" min="0" step="0.5" placeholder="e.g., 5" 
+                        class="w-full px-4 py-2.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition" />
+                </div>
+                
+                <!-- Apply To Selection -->
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Apply To</label>
+                    <select id="moderationApplyTo" class="w-full px-4 py-2.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition">
+                        <option value="all">All Students</option>
+                        <option value="range">Students Below Score</option>
+                        <option value="username">Specific Student</option>
+                    </select>
+                </div>
+                
+                <!-- Conditional Fields -->
+                <div id="moderationRangeField" class="hidden">
+                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Score Threshold</label>
+                    <input type="number" id="moderationRange" min="0" step="0.5" placeholder="e.g., 40" 
+                        class="w-full px-4 py-2.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition" />
+                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Bonus will be added to students scoring below this value</p>
+                </div>
+                
+                <div id="moderationUsernameField" class="hidden">
+                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Username</label>
+                    <input type="text" id="moderationUsername" placeholder="Enter username..." 
+                        class="w-full px-4 py-2.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition" />
+                    <div id="studentSuggestions" class="mt-2 max-h-40 overflow-y-auto hidden"></div>
+                </div>
+                
+                <!-- Moderation Options -->
+                <div class="border-t border-gray-200 dark:border-gray-700 pt-4 mt-4">
+                    <div class="flex items-start gap-3 mb-3">
+                        <input type="checkbox" id="moderationIncludeCBT" class="mt-1 h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary" />
+                        <div>
+                            <label for="moderationIncludeCBT" class="text-sm font-semibold text-gray-700 dark:text-gray-300 cursor-pointer">Include CBT Scores</label>
+                            <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Apply moderation to computer-based test scores (normally protected)</p>
+                        </div>
+                    </div>
+                    
+                    <div class="flex items-start gap-3">
+                        <input type="checkbox" id="moderationRequireApproval" class="mt-1 h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary" checked />
+                        <div>
+                            <label for="moderationRequireApproval" class="text-sm font-semibold text-gray-700 dark:text-gray-300 cursor-pointer">Require Admin Approval</label>
+                            <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Changes will be pending until approved by administrator</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Reason Field -->
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Reason for Moderation <span class="text-red-500">*</span></label>
+                    <textarea id="moderationReason" rows="3" placeholder="e.g., Exam was too difficult, mass failure observed..." 
+                        class="w-full px-4 py-2.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition resize-none"></textarea>
+                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Required for audit trail and admin approval</p>
+                </div>
+                
+                <!-- Preview -->
+                <div id="moderationPreview" class="hidden bg-blue-50 dark:bg-blue-900/20 rounded-lg p-3 border border-blue-200 dark:border-blue-700">
+                    <p class="text-sm text-blue-700 dark:text-blue-300 font-medium">Preview:</p>
+                    <p id="moderationPreviewText" class="text-sm text-gray-700 dark:text-gray-300 mt-1"></p>
+                </div>
+                
+                <div class="flex gap-3 mt-6">
+                    <button id="cancelModerationBtn" class="flex-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-semibold py-3 px-6 rounded-xl hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
+                        Cancel
+                    </button>
+                    <button id="applyModerationBtn" class="flex-1 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-semibold py-3 px-6 rounded-xl shadow-md hover:shadow-lg transition-all duration-200">
+                        Apply Moderation
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Scores Input Table -->
+<div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-100 dark:border-gray-700 overflow-hidden">
+    <div class="p-4 border-b border-gray-100 dark:border-gray-700">
+        <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
+            <h2 class="text-lg font-bold text-gray-800 dark:text-white">Student Scores</h2>
+            <div class="flex items-center gap-1 text-xs text-gray-600 dark:text-gray-400">
+                <span class="material-symbols-outlined text-base">info</span>
+                <span class="hidden sm:inline">Enter scores for First CA (20), Second CA (20), Exam (60)</span>
+                <span class="sm:hidden">Scores: CA(20)+CA(20)+Exam(60)</span>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Mobile instruction for horizontal scrolling -->
+    <div class="md:hidden bg-blue-50 dark:bg-blue-900/20 p-3 text-center border-b border-blue-100 dark:border-blue-800">
+        <p class="text-blue-700 dark:text-blue-300 text-xs flex items-center justify-center gap-1">
+            <span class="material-symbols-outlined text-sm">swipe_left</span>
+            <span>Swipe left to view all columns</span>
+            <span class="material-symbols-outlined text-sm">swipe_left</span>
+        </p>
+    </div>
+
+    <div class="overflow-x-auto">
+        <table class="w-full min-w-[640px]">
+            <thead class="bg-gray-50 dark:bg-gray-700/50">
+                <tr>
+                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-400">Student Name</th>
+                    {% if assessment_types %}
+                        {% for assessment in assessment_types %}
+                        <th class="px-2 py-3 text-center text-xs font-semibold text-gray-600 dark:text-gray-400 w-16">
+                            <div class="flex flex-col items-center gap-0.5">
+                                <span class="text-xs">{{ assessment.name }}</span>
+                                <span class="text-xs text-gray-500 dark:text-gray-400">({{ assessment.max_score|int }})</span>
+                            </div>
+                        </th>
+                        {% endfor %}
+                    {% else %}
+                        <th class="px-2 py-3 text-center text-xs font-semibold text-gray-600 dark:text-gray-400 w-16">
+                            <div class="flex flex-col items-center gap-0.5">
+                                <span class="text-xs">First CA</span>
+                                <span class="text-xs text-gray-500 dark:text-gray-400">(20)</span>
+                            </div>
+                        </th>
+                        <th class="px-2 py-3 text-center text-xs font-semibold text-gray-600 dark:text-gray-400 w-16">
+                            <div class="flex flex-col items-center gap-0.5">
+                                <span class="text-xs">Second CA</span>
+                                <span class="text-xs text-gray-500 dark:text-gray-400">(20)</span>
+                            </div>
+                        </th>
+                        <th class="px-2 py-3 text-center text-xs font-semibold text-gray-600 dark:text-gray-400 w-16">
+                            <div class="flex flex-col items-center gap-0.5">
+                                <span class="text-xs">Exam</span>
+                                <span class="text-xs text-gray-500 dark:text-gray-400">(60)</span>
+                            </div>
+                        </th>
+                    {% endif %}
+                    <th class="px-2 py-3 text-center text-xs font-semibold text-gray-600 dark:text-gray-400 w-12">Total</th>
+                    <th class="px-2 py-3 text-center text-xs font-semibold text-gray-600 dark:text-gray-400 w-12">Grade</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+                {% if students %}
+                    {% for student in students %}
+                    <tr class="student-row hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors" data-student-id="{{ student.id }}" data-student-name="{{ student.full_name() }}" data-username="{{ student.username }}">
+                        <td class="px-4 py-3">
+                            <div class="flex items-center gap-2">
+                                <div class="h-8 w-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
+                                    <span class="material-symbols-outlined text-white text-sm">person</span>
+                                </div>
+                                <div>
+                                    <p class="student-name font-semibold text-gray-800 dark:text-white text-sm">{{ student.full_name() }}</p>
+                                    <p class="text-xs text-gray-500 dark:text-gray-400">ID: {{ student.id[:8] }}</p>
+                                </div>
+                            </div>
+                        </td>
+                        {% if assessment_types %}
+                            {% for assessment in assessment_types %}
+                            <td class="px-2 py-3">
+                                {% set assessment_key = student.id ~ '_' ~ assessment.name %}
+                                {% set is_cbt = cbt_grades.get(assessment_key, False) %}
+                                <div class="relative">
+                                    <input type="number" 
+                                           class="score-input {{ assessment.code }} w-full text-center rounded border {% if is_cbt %}border-blue-300 dark:border-blue-600 bg-blue-50 dark:bg-blue-900/20{% else %}border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700{% endif %} text-gray-800 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition py-2 text-base md:text-sm min-h-[44px]" 
+                                           placeholder="--" 
+                                           min="0" 
+                                           max="{{ assessment.max_score }}"
+                                           step="0.5"
+                                           data-student-id="{{ student.id }}"
+                                           data-max="{{ assessment.max_score }}"
+                                           data-assessment="{{ assessment.code }}"
+                                           data-is-cbt="{{ 'true' if is_cbt else 'false' }}"
+                                           value="{{ existing_grades.get(assessment_key, '') }}"
+                                           title="{% if is_cbt %}Originally from CBT Exam - Editable{% endif %}" />
+                                    {% if is_cbt %}
+                                    <span class="absolute -top-1 -right-1 bg-blue-500 text-white text-xs px-1.5 py-0.5 rounded-full font-bold" title="Originally from CBT Exam">CBT</span>
+                                    {% endif %}
+                                </div>
+                            </td>
+                            {% endfor %}
+                        {% endif %}
+                        <td class="px-2 py-3 text-center">
+                            <span class="total-score text-gray-500 dark:text-gray-400 text-sm font-semibold">--</span>
+                        </td>
+                        <td class="px-2 py-3 text-center">
+                            <span class="grade-letter text-gray-500 dark:text-gray-400 text-sm">--</span>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                {% else %}
+                <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+                    <td class="px-4 py-3">
+                        <div class="flex items-center gap-2">
+                            <div class="h-8 w-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
+                                <span class="material-symbols-outlined text-white text-sm">person</span>
+                            </div>
+                            <p class="font-semibold text-gray-800 dark:text-white text-sm">Alex Johnson</p>
+                        </div>
+                    </td>
+                    <td class="px-2 py-3">
+                        <input type="number" placeholder="--"
+                            class="w-full text-center rounded border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-1 focus:ring-primary/20 focus:border-primary outline-none transition py-1 text-sm" />
+                    </td>
+                    <td class="px-2 py-3">
+                        <input type="number" placeholder="--"
+                            class="w-full text-center rounded border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-1 focus:ring-primary/20 focus:border-primary outline-none transition py-1 text-sm" />
+                    </td>
+                    <td class="px-2 py-3">
+                        <input type="number" placeholder="--"
+                            class="w-full text-center rounded border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-1 focus:ring-primary/20 focus:border-primary outline-none transition py-1 text-sm" />
+                    </td>
+                    <td class="px-2 py-3 text-center">
+                        <span class="text-gray-500 dark:text-gray-400 text-sm">--</span>
+                    </td>
+                    <td class="px-2 py-3 text-center">
+                        <span class="text-gray-500 dark:text-gray-400 text-sm">--</span>
+                    </td>
+                </tr>
+
+                <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+                    <td class="px-4 py-3">
+                        <div class="flex items-center gap-2">
+                            <div class="h-8 w-8 rounded-full bg-gradient-to-br from-pink-500 to-red-600 flex items-center justify-center">
+                                <span class="material-symbols-outlined text-white text-sm">person</span>
+                            </div>
+                            <p class="font-semibold text-gray-800 dark:text-white text-sm">Bella Hadid</p>
+                        </div>
+                    </td>
+                    <td class="px-2 py-3">
+                        <input type="number" value="18" placeholder="--"
+                            class="w-full text-center rounded border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-1 focus:ring-primary/20 focus:border-primary outline-none transition py-1 text-sm" />
+                    </td>
+                    <td class="px-2 py-3">
+                        <input type="number" placeholder="--"
+                            class="w-full text-center rounded border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-1 focus:ring-primary/20 focus:border-primary outline-none transition py-1 text-sm" />
+                    </td>
+                    <td class="px-2 py-3">
+                        <input type="number" placeholder="--"
+                            class="w-full text-center rounded border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-1 focus:ring-primary/20 focus:border-primary outline-none transition py-1 text-sm" />
+                    </td>
+                    <td class="px-2 py-3 text-center">
+                        <span class="text-gray-500 dark:text-gray-400 text-sm">--</span>
+                    </td>
+                    <td class="px-2 py-3 text-center">
+                        <span class="text-gray-500 dark:text-gray-400 text-sm">--</span>
+                    </td>
+                </tr>
+
+                <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+                    <td class="px-4 py-3">
+                        <div class="flex items-center gap-2">
+                            <div class="h-8 w-8 rounded-full bg-gradient-to-br from-green-500 to-teal-600 flex items-center justify-center">
+                                <span class="material-symbols-outlined text-white text-sm">person</span>
+                            </div>
+                            <p class="font-semibold text-gray-800 dark:text-white text-sm">Charles Leclerc</p>
+                        </div>
+                    </td>
+                    <td class="px-2 py-3">
+                        <input type="number" value="15" placeholder="--"
+                            class="w-full text-center rounded border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-1 focus:ring-primary/20 focus:border-primary outline-none transition py-1 text-sm" />
+                    </td>
+                    <td class="px-2 py-3">
+                        <input type="number" value="17" placeholder="--"
+                            class="w-full text-center rounded border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-1 focus:ring-primary/20 focus:border-primary outline-none transition py-1 text-sm" />
+                    </td>
+                    <td class="px-2 py-3">
+                        <input type="number" value="55" placeholder="--"
+                            class="w-full text-center rounded border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-1 focus:ring-primary/20 focus:border-primary outline-none transition py-1 text-sm" />
+                    </td>
+                    <td class="px-2 py-3 text-center">
+                        <span class="text-green-600 dark:text-green-400 font-semibold text-sm">87</span>
+                    </td>
+                    <td class="px-2 py-3 text-center">
+                        <span class="px-1.5 py-0.5 rounded-full bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 text-xs font-semibold">A</span>
+                    </td>
+                </tr>
+
+                <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+                    <td class="px-4 py-3">
+                        <div class="flex items-center gap-2">
+                            <div class="h-8 w-8 rounded-full bg-gradient-to-br from-orange-500 to-red-600 flex items-center justify-center">
+                                <span class="material-symbols-outlined text-white text-sm">person</span>
+                            </div>
+                            <p class="font-semibold text-gray-800 dark:text-white text-sm">Diana Prince</p>
+                        </div>
+                    </td>
+                    <td class="px-2 py-3">
+                        <input type="number" value="22" placeholder="--"
+                            class="w-full text-center rounded border-2 border-red-300 dark:border-red-600 bg-red-50 dark:bg-red-900/20 text-red-800 dark:text-red-300 focus:ring-1 focus:ring-red-500/20 focus:border-red-500 outline-none transition py-1 text-sm" />
+                    </td>
+                    <td class="px-2 py-3">
+                        <input type="number" placeholder="--"
+                            class="w-full text-center rounded border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-1 focus:ring-primary/20 focus:border-primary outline-none transition py-1 text-sm" />
+                    </td>
+                    <td class="px-2 py-3">
+                        <input type="number" placeholder="--"
+                            class="w-full text-center rounded border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-1 focus:ring-primary/20 focus:border-primary outline-none transition py-1 text-sm" />
+                    </td>
+                    <td class="px-2 py-3 text-center">
+                        <span class="text-gray-500 dark:text-gray-400 text-sm">--</span>
+                    </td>
+                    <td class="px-2 py-3 text-center">
+                        <span class="text-gray-500 dark:text-gray-400 text-sm">--</span>
+                    </td>
+                </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Validation Messages -->
+    <div id="validationMessage" class="hidden px-4 py-2 border-t">
+        <div class="flex items-center gap-1">
+            <span class="material-symbols-outlined text-sm"></span>
+            <p class="text-xs font-medium"></p>
+        </div>
+    </div>
+</div>
+
+<!-- Action Buttons -->
+<div class="mt-6 flex flex-col sm:flex-row gap-3">
+    <button id="saveScoresBtn" class="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-primary to-blue-600 hover:from-primary/90 hover:to-blue-600/90 text-white rounded-lg shadow-md hover:shadow-lg transition-all duration-200 font-semibold text-sm disabled:opacity-50 disabled:cursor-not-allowed">
+        <span class="material-symbols-outlined text-base">save</span>
+        <span>Save All Scores</span>
+    </button>
+    <button id="moderateScoresBtn" class="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white rounded-lg shadow-md hover:shadow-lg transition-all duration-200 font-semibold text-sm">
+        <span class="material-symbols-outlined text-base">tune</span>
+        <span>Moderate Scores</span>
+    </button>
+    <button id="autoCalculateBtn" class="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-white dark:bg-gray-700 text-primary dark:text-white border-2 border-primary dark:border-primary hover:bg-primary hover:text-white dark:hover:bg-primary rounded-lg shadow-md hover:shadow-lg transition-all duration-200 font-semibold text-sm">
+        <span class="material-symbols-outlined text-base">calculate</span>
+        <span>Calculate Totals</span>
+    </button>
+</div>
+
+<!-- Progress and Stats -->
+<div id="saveProgress" class="mt-4 hidden">
+    <div class="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 border border-blue-200 dark:border-blue-700">
+        <div class="flex items-center gap-33">
+            <div class="animate-spin h-5 w-5 border-2 border-blue-500 border-t-transparent rounded-full"></div>
+            <p class="text-sm text-blue-700 dark:text-blue-300 font-medium">Saving scores...</p>
+        </div>
+    </div>
+</div>
+
+<!-- Statistics Card -->
+<div class="mt-4 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-2xl p-4 border border-green-200 dark:border-green-700">
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div class="text-center">
+            <p class="text-xs text-gray-600 dark:text-gray-400 font-medium mb-1">Total Students</p>
+            <p id="totalStudents" class="text-2xl font-bold text-gray-900 dark:text-white">{{ students|length if students else 0 }}</p>
+        </div>
+        <div class="text-center">
+            <p class="text-xs text-gray-600 dark:text-gray-400 font-medium mb-1">Scores Entered</p>
+            <p id="scoresEntered" class="text-2xl font-bold text-blue-600 dark:text-blue-400">0</p>
+        </div>
+        <div class="text-center">
+            <p class="text-xs text-gray-600 dark:text-gray-400 font-medium mb-1">Average Score</p>
+            <p id="averageScore" class="text-2xl font-bold text-purple-600 dark:text-purple-400">--</p>
+        </div>
+        <div class="text-center">
+            <p class="text-xs text-gray-600 dark:text-gray-400 font-medium mb-1">Completion</p>
+            <p id="completionRate" class="text-2xl font-bold text-green-600 dark:text-green-400">0%</p>
+        </div>
+    </div>
+</div>
+
+<style>
+    /* Ensure proper z-index stacking */
+    #fixedHeader {
+        z-index: 30;
+    }
+    #fixedInfoCard {
+        z-index: 20;
+    }
+    
+    /* Add a slight shadow to distinguish the layers */
+    #fixedHeader {
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    }
+    #fixedInfoCard {
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    }
+    
+    /* Ensure error styles are visible */
+    .score-input.border-red-300,
+    .score-input.dark\:border-red-600 {
+        border-width: 2px;
+    }
+</style>
+
+<script>
+    // Configuration
+    const CONFIG = {
+        subject_id: "{{ selected_subject.subject_id if selected_subject else '' }}",
+        class_id: "{{ selected_class.class_room_id if selected_class else '' }}",
+        term_id: "{{ current_term.term_id if current_term else '' }}",
+        academic_session: "{{ current_term.academic_session if current_term else '' }}"
+    };
+
+    // Add this near the top of the script section with other global variables
+    let defaultGradeScale = null;
+
+    // Add this function to load the default grade scale
+    async function loadDefaultGradeScale() {
+        try {
+            const response = await fetch('/reports/api/grade-scales/default');
+            const data = await response.json();
+            
+            if (data.success) {
+                defaultGradeScale = data.scale;
+                console.log('Loaded default grade scale:', defaultGradeScale);
+            } else {
+                console.warn('Failed to load default grade scale:', data.error);
+                // Fall back to hardcoded system if API fails
+                defaultGradeScale = null;
+            }
+        } catch (error) {
+            console.error('Error loading default grade scale:', error);
+            // Fall back to hardcoded system if API fails
+            defaultGradeScale = null;
+        }
+    }
+    // Utility Functions
+    function showValidationMessage(message, type = 'error') {
+        const validationMessage = document.getElementById('validationMessage');
+        if (!validationMessage) return;
+        
+        const icon = validationMessage.querySelector('.material-symbols-outlined');
+        const text = validationMessage.querySelector('p');
+        
+        validationMessage.classList.remove('hidden', 'bg-red-50', 'bg-green-50', 'bg-yellow-50',
+            'dark:bg-red-900/20', 'dark:bg-green-900/20', 'dark:bg-yellow-900/20',
+            'border-red-200', 'border-green-200', 'border-yellow-200',
+            'dark:border-red-800', 'dark:border-green-800', 'dark:border-yellow-800');
+        icon.classList.remove('text-red-700', 'text-green-700', 'text-yellow-700',
+            'dark:text-red-300', 'dark:text-green-300', 'dark:text-yellow-300');
+        text.classList.remove('text-red-700', 'text-green-700', 'text-yellow-700',
+            'dark:text-red-300', 'dark:text-green-300', 'dark:text-yellow-300');
+        
+        if (type === 'error') {
+            validationMessage.classList.add('bg-red-50', 'dark:bg-red-900/20', 'border-red-200', 'dark:border-red-800');
+            icon.classList.add('text-red-700', 'dark:text-red-300');
+            text.classList.add('text-red-700', 'dark:text-red-300');
+            icon.textContent = 'error';
+        } else if (type === 'success') {
+            validationMessage.classList.add('bg-green-50', 'dark:bg-green-900/20', 'border-green-200', 'dark:border-green-800');
+            icon.classList.add('text-green-700', 'dark:text-green-300');
+            text.classList.add('text-green-700', 'dark:text-green-300');
+            icon.textContent = 'check_circle';
+        } else if (type === 'warning') {
+            validationMessage.classList.add('bg-yellow-50', 'dark:bg-yellow-900/20', 'border-yellow-200', 'dark:border-yellow-800');
+            icon.classList.add('text-yellow-700', 'dark:text-yellow-300');
+            text.classList.add('text-yellow-700', 'dark:text-yellow-300');
+            icon.textContent = 'warning';
+        }
+        
+        text.textContent = message;
+        
+        // Auto-hide after 5 seconds for success/warning
+        if (type !== 'error') {
+            setTimeout(() => {
+                validationMessage.classList.add('hidden');
+            }, 5000);
+        }
+    }
+
+    function validateScoreInput(input) {
+        const value = parseFloat(input.value);
+        const max = parseFloat(input.dataset.max);
+        const min = 0;
+        
+        // Remove previous validation styles
+        input.classList.remove('border-red-300', 'dark:border-red-600', 'bg-red-50', 'dark:bg-red-900/20', 'text-red-800', 'dark:text-red-300');
+        
+        if (input.value === '') {
+            return true; // Empty is valid
+        }
+        
+        if (isNaN(value) || value < min || value > max) {
+            // Add error styles
+            input.classList.add('border-red-300', 'dark:border-red-600', 'bg-red-50', 'dark:bg-red-900/20', 'text-red-800', 'dark:text-red-300');
+            
+            if (isNaN(value)) {
+                showValidationMessage(`Please enter a valid number`, 'error');
+            } else if (value < min) {
+                showValidationMessage(`Score cannot be negative`, 'error');
+            } else if (value > max) {
+                showValidationMessage(`Score must be between ${min} and ${max}`, 'error');
+            }
+            return false;
+        }
+        
+        return true;
+    }
+
+    function calculateTotal(row) {
+        // Get all score inputs in the row
+        const allInputs = row.querySelectorAll('.score-input');
+        let total = 0;
+        let maxTotal = 0;
+        let hasAnyScore = false;
+        
+        // Sum up all scores and calculate max possible total
+        allInputs.forEach(input => {
+            const value = parseFloat(input.value);
+            const max = parseFloat(input.dataset.max);
+            
+            // Add to max total
+            if (!isNaN(max)) {
+                maxTotal += max;
+            }
+            
+            // Add to current total if value exists
+            if (!isNaN(value) && input.value !== '') {
+                total += value;
+                hasAnyScore = true;
+            }
+        });
+        
+        const totalSpan = row.querySelector('.total-score');
+        const gradeSpan = row.querySelector('.grade-letter');
+        
+        if (!totalSpan || !gradeSpan) return;
+        
+        if (hasAnyScore && total > 0) {
+            totalSpan.textContent = total.toFixed(1);
+            totalSpan.classList.remove('text-gray-500', 'dark:text-gray-400');
+            
+            // Use total directly as percentage since maxTotal is always 100
+            const percentage = total;
+            let grade, colorClass;
+            
+            // Use the configurable grading  system from backend
+            if (defaultGradeScale && defaultGradeScale.grade_ranges) {
+                // Find the appropriate grade range from the loaded scale
+                const gradeRange = defaultGradeScale.grade_ranges.find(range => 
+                    percentage >= range.min_score && percentage <= range.max_score
+                );
+                
+                if (gradeRange) {
+                    grade = gradeRange.grade;
+                    // Set color class based on grade
+                    switch(grade) {
+                        case 'A':
+                            colorClass = 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300';
+                            totalSpan.classList.add('text-green-600', 'dark:text-green-400');
+                            break;
+                        case 'B':
+                            colorClass = 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300';
+                            totalSpan.classList.add('text-blue-600', 'dark:text-blue-400');
+                            break;
+                        case 'C':
+                            colorClass = 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300';
+                            totalSpan.classList.add('text-yellow-600', 'dark:text-yellow-400');
+                            break;
+                        case 'D':
+                            colorClass = 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300';
+                            totalSpan.classList.add('text-orange-600', 'dark:text-orange-400');
+                            break;
+                        default: // F
+                            colorClass = 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300';
+                            totalSpan.classList.add('text-red-600', 'dark:text-red-400');
+                    }
+                } else {
+                    // Default to F if no range matches
+                    grade = 'F';
+                    colorClass = 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300';
+                    totalSpan.classList.add('text-red-600', 'dark:text-red-400');
+                }
+            } else {
+                // If no grade scale is loaded, show an error message
+                console.error("No grade scale available. Please ensure the default grade scale is properly configured.");
+                // Default to F if no scale is available
+                grade = 'F';
+                colorClass = 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300';
+                totalSpan.classList.add('text-red-600', 'dark:text-red-400');
+            }
+            
+            gradeSpan.innerHTML = `<span class="px-2 py-0.5 rounded-full ${colorClass} text-xs font-semibold">${grade}</span>`;
+        } else {            totalSpan.textContent = '--';
+            totalSpan.className = 'total-score text-gray-500 dark:text-gray-400 text-sm font-semibold';
+            gradeSpan.textContent = '--';
+            gradeSpan.className = 'grade-letter text-gray-500 dark:text-gray-400 text-sm';
+        }
+    }
+
+    function updateStatistics() {
+        const rows = document.querySelectorAll('.student-row');
+        let totalScores = 0;
+        let scoresCount = 0;
+        let studentsWithScores = 0;
+        
+        rows.forEach(row => {
+            const inputs = row.querySelectorAll('.score-input');
+            let hasAnyScore = false;
+            
+            inputs.forEach(input => {
+                if (input.value !== '') {
+                    scoresCount++;
+                    totalScores += parseFloat(input.value) || 0;
+                    hasAnyScore = true;
+                }
+            });
+            
+            if (hasAnyScore) studentsWithScores++;
+        });
+        
+        // Update UI
+        document.getElementById('scoresEntered').textContent = scoresCount;
+        
+        if (scoresCount > 0) {
+            // Average score represents average percentage since each score is already a percentage value
+            const avgScore = (totalScores / scoresCount).toFixed(1);
+            document.getElementById('averageScore').textContent = avgScore;
+        } else {
+            document.getElementById('averageScore').textContent = '--';
+        }
+        
+        const completionRate = rows.length > 0 ? ((studentsWithScores / rows.length) * 100).toFixed(0) : 0;
+        document.getElementById('completionRate').textContent = completionRate + '%';
+    }
+
+    function collectScoresData() {
+        const rows = document.querySelectorAll('.student-row');
+        const scoresData = [];
+        
+        rows.forEach(row => {
+            const studentId = row.dataset.studentId;
+            const scoreInputs = row.querySelectorAll('.score-input:not([readonly])');
+            const studentScores = {};
+            let hasAnyScore = false;
+            
+            // Collect all scores for this student
+            scoreInputs.forEach(input => {
+                const assessmentCode = input.dataset.assessment;
+                const value = input.value;
+                
+                if (value !== '') {
+                    studentScores[assessmentCode] = parseFloat(value);
+                    hasAnyScore = true;
+                } else {
+                    studentScores[assessmentCode] = null;
+                }
+            });
+            
+            // Only include if at least one score is entered
+            if (hasAnyScore) {
+                scoresData.push({
+                    student_id: studentId,
+                    scores: studentScores
+                });
+            }
+        });
+        
+        return scoresData;
+    }
+
+    async function saveScores() {
+        // Validate all inputs first
+        const inputs = document.querySelectorAll('.score-input');
+        let isValid = true;
+        
+        inputs.forEach(input => {
+            if (input.value !== '' && !validateScoreInput(input)) {
+                isValid = false;
+            }
+        });
+        
+        if (!isValid) {
+            showValidationMessage('Please correct invalid scores before saving', 'error');
+            return;
+        }
+        
+        const scoresData = collectScoresData();
+        
+        if (scoresData.length === 0) {
+            showValidationMessage('No scores to save. Please enter at least one score.', 'warning');
+            return;
+        }
+        
+        // Show progress
+        const saveBtn = document.getElementById('saveScoresBtn');
+        const progress = document.getElementById('saveProgress');
+        saveBtn.disabled = true;
+        progress.classList.remove('hidden');
+        
+        try {
+            const response = await fetch(`/staff/input_scores/{{ current_user.id }}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    subject_id: CONFIG.subject_id,
+                    class_id: CONFIG.class_id,
+                    term_id: CONFIG.term_id,
+                    academic_session: CONFIG.academic_session,
+                    scores: scoresData
+                })
+            });
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                showValidationMessage(result.message, 'success');
+                
+                // Show errors if any
+                if (result.errors && result.errors.length > 0) {
+                    console.warn('Errors:', result.errors);
+                    setTimeout(() => {
+                        showValidationMessage(`${result.errors.length} errors occurred. Check console for details.`, 'warning');
+                    }, 5000);
+                }
+            } else {
+                showValidationMessage(result.message || 'Failed to save scores', 'error');
+            }
+        } catch (error) {
+            console.error('Error saving scores:', error);
+            showValidationMessage('Network error. Please check your connection and try again.', 'error');
+        } finally {
+            saveBtn.disabled = false;
+            progress.classList.add('hidden');
+        }
+    }
+
+    async function clearAllScores() {
+        // Show progress
+        const clearBtn = document.getElementById('clearAllBtn');
+        const progress = document.getElementById('saveProgress');
+        clearBtn.disabled = true;
+        progress.classList.remove('hidden');
+        
+        try {
+            const response = await fetch(`/staff/input_scores/{{ current_user.id }}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    subject_id: CONFIG.subject_id,
+                    class_id: CONFIG.class_id,
+                    term_id: CONFIG.term_id,
+                    academic_session: CONFIG.academic_session,
+                    action: "clear_scores"
+                })
+            });
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                // Clear all input fields except readonly CBT scores
+                document.querySelectorAll('.score-input:not([readonly])').forEach(input => {
+                    input.value = '';
+                    input.classList.remove('border-red-300', 'dark:border-red-600', 'bg-red-50', 'dark:bg-red-900/20', 'text-red-800', 'dark:text-red-300');
+                });
+                
+                // Recalculate totals and update statistics
+                document.querySelectorAll('.student-row').forEach(row => {
+                    calculateTotal(row);
+                });
+                
+                updateStatistics();
+                showValidationMessage(result.message, 'success');
+            } else {
+                showValidationMessage(result.message || 'Failed to clear scores', 'error');
+            }
+        } catch (error) {
+            console.error('Error clearing scores:', error);
+            showValidationMessage('Network error. Please check your connection and try again.', 'error');
+        } finally {
+            clearBtn.disabled = false;
+            progress.classList.add('hidden');
+        }
+    }
+
+    // Event Listeners
+    document.addEventListener('DOMContentLoaded', async function() {
+        // Load the default grade scale before initializing
+        await loadDefaultGradeScale();
+        // Input validation and calculation
+        document.querySelectorAll('.score-input').forEach(input => {
+            // Real-time validation on input
+            input.addEventListener('input', function() {
+                validateScoreInput(this);
+                const row = this.closest('.student-row');
+                calculateTotal(row);
+                updateStatistics();
+            });
+            
+            // Validation on blur (when user leaves the field)
+            input.addEventListener('blur', function() {
+                validateScoreInput(this);
+            });
+            
+            // Validation on keyup for immediate feedback
+            input.addEventListener('keyup', function() {
+                validateScoreInput(this);
+            });
+            
+            // Validation when using spinner controls
+            input.addEventListener('change', function() {
+                validateScoreInput(this);
+                const row = this.closest('.student-row');
+                calculateTotal(row);
+                updateStatistics();
+            });
+        });
+        
+        // Save scores button
+        const saveBtn = document.getElementById('saveScoresBtn');
+        if (saveBtn) {
+            saveBtn.addEventListener('click', saveScores);
+        }
+        
+        // Auto calculate button
+        const autoCalcBtn = document.getElementById('autoCalculateBtn');
+        if (autoCalcBtn) {
+            autoCalcBtn.addEventListener('click', function() {
+                document.querySelectorAll('.student-row').forEach(row => {
+                    calculateTotal(row);
+                });
+                updateStatistics();
+                showValidationMessage('Totals calculated successfully', 'success');
+            });
+        }
+        
+        // Moderate scores button and modal
+        const moderateBtn = document.getElementById('moderateScoresBtn');
+        const moderationModal = document.getElementById('moderationModal');
+        const closeModerationBtn = document.getElementById('closeModerationBtn');
+        const cancelModerationBtn = document.getElementById('cancelModerationBtn');
+        const applyModerationBtn = document.getElementById('applyModerationBtn');
+        const moderationApplyTo = document.getElementById('moderationApplyTo');
+        const moderationRangeField = document.getElementById('moderationRangeField');
+        const moderationUsernameField = document.getElementById('moderationUsernameField');
+        const moderationUsername = document.getElementById('moderationUsername');
+        const studentSuggestions = document.getElementById('studentSuggestions');
+        
+        if (moderateBtn && moderationModal) {
+            // Open moderation modal
+            moderateBtn.addEventListener('click', function() {
+                moderationModal.classList.remove('hidden');
+                moderationModal.classList.add('flex');
+                document.body.style.overflow = 'hidden';
+            });
+            
+            // Close moderation modal
+            function closeModerationModal() {
+                moderationModal.classList.add('hidden');
+                moderationModal.classList.remove('flex');
+                document.body.style.overflow = '';
+                // Reset form
+                document.getElementById('moderationAssessment').value = '';
+                document.getElementById('moderationValue').value = '';
+                document.getElementById('moderationApplyTo').value = 'all';
+                document.getElementById('moderationRange').value = '';
+                document.getElementById('moderationUsername').value = '';
+                document.getElementById('moderationIncludeCBT').checked = false;
+                document.getElementById('moderationRequireApproval').checked = true;
+                document.getElementById('moderationReason').value = '';
+                moderationRangeField.classList.add('hidden');
+                moderationUsernameField.classList.add('hidden');
+                document.getElementById('moderationPreview').classList.add('hidden');
+            }
+            
+            closeModerationBtn.addEventListener('click', closeModerationModal);
+            cancelModerationBtn.addEventListener('click', closeModerationModal);
+            
+            // Handle apply to selection change
+            moderationApplyTo.addEventListener('change', function() {
+                const value = this.value;
+                moderationRangeField.classList.add('hidden');
+                moderationUsernameField.classList.add('hidden');
+                
+                if (value === 'range') {
+                    moderationRangeField.classList.remove('hidden');
+                } else if (value === 'username') {
+                    moderationUsernameField.classList.remove('hidden');
+                }
+                updateModerationPreview();
+            });
+            
+            // Username autocomplete
+            if (moderationUsername) {
+                moderationUsername.addEventListener('input', function() {
+                    const searchTerm = this.value.toLowerCase();
+                    if (searchTerm.length < 1) {
+                        studentSuggestions.classList.add('hidden');
+                        return;
+                    }
+                    
+                    const students = [];
+                    document.querySelectorAll('.student-row').forEach(row => {
+                        const username = row.dataset.username;
+                        const name = row.dataset.studentName;
+                        if (username && username.toLowerCase().includes(searchTerm)) {
+                            students.push({
+                                id: row.dataset.studentId,
+                                username: username,
+                                name: name
+                            });
+                        }
+                    });
+                    
+                    if (students.length > 0) {
+                        studentSuggestions.innerHTML = students.map(s => 
+                            `<div class="px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer rounded border-b border-gray-200 dark:border-gray-600" data-student-id="${s.id}" data-username="${s.username}">
+                                <div class="font-semibold text-gray-900 dark:text-white">${s.username}</div>
+                                <div class="text-xs text-gray-500 dark:text-gray-400">${s.name}</div>
+                            </div>`
+                        ).join('');
+                        studentSuggestions.classList.remove('hidden');
+                        
+                        // Add click handlers to suggestions
+                        studentSuggestions.querySelectorAll('div').forEach(div => {
+                            div.addEventListener('click', function() {
+                                moderationUsername.value = this.dataset.username;
+                                moderationUsername.dataset.studentId = this.dataset.studentId;
+                                studentSuggestions.classList.add('hidden');
+                                updateModerationPreview();
+                            });
+                        });
+                    } else {
+                        studentSuggestions.classList.add('hidden');
+                    }
+                });
+            }
+            
+            // Update preview
+            function updateModerationPreview() {
+                const assessment = document.getElementById('moderationAssessment');
+                const value = document.getElementById('moderationValue').value;
+                const applyTo = document.getElementById('moderationApplyTo').value;
+                const range = document.getElementById('moderationRange').value;
+                const username = document.getElementById('moderationUsername').value;
+                const preview = document.getElementById('moderationPreview');
+                const previewText = document.getElementById('moderationPreviewText');
+                
+                if (!assessment.value || !value) {
+                    preview.classList.add('hidden');
+                    return;
+                }
+                
+                const assessmentName = assessment.options[assessment.selectedIndex].text.split(' (')[0];
+                let text = `Add ${value} points to ${assessmentName} for `;
+                
+                if (applyTo === 'all') {
+                    text += 'all students';
+                } else if (applyTo === 'range' && range) {
+                    text += `students scoring below ${range}`;
+                } else if (applyTo === 'username' && username) {
+                    text += username;
+                } else {
+                    preview.classList.add('hidden');
+                    return;
+                }
+                
+                previewText.textContent = text;
+                preview.classList.remove('hidden');
+            }
+            
+            // Add event listeners for preview updates
+            ['moderationAssessment', 'moderationValue', 'moderationRange'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) {
+                    el.addEventListener('input', updateModerationPreview);
+                }
+            });
+            
+            // Apply moderation
+            applyModerationBtn.addEventListener('click', async function() {
+                const assessment = document.getElementById('moderationAssessment').value;
+                const value = parseFloat(document.getElementById('moderationValue').value);
+                const applyTo = document.getElementById('moderationApplyTo').value;
+                const range = parseFloat(document.getElementById('moderationRange').value);
+                const username = document.getElementById('moderationUsername').value;
+                const studentId = document.getElementById('moderationUsername').dataset.studentId;
+                const includeCBT = document.getElementById('moderationIncludeCBT').checked;
+                const requireApproval = document.getElementById('moderationRequireApproval').checked;
+                const reason = document.getElementById('moderationReason').value.trim();
+                
+                // Validation
+                if (!assessment) {
+                    showValidationMessage('Please select an assessment type', 'error');
+                    return;
+                }
+                if (!value || value <= 0) {
+                    showValidationMessage('Please enter a valid bonus value', 'error');
+                    return;
+                }
+                if (applyTo === 'range' && (!range || range < 0)) {
+                    showValidationMessage('Please enter a valid score threshold', 'error');
+                    return;
+                }
+                if (applyTo === 'username' && !username) {
+                    showValidationMessage('Please select a student', 'error');
+                    return;
+                }
+                if (!reason) {
+                    showValidationMessage('Please provide a reason for moderation', 'error');
+                    return;
+                }
+                
+                // Show progress
+                applyModerationBtn.disabled = true;
+                applyModerationBtn.innerHTML = '<span class="material-symbols-outlined text-base animate-spin">refresh</span><span>Processing...</span>';
+                
+                console.log('='.repeat(80));
+                console.log('STARTING MODERATION API CALL');
+                console.log('URL:', `/staff/moderate_scores/{{ current_user.id }}`);
+                console.log('Assessment:', assessment);
+                console.log('Value:', value);
+                console.log('Apply To:', applyTo);
+                console.log('='.repeat(80));
+                
+                try {
+                    // Call backend API
+                    const url = `/staff/moderate_scores/{{ current_user.id }}`;
+                    console.log('Fetching:', url);
+                    
+                    const payload = {
+                        subject_id: CONFIG.subject_id,
+                        class_id: CONFIG.class_id,
+                        term_id: CONFIG.term_id,
+                        academic_session: CONFIG.academic_session,
+                        assessment_code: assessment,
+                        bonus_value: value,
+                        apply_to: applyTo,
+                        threshold: range || null,
+                        student_id: studentId || null,
+                        include_cbt: includeCBT,
+                        require_approval: requireApproval,
+                        reason: reason
+                    };
+                    
+                    console.log('Payload:', JSON.stringify(payload, null, 2));
+                    
+                    const response = await fetch(url, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify(payload)
+                    });
+                    
+                    console.log('Response status:', response.status);
+                    console.log('Response ok:', response.ok);
+                    
+                    if (!response.ok) {
+                        const errorText = await response.text();
+                        console.error('Response error:', errorText);
+                        throw new Error(`HTTP ${response.status}: ${errorText}`);
+                    }
+                    
+                    const result = await response.json();
+                    console.log('Result:', result);
+                    
+                    if (result.success) {
+                        console.log('Moderation successful!');
+                        // Apply changes to UI
+                        let affectedCount = 0;
+                        
+                        document.querySelectorAll('.student-row').forEach(row => {
+                            const input = row.querySelector(`.score-input[data-assessment="${assessment}"]`);
+                            
+                            if (!input) return;
+                            
+                            // Check if CBT score and if CBT moderation is allowed
+                            if (input.readOnly && !includeCBT) return;
+                            
+                            const currentValue = parseFloat(input.value);
+                            const maxScore = parseFloat(input.dataset.max);
+                            
+                            // Skip if no value entered
+                            if (isNaN(currentValue) || input.value === '') return;
+                            
+                            let shouldApply = false;
+                            if (applyTo === 'all') {
+                                shouldApply = true;
+                            } else if (applyTo === 'range') {
+                                shouldApply = currentValue < range;
+                            } else if (applyTo === 'username') {
+                                shouldApply = row.dataset.studentId === studentId;
+                            }
+                            
+                            if (shouldApply) {
+                                const newValue = Math.min(currentValue + value, maxScore);
+                                input.value = newValue.toFixed(1);
+                                affectedCount++;
+                                
+                                // Highlight the changed input
+                                input.classList.add('border-green-300', 'dark:border-green-600', 'bg-green-50', 'dark:bg-green-900/20');
+                                setTimeout(() => {
+                                    input.classList.remove('border-green-300', 'dark:border-green-600', 'bg-green-50', 'dark:bg-green-900/20');
+                                }, 2000);
+                            }
+                        });
+                        
+                        // Recalculate totals
+                        document.querySelectorAll('.student-row').forEach(row => {
+                            calculateTotal(row);
+                        });
+                        updateStatistics();
+                        
+                        closeModerationModal();
+                        
+                        let message = result.message || `Moderation applied to ${affectedCount} student(s).`;
+                        if (requireApproval) {
+                            message += ' Changes are pending admin approval.';
+                        }
+                        showValidationMessage(message, 'success');
+                        
+                        console.log('Moderation applied:', result);
+                    } else {
+                        console.log('Moderation failed:', result.message);
+                        showValidationMessage(result.message || 'Failed to apply moderation', 'warning');
+                    }
+                } catch (error) {
+                    console.error('='.repeat(80));
+                    console.error('MODERATION ERROR:');
+                    console.error('Error message:', error.message);
+                    console.error('Error stack:', error.stack);
+                    console.error('='.repeat(80));
+                    showValidationMessage(`Error: ${error.message}`, 'error');
+                } finally {
+                    applyModerationBtn.disabled = false;
+                    applyModerationBtn.innerHTML = '<span class="material-symbols-outlined text-base">tune</span><span>Apply Moderation</span>';
+                }
+            });
+        }
+        
+        // Clear all button with custom modal
+        const clearBtn = document.getElementById('clearAllBtn');
+        const clearModal = document.getElementById('clearAllModal');
+        const cancelClearBtn = document.getElementById('cancelClearBtn');
+        const confirmClearBtn = document.getElementById('confirmClearBtn');
+        
+        if (clearBtn && clearModal && cancelClearBtn && confirmClearBtn) {
+            // Open modal when clear button is clicked
+            clearBtn.addEventListener('click', function() {
+                clearModal.classList.remove('hidden');
+                clearModal.classList.add('flex');
+                document.body.style.overflow = 'hidden';
+            });
+            
+            // Close modal when cancel button is clicked
+            cancelClearBtn.addEventListener('click', function() {
+                clearModal.classList.add('hidden');
+                clearModal.classList.remove('flex');
+                document.body.style.overflow = '';
+            });
+            
+            // Clear all scores when confirm button is clicked
+            confirmClearBtn.addEventListener('click', function() {
+                // Close the modal
+                clearModal.classList.add('hidden');
+                clearModal.classList.remove('flex');
+                document.body.style.overflow = '';
+                
+                // Call the clear all scores function
+                clearAllScores();
+            });
+            
+            // Close modal on escape key
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape' && clearModal.classList.contains('flex')) {
+                    clearModal.classList.add('hidden');
+                    clearModal.classList.remove('flex');
+                    document.body.style.overflow = '';
+                }
+            });
+            
+            // Close modal when clicking outside content
+            clearModal.addEventListener('click', function(e) {
+                if (e.target === clearModal) {
+                    clearModal.classList.add('hidden');
+                    clearModal.classList.remove('flex');
+                    document.body.style.overflow = '';
+                }
+            });
+        }
+        
+        // Student search
+        const searchInput = document.getElementById('studentSearch');
+        if (searchInput) {
+            searchInput.addEventListener('input', function() {
+                const searchTerm = this.value.toLowerCase();
+                document.querySelectorAll('.student-row').forEach(row => {
+                    const studentName = row.dataset.studentName.toLowerCase();
+                    if (studentName.includes(searchTerm)) {
+                        row.style.display = '';
+                    } else {
+                        row.style.display = 'none';
+                    }
+                });
+            });
+        }
+        
+        // Sync CBT scores button
+        const syncCBTBtn = document.getElementById('syncCBTBtn');
+        if (syncCBTBtn) {
+            syncCBTBtn.addEventListener('click', async function() {
+                if (!CONFIG.subject_id || !CONFIG.class_id || !CONFIG.term_id) {
+                    showValidationMessage('Please select a subject and class first', 'warning');
+                    return;
+                }
+                
+                this.disabled = true;
+                this.innerHTML = '<span class="material-symbols-outlined text-base animate-spin">refresh</span><span class="font-semibold">Syncing...</span>';
+                
+                try {
+                    const response = await fetch(`/staff/sync_cbt_scores/{{ current_user.id }}`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            subject_id: CONFIG.subject_id,
+                            class_id: CONFIG.class_id,
+                            term_id: CONFIG.term_id
+                        })
+                    });
+                    
+                    const result = await response.json();
+                    
+                    if (result.success) {
+                        showValidationMessage(result.message, 'success');
+                        // Reload page to show synced scores
+                        setTimeout(() => {
+                            window.location.reload();
+                        }, 1500);
+                    } else {
+                        showValidationMessage(result.message || 'Failed to sync CBT scores', 'error');
+                    }
+                } catch (error) {
+                    console.error('Error syncing CBT scores:', error);
+                    showValidationMessage('Network error. Please try again.', 'error');
+                } finally {
+                    this.disabled = false;
+                    this.innerHTML = '<span class="material-symbols-outlined text-base">sync</span><span class="font-semibold">Sync CBT</span>';
+                }
+            });
+        }
+        
+        // Initial calculations for existing grades
+        document.querySelectorAll('.student-row').forEach(row => {
+            calculateTotal(row);
+        });
+        updateStatistics();
+    });
+    // Open the Input Scores menu when the button is clicked
+    document.getElementById('openInputScoresMenu')?.addEventListener('click', function() {
+        // Find the Input Scores toggle button and click it
+        const inputScoresToggle = document.getElementById('inputScoresToggle');
+        if (inputScoresToggle) {
+            inputScoresToggle.click();
+        }
+    });
+    
+    // Handle mobile sidebar toggle
+    document.addEventListener('DOMContentLoaded', function() {
+        // Adjust fixed elements on window resize and initial load
+        function adjustFixedElements() {
+            const sidebar = document.getElementById('sidebar');
+            const fixedHeader = document.getElementById('fixedHeader');
+            const fixedInfoCard = document.getElementById('fixedInfoCard');
+            
+            if (sidebar && fixedHeader) {
+                const isCollapsed = sidebar.classList.contains('w-20');
+                const isMobile = window.innerWidth < 768; // Tailwind's md breakpoint
+                
+                if (isMobile) {
+                    // On mobile, fixed elements should take full width
+                    fixedHeader.style.left = '0';
+                    fixedHeader.style.right = '0';
+                    fixedHeader.style.top = '64px'; // Account for mobile navbar height
+                } else if (isCollapsed) {
+                    fixedHeader.style.left = '80px'; // 20px collapsed sidebar width
+                    fixedHeader.style.right = '0';
+                    fixedHeader.style.top = '0'; // Reset to default
+                    if (fixedInfoCard) {
+                        fixedInfoCard.style.left = '80px';
+                        fixedInfoCard.style.right = '0';
+                        fixedInfoCard.style.top = '80px'; // Reset to default
+                    }
+                } else {
+                    fixedHeader.style.left = '288px'; // 72px expanded sidebar width + extra
+                    fixedHeader.style.right = '0';
+                    fixedHeader.style.top = '0'; // Reset to default
+                    if (fixedInfoCard) {
+                        fixedInfoCard.style.left = '288px';
+                        fixedInfoCard.style.right = '0';
+                        fixedInfoCard.style.top = '80px'; // Reset to default
+                    }
+                }
+            }
+        }
+        
+        // Run on initial load
+        adjustFixedElements();
+        
+        // Run on window resize
+        window.addEventListener('resize', function() {
+            adjustFixedElements();
+        });
+        
+        // Also adjust when sidebar is toggled
+        const sidebarCollapse = document.getElementById('sidebarCollapse');
+        if (sidebarCollapse) {
+            sidebarCollapse.addEventListener('click', function() {
+                // Use a small delay to allow the sidebar animation to complete
+                setTimeout(adjustFixedElements, 300);
+            });
+        }
+        
+        // Handle mobile sidebar toggle
+        const sidebarToggle = document.getElementById('sidebarToggle');
+        if (sidebarToggle) {
+            sidebarToggle.addEventListener('click', function() {
+                // Use a small delay to allow the sidebar animation to complete
+                setTimeout(adjustFixedElements, 300);
+            });
+        }
+        
+        // Handle sidebar overlay click (mobile)
+        const sidebarOverlay = document.getElementById('sidebarOverlay');
+        if (sidebarOverlay) {
+            sidebarOverlay.addEventListener('click', function() {
+                // Use a small delay to allow the sidebar animation to complete
+                setTimeout(adjustFixedElements, 300);
+            });
+        }
+    });
+</script>
+{% endblock %}

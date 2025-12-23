@@ -1,0 +1,88 @@
+# Copy this into Word - These questions will work perfectly!
+
+Question: Simplify $\sqrt{81}$
+Type: MCQ
+Options:
+- 1
+- *9
+- 5
+- 81
+
+Question: Calculate $\int 2x \, dx$
+Type: MCQ
+Options:
+- $x^6$
+- *$x^2 + C$
+- $2x^2$
+- none of the options
+
+Question: Simplify $\frac{1}{5} + \frac{3}{5}$
+Type: MCQ
+Options:
+- $\frac{1}{5}$
+- $\frac{3}{5}$
+- *$\frac{4}{5}$
+- $1$
+
+Question: What is the product of the reaction $2H_2 + O_2 \rightarrow 2H_2O$?
+Type: MCQ
+Options:
+- Gas
+- *Water
+- Kerosene
+- none of the options
+
+Question: Solve $x^2 + 5x + 6 = 0$
+Type: MCQ
+Options:
+- $x = 1, 2$
+- *$x = -2, -3$
+- $x = 2, 3$
+- none of the options
+
+Question: What is $2^3$?
+Type: MCQ
+Options:
+- 4
+- 6
+- *8
+- 9
+
+Question: Calculate the area of a circle with radius $r = 5$ cm. Use $\pi = 3.14$
+Type: MCQ
+Options:
+- 15.7 cm²
+- 31.4 cm²
+- *78.5 cm²
+- 157 cm²
+
+Question: What is the chemical formula for sulfuric acid?
+Type: Short Answer
+Answer: $H_2SO_4$
+
+Question: Evaluate $\lim_{x \to 0} \frac{\sin x}{x}$
+Type: MCQ
+Options:
+- $0$
+- *$1$
+- $\infty$
+- undefined
+
+Question: Calculate $\sum_{i=1}^{10} i$
+Type: MCQ
+Options:
+- 45
+- *55$
+- 65
+- 100
+
+# Instructions:
+# 1. Copy ALL the text above
+# 2. Paste into Microsoft Word
+# 3. Save as .docx
+# 4. Upload via Bulk Upload Questions
+# 5. All math will render perfectly!
+
+# DO NOT use Word's Equation Editor (Alt + =)
+# Just type the LaTeX as shown above
+# The $ signs tell the system it's math

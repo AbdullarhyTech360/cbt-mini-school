@@ -1,0 +1,295 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>Quiz Instructions - {{ exam.name if exam else 'Quiz' }}</title>
+    <link href="{{ url_for('static', filename='dist/output.css') }}" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            padding-bottom: 90px;
+            background-color: #f8fafc;
+        }
+        
+        .dark body {
+            background-color: #0f172a;
+        }
+        
+        .material-symbols-outlined {
+            font-variation-settings:
+                'FILL' 0,
+                'wght' 400,
+                'GRAD' 0,
+                'opsz' 24
+        }
+        
+        .fixed-footer {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            z-index: 50;
+        }
+        
+        .card {
+            border-radius: 16px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+            transition: all 0.2s ease;
+        }
+        
+        .card:hover {
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.07), 0 4px 6px -2px rgba(0, 0, 0, 0.03);
+        }
+        
+        .icon-container {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .gradient-button {
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            border-radius: 12px;
+            font-weight: 600;
+            transition: all 0.2s ease;
+        }
+        
+        .gradient-button:hover {
+            opacity: 0.95;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.2);
+        }
+    </style>
+</head>
+<body class="bg-gray-50 dark:bg-[#0f1419] relative overflow-x-hidden">
+    <!-- Decorative gradients -->
+    <div class="pointer-events-none absolute -top-24 -right-24 h-80 w-80 rounded-full blur-3xl opacity-30 bg-gradient-to-br from-primary to-blue-600"></div>
+    <div class="pointer-events-none absolute top-[40%] -left-24 h-72 w-72 rounded-full blur-3xl opacity-20 bg-gradient-to-br from-purple-500 to-pink-500"></div>
+    <!-- Header -->
+    <div class="fixed top-0 left-0 right-0 bg-white/70 dark:bg-gray-900/40 backdrop-blur supports-[backdrop-filter]:bg-white/50 border-b border-gray-200 dark:border-gray-800 shadow-sm z-50">
+        <div class="max-w-4xl mx-auto px-6 py-4 flex items-center justify-between">
+            <button onclick="window.history.back()" 
+                    class="flex items-center justify-center w-10 h-10 rounded-lg bg-white/80 hover:bg-white dark:bg-gray-800/80 dark:hover:bg-gray-700 transition-all duration-200 border border-gray-200 dark:border-gray-700 shadow-sm">
+                <span class="material-symbols-outlined text-gray-700 dark:text-gray-200 text-xl">arrow_back</span>
+            </button>
+            <div class="text-center absolute left-1/2 transform -translate-x-1/2">
+                <h1 class="text-gray-900 dark:text-white text-xl font-bold whitespace-nowrap">Quiz Instructions</h1>
+            </div>
+            <div class="w-10"></div> <!-- Spacer for balance -->
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <main class="max-w-4xl mx-auto px-4 py-4 pt-16">
+        <div class="space-y-4">
+            <!-- Exam Header -->
+            {% if exam %}
+            <div class="card bg-white dark:bg-slate-800 p-4 border border-slate-200 dark:border-slate-700">
+                <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                    <div>
+                        <h2 class="text-lg font-bold text-slate-900 dark:text-white mb-1">{{ exam.name }}</h2>
+                        {% if exam.description %}
+                        <p class="text-slate-600 dark:text-slate-300">{{ exam.description }}</p>
+                        {% endif %}
+                    </div>
+                    <div class="flex flex-wrap items-center gap-4">
+                        <div class="text-center">
+                            <p class="text-sm text-slate-500 dark:text-slate-400">Subject</p>
+                            <p class="font-semibold text-slate-900 dark:text-white">
+                                {{ subject.subject_name if subject else exam.subject.subject_name if exam.subject else 'N/A' }}
+                                {% if subject.subject_code or (exam.subject and exam.subject.subject_code) %}
+                                <span class="text-xs bg-blue-100 dark:bg-blue-900/40 text-blue-800 dark:text-blue-200 px-2 py-1 rounded ml-2">
+                                    {{ subject.subject_code if subject else exam.subject.subject_code if exam.subject else '' }}
+                                </span>
+                                {% endif %}
+                            </p>
+                        </div>
+                        <div class="text-center">
+                            <p class="text-sm text-slate-500 dark:text-slate-400">Date</p>
+                            <p class="font-semibold text-slate-900 dark:text-white">{{ exam.date.strftime('%b %d, %Y') }}</p>
+                        </div>
+                        {% if term %}
+                        <div class="text-center">
+                            <p class="text-sm text-slate-500 dark:text-slate-400">Term</p>
+                            <p class="font-semibold text-slate-900 dark:text-white">{{ term.term_name }}</p>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Exam Details -->
+            <div class="card bg-white dark:bg-slate-800 p-4 border border-slate-200 dark:border-slate-700">
+                <h3 class="text-base font-bold text-slate-900 dark:text-white mb-4">Exam Details</h3>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <div class="flex items-start gap-3 p-3 rounded-xl bg-blue-50/50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800/30">
+                        <div class="icon-container bg-blue-100 dark:bg-blue-900/40 flex-shrink-0">
+                            <span class="material-symbols-outlined text-blue-600 dark:text-blue-400 text-lg">help_outline</span>
+                        </div>
+                        <div>
+                            <p class="text-xs text-slate-500 dark:text-slate-400 mb-1">Total Questions</p>
+                            <p class="text-lg font-bold text-slate-900 dark:text-white">{{ question_count if question_count else 20 }}</p>
+                        </div>
+                    </div>
+                    
+                    <div class="flex items-start gap-3 p-3 rounded-xl bg-blue-50/50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800/30">
+                        <div class="icon-container bg-blue-100 dark:bg-blue-900/40 flex-shrink-0">
+                            <span class="material-symbols-outlined text-blue-600 dark:text-blue-400 text-lg">timer</span>
+                        </div>
+                        <div>
+                            <p class="text-xs text-slate-500 dark:text-slate-400 mb-1">Time Limit</p>
+                            <p class="text-lg font-bold text-slate-900 dark:text-white">
+                                {% if exam and exam.duration %}
+                                    {{ (exam.duration.seconds // 60) }} Min
+                                {% else %}
+                                    30 Min
+                                {% endif %}
+                            </p>
+                        </div>
+                    </div>
+                    
+                    <div class="flex items-start gap-3 p-3 rounded-xl bg-blue-50/50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800/30">
+                        <div class="icon-container bg-blue-100 dark:bg-blue-900/40 flex-shrink-0">
+                            <span class="material-symbols-outlined text-blue-600 dark:text-blue-400 text-lg">military_tech</span>
+                        </div>
+                        <div>
+                            <p class="text-xs text-slate-500 dark:text-slate-400 mb-1">Passing Score</p>
+                            <p class="text-lg font-bold text-slate-900 dark:text-white">70%</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Additional Exam Information -->
+                {% if exam %}
+                <div class="mt-4 pt-4 border-t border-slate-200 dark:border-slate-700">
+                    <h4 class="text-sm font-semibold text-slate-900 dark:text-white mb-3">Additional Information</h4>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="flex justify-between">
+                            <span class="text-slate-600 dark:text-slate-400">Exam Type:</span>
+                            <span class="font-medium text-slate-900 dark:text-white">{{ exam.exam_type }}</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-slate-600 dark:text-slate-400">Maximum Score:</span>
+                            <span class="font-medium text-slate-900 dark:text-white">{{ exam.max_score }}</span>
+                        </div>
+                        {% if subject and subject.credit_hours %}
+                        <div class="flex justify-between">
+                            <span class="text-slate-600 dark:text-slate-400">Credit Hours:</span>
+                            <span class="font-medium text-slate-900 dark:text-white">{{ subject.credit_hours }}</span>
+                        </div>
+                        {% endif %}
+                        {% if term %}
+                        <div class="flex justify-between">
+                            <span class="text-slate-600 dark:text-slate-400">Academic Session:</span>
+                            <span class="font-medium text-slate-900 dark:text-white">{{ term.academic_session }}</span>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Instructions -->
+            <div class="card bg-white dark:bg-slate-800 p-4 border border-slate-200 dark:border-slate-700">
+                <h3 class="text-base font-bold text-slate-900 dark:text-white mb-4">Instructions</h3>
+                
+                {% if exam and exam.instructions %}
+                <!-- Custom instructions from database -->
+                <div class="prose dark:prose-invert max-w-none">
+                    <div class="text-slate-700 dark:text-slate-300 whitespace-pre-line leading-relaxed">{{ exam.instructions }}</div>
+                </div>
+                {% else %}
+                <!-- Default instructions -->
+                <div class="space-y-3">
+                    <div class="flex gap-3">
+                        <div class="icon-container bg-blue-100 dark:bg-blue-900/40 flex-shrink-0 mt-1">
+                            <span class="material-symbols-outlined text-blue-600 dark:text-blue-400 text-base">check_circle</span>
+                        </div>
+                        <div>
+                            <h4 class="font-semibold text-slate-900 dark:text-white mb-1 text-sm">Read Carefully</h4>
+                            <p class="text-slate-600 dark:text-slate-300 leading-relaxed">Read each question carefully before selecting your answer. Take your time to understand what is being asked.</p>
+                        </div>
+                    </div>
+
+                    <div class="flex gap-3">
+                        <div class="icon-container bg-blue-100 dark:bg-blue-900/40 flex-shrink-0 mt-1">
+                            <span class="material-symbols-outlined text-blue-600 dark:text-blue-400 text-base">radio_button_checked</span>
+                        </div>
+                        <div>
+                            <h4 class="font-semibold text-slate-900 dark:text-white mb-1 text-sm">Select Best Answer</h4>
+                            <p class="text-slate-600 dark:text-slate-300 leading-relaxed">Choose the best answer from the options provided for each question. There is only one correct answer per question.</p>
+                        </div>
+                    </div>
+
+                    <div class="flex gap-3">
+                        <div class="icon-container bg-blue-100 dark:bg-blue-900/40 flex-shrink-0 mt-1">
+                            <span class="material-symbols-outlined text-blue-600 dark:text-blue-400 text-base">assessment</span>
+                        </div>
+                        <div>
+                            <h4 class="font-semibold text-slate-900 dark:text-white mb-1 text-sm">Results Display</h4>
+                            <p class="text-slate-600 dark:text-slate-300 leading-relaxed">Your score and performance will be displayed upon quiz completion. You'll see your results immediately after finishing.</p>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Important Tips -->
+            <div class="card bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-slate-800 dark:to-slate-800/80 p-4 border border-blue-200 dark:border-slate-700">
+                <div class="flex gap-3 mb-3">
+                    <div class="icon-container bg-blue-100 dark:bg-blue-900/40 flex-shrink-0">
+                        <span class="material-symbols-outlined text-blue-600 dark:text-blue-400 text-lg">tips_and_updates</span>
+                    </div>
+                    <h4 class="font-bold text-blue-900 dark:text-blue-100 text-base self-center">Important Tips</h4>
+                </div>
+                <ul class="space-y-2 text-sm text-blue-900 dark:text-blue-100">
+                    <li class="flex gap-2">
+                        <span class="material-symbols-outlined text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5 text-base">check_circle</span>
+                        <span class="leading-relaxed">Ensure you have a stable internet connection before starting the quiz</span>
+                    </li>
+                    <li class="flex gap-2">
+                        <span class="material-symbols-outlined text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5 text-base">check_circle</span>
+                        <span class="leading-relaxed">Close all other applications and browser tabs to avoid distractions</span>
+                    </li>
+                    <li class="flex gap-2">
+                        <span class="material-symbols-outlined text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5 text-base">check_circle</span>
+                        <span class="leading-relaxed">Do not refresh or navigate away from the page during the quiz</span>
+                    </li>
+                    <li class="flex gap-2">
+                        <span class="material-symbols-outlined text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5 text-base">check_circle</span>
+                        <span class="leading-relaxed">Answer all questions before submitting your quiz</span>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </main>
+
+    <!-- Fixed Footer with Start Button -->
+    <footer class="fixed-footer bg-white dark:bg-slate-800 border-t border-slate-200 dark:border-slate-700 shadow-2xl">
+        <div class="max-w-4xl mx-auto px-4 py-4">
+            <div class="flex flex-col gap-2">
+                {% if exam %}
+                <a href="{{ url_for('start_exam', exam_id=exam.id) }}" 
+                   class="gradient-button w-full text-white text-center font-semibold py-3 px-6 shadow-lg">
+                    Start Quiz
+                </a>
+                {% else %}
+                <button class="gradient-button w-full text-white text-center font-semibold py-3 px-6 shadow-lg">
+                    Start Quiz
+                </button>
+                {% endif %}
+                <p class="text-center text-sm text-slate-500 dark:text-slate-400">
+                    By starting the quiz, you agree to the terms and conditions
+                </p>
+            </div>
+        </div>
+    </footer>
+</body>
+</html>

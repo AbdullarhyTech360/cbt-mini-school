@@ -1,0 +1,70 @@
+{% extends 'staff/base.html' %}
+
+{% block title %}Test Icons{% endblock %}
+
+{% block content %}
+<div class="p-6">
+    <h1 class="text-2xl font-bold mb-6">Material Symbols Test</h1>
+    
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div class="bg-white dark:bg-gray-800 rounded-lg p-6 shadow">
+            <h2 class="text-lg font-semibold mb-4">Outlined Icons</h2>
+            <div class="flex flex-wrap gap-4">
+                <span class="material-symbols-outlined text-3xl">home</span>
+                <span class="material-symbols-outlined text-3xl">person</span>
+                <span class="material-symbols-outlined text-3xl">edit_note</span>
+                <span class="material-symbols-outlined text-3xl">dashboard</span>
+                <span class="material-symbols-outlined text-3xl">checklist</span>
+            </div>
+        </div>
+        
+        <div class="bg-white dark:bg-gray-800 rounded-lg p-6 shadow">
+            <h2 class="text-lg font-semibold mb-4">Rounded Icons</h2>
+            <div class="flex flex-wrap gap-4">
+                <span class="material-symbols-rounded text-3xl">home</span>
+                <span class="material-symbols-rounded text-3xl">person</span>
+                <span class="material-symbols-rounded text-3xl">edit_note</span>
+                <span class="material-symbols-rounded text-3xl">dashboard</span>
+                <span class="material-symbols-rounded text-3xl">checklist</span>
+            </div>
+        </div>
+        
+        <div class="bg-white dark:bg-gray-800 rounded-lg p-6 shadow">
+            <h2 class="text-lg font-semibold mb-4">Sharp Icons</h2>
+            <div class="flex flex-wrap gap-4">
+                <span class="material-symbols-sharp text-3xl">home</span>
+                <span class="material-symbols-sharp text-3xl">person</span>
+                <span class="material-symbols-sharp text-3xl">edit_note</span>
+                <span class="material-symbols-sharp text-3xl">dashboard</span>
+                <span class="material-symbols-sharp text-3xl">checklist</span>
+            </div>
+        </div>
+    </div>
+    
+    <div class="mt-8 bg-blue-50 dark:bg-blue-900/20 rounded-lg p-6">
+        <h2 class="text-lg font-semibold mb-4">Icon Variations</h2>
+        <div class="flex flex-wrap gap-6">
+            <div class="text-center">
+                <span class="material-symbols-outlined text-4xl">favorite</span>
+                <p class="text-sm mt-2">Default (400)</p>
+            </div>
+            <div class="text-center">
+                <span class="material-symbols-outlined text-4xl font-bold">favorite</span>
+                <p class="text-sm mt-2">Bold (700)</p>
+            </div>
+            <div class="text-center">
+                <span class="material-symbols-outlined text-4xl" style="font-variation-settings: 'FILL' 1">favorite</span>
+                <p class="text-sm mt-2">Filled</p>
+            </div>
+            <div class="text-center">
+                <span class="material-symbols-outlined text-2xl">favorite</span>
+                <p class="text-sm mt-2">Small</p>
+            </div>
+            <div class="text-center">
+                <span class="material-symbols-outlined text-6xl">favorite</span>
+                <p class="text-sm mt-2">Large</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

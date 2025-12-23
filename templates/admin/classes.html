@@ -1,0 +1,871 @@
+<!doctype html>
+{% extends "admin/base.html" %} {% block title %}Manage Classes - Admin Panel{%
+endblock %} {% block sidebar_nav %} {{ super() }} {% endblock %} {% block
+content %}
+<!-- Load modal.js first -->
+<script src="{{ url_for('static', filename='js/components/modal.js') }}" defer></script>
+<script src="{{ url_for('static', filename='js/admin/classes.js') }}" defer></script>
+<!-- Header Section -->
+<div class="mb-6 md:mb-8">
+    <div
+        class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
+    >
+        <div>
+            <h1
+                class="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white mb-2"
+            >
+                Class Management
+            </h1>
+            <p class="text-gray-600 dark:text-gray-400 text-sm md:text-base">
+                Manage all classes, teachers, and student enrollments across the
+                school.
+            </p>
+        </div>
+        <div class="flex items-center gap-3">
+            <button
+                class="flex items-center gap-2 px-3 py-2 md:px-4 md:py-2 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white rounded-lg shadow-md hover:shadow-lg transition-all duration-200 text-sm md:text-base"
+                data-modal-target="createClassModal"
+            >
+                <span class="material-symbols-outlined text-lg">add</span>
+                <span class="font-semibold">Create Class</span>
+            </button>
+            <button
+                class="flex items-center gap-2 px-3 py-2 md:px-4 md:py-2 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-lg shadow-md hover:shadow-lg transition-all duration-200 text-sm md:text-base"
+                data-modal-target="importModal"
+            >
+                <span class="material-symbols-outlined text-lg">upload</span>
+                <span class="font-semibold">Import</span>
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- School Overview Stats -->
+<div
+    class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-6 md:mb-8"
+>
+    <div
+        class="bg-gradient-to-br from-blue-500 to-blue-600 p-4 md:p-6 rounded-2xl shadow-lg"
+    >
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-white/90 text-xs md:text-sm font-medium mb-1">
+                    Total Classes
+                </p>
+                <p class="text-xl md:text-3xl font-bold text-white">{{ class_rooms|length }}</p>
+            </div>
+            <div
+                class="h-10 w-10 md:h-12 md:w-12 rounded-xl bg-white/20 flex items-center justify-center"
+            >
+                <span
+                    class="material-symbols-outlined text-white text-lg md:text-2xl"
+                    >school</span
+                >
+            </div>
+        </div>
+    </div>
+    <div
+        class="bg-gradient-to-br from-green-500 to-green-600 p-4 md:p-6 rounded-2xl shadow-lg"
+    >
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-white/90 text-xs md:text-sm font-medium mb-1">
+                    Active Teachers
+                </p>
+                <p class="text-xl md:text-3xl font-bold text-white">{{ teachers|length }}</p>
+            </div>
+            <div
+                class="h-10 w-10 md:h-12 md:w-12 rounded-xl bg-white/20 flex items-center justify-center"
+            >
+                <span
+                    class="material-symbols-outlined text-white text-lg md:text-2xl"
+                    >group</span
+                >
+            </div>
+        </div>
+    </div>
+    <div
+        class="bg-gradient-to-br from-purple-500 to-purple-600 p-4 md:p-6 rounded-2xl shadow-lg"
+    >
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-white/90 text-xs md:text-sm font-medium mb-1">
+                    Total Students
+                </p>
+                <p class="text-xl md:text-3xl font-bold text-white">{{ students|length }}</p>
+            </div>
+            <div
+                class="h-10 w-10 md:h-12 md:w-12 rounded-xl bg-white/20 flex items-center justify-center"
+            >
+                <span
+                    class="material-symbols-outlined text-white text-lg md:text-2xl"
+                    >groups</span
+                >
+            </div>
+        </div>
+    </div>
+    <div
+        class="bg-gradient-to-br from-orange-500 to-orange-600 p-4 md:p-6 rounded-2xl shadow-lg"
+    >
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-white/90 text-xs md:text-sm font-medium mb-1">
+                    Avg. Class Size
+                </p>
+                <p class="text-xl md:text-3xl font-bold text-white">{{ average_class_size }}</p>
+            </div>
+            <div
+                class="h-10 w-10 md:h-12 md:w-12 rounded-xl bg-white/20 flex items-center justify-center"
+            >
+                <span
+                    class="material-symbols-outlined text-white text-lg md:text-2xl"
+                    >trending_up</span
+                >
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Search and Filter -->
+<div class="mb-6 md:mb-8">
+    <div class="flex flex-col lg:flex-row gap-4">
+        <div class="flex-1 relative">
+            <span
+                class="material-symbols-outlined absolute left-4 top-3.5 text-gray-400"
+                >search</span
+            >
+            <input
+                type="text"
+                id="searchInput"
+                placeholder="Search classes, teachers, or students..."
+                class="w-full pl-12 pr-4 py-3.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition shadow-sm hover:shadow-md placeholder:text-gray-400 dark:placeholder:text-gray-500 text-sm md:text-base"
+            />
+        </div>
+        <div
+            class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3"
+        >
+            <select
+                id="sectionFilter"
+                class="w-full sm:w-auto px-4 py-3.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition shadow-sm hover:shadow-md text-sm md:text-base"
+            >
+                {% if sections and sections|length > 0 %}
+                    <option value="all">All Sections</option>
+                    {% for section in sections %}
+                        <option value="{{ section.section_id }}">{{ section.name }}</option>
+                    {% endfor %}
+                {% else %}
+                    <option value="" disabled>No sections available</option>
+                {% endif %}
+            </select>
+            <button
+                class="flex items-center justify-center gap-2 px-4 py-3.5 bg-gradient-to-r from-primary to-blue-600 hover:from-primary/90 hover:to-blue-600/90 text-white rounded-xl shadow-md hover:shadow-lg transition-all duration-200 text-sm md:text-base font-semibold"
+            >
+                <span class="material-symbols-outlined text-lg"
+                    >filter_list</span
+                >
+                <span>Filter</span>
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Classes Management Table -->
+<div
+    class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-100 dark:border-gray-700 overflow-hidden"
+>
+    <div class="p-4 md:p-6 border-b border-gray-100 dark:border-gray-700">
+        <div
+            class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
+        >
+            <h2
+                class="text-lg md:text-xl font-bold text-gray-800 dark:text-white flex items-center gap-2"
+            >
+                <span class="material-symbols-outlined text-primary"
+                    >school</span
+                >
+                All Classes
+            </h2>
+            <div class="flex items-center gap-2">
+                <span class="text-sm text-gray-500 dark:text-gray-400"
+                    >{{ class_rooms|length }} {% if class_rooms|length == 1
+                    %}class{% else %}classes{% endif %} found</span
+                >
+                <button
+                    type="button"
+                    id="refresh-button"
+                    class="p-2 text-gray-400 hover:text-primary transition-colors cursor-pointer"
+                >
+                    <span class="material-symbols-outlined text-lg"
+                        >refresh</span
+                    >
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="overflow-x-auto">
+        <table class="w-full">
+            <thead class="bg-gray-50 dark:bg-gray-700/50">
+                <tr>
+                    <th
+                        class="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider"
+                    >
+                        Class
+                    </th>
+                    <th
+                        class="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider"
+                    >
+                        Form Teacher
+                    </th>
+                    <th
+                        class="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider"
+                    >
+                        Students
+                    </th>
+                    <th
+                        class="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider"
+                    > 
+                        Created At
+                    </th>
+                    <th
+                        class="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider"
+                    >
+                        Status
+                    </th>
+                    <th
+                        class="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider"
+                    >
+                        Actions
+                    </th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200 dark:divide-gray-600">
+                {% for class_room in class_rooms %}
+                <tr
+                    data-section-id="{{ class_room.section_id }}"
+                    class="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+                >
+                    <td class="px-4 py-4 whitespace-nowrap">
+                        <div class="flex items-center gap-3">
+                            <div
+                                class="h-10 w-10 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center"
+                            >
+                                <span
+                                    class="material-symbols-outlined text-white text-lg"
+                                    >calculate</span
+                                >
+                            </div>
+                            <div>
+                                <p
+                                    class="class-name text-sm font-semibold text-gray-900 dark:text-white"
+                                >
+                                    {{ class_room.class_room_name }}
+                                </p>
+                            </div>
+                        </div>
+                    </td>
+                    <td class="px-4 py-4 whitespace-nowrap">
+                        <div class="flex items-center gap-2">
+                            <div
+                                class="h-8 w-8 rounded-full bg-gradient-to-br from-green-500 to-green-600 flex items-center justify-center"
+                            >
+                                {% if class_room.form_teacher %}
+                                <span class="text-white text-xs font-bold"
+                                    >{{ class_room.form_teacher.first_name[0] }}{{ class_room.form_teacher.last_name[0] }}</span
+                                >
+                                {% else %}
+                                <span class="text-white text-xs font-bold">U</span>
+                                {% endif %}
+                            </div>
+                            <span class="form-teacher text-sm text-gray-900 dark:text-white"
+                                >{% if class_room.form_teacher %}{{ class_room.form_teacher.full_name() }}{% else %}Unassigned{% endif %}</span
+                            >
+                        </div>
+                    </td>
+                    <td
+                        class="px-4 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white"
+                    >
+                        {{ class_room.number_of_students }} students
+                    </td>
+                    <td
+                        class="px-4 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white"
+                    >
+                        {{ class_room.created_at.strftime('%B %d, %Y %I:%M%p')
+                        }}
+                    </td>
+                    <td class="px-4 py-4 whitespace-nowrap">
+                        <span
+                            class="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300"
+                            >Active</span
+                        >
+                    </td>
+                    <td class="px-4 py-4 whitespace-nowrap text-sm font-medium">
+                        <div class="flex items-center gap-2">
+                            <button
+                                class="p-1 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors edit-class-btn"
+                                title="Edit Class"
+                                data-class-id="{{ class_room.class_room_id }}"
+                                data-class-name="{{ class_room.class_room_name }}"
+                                data-form-teacher="{{ class_room.form_teacher_id or '' }}"
+                                data-class-capacity="{{ class_room.class_capacity }}"
+                                data-section-id="{{ class_room.section_id or '' }}"
+                                data-level="{{ class_room.level or '' }}"
+                                data-group="{{ class_room.group or '' }}"
+                                data-academic-year="{{ class_room.academic_year or '' }}"
+                                data-is-active="{{ class_room.is_active|lower }}"
+                            >
+                                <span class="material-symbols-outlined text-lg">edit</span>
+                            </button>
+                            <button
+                                class="p-1 text-gray-400 hover:text-green-600 dark:hover:text-green-400 transition-colors"
+                                title="View Details"
+                            >
+                                <span class="material-symbols-outlined text-lg">visibility</span>
+                            </button>
+                            <button
+                                class="p-1 text-gray-400 hover:text-orange-600 dark:hover:text-orange-400 transition-colors"
+                                title="Manage Students"
+                            >
+                                <span class="material-symbols-outlined text-lg">group</span>
+                            </button>
+                            <button
+                                id="deleteClassBtn-{{ class_room.class_room_id }}"
+                                class="p-1 text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-colors delete-class-btn"
+                                title="Delete Class"
+                                data-class-id="{{ class_room.class_room_id }}"
+                                data-class-name="{{ class_room.class_room_name }}"
+                            >
+                                <span class="material-symbols-outlined text-lg">delete</span>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Pagination -->
+    <div
+        class="px-4 py-3 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/50"
+    >
+        <div class="flex items-center justify-between">
+            <div
+                class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300"
+            >
+                <span>Showing 1-3 of 12 classes</span>
+            </div>
+            <div class="flex items-center gap-2">
+                <button
+                    class="px-3 py-1 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 disabled:opacity-50"
+                    disabled
+                >
+                    Previous
+                </button>
+                <button class="px-3 py-1 text-sm bg-primary text-white rounded">
+                    1
+                </button>
+                <button
+                    class="px-3 py-1 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
+                >
+                    2
+                </button>
+                <button
+                    class="px-3 py-1 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
+                >
+                    3
+                </button>
+                <button
+                    class="px-3 py-1 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
+                >
+                    Next
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Actions Panel -->
+<div
+    class="mt-6 md:mt-8 bg-gradient-to-r from-primary/5 to-blue-600/5 dark:from-primary/10 dark:to-blue-600/10 rounded-2xl p-4 md:p-6 border border-primary/20 dark:border-primary/30"
+>
+    <div class="flex items-center justify-between mb-6">
+        <div>
+            <h2
+                class="text-lg md:text-xl font-bold text-gray-800 dark:text-white flex items-center gap-2"
+            >
+                <span class="material-symbols-outlined text-primary"
+                    >flash_on</span
+                >
+                Quick Actions
+            </h2>
+            <p class="text-xs md:text-sm text-gray-600 dark:text-gray-400 mt-1">
+                Common administrative tasks
+            </p>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
+        <button
+            class="flex flex-col items-center gap-2 md:gap-3 p-3 md:p-4 bg-white dark:bg-gray-800 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors border border-gray-100 dark:border-gray-600"
+        >
+            <div
+                class="h-10 w-10 md:h-12 md:w-12 rounded-xl bg-gradient-to-br from-green-500 to-green-600 flex items-center justify-center"
+            >
+                <span
+                    class="material-symbols-outlined text-white text-lg md:text-xl"
+                    >add</span
+                >
+            </div>
+            <span
+                class="text-xs md:text-sm font-semibold text-gray-800 dark:text-white"
+                >Create Class</span
+            >
+        </button>
+
+        <button
+            class="flex flex-col items-center gap-2 md:gap-3 p-3 md:p-4 bg-white dark:bg-gray-800 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors border border-gray-100 dark:border-gray-600"
+        >
+            <div
+                class="h-10 w-10 md:h-12 md:w-12 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center"
+            >
+                <span
+                    class="material-symbols-outlined text-white text-lg md:text-xl"
+                    >group</span
+                >
+            </div>
+            <span
+                class="text-xs md:text-sm font-semibold text-gray-800 dark:text-white"
+                >Manage Teachers</span
+            >
+        </button>
+
+        <button
+            class="flex flex-col items-center gap-2 md:gap-3 p-3 md:p-4 bg-white dark:bg-gray-800 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors border border-gray-100 dark:border-gray-600"
+        >
+            <div
+                class="h-10 w-10 md:h-12 md:w-12 rounded-xl bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center"
+            >
+                <span
+                    class="material-symbols-outlined text-white text-lg md:text-xl"
+                    >groups</span
+                >
+            </div>
+            <span
+                class="text-xs md:text-sm font-semibold text-gray-800 dark:text-white"
+                >Student Enrollment</span
+            >
+        </button>
+
+        <button
+            class="flex flex-col items-center gap-2 md:gap-3 p-3 md:p-4 bg-white dark:bg-gray-800 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors border border-gray-100 dark:border-gray-600"
+        >
+            <div
+                class="h-10 w-10 md:h-12 md:w-12 rounded-xl bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center"
+            >
+                <span
+                    class="material-symbols-outlined text-white text-lg md:text-xl"
+                    >upload</span
+                >
+            </div>
+            <span
+                class="text-xs md:text-sm font-semibold text-gray-800 dark:text-white"
+                >Bulk Import</span
+            >
+        </button>
+    </div>
+</div>
+
+<!-- Create Class Modal -->
+<div
+    id="createClassModal"
+    class="fixed inset-0 bg-black/50 z-50 hidden items-center justify-center p-4"
+>
+    <div
+        class="bg-white dark:bg-gray-800 rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto"
+    >
+        <div class="p-6 border-b border-gray-200 dark:border-gray-700">
+            <div class="flex items-center justify-between">
+                <h2 class="text-xl font-bold text-gray-900 dark:text-white">
+                    Create New Class
+                </h2>
+                <button
+                    class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                    onclick="closeModal('createClassModal')"
+                >
+                    <span class="material-symbols-outlined text-2xl"
+                        >close</span
+                    >
+                </button>
+            </div>
+        </div>
+
+        <form id="createClassForm" class="p-6 space-y-6">
+            <!-- Custom Class Toggle -->
+            <div class="flex items-center gap-3 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-200 dark:border-blue-800">
+                <input id="useCustomName" type="checkbox" class="form-checkbox text-primary focus:ring-primary rounded h-5 w-5" />
+                <label for="useCustomName" class="text-sm font-semibold text-gray-700 dark:text-gray-300 cursor-pointer">
+                    Use Custom Class Name
+                    <span class="block text-xs font-normal text-gray-500 dark:text-gray-400 mt-1">Enable this to create a class with a custom name instead of using section/level structure</span>
+                </label>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Auto-generated Class Name (shown when custom is disabled) -->
+                <div id="autoNameField">
+                    <label
+                        for="className"
+                        class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2"
+                        >Class Name (Auto-generated)</label
+                    >
+                    <input
+                        id="className"
+                        type="text"
+                        placeholder="Auto-generated from Section + Level + Group"
+                        readonly
+                        class="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition cursor-not-allowed"
+                    />
+                    <p class="mt-2 text-xs text-gray-500 dark:text-gray-400">Preview: <span id="classNamePreview" class="font-semibold text-gray-700 dark:text-gray-200">—</span></p>
+                </div>
+                
+                <!-- Custom Class Name (shown when custom is enabled) -->
+                <div id="customNameField" class="hidden">
+                    <label
+                        for="customClassName"
+                        class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2"
+                        >Custom Class Name *</label
+                    >
+                    <input
+                        id="customClassName"
+                        type="text"
+                        placeholder="e.g., Advanced Mathematics, Science Lab A"
+                        class="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition"
+                    />
+                    <p class="mt-2 text-xs text-gray-500 dark:text-gray-400">Enter any custom name for this class</p>
+                </div>
+                <div>
+                    <label
+                        for="formTeacher"
+                        class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2"
+                        >Assign Form Teacher</label
+                    >
+                    <select
+                        id="formTeacher"
+                        required
+                        class="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition"
+                    >
+                        <option>Select a teacher...</option>
+                        {% for teacher in teachers %}
+                        <option value="{{ teacher.id }}">
+                            {{ teacher.full_name() }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div id="sectionField">
+                    <label for="sectionId" class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                        Section <span id="sectionRequired" class="text-red-500">*</span>
+                    </label>
+                    <select required id="sectionId" class="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition">
+                        <option value="">Select a section...</option>
+                        {% for section in sections %}
+                        <option value="{{ section.section_id }}" data-abbr="{{ section.abbreviation }}">{{ section.name }} ({{ section.abbreviation }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div id="levelField">
+                    <label for="level" class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                        Grade Level <span id="levelRequired" class="text-red-500">*</span>
+                    </label>
+                    <input required id="level" type="number" placeholder="e.g., 1" class="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition" />
+                </div>
+                <div>
+                    <label for="group" class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Group</label>
+                    <input id="group" type="text" placeholder="e.g., A, B, C" class="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition" />
+                </div>
+                <div>
+                    <label for="academicYear" class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Academic Year</label>
+                    <input id="academicYear" type="text" placeholder="e.g., 2024-2025" class="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition" />
+                </div>
+                <div class="flex items-center gap-2 mt-2">
+                    <input id="isActive" type="checkbox" checked class="form-checkbox text-primary focus:ring-primary rounded" />
+                    <label for="isActive" class="text-sm font-medium text-gray-700 dark:text-gray-300">Active</label>
+                </div>
+                <div>
+                    <label
+                        for="classCapacity"
+                        class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2"
+                        >Class Capacity</label
+                    >
+                    <input
+                        id="classCapacity"
+                        type="number"
+                        placeholder="30"
+                        class="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition"
+                    />
+                </div>
+                
+            </div>
+
+            <div>
+                <label
+                    for="description"
+                    class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2"
+                    >Description (Optional)</label
+                >
+                <textarea
+                    id="description"
+                    rows="3"
+                    placeholder="Brief description of the class..."
+                    class="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition resize-none"
+                ></textarea>
+            </div>
+
+            <div class="flex flex-col sm:flex-row gap-3 pt-4">
+                <button
+                    type="submit"
+                    class="flex-1 bg-gradient-to-r from-primary to-blue-600 hover:from-primary/90 hover:to-blue-600/90 text-white font-semibold py-3 px-6 rounded-xl shadow-md hover:shadow-lg transition-all duration-200"
+                >
+                    Create Class
+                </button>
+                <button
+                    type="button"
+                    onclick="closeModal('createClassModal')"
+                    class="flex-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-semibold py-3 px-6 rounded-xl hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                >
+                    Cancel
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Import Modal -->
+<div
+    id="importModal"
+    class="fixed inset-0 bg-black/50 z-50 hidden items-center justify-center p-4"
+>
+    <div
+        class="bg-white dark:bg-gray-800 rounded-2xl shadow-xl w-full max-w-lg"
+    >
+        <div class="p-6 border-b border-gray-200 dark:border-gray-700">
+            <div class="flex items-center justify-between">
+                <h2 class="text-xl font-bold text-gray-900 dark:text-white">
+                    Import Classes
+                </h2>
+                <button
+                    class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                    onclick="closeModal('importModal')"
+                >
+                    <span class="material-symbols-outlined text-2xl"
+                        >close</span
+                    >
+                </button>
+            </div>
+        </div>
+
+        <div class="p-6 space-y-6">
+            <div class="text-center">
+                <div
+                    class="h-16 w-16 mx-auto mb-4 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center"
+                >
+                    <span class="material-symbols-outlined text-white text-3xl"
+                        >upload</span
+                    >
+                </div>
+                <h3
+                    class="text-lg font-semibold text-gray-900 dark:text-white mb-2"
+                >
+                    Import Classes from CSV
+                </h3>
+                <p class="text-gray-600 dark:text-gray-400 text-sm">
+                    Upload a CSV file to bulk import classes and enrollments
+                </p>
+            </div>
+
+            <div
+                class="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl p-8 text-center hover:border-primary dark:hover:border-primary transition-colors"
+            >
+                <span
+                    class="material-symbols-outlined text-gray-400 text-4xl mb-4 block"
+                    >cloud_upload</span
+                >
+                <p class="text-gray-600 dark:text-gray-400 mb-2">
+                    Drop your CSV file here or
+                </p>
+                <label
+                    class="inline-flex items-center gap-2 bg-primary text-white font-semibold py-2 px-4 rounded-lg cursor-pointer hover:bg-primary/90 transition-colors"
+                >
+                    <span class="material-symbols-outlined text-lg"
+                        >file_upload</span
+                    >
+                    Browse Files
+                    <input type="file" accept=".csv" class="hidden" />
+                </label>
+            </div>
+
+            <div
+                class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4"
+            >
+                <h4 class="font-semibold text-blue-900 dark:text-blue-100 mb-2">
+                    CSV Format Requirements:
+                </h4>
+                <ul class="text-sm text-blue-800 dark:text-blue-200 space-y-1">
+                    <li>• Column 1: Class Name</li>
+                    <li>• Column 2: Grade Level</li>
+                    <li>• Column 3: Form Teacher Email</li>
+                    <li>• Column 4: Schedule</li>
+                </ul>
+            </div>
+
+            <div class="flex gap-3">
+                <button
+                    class="flex-1 bg-gradient-to-r from-primary to-blue-600 hover:from-primary/90 hover:to-blue-600/90 text-white font-semibold py-3 px-6 rounded-xl shadow-md hover:shadow-lg transition-all duration-200"
+                >
+                    Import Classes
+                </button>
+                <button
+                    onclick="closeModal('importModal')"
+                    class="flex-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-semibold py-3 px-6 rounded-xl hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                >
+                    Cancel
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Class Modal -->
+<div
+    id="editClassModal"
+    class="fixed inset-0 bg-black/50 z-50 hidden items-center justify-center p-4"
+>
+    <div
+        class="bg-white dark:bg-gray-800 rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto"
+    >
+        <div class="p-6 border-b border-gray-200 dark:border-gray-700">
+            <div class="flex items-center justify-between">
+                <h2 class="text-xl font-bold text-gray-900 dark:text-white">
+                    Edit Class
+                </h2>
+                <button
+                    class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                    onclick="closeModal('editClassModal')"
+                >
+                    <span class="material-symbols-outlined text-2xl">close</span>
+                </button>
+            </div>
+        </div>
+
+        <form id="editClassForm" class="p-6 space-y-6">
+            <input type="hidden" id="editClassId" name="class_id">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <label
+                        for="editClassName"
+                        class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2"
+                        >Class Name</label
+                    >
+                    <input
+                        id="editClassName"
+                        type="text"
+                        placeholder="Auto-generated from Section + Level + Group"
+                        readonly
+                        class="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition cursor-not-allowed"
+                    />
+                    <p class="mt-2 text-xs text-gray-500 dark:text-gray-400">Preview: <span id="editClassNamePreview" class="font-semibold text-gray-700 dark:text-gray-200">—</span></p>
+                </div>
+                <div>
+                    <label
+                        for="editFormTeacher"
+                        class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2"
+                        >Assign Form Teacher</label
+                    >
+                    <select
+                        id="editFormTeacher"
+                        required
+                        class="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition"
+                    >
+                        <option value="" selected disabled>Select a teacher...</option>
+                        {% for teacher in teachers %}
+                        <option value="{{ teacher.id }}">
+                            {{ teacher.full_name() }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label for="editSectionId" class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Section</label>
+                    <select required id="editSectionId" class="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition">
+                        <option value="" selected disabled>Select a section...</option>
+                        {% for section in sections %}
+                        <option value="{{ section.section_id }}" data-abbr="{{ section.abbreviation }}">{{ section.name }} ({{ section.abbreviation }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label for="editLevel" class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Grade Level</label>
+                    <input required id="editLevel" type="number" placeholder="e.g., 1" class="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition" />
+                </div>
+                <div>
+                    <label for="editGroup" class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Group</label>
+                    <input id="editGroup" type="text" placeholder="e.g., A, B, C" class="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition" />
+                </div>
+                <div>
+                    <label for="editAcademicYear" class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Academic Year</label>
+                    <input id="editAcademicYear" type="text" placeholder="e.g., 2024-2025" class="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition" />
+                </div>
+                <div class="flex items-center gap-2 mt-2">
+                    <input id="editIsActive" type="checkbox" checked class="form-checkbox text-primary focus:ring-primary rounded" />
+                    <label for="editIsActive" class="text-sm font-medium text-gray-700 dark:text-gray-300">Active</label>
+                </div>
+                <div>
+                    <label
+                        for="editClassCapacity"
+                        class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2"
+                        >Class Capacity</label
+                    >
+                    <input
+                        id="editClassCapacity"
+                        type="number"
+                        placeholder="30"
+                        class="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition"
+                    />
+                </div>
+                
+            </div>
+
+            <div>
+                <label
+                    for="editDescription"
+                    class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2"
+                    >Description (Optional)</label
+                >
+                <textarea
+                    id="editDescription"
+                    rows="3"
+                    placeholder="Brief description of the class..."
+                    class="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition resize-none"
+                ></textarea>
+            </div>
+
+            <div class="flex flex-col sm:flex-row gap-3 pt-4">
+                <button
+                    type="submit"
+                    class="flex-1 bg-gradient-to-r from-primary to-blue-600 hover:from-primary/90 hover:to-blue-600/90 text-white font-semibold py-3 px-6 rounded-xl shadow-md hover:shadow-lg transition-all duration-200"
+                >
+                    Update Class
+                </button>
+                <button
+                    type="button"
+                    onclick="closeModal('editClassModal')"
+                    class="flex-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-semibold py-3 px-6 rounded-xl hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                >
+                    Cancel
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% endblock %}

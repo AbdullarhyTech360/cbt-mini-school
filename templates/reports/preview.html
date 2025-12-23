@@ -1,0 +1,1487 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Student Report Card</title>
+    <link
+      href="{{ url_for('static', filename='dist/output.css') }}"
+      rel="stylesheet"
+    />
+    <!-- Material Symbols removed - using Unicode emojis instead -->
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@700&display=swap"
+      rel="stylesheet"
+    />
+    <!-- Add pdfmake CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
+    <style>
+      @media print {
+        body {
+          margin: 0;
+          padding: 0;
+          background: white !important;
+          font-size: 7px !important;
+          line-height: 1 !important;
+          transform: scale(0.82);
+          transform-origin: top left;
+          width: 121.95% !important;
+        }
+        .no-print {
+          display: none !important;
+        }
+
+        .report-card {
+          box-shadow: none !important;
+          margin: 0 !important;
+          padding: 4mm !important; /* Adjusted padding */
+          page-break-after: always;
+          width: 100% !important;
+          max-width: none !important;
+          border: none !important;
+          min-height: auto !important;
+        }
+
+        .print-break-inside-avoid {
+          break-inside: avoid;
+        }
+
+        .score-table-container {
+          width: 100% !important;
+          overflow: visible !important;
+          margin-bottom: 2px !important;
+        }
+
+        .score-table {
+          table-layout: auto !important;
+          width: 100% !important;
+          font-size: 6px !important;
+          margin-bottom: 0 !important;
+          border-collapse: collapse !important;
+        }
+
+        .score-table th,
+        .score-table td {
+          padding: 1px 1px !important;
+          margin: 0 !important;
+          border: none !important;
+          line-height: 0.9 !important;
+        }
+
+        .score-table th {
+          font-size: 7px !important; /* Restored font size */
+          padding: 3px 2px !important; /* Increased padding */
+        }
+
+        .score-table td {
+          font-size: 8px !important; /* Restored font size */
+          padding: 2px 1px !important; /* Reduced padding only */
+        }
+
+        /* Ensure watermark is visible in print - FIXED VISIBILITY */
+        .watermark {
+          color: rgba(124, 58, 237, 0.12) !important;
+          -webkit-print-color-adjust: exact;
+          print-color-adjust: exact;
+          font-size: 45px !important;
+          z-index: 9999 !important;
+          position: absolute !important;
+          top: 50% !important;
+          left: 50% !important;
+          transform: translate(-50%, -50%) rotate(-30deg) !important;
+          pointer-events: none !important;
+        }
+
+        /* Ensure icons are visible in print */
+        .icon {
+          -webkit-print-color-adjust: exact;
+          print-color-adjust: exact;
+        }
+
+        /* Minimal vertical spacing in print */
+        .student-card,
+        .term-info,
+        .comments-section,
+        .grading-legend,
+        .school-header,
+        .report-title,
+        .action-bar {
+          margin: 2px 0 !important;
+          padding: 2px !important;
+        }
+
+        .detail-item,
+        .term-item {
+          margin-bottom: 2px !important;
+        }
+
+        /* Adjusted comments section for print */
+        .comment-content {
+          min-height: 25px !important;
+          padding: 3px 5px !important;
+          margin: 2px 0 !important;
+          font-size: 8px !important; /* Increased from 7px */
+        }
+
+        /* Enhanced school header for print */
+        .school-header {
+          gap: 6px !important; /* Reduced from 8px */
+          padding: 3px !important; /* Reduced from 4px */
+          margin-bottom: 5px !important; /* Reduced from 6px */
+          background: #f5f3ff !important;
+          border-bottom: 1px solid #e9d5ff !important;
+          border-radius: 3px 3px 0 0 !important; /* Reduced from 4px */
+        }
+
+        .school-logo {
+          width: 45px !important; /* Reduced from 50px */
+          height: 55px !important; /* Reduced from 65px */
+          padding: 1px !important; /* Reduced from 2px */
+          border: 1px solid #ddd !important;
+          border-radius: 3px !important; /* Reduced from 4px */
+        }
+
+        .school-info h1 {
+          font-size: 16px !important; /* Reduced from 18px */
+          margin-bottom: 1px !important; /* Reduced from 2px */
+        }
+
+        .school-info p {
+          font-size: 11px !important; /* Reduced from 12px */
+          margin: 1px 0 !important;
+        }
+
+        .report-title {
+          font-size: 14px !important; /* Reduced from 16px */
+          margin: 4px 0 !important; /* Reduced from 6px */
+        }
+
+        .student-card {
+          padding: 2px !important; /* Reduced padding */
+          margin-bottom: 1px !important; /* Reduced margin */
+          gap: 2px !important; /* Reduced gap */
+          border: 1px solid #e2e8f0 !important;
+        }
+
+        .student-photo {
+          width: 30px !important; /* Reduced from 35px */
+          height: 45px !important; /* Reduced from 50px */
+        }
+
+        .student-details {
+          gap: 1px !important; /* Reduced from 2px */
+        }
+
+        .detail-label {
+          font-size: 6px !important; /* Increased from 5px */
+        }
+
+        .detail-value {
+          font-size: 8px !important; /* Increased from 7px */
+        }
+
+        .term-label {
+          font-size: 6px !important; /* Increased from 5px */
+        }
+
+        .term-value {
+          font-size: 8px !important; /* Increased from 7px */
+        }
+
+        .grading-legend {
+          gap: 3px; /* Increased from 2px */
+          padding: 2px 0 !important; /* Increased padding */
+          margin: 2px 0 !important; /* Increased margin */
+        }
+
+        .legend-item {
+          font-size: 7px; /* Increased from 6px */
+          padding: 2px 4px; /* Increased padding */
+        }
+
+        .disclaimer {
+          font-size: 9px !important;
+          color: #475569 !important; /* Darker color for better readability */
+          padding: 3px !important;
+          background: #f8fafc !important;
+          border-radius: 3px !important;
+          border: 1px solid #e2e8f0 !important;
+          font-weight: 500;
+          margin: 1px 0 !important;
+          min-height: auto;
+          line-height: 1.2 !important;
+        }
+
+        /* Minimal page settings */
+        @page {
+          size: A4 landscape; /* Changed back to landscape */
+          margin: 0mm !important;
+          marks: none;
+        }
+
+        /* Strict page-break controls */
+        .student-card,
+        .term-info,
+        .score-table-container,
+        .comments-section,
+        .grading-legend,
+        .disclaimer {
+          page-break-inside: avoid;
+        }
+
+        /* Enhanced school header for print */
+        .school-header {
+          gap: 8px !important;
+          padding: 4px !important;
+          margin-bottom: 6px !important;
+          background: #f5f3ff !important;
+          border-bottom: 1px solid #e9d5ff !important;
+          border-radius: 4px 4px 0 0 !important;
+        }
+
+        .school-logo {
+          width: 50px !important;
+          height: 65px !important;
+          padding: 2px !important;
+          border: 1px solid #ddd !important;
+          border-radius: 4px !important;
+        }
+
+        .school-info h1 {
+          font-size: 18px !important;
+          margin-bottom: 2px !important;
+        }
+
+        .school-info p {
+          font-size: 11px !important;
+          margin: 1px 0 !important;
+        }
+      }
+      @page {
+        size: A4 landscape; /* Standard A4 landscape */
+        margin: 1mm; /* Minimal margin */
+      }
+
+      body {
+        font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI",
+          Roboto, Oxygen, Ubuntu, Cantarell, "Open Sans", "Helvetica Neue",
+          sans-serif;
+        background-color: #f8fafc;
+        color: #1e293b;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+        /* Add padding to account for fixed bottom bar */
+        padding-bottom: 80px;
+        margin: 0;
+        padding: 0;
+      }
+
+      .term-info {
+        display: flex;
+        justify-content: space-between;
+        background: white;
+        padding: 2px 4px !important; /* Reduced padding only */
+        margin-bottom: 3px !important; /* Reduced margin only */
+        font-size: 8px !important; /* Keep original font size */
+      }
+
+      .term-item {
+        text-align: center;
+        flex: 1;
+      }
+
+      .term-label {
+        font-size: 7px !important; /* Keep original font size */
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: #7c3aed;
+        margin-bottom: 1px;
+        font-weight: 700;
+      }
+
+      .term-value {
+        font-weight: 700;
+        color: #0f172a;
+        font-size: 9px !important; /* Keep original font size */
+      }
+
+      .report-container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 2rem 1rem 6rem 1rem; /* Added extra bottom padding for fixed buttons */
+      }
+
+      .report-card {
+        background: white;
+        width: 297mm; /* A4 width for landscape */
+        min-height: 210mm; /* A4 height for landscape */
+        margin: 3px auto;
+        padding: 8mm; /* Adjusted padding */
+        box-shadow: 0 3px 10px -2px rgba(0, 0, 0, 0.1);
+        border-radius: 4px;
+        position: relative;
+        overflow: hidden;
+        font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI",
+          Roboto, Oxygen, Ubuntu, Cantarell, "Open Sans", "Helvetica Neue",
+          sans-serif;
+        border: 1px solid #e2e8f0;
+        font-size: 9px;
+        line-height: 1.2;
+      }
+
+      .header-pattern {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 2px; /* Reduced from 3px */
+        background: #7c3aed;
+      }
+
+      .school-header {
+        display: flex;
+        align-items: center;
+        gap: 10px; /* Reduced from 12px */
+        padding: 6px; /* Reduced from 8px */
+        background: linear-gradient(135deg, #f5f3ff 0%, #faf5ff 100%);
+        border-bottom: 2px solid #e9d5ff;
+        border-radius: 6px 6px 0 0; /* Reduced from 8px */
+        margin-bottom: 10px; /* Reduced from 12px */
+      }
+
+      .school-logo {
+        width: 60px; /* Reduced from 70px */
+        height: 75px; /* Reduced from 90px */
+        object-fit: contain;
+        border: 2px solid #ddd;
+        border-radius: 5px; /* Reduced from 6px */
+        background: white;
+        padding: 3px; /* Reduced from 4px */
+      }
+
+      .school-info h1 {
+        font-family: "Playfair Display", serif;
+        color: #6b21a8;
+        font-size: 20px; /* Reduced from 24px */
+        font-weight: 800;
+        margin-bottom: 3px; /* Reduced from 4px */
+        letter-spacing: -0.03em;
+      }
+
+      .school-info p {
+        color: #64748b;
+        font-size: 13px; /* Reduced from 15px */
+        margin: 1px 0; /* Reduced from 2px 0 */
+        font-weight: 500;
+      }
+
+      .report-title {
+        font-size: 18px; /* Increased from 16px */
+        font-weight: 800;
+        color: #7c3aed;
+        text-align: center;
+        margin: 2px 0; /* Reduced from default margin */
+        letter-spacing: -0.02em;
+        text-transform: uppercase;
+        font-family: "Playfair Display", serif;
+      }
+
+      .student-card {
+        display: flex;
+        gap: 8px;
+        background: white;
+        padding: 6px;
+        border-radius: 6px;
+        box-shadow: 0 1px 3px -1px rgba(0, 0, 0, 0.08);
+        border: 1px solid #f3e8ff;
+        margin-bottom: 2px; /* Reduced from default */
+        align-items: center;
+      }
+
+      .student-photo {
+        width: 35px; /* Reduced from 40px */
+        height: 50px; /* Reduced from 55px */
+        object-fit: cover;
+        border-radius: 3px;
+        border: 1px solid white;
+        box-shadow: 0 1px 2px -1px rgba(0, 0, 0, 0.1);
+      }
+
+      .student-details {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 2px; /* Reduced from 3px */
+      }
+
+      .detail-item {
+        display: flex;
+        flex-direction: column;
+      }
+
+      .detail-label {
+        font-size: 7px;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: #7c3aed;
+        margin-bottom: 1px;
+        font-weight: 700;
+      }
+
+      .detail-value {
+        font-weight: 700;
+        color: #0f172a;
+        font-size: 8px; /* Reduced from 9px */
+      }
+
+      .term-label {
+        font-size: 7px; /* Increased from 6px */
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: #7c3aed;
+        margin-bottom: 1px;
+        font-weight: 700;
+      }
+
+      .term-value {
+        font-weight: 700;
+        color: #0f172a;
+        font-size: 9px; /* Increased from 8px */
+      }
+
+      .school-info h1 {
+        font-family: "Playfair Display", serif;
+        color: #6b21a8;
+        font-size: 24px; /* Increased from 22px */
+        font-weight: 800;
+        margin-bottom: 4px;
+        letter-spacing: -0.03em;
+      }
+
+      .school-info p {
+        color: #64748b;
+        font-size: 15px; /* Increased from 14px */
+        margin: 2px 0;
+        font-weight: 500;
+      }
+
+      .report-title {
+        font-size: 18px; /* Increased from 16px */
+        font-weight: 800;
+        color: #7c3aed;
+        text-align: center;
+        margin: 8px 0; /* Increased from 6px */
+        letter-spacing: 0.5px;
+        text-transform: uppercase;
+      }
+
+      .score-table-container {
+        border-radius: 5px;
+        overflow: hidden;
+        border: 1px solid #e9d5ff;
+        margin-bottom: 10px;
+        box-shadow: 0 1px 2px -1px rgba(0, 0, 0, 0.05);
+      }
+
+      .score-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 8px; /* Increased from 7px */
+      }
+
+      .score-table th {
+        background: #7c3aed;
+        color: white;
+        font-weight: 700;
+        text-transform: uppercase;
+        font-size: 7px; /* Restored from 6px */
+        letter-spacing: 0.05em;
+        padding: 4px 3px; /* Increased padding */
+        text-align: center;
+      }
+
+      .score-table td {
+        padding: 3px 2px; /* Increased padding */
+        border-bottom: 1px solid #f3e8ff;
+        text-align: center;
+        color: #334155;
+        font-size: 8px; /* Restored from 7px */
+        font-weight: 500;
+      }
+
+      .subject-name {
+        font-weight: 700;
+        color: #0f172a;
+        font-size: 8px;
+      }
+
+      .grade-badge {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        font-weight: 800;
+        font-size: 7px;
+        box-shadow: 0 1px 1px 0 rgba(0, 0, 0, 0.1);
+      }
+
+      .remark-excellent {
+        color: #059669;
+        font-weight: 700;
+        font-size: 7px;
+      }
+      .remark-good {
+        color: #2563eb;
+        font-weight: 700;
+        font-size: 7px;
+      }
+      .remark-average {
+        color: #d97706;
+        font-weight: 700;
+        font-size: 7px;
+      }
+      .remark-poor {
+        color: #dc2626;
+        font-weight: 700;
+        font-size: 7px;
+      }
+      .remark-fail {
+        color: #4b5563;
+        font-weight: 700;
+        font-size: 7px;
+      }
+
+      .cbt-score {
+        position: relative;
+        font-weight: 700;
+        color: #7c3aed;
+        font-size: 7px;
+      }
+
+      .comments-section {
+        background: white;
+        border: 1px solid #f3e8ff;
+        border-radius: 3px;
+        padding: 2px 4px;
+        margin-bottom: 3px;
+      }
+
+      .comment-content {
+        min-height: 35px; /* Increased height */
+        padding: 6px 8px; /* Increased padding */
+        margin: 3px 0;
+        background: #faf5ff;
+        border-radius: 4px;
+        border: 1px solid #f3e8ff;
+        font-size: 10px; /* Increased from 9px */
+        color: #334155;
+        line-height: 1.3; /* Improved line height */
+      }
+
+      .signature-area {
+        display: flex;
+        justify-content: space-between;
+        gap: 5px;
+        margin-top: 3px;
+      }
+
+      .signature-box {
+        border-top: 1px dashed #c4b5fd;
+        padding-top: 3px;
+        text-align: center;
+        flex: 1;
+      }
+
+      .signature-title {
+        font-size: 6px;
+        color: #7c3aed;
+        font-weight: 600;
+        margin-bottom: 1px;
+      }
+
+      .signature-name {
+        font-weight: 700;
+        color: #0f172a;
+        font-size: 7px;
+      }
+
+      .grading-legend {
+        display: flex;
+        justify-content: center;
+        gap: 4px; /* Increased from 2px */
+        flex-wrap: wrap;
+        padding-top: 5px;
+        border-top: 1px solid #f3e8ff;
+        margin-bottom: 5px;
+      }
+
+      .legend-item {
+        display: flex;
+        align-items: center;
+        gap: 2px;
+        font-size: 8px; /* Increased from 6px */
+        color: #64748b;
+        background: white;
+        padding: 3px 5px;
+        border-radius: 8px;
+        border: 1px solid #f3e8ff;
+        font-weight: 600;
+        box-shadow: 0 1px 1px 0 rgba(0, 0, 0, 0.05);
+      }
+
+      .legend-dot {
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+      }
+
+      .watermark {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%) rotate(-30deg);
+        font-size: 65px; /* Adjusted */
+        font-weight: 900;
+        color: rgba(124, 58, 237, 0.12);
+        pointer-events: none;
+        white-space: nowrap;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        z-index: 9999; /* Ensure visibility - FIXED */
+      }
+
+      .disclaimer {
+        text-align: center;
+        font-size: 9px;
+        color: #475569; /* Darker color for better readability */
+        padding: 4px;
+        background: #f8fafc;
+        border-radius: 4px;
+        border: 1px solid #e2e8f0;
+        font-weight: 500;
+        margin-top: 3px;
+        margin-bottom: 0;
+        min-height: auto;
+        line-height: 1.2;
+      }
+
+      /* Enhanced modern styling */
+      .action-bar {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background: white;
+        border-top: 1px solid #e5e7eb;
+        box-shadow: 0 -1px 3px -1px rgba(0, 0, 0, 0.1);
+        z-index: 50;
+        padding: 0.5rem; /* Reduced from 0.75rem */
+      }
+
+      .action-buttons {
+        display: flex;
+        justify-content: center;
+        gap: 0.5rem; /* Reduced from 0.75rem */
+        max-width: 1200px;
+        margin: 0 auto;
+      }
+
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.3rem; /* Reduced from 0.4rem */
+        padding: 0.5rem 1rem; /* Reduced from 0.6rem 1.2rem */
+        border-radius: 0.3rem; /* Reduced from 0.4rem */
+        font-weight: 500;
+        font-size: 0.75rem; /* Reduced from 0.8rem */
+        transition: all 0.1s ease-in-out; /* Reduced from 0.15s */
+        cursor: pointer;
+        border: none;
+        box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.1);
+      }
+
+      .icon {
+        font-size: 0.9rem; /* Reduced from 1rem */
+        font-weight: bold;
+      }
+
+      .btn-primary {
+        background-color: #7c3aed;
+        color: white;
+      }
+
+      .btn-primary:hover {
+        background-color: #6d28d9;
+        transform: translateY(-1px);
+        box-shadow: 0 1px 3px -1px rgba(0, 0, 0, 0.1);
+      }
+
+      .btn-secondary {
+        background-color: #6b7280;
+        color: white;
+      }
+
+      .btn-secondary:hover {
+        background-color: #4b5563;
+        transform: translateY(-1px);
+        box-shadow: 0 1px 3px -1px rgba(0, 0, 0, 0.1);
+      }
+
+      .btn-success {
+        background-color: #10b981;
+        color: white;
+      }
+
+      .btn-success:hover {
+        background-color: #059669;
+        transform: translateY(-1px);
+        box-shadow: 0 1px 3px -1px rgba(0, 0, 0, 0.1);
+      }
+
+      .report-header {
+        text-align: center;
+        margin-bottom: 1rem; /* Reduced from 1.5rem */
+      }
+
+      .report-header h1 {
+        font-size: 1.1rem; /* Reduced from 1.25rem */
+        font-weight: 700;
+        color: #1f2937;
+        margin-bottom: 0.3rem; /* Reduced from 0.4rem */
+      }
+
+      .report-header p {
+        color: #6b7280;
+        font-size: 0.75rem; /* Reduced from 0.8rem */
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="report-container">
+      <div class="report-header no-print">
+        <h1>Student Report Card</h1>
+        <p>Preview and Print</p>
+      </div>
+
+      <div class="report-card" id="reportCard">
+        <div class="watermark">OFFICIAL DOCUMENT</div>
+        <div class="header-pattern"></div>
+        <div
+          style="
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+          "
+        >
+          <div
+            style="display: flex; flex-direction: column; align-items: center"
+          >
+            <div
+              style="
+                height: 3rem;
+                width: 3rem;
+                background-color: #ddd6fe;
+                border-radius: 50%;
+                margin-bottom: 1rem;
+              "
+            ></div>
+            <div
+              style="
+                height: 1rem;
+                width: 12rem;
+                background-color: #ddd6fe;
+                border-radius: 0.25rem;
+                margin-bottom: 0.5rem;
+              "
+            ></div>
+            <div
+              style="
+                height: 0.75rem;
+                width: 8rem;
+                background-color: #ddd6fe;
+                border-radius: 0.25rem;
+              "
+            ></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Fixed action bar at the bottom -->
+    <div class="action-bar no-print">
+      <div class="action-buttons">
+        <!-- Back button -->
+        <button onclick="window.history.back()" class="btn btn-secondary">
+          <span class="icon">&#8592;</span>
+          Back
+        </button>
+        <!-- Download button (disabled) -->
+        <button
+          onclick="showDownloadMessage()"
+          class="btn btn-success"
+          disabled
+        >
+          <span class="icon">&#8681;</span>
+          Download PDF
+        </button>
+        <!-- Print button -->
+        <button onclick="window.print()" class="btn btn-primary">
+          <span class="icon">&#128424;</span>
+          Print Report
+        </button>
+      </div>
+    </div>
+
+    <script>
+      // Show download message function
+      function showDownloadMessage() {
+        alert(
+          "PDF generation is currently disabled. Please use the Print button to generate a PDF."
+        );
+      }
+
+      // Format position helper
+      function formatPosition(position) {
+        if (position === 1) return "1st";
+        if (position === 2) return "2nd";
+        if (position === 3) return "3rd";
+        return position + "th";
+      }
+
+      // Format assessment name helper
+      function formatAssessmentName(name) {
+        if (!name) return "";
+        // If name is already short, return as is
+        if (name.length <= 10) return name;
+        // Otherwise, try to abbreviate common terms
+        const abbreviations = {
+          Continuous: "Cont.",
+          Assessment: "Assess.",
+          Test: "T",
+          Exam: "E",
+          Practical: "Prac.",
+          Project: "Proj.",
+          Assignment: "Assign.",
+        };
+
+        let abbreviated = name;
+        for (const [full, abbr] of Object.entries(abbreviations)) {
+          abbreviated = abbreviated.replace(new RegExp(full, "gi"), abbr);
+        }
+
+        // If still too long, truncate
+        if (abbreviated.length > 10) {
+          return abbreviated.substring(0, 10) + ".";
+        }
+
+        return abbreviated;
+      }
+
+      // Helper to get grade color
+      function getGradeColor(grade) {
+        const colors = {
+          A: "#10b981",
+          B: "#3b82f6",
+          C: "#f59e0b",
+          D: "#f97316",
+          E: "#ef4444",
+          F: "#6b7280",
+        };
+        return colors[grade.toUpperCase()] || "#6b7280";
+      }
+
+      // Get grade based on percentage
+      function getGrade(percentage, gradeScale = null) {
+        const score = parseFloat(percentage);
+        if (gradeScale && gradeScale.grade_ranges) {
+          const range = gradeScale.grade_ranges.find(
+            (r) => score >= r.min_score && score <= r.max_score
+          );
+          if (range) return range.grade;
+        }
+        if (score >= 70) return "A";
+        if (score >= 60) return "B";
+        if (score >= 50) return "C";
+        if (score >= 45) return "D";
+        if (score >= 40) return "E";
+        return "F";
+      }
+
+      // Get remark based on percentage
+      function getRemark(percentage, gradeScale = null) {
+        const score = parseFloat(percentage);
+        if (gradeScale && gradeScale.grade_ranges) {
+          const range = gradeScale.grade_ranges.find(
+            (r) => score >= r.min_score && score <= r.max_score
+          );
+          if (range) {
+            const grade = range.grade;
+            let cls = "remark-fail";
+            if (grade === "A") cls = "remark-excellent";
+            else if (grade === "B") cls = "remark-good";
+            else if (grade === "C") cls = "remark-average";
+            else if (["D", "E"].includes(grade)) cls = "remark-poor";
+            return { text: range.remark || grade, class: cls };
+          }
+        }
+        if (score >= 70)
+          return { text: "Excellent", class: "remark-excellent" };
+        if (score >= 60) return { text: "Very Good", class: "remark-good" };
+        if (score >= 50) return { text: "Good", class: "remark-average" };
+        if (score >= 45) return { text: "Fair", class: "remark-poor" };
+        if (score >= 40) return { text: "Pass", class: "remark-poor" };
+        return { text: "Fail", class: "remark-fail" };
+      }
+
+      // Calculate resumption date
+      function calculateResumptionDate(endDateStr) {
+        try {
+          const endDate = new Date(endDateStr);
+          const resumptionDate = new Date(endDate);
+          resumptionDate.setDate(resumptionDate.getDate() + 14);
+          return resumptionDate.toISOString().split("T")[0];
+        } catch (e) {
+          return "N/A";
+        }
+      }
+
+      // Render the report
+      function renderReport(report) {
+        const {
+          student,
+          school,
+          term,
+          assessment_types,
+          scores,
+          position,
+          total_students,
+          overall_total,
+          overall_max,
+          grade_scale,
+          config,
+        } = report;
+
+        const displaySettings = (config && config.display_settings) || {};
+
+        const assessments = assessment_types
+          .sort((a, b) => (a.order || 0) - (b.order || 0))
+          .map((at) => at.code);
+
+        // FORCE 100 Max as requested by user
+        const isPercentageMode = true;
+        const overallPercentage =
+          overall_total / (Object.keys(scores).length || 1);
+
+        console.log("[Preview] Overall Mode: Direct (Forced)");
+        console.log("[Preview] Overall Total:", overall_total);
+        console.log("[Preview] Overall Max:", overall_max);
+        console.log("[Preview] Overall Percentage:", overallPercentage);
+        const overallGrade = getGrade(overallPercentage, grade_scale);
+        const overallRemark = getRemark(overallPercentage, grade_scale);
+
+        let html = `
+                <div class="header-pattern"></div>
+                <div class="watermark">OFFICIAL DOCUMENT</div>
+                
+                <header class="school-header">
+                    ${
+                      school.logo
+                        ? `<img src="/static/${school.logo.replace(
+                            /^static\//,
+                            ""
+                          )}" alt="School Logo" class="school-logo">`
+                        : `<div class="school-logo" style="background-color: #ede9fe; display: flex; align-items: center; justify-content: center;">
+                            <span style="font-size: 24px;">🏫</span>
+                        </div>`
+                    }
+                    <div class="school-info" style="flex: 1;">
+                        <h1>${school.name.toUpperCase()}</h1>
+                        ${
+                          school.motto
+                            ? `<p style="font-style: italic; color: #7c3aed; font-size: 14px; font-weight: 600;">"${school.motto}"</p>`
+                            : ""
+                        }
+                        <p style="font-size: 12px; color: #64748b; margin: 4px 0;">${
+                          school.address || ""
+                        } ${school.phone ? "| Tel: " + school.phone : ""} ${
+          school.email ? " | Email: " + school.email : ""
+        }</p>
+                    </div>
+                </header>
+                
+                <div class="report-title">STUDENT PERFORMANCE REPORT</div>
+
+                <div class="student-card">
+                    ${
+                      student.image
+                        ? `<img src="${student.image}" alt="Student" class="student-photo">`
+                        : `<img src="/static/uploads/profile_images/${student.gender && student.gender.toLowerCase() === 'male' ? 'male_default_avatar.png' : 'female_default_avatar.png'}" alt="Student" class="student-photo" onerror="this.outerHTML='<div class=\"student-photo\" style=\"background-color: #ede9fe; display: flex; align-items: center; justify-content: center;\"><span style=\"font-size: 24px;\">👤</span></div>'">`
+                    }
+                    <div class="student-details">
+                        <div class="detail-item">
+                            <span class="detail-label">Student Name</span>
+                            <span class="detail-value">${student.name}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Admission No.</span>
+                            <span class="detail-value">${
+                              student.admission_number || "N/A"
+                            }</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Class</span>
+                            <span class="detail-value">${
+                              student.class_name
+                            }</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Position</span>
+                            <span class="detail-value" style="color: #7c3aed;">${formatPosition(
+                              position
+                            )} of ${total_students}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Total Score</span>
+                            <span class="detail-value">${overall_total.toFixed(
+                              1
+                            )} / ${overall_max}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Overall Grade</span>
+                            <span class="detail-value">
+                                <span class="grade-badge grade-${overallGrade}" style="width: 24px; height: 24px; font-size: 11px;">${overallGrade}</span>
+                                <span style="margin-left: 6px; font-size: 13px; font-weight: 600;">(${overallPercentage.toFixed(
+                                  1
+                                )}%)</span>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="term-info">
+                    <div class="term-item">
+                        <span class="term-label">Term</span>
+                        <span class="term-value">${term.name}</span>
+                    </div>
+                    <div class="term-item">
+                        <span class="term-label">Session</span>
+                        <span class="term-value">${term.session}</span>
+                    </div>
+                    <div class="term-item">
+                        <span class="term-label">Term Begin</span>
+                        <span class="term-value">${
+                          term.start_date || "N/A"
+                        }</span>
+                    </div>
+                    <div class="term-item">
+                        <span class="term-label">Term End</span>
+                        <span class="term-value">${
+                          term.end_date || "N/A"
+                        }</span>
+                    </div>
+                    <div class="term-item">
+                        <span class="term-label">Resumption</span>
+                        <span class="term-value">${
+                          config && config.resumption_date 
+                            ? config.resumption_date 
+                            : (term.end_date ? calculateResumptionDate(term.end_date) : "N/A")
+                        }</span>
+                    </div>
+                </div>
+
+                <div class="score-table-container">
+                    <table class="score-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 30px;">SN</th>
+                                <th style="width: 150px; text-align: left;">Subject</th>
+                                ${assessments
+                                  .map((code) => {
+                                    const at = assessment_types.find(
+                                      (a) => a.code === code
+                                    );
+                                    const name = at
+                                      ? formatAssessmentName(at.name)
+                                      : formatAssessmentName(code);
+                                    const max = at ? at.max_score : "-";
+                                    return `<th style="width: 55px;">${name}<br><span style="font-size: 10px; font-weight: 500;">(${max})</span></th>`;
+                                  })
+                                  .join("")}
+                                <th style="width: 50px;">Total</th>
+                                <th style="width: 40px;">%</th>
+                                <th style="width: 45px;">Grade</th>
+                                <th style="width: 80px;">Remark</th>
+                            </tr>
+                        </thead>
+                        <tbody>`;
+
+        let serialNumber = 1;
+        // Limit to 25 subjects for single page layout
+        const limitedScores = Object.values(scores).slice(0, 25);
+        limitedScores.forEach((subject) => {
+          // FORCE 100 Max
+          subject.max_total = 100.0;
+          const percentage = subject.total;
+
+          console.log(
+            `[Preview] ${subject.subject_name}: Total=${subject.total}, Max=100 (Forced), Perc=${percentage}`
+          );
+          const grade = getGrade(percentage, grade_scale);
+          const remark = getRemark(percentage, grade_scale);
+
+          html += `
+                    <tr>
+                        <td style="color: #94a3b8; font-size: 11px; font-weight: 600;">${serialNumber++}</td>
+                        <td style="font-size: 12px; text-align: left;" class="subject-name">${
+                          subject.subject_name.length > 30
+                            ? subject.subject_name.substring(0, 30) + "..."
+                            : subject.subject_name
+                        }</td>`;
+
+          assessments.forEach((code) => {
+            const assessment = subject.assessments[code];
+            if (assessment) {
+              const isCBT =
+                assessment.is_cbt || code.toLowerCase().includes("cbt");
+              html += `<td class="${
+                isCBT ? "cbt-score" : ""
+              }" style="font-size: 11px; font-weight: 600;">${assessment.score.toFixed(
+                1
+              )}</td>`;
+            } else {
+              html += `<td style="color: #d1d5db; font-size: 11px; font-weight: 500;">-</td>`;
+            }
+          });
+
+          html += `
+                        <td style="font-weight: 700; font-size: 11px;">${subject.total.toFixed(
+                          1
+                        )}</td>
+                        <td style="font-size: 11px; font-weight: 600;">${percentage.toFixed(
+                          1
+                        )}</td>
+                        <td><span class="grade-badge grade-${grade}" style="width: 24px; height: 24px; font-size: 11px;">${grade}</span></td>
+                        <td class="${
+                          remark.class
+                        }" style="font-size: 11px; font-weight: 600;">${
+            remark.text.length > 15
+              ? remark.text.substring(0, 15) + "."
+              : remark.text
+          }</td>
+                    </tr>`;
+        });
+
+        // Add indicator if there are more subjects
+        if (Object.values(scores).length > 25) {
+          html += `
+                    <tr>
+                        <td colspan="${
+                          4 + assessments.length
+                        }" style="text-align: center; font-style: italic; color: #6b7280; font-size: 12px; padding: 12px; font-weight: 600;">
+                            +${
+                              Object.values(scores).length - 25
+                            } more subjects not shown
+                        </td>
+                    </tr>`;
+        }
+
+        html += `
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="comments-section">
+                    <div style="display: flex; gap: 15px; margin-top: 8px;">
+                        <div style="flex: 1;">
+                            <div style="font-weight: bold; font-size: 10px; color: #7c3aed; margin-bottom: 4px;">Teacher's Comment:</div>
+                            <div class="comment-content">${
+                              report.teacherComment || ""
+                            }</div>
+                        </div>
+                        <div style="flex: 1;">
+                            <div style="font-weight: bold; font-size: 10px; color: #7c3aed; margin-bottom: 4px;">Principal's Comment:</div>
+                            <div class="comment-content">${
+                              report.principalComment || ""
+                            }</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grading-legend">
+                    ${(grade_scale && grade_scale.grade_ranges
+                      ? grade_scale.grade_ranges
+                      : [
+                          {
+                            grade: "A",
+                            min_score: 70,
+                            max_score: 100,
+                            remark: "Excellent",
+                          },
+                          {
+                            grade: "B",
+                            min_score: 60,
+                            max_score: 69,
+                            remark: "Very Good",
+                          },
+                          {
+                            grade: "C",
+                            min_score: 50,
+                            max_score: 59,
+                            remark: "Good",
+                          },
+                          {
+                            grade: "D",
+                            min_score: 45,
+                            max_score: 49,
+                            remark: "Fair",
+                          },
+                          {
+                            grade: "E",
+                            min_score: 40,
+                            max_score: 44,
+                            remark: "Pass",
+                          },
+                          {
+                            grade: "F",
+                            min_score: 0,
+                            max_score: 39,
+                            remark: "Fail",
+                          },
+                        ]
+                    )
+                      .map(
+                        (r) => `
+                        <div class="legend-item">
+                            <div class="legend-dot" style="background: ${getGradeColor(
+                              r.grade
+                            )};"></div>
+                            ${r.grade} (${r.min_score}-${r.max_score}%) ${
+                          r.remark || ""
+                        }
+                        </div>
+                    `
+                      )
+                      .join("")}
+                </div>
+
+                <div class="disclaimer">
+                    📄 Official document issued by ${
+                      school.name
+                    }. Any alteration renders it invalid. Generated on ${new Date().toLocaleDateString()}
+                </div>`;
+
+        document.getElementById("reportCard").innerHTML = html;
+
+        // Store report data for PDF generation
+        window.currentReportData = report;
+      }
+
+      // Load report data
+      async function loadReport() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const studentId = urlParams.get("student_id") || "{{ student_id }}";
+
+        // Also check for student_id in the URL path (for Flask route)
+        const pathParts = window.location.pathname.split("/");
+        const pathStudentId = pathParts[pathParts.length - 1];
+
+        // If no student_id in query params, try to get it from the path or template
+        const finalStudentId =
+          studentId !== "{{ student_id }}"
+            ? studentId
+            : pathStudentId && pathStudentId !== "preview"
+            ? pathStudentId
+            : null;
+
+        if (!finalStudentId) {
+          console.log("No student ID provided, waiting for manual load");
+          return;
+        }
+
+        // Build query parameters
+        const params = new URLSearchParams();
+        for (const [key, value] of urlParams.entries()) {
+          if (key !== "student_id") {
+            params.append(key, value);
+          }
+        }
+
+        try {
+          const response = await fetch(
+            `/reports/api/student-report/${finalStudentId}?${params.toString()}`
+          );
+          const data = await response.json();
+
+          if (data.success) {
+            renderReport(data.report);
+          } else {
+            console.error("Failed to load report:", data.message);
+            document.getElementById("reportCard").innerHTML = `
+                        <div class="header-pattern"></div>
+                        <div class="watermark">OFFICIAL DOCUMENT</div>
+                        <div style="text-align: center; padding: 2rem;">
+                            <h2>Error Loading Report</h2>
+                            <p>${
+                              data.message || "Unable to load report data"
+                            }</p>
+                        </div>`;
+          }
+        } catch (error) {
+          console.error("Error loading report:", error);
+          document.getElementById("reportCard").innerHTML = `
+                    <div class="header-pattern"></div>
+                    <div class="watermark">OFFICIAL DOCUMENT</div>
+                    <div style="text-align: center; padding: 2rem;">
+                        <h2>Connection Error</h2>
+                        <p>Could not connect to server to load report data</p>
+                        <p style="font-size: 0.9rem; color: #6b7280;">${error.message}</p>
+                    </div>`;
+        }
+      }
+
+      // Function to manually load report data (for testing)
+      function loadReportData(studentId, termId, classRoomId, configId) {
+        const params = new URLSearchParams();
+        if (termId) params.append("term_id", termId);
+        if (classRoomId) params.append("class_room_id", classRoomId);
+        if (configId) params.append("config_id", configId);
+
+        loadReportWithParams(studentId, params);
+      }
+
+      // Load report with specific parameters
+      async function loadReportWithParams(studentId, params) {
+        try {
+          const response = await fetch(
+            `/reports/api/student-report/${studentId}?${params.toString()}`
+          );
+          const data = await response.json();
+
+          if (data.success) {
+            renderReport(data.report);
+          } else {
+            console.error("Failed to load report:", data.message);
+            document.getElementById("reportCard").innerHTML = `
+                        <div class="header-pattern"></div>
+                        <div class="watermark">OFFICIAL DOCUMENT</div>
+                        <div style="text-align: center; padding: 1rem;">
+                            <h2 style="font-size: 1rem;">Error Loading Report</h2>
+                            <p style="font-size: 0.8rem;">${
+                              data.message || "Unable to load report data"
+                            }</p>
+                        </div>`;
+          }
+        } catch (error) {
+          console.error("Error loading report:", error);
+          document.getElementById("reportCard").innerHTML = `
+                    <div class="header-pattern"></div>
+                    <div class="watermark">OFFICIAL DOCUMENT</div>
+                    <div style="text-align: center; padding: 1rem;">
+                        <h2 style="font-size: 1rem;">Connection Error</h2>
+                        <p style="font-size: 0.8rem;">Could not connect to server</p>
+                        <p style="font-size: 0.7rem; color: #6b7280;">${error.message}</p>
+                    </div>`;
+        }
+      }
+
+      // Initialize when page loads
+      document.addEventListener("DOMContentLoaded", loadReport);
+
+      // For testing purposes - load sample data if no real data is available after 2 seconds
+      setTimeout(() => {
+        const reportCard = document.getElementById("reportCard");
+        if (reportCard && reportCard.innerHTML.includes("animate-pulse")) {
+          console.log("Loading sample data for testing");
+          loadSampleData();
+        }
+      }, 2000);
+
+      // Load sample data for testing
+      function loadSampleData() {
+        const sampleReport = {
+          student: {
+            name: "John Doe",
+            admission_number: "STU001",
+            class_name: "SSS 1A",
+            image: null,
+            gender: "male",
+          },
+          school: {
+            name: "Greenwood High School",
+            motto: "Knowledge for Excellence",
+            address: "123 Education Street, Learning City",
+            phone: "+1 234 567 8900",
+            email: "info@greenwoodhigh.edu",
+            logo: null,
+          },
+          term: {
+            name: "First Term",
+            session: "2023/2024",
+            start_date: "2023-09-01",
+            end_date: "2023-12-15",
+          },
+          assessment_types: [
+            {
+              code: "CA1",
+              name: "Continuous Assessment 1",
+              max_score: 20,
+              order: 1,
+            },
+            {
+              code: "CA2",
+              name: "Continuous Assessment 2",
+              max_score: 20,
+              order: 2,
+            },
+            { code: "EXAM", name: "Examination", max_score: 60, order: 3 },
+          ],
+          scores: {
+            math: {
+              subject_name: "Mathematics",
+              total: 75,
+              max_total: 100,
+              assessments: {
+                CA1: { score: 15, is_cbt: false },
+                CA2: { score: 18, is_cbt: false },
+                EXAM: { score: 42, is_cbt: true },
+              },
+            },
+            eng: {
+              subject_name: "English Language",
+              total: 68,
+              max_total: 100,
+              assessments: {
+                CA1: { score: 12, is_cbt: false },
+                CA2: { score: 16, is_cbt: false },
+                EXAM: { score: 40, is_cbt: true },
+              },
+            },
+            sci: {
+              subject_name: "Basic Science",
+              total: 82,
+              max_total: 100,
+              assessments: {
+                CA1: { score: 18, is_cbt: false },
+                CA2: { score: 20, is_cbt: false },
+                EXAM: { score: 44, is_cbt: true },
+              },
+            },
+          },
+          position: 5,
+          total_students: 45,
+          overall_total: 225,
+          overall_max: 300,
+        };
+
+        renderReport(sampleReport);
+      }
+    </script>
+  </body>
+</html>

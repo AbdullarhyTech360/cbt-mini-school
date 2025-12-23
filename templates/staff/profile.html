@@ -1,0 +1,275 @@
+{% extends 'staff/base.html' %}
+
+{% block title %}My Profile{% endblock %}
+
+{% block sidebar_nav %}
+{{ super() }}
+{% endblock %}
+
+{% block content %}
+<!-- Header Section -->
+<div class="mb-6 md:mb-8">
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+            <h1 class="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white mb-2">My Profile</h1>
+            <p class="text-gray-600 dark:text-gray-400 text-sm md:text-base">Manage your personal information and account settings.</p>
+        </div>
+        <div class="flex items-center gap-3">
+            <button class="flex items-center gap-2 px-3 py-2 md:px-4 md:py-2 bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white rounded-lg shadow-md hover:shadow-lg transition-all duration-200 text-sm md:text-base">
+                <span class="material-symbols-outlined text-lg">security</span>
+                <span class="font-semibold">Security Settings</span>
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Profile Header Card -->
+<div class="mb-6 md:mb-8">
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-100 dark:border-gray-700 overflow-hidden">
+        <div class="p-4 md:p-6 border-b border-gray-100 dark:border-gray-700">
+            <div class="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+                <div class="relative flex-shrink-0">
+                    <img class="h-16 w-16 md:h-20 md:w-20 rounded-full object-cover ring-4 ring-primary/20"
+                        src="https://lh3.googleusercontent.com/aida-public/AB6AXuAZx9wH3s7WLF7tI5V03nO7WDimNcyeOP0-ojFyb8k-eSfCqL5TPczJ1S6aPg61FLqenBL6x1wAquVE_gzaC3Uc4fqAWhc_eqnGM0_fQYaSWabREemao-VEkcs1qQ1JruP_ykQGdrgTHou8Ffpk_IqyNIQcKjk62hYlkfL8RNm8FYH2eU0eNTJi5-232xAxzrGyvljODTVj8PE1ceTrs-TdrK1rcmap-1O_MSB8orpHYaorm5wVuzfkkPD55-JWr6mOv_yimZ3Du-o" />
+                    <span class="absolute bottom-1 right-1 h-4 w-4 bg-green-500 rounded-full ring-2 ring-white dark:ring-gray-800"></span>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <h2 class="text-xl md:text-2xl font-bold text-gray-800 dark:text-white mb-1">John Doe</h2>
+                    <p class="text-gray-600 dark:text-gray-400 text-sm md:text-base mb-2">Mathematics Teacher</p>
+                    <div class="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
+                        <span class="material-symbols-outlined text-base">mail</span>
+                        <span class="truncate">john.doe@school.com</span>
+                    </div>
+                </div>
+                <div class="flex gap-2">
+                    <button class="flex items-center gap-2 px-3 py-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-lg transition-colors text-sm">
+                        <span class="material-symbols-outlined text-lg">edit</span>
+                        <span>Edit</span>
+                    </button>
+                    <button class="flex items-center gap-2 px-3 py-2 bg-primary hover:bg-primary/90 text-white rounded-lg transition-colors text-sm">
+                        <span class="material-symbols-outlined text-lg">photo_camera</span>
+                        <span>Photo</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="p-4 md:p-6">
+            <!-- Quick Stats -->
+            <div class="grid grid-cols-2 gap-3 md:gap-4 mb-4">
+                <div class="bg-gradient-to-r from-green-500 to-green-600 text-white px-3 py-3 md:px-4 md:py-3 rounded-xl shadow-md text-center">
+                    <p class="text-lg md:text-2xl font-bold">3</p>
+                    <p class="text-xs md:text-sm opacity-90">Classes Teaching</p>
+                </div>
+                <div class="bg-gradient-to-r from-blue-500 to-blue-600 text-white px-3 py-3 md:px-4 md:py-3 rounded-xl shadow-md text-center">
+                    <p class="text-lg md:text-2xl font-bold">92%</p>
+                    <p class="text-xs md:text-sm opacity-90">Attendance Rate</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Profile Information Form -->
+<div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-100 dark:border-gray-700 overflow-hidden">
+    <div class="p-4 md:p-6 border-b border-gray-100 dark:border-gray-700">
+        <h2 class="text-lg md:text-xl font-bold text-gray-800 dark:text-white">Personal Information</h2>
+        <p class="text-xs md:text-sm text-gray-600 dark:text-gray-400 mt-1">Update your personal details and contact information</p>
+    </div>
+
+    <form class="p-4 md:p-6 space-y-4 md:space-y-6">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-6">
+            <!-- Full Name -->
+            <div class="space-y-2">
+                <label for="fullName" class="text-sm font-semibold text-gray-700 dark:text-gray-300">Full Name</label>
+                <input type="text" id="fullName" value="John Doe"
+                    class="w-full px-3 py-2 md:px-4 md:py-3 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition shadow-sm hover:shadow-md text-sm md:text-base" />
+            </div>
+
+            <!-- Staff ID -->
+            <div class="space-y-2">
+                <label for="staffId" class="text-sm font-semibold text-gray-700 dark:text-gray-300">Staff ID</label>
+                <input type="text" id="staffId" value="S-12345" readonly
+                    class="w-full px-3 py-2 md:px-4 md:py-3 rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-500 dark:text-gray-400 outline-none cursor-not-allowed text-sm md:text-base" />
+            </div>
+
+            <!-- Email Address -->
+            <div class="space-y-2">
+                <label for="email" class="text-sm font-semibold text-gray-700 dark:text-gray-300">Email Address</label>
+                <input type="email" id="email" value="john.doe@school.com"
+                    class="w-full px-3 py-2 md:px-4 md:py-3 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition shadow-sm hover:shadow-md text-sm md:text-base" />
+            </div>
+
+            <!-- Phone Number -->
+            <div class="space-y-2">
+                <label for="phone" class="text-sm font-semibold text-gray-700 dark:text-gray-300">Phone Number</label>
+                <input type="tel" id="phone" value="+1 234 567 890"
+                    class="w-full px-3 py-2 md:px-4 md:py-3 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition shadow-sm hover:shadow-md text-sm md:text-base" />
+            </div>
+        </div>
+
+        <!-- Assigned Classes -->
+        <div class="space-y-3">
+            <label class="text-sm font-semibold text-gray-700 dark:text-gray-300">Assigned Classes</label>
+            <div class="flex flex-wrap gap-2 md:gap-3">
+                <span class="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-blue-100 to-blue-200 dark:from-blue-900/30 dark:to-blue-800/30 text-blue-700 dark:text-blue-300 rounded-full text-xs md:text-sm font-semibold">
+                    <span class="material-symbols-outlined text-sm">menu_book</span>
+                    <span class="truncate">Mathematics - Grade 10A</span>
+                </span>
+                <span class="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-purple-100 to-purple-200 dark:from-purple-900/30 dark:to-purple-800/30 text-purple-700 dark:text-purple-300 rounded-full text-xs md:text-sm font-semibold">
+                    <span class="material-symbols-outlined text-sm">science</span>
+                    <span class="truncate">Physics - Grade 11B</span>
+                </span>
+                <span class="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-green-100 to-green-200 dark:from-green-900/30 dark:to-green-800/30 text-green-700 dark:text-green-300 rounded-full text-xs md:text-sm font-semibold">
+                    <span class="material-symbols-outlined text-sm">computer</span>
+                    <span class="truncate">Computer Science - Grade 9C</span>
+                </span>
+                <button type="button" class="flex items-center justify-center h-9 w-9 md:h-10 md:w-10 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-primary hover:text-white rounded-full transition-all duration-200 shadow-sm hover:shadow-md">
+                    <span class="material-symbols-outlined text-base md:text-lg">add</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Additional Information -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-6 pt-4 md:pt-6 border-t border-gray-100 dark:border-gray-700">
+            <!-- Department -->
+            <div class="space-y-2">
+                <label for="department" class="text-sm font-semibold text-gray-700 dark:text-gray-300">Department</label>
+                <select id="department"
+                    class="w-full px-3 py-2 md:px-4 md:py-3 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition shadow-sm hover:shadow-md text-sm md:text-base">
+                    <option selected>Mathematics Department</option>
+                    <option>Science Department</option>
+                    <option>English Department</option>
+                    <option>Arts Department</option>
+                </select>
+            </div>
+
+            <!-- Join Date -->
+            <div class="space-y-2">
+                <label for="joinDate" class="text-sm font-semibold text-gray-700 dark:text-gray-300">Join Date</label>
+                <input type="date" id="joinDate" value="2022-09-01"
+                    class="w-full px-3 py-2 md:px-4 md:py-3 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition shadow-sm hover:shadow-md text-sm md:text-base" />
+            </div>
+        </div>
+    </form>
+</div>
+
+<!-- Security Settings Card -->
+<div class="mt-6 md:mt-8 bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-4 md:p-6 border border-gray-100 dark:border-gray-700">
+    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
+        <div>
+            <h2 class="text-lg md:text-xl font-bold text-gray-800 dark:text-white flex items-center gap-2">
+                <span class="material-symbols-outlined text-primary">security</span>
+                Security Settings
+            </h2>
+            <p class="text-xs md:text-sm text-gray-600 dark:text-gray-400 mt-1">Manage your account security and privacy</p>
+        </div>
+        <div class="h-10 w-10 md:h-12 md:w-12 rounded-xl bg-gradient-to-br from-red-500 to-red-600 flex items-center justify-center shadow-lg">
+            <span class="material-symbols-outlined text-white text-lg md:text-xl">lock</span>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4">
+        <button class="flex items-center gap-3 p-3 md:p-4 bg-gray-50 dark:bg-gray-700/50 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors border border-gray-100 dark:border-gray-600">
+            <div class="h-8 w-8 md:h-10 md:w-10 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center">
+                <span class="material-symbols-outlined text-white text-sm md:text-lg">password</span>
+            </div>
+            <div class="text-left">
+                <p class="font-semibold text-gray-800 dark:text-white text-sm">Change Password</p>
+                <p class="text-xs text-gray-600 dark:text-gray-400">Update your account password</p>
+            </div>
+        </button>
+
+        <button class="flex items-center gap-3 p-3 md:p-4 bg-gray-50 dark:bg-gray-700/50 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors border border-gray-100 dark:border-gray-600">
+            <div class="h-8 w-8 md:h-10 md:w-10 rounded-lg bg-gradient-to-br from-green-500 to-green-600 flex items-center justify-center">
+                <span class="material-symbols-outlined text-white text-sm md:text-lg">verified</span>
+            </div>
+            <div class="text-left">
+                <p class="font-semibold text-gray-800 dark:text-white text-sm">Two-Factor Auth</p>
+                <p class="text-xs text-gray-600 dark:text-gray-400">Enable additional security</p>
+            </div>
+        </button>
+
+        <button class="flex items-center gap-3 p-3 md:p-4 bg-gray-50 dark:bg-gray-700/50 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors border border-gray-100 dark:border-gray-600">
+            <div class="h-8 w-8 md:h-10 md:w-10 rounded-lg bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center">
+                <span class="material-symbols-outlined text-white text-sm md:text-lg">notifications</span>
+            </div>
+            <div class="text-left">
+                <p class="font-semibold text-gray-800 dark:text-white text-sm">Email Preferences</p>
+                <p class="text-xs text-gray-600 dark:text-gray-400">Manage notification settings</p>
+            </div>
+        </button>
+
+        <button class="flex items-center gap-3 p-3 md:p-4 bg-gray-50 dark:bg-gray-700/50 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors border border-gray-100 dark:border-gray-600">
+            <div class="h-8 w-8 md:h-10 md:w-10 rounded-lg bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center">
+                <span class="material-symbols-outlined text-white text-sm md:text-lg">download</span>
+            </div>
+            <div class="text-left">
+                <p class="font-semibold text-gray-800 dark:text-white text-sm">Export Data</p>
+                <p class="text-xs text-gray-600 dark:text-gray-400">Download your information</p>
+            </div>
+        </button>
+    </div>
+</div>
+
+<!-- Recent Activity -->
+<div class="mt-6 md:mt-8 bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-4 md:p-6 border border-gray-100 dark:border-gray-700">
+    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
+        <h2 class="text-lg md:text-xl font-bold text-gray-800 dark:text-white flex items-center gap-2">
+            <span class="material-symbols-outlined text-primary">history</span>
+            Recent Activity
+        </h2>
+        <button class="text-primary font-semibold text-xs md:text-sm hover:underline">View All</button>
+    </div>
+    <div class="space-y-3 md:space-y-4">
+        <div class="flex items-start gap-3 md:gap-4 p-3 md:p-4 bg-gray-50 dark:bg-gray-700/50 rounded-xl border border-gray-100 dark:border-gray-600">
+            <div class="h-8 w-8 md:h-10 md:w-10 rounded-lg bg-gradient-to-br from-green-500 to-green-600 flex items-center justify-center flex-shrink-0">
+                <span class="material-symbols-outlined text-white text-sm md:text-lg">edit_note</span>
+            </div>
+            <div class="flex-1 min-w-0">
+                <p class="font-semibold text-gray-800 dark:text-white text-sm mb-1">Updated student scores</p>
+                <p class="text-xs md:text-sm text-gray-600 dark:text-gray-400 mb-2">Mathematics Grade 10A • 2 hours ago</p>
+            </div>
+            <span class="px-2 py-1 rounded-full bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 text-xs font-semibold flex-shrink-0">Success</span>
+        </div>
+
+        <div class="flex items-start gap-3 md:gap-4 p-3 md:p-4 bg-gray-50 dark:bg-gray-700/50 rounded-xl border border-gray-100 dark:border-gray-600">
+            <div class="h-8 w-8 md:h-10 md:w-10 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center flex-shrink-0">
+                <span class="material-symbols-outlined text-white text-sm md:text-lg">checklist</span>
+            </div>
+            <div class="flex-1 min-w-0">
+                <p class="font-semibold text-gray-800 dark:text-white text-sm mb-1">Marked attendance</p>
+                <p class="text-xs md:text-sm text-gray-600 dark:text-gray-400 mb-2">Grade 10A Mathematics • Yesterday</p>
+            </div>
+            <span class="px-2 py-1 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 text-xs font-semibold flex-shrink-0">Completed</span>
+        </div>
+
+        <div class="flex items-start gap-3 md:gap-4 p-3 md:p-4 bg-gray-50 dark:bg-gray-700/50 rounded-xl border border-gray-100 dark:border-gray-600">
+            <div class="h-8 w-8 md:h-10 md:w-10 rounded-lg bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center flex-shrink-0">
+                <span class="material-symbols-outlined text-white text-sm md:text-lg">upload_file</span>
+            </div>
+            <div class="flex-1 min-w-0">
+                <p class="font-semibold text-gray-800 dark:text-white text-sm mb-1">Uploaded new questions</p>
+                <p class="text-xs md:text-sm text-gray-600 dark:text-gray-400 mb-2">Physics Chapter 5 Quiz • 3 days ago</p>
+            </div>
+            <span class="px-2 py-1 rounded-full bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 text-xs font-semibold flex-shrink-0">Uploaded</span>
+        </div>
+    </div>
+</div>
+
+<!-- Action Buttons -->
+<div class="mt-6 md:mt-8 flex flex-col sm:flex-row gap-3 md:gap-4">
+    <button class="flex-1 flex items-center justify-center gap-2 px-4 py-2 md:px-6 md:py-3 bg-white dark:bg-gray-700 text-primary dark:text-white border-2 border-primary dark:border-primary hover:bg-primary hover:text-white dark:hover:bg-primary dark:hover:text-white rounded-xl shadow-md hover:shadow-lg transition-all duration-200 font-semibold text-sm md:text-base">
+        <span class="material-symbols-outlined text-base md:text-lg">save</span>
+        Save Changes
+    </button>
+    <button class="flex-1 flex items-center justify-center gap-2 px-4 py-2 md:px-6 md:py-3 bg-gradient-to-r from-primary to-blue-600 hover:from-primary/90 hover:to-blue-600/90 text-white rounded-xl shadow-md hover:shadow-lg transition-all duration-200 font-semibold text-sm md:text-base">
+        <span class="material-symbols-outlined text-base md:text-lg">update</span>
+        Update Profile
+    </button>
+    <button class="flex-1 flex items-center justify-center gap-2 px-4 py-2 md:px-6 md:py-3 bg-gray-100 dark:bg-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-500 rounded-xl shadow-md hover:shadow-lg transition-all duration-200 font-semibold text-sm md:text-base">
+        <span class="material-symbols-outlined text-base md:text-lg">cancel</span>
+        Cancel
+    </button>
+</div>
+{% endblock %}

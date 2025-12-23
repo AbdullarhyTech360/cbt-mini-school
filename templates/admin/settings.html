@@ -1,0 +1,1541 @@
+{% extends 'admin/base.html' %} {% block title %}System Settings{% endblock %}
+{# modals scripts #}
+{% block sidebar_nav %} {{ super() }} {% endblock %} {% block content %}
+<!-- Header -->
+<div class="mb-8">
+    <div
+        class="flex flex-col md:flex-row md:items-center md:justify-between gap-4"
+    >
+        <div>
+            <h1 class="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+                System Settings
+            </h1>
+            <p class="text-gray-600 dark:text-gray-400">
+                Manage and configure your school's CBT platform.
+            </p>
+        </div>
+    </div>
+</div>
+
+<!-- Settings Content -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+    <div class="lg:col-span-2 space-y-6">
+        <!-- User Permissions & Privileges -->
+        <div
+            class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 border border-gray-100 dark:border-gray-700"
+        >
+            <details open>
+                <summary
+                    class="flex items-center justify-between cursor-pointer mb-4"
+                >
+                    <h2
+                        class="text-xl font-semibold text-gray-900 dark:text-white flex items-center gap-2"
+                    >
+                        <span class="material-symbols-outlined text-primary"
+                            >admin_panel_settings</span
+                        >
+                        User Permissions & Privileges
+                    </h2>
+                    <span
+                        class="material-symbols-outlined text-gray-500 dark:text-gray-400 transform transition-transform duration-200"
+                        >expand_more</span
+                    >
+                </summary>
+                <div
+                    class="space-y-4 pt-4 border-t border-gray-200 dark:border-gray-700"
+                >
+                    <div class="flex items-center justify-between py-2">
+                        <label
+                            class="text-gray-700 dark:text-gray-300 font-medium"
+                            for="user-register"
+                            >Users can register</label
+                        >
+                        <label
+                            class="relative inline-flex items-center cursor-pointer"
+                        >
+                            <input
+                                class="sr-only peer"
+                                id="user-register"
+                                type="checkbox"
+                            />
+                            <div
+                                class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-primary"
+                            ></div>
+                        </label>
+                    </div>
+                    <div class="flex items-center justify-between py-2">
+                        <label
+                            class="text-gray-700 dark:text-gray-300 font-medium"
+                            for="teacher-create-exam"
+                            >Teachers can create exams</label
+                        >
+                        <label
+                            class="relative inline-flex items-center cursor-pointer"
+                        >
+                            <input
+                                class="sr-only peer"
+                                id="teacher-create-exam"
+                                type="checkbox"
+                            />
+                            <div
+                                class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-primary"
+                            ></div>
+                        </label>
+                    </div>
+                    <div class="flex items-center justify-between py-2">
+                        <label
+                            class="text-gray-700 dark:text-gray-300 font-medium"
+                            for="student-results"
+                            >Students can view results immediately</label
+                        >
+                        <label
+                            class="relative inline-flex items-center cursor-pointer"
+                        >
+                            <input
+                                class="sr-only peer"
+                                id="student-results"
+                                type="checkbox"
+                            />
+                            <div
+                                class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-primary"
+                            ></div>
+                        </label>
+                    </div>
+                    <div class="flex items-center justify-between py-2">
+                        <label
+                            class="text-gray-700 dark:text-gray-300 font-medium"
+                            for="student-write-exam"
+                            >Students can write exams</label
+                        >
+                        <label
+                            class="relative inline-flex items-center cursor-pointer"
+                        >
+                            <input
+                                class="sr-only peer"
+                                id="student-write-exam"
+                                type="checkbox"
+                                
+                            />
+                            <div
+                                class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-primary"
+                            ></div>
+                        </label>
+                    </div>
+                    <div class="flex items-center justify-between py-2">
+                        <label
+                            class="text-gray-700 dark:text-gray-300 font-medium"
+                            for="student-view-dashboard"
+                            >Students can view dashboard</label
+                        >
+                        <label
+                            class="relative inline-flex items-center cursor-pointer"
+                        >
+                            <input
+                                class="sr-only peer"
+                                id="student-view-dashboard"
+                                type="checkbox"
+                            />
+                            <div
+                                class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-primary"
+                            ></div>
+                        </label>
+                    </div>
+                    <div class="flex items-center justify-between py-2">
+                        <label
+                            class="text-gray-700 dark:text-gray-300 font-medium"
+                            for="teacher-view-dashboard"
+                            >Teachers can view dashboard</label
+                        >
+                        <label
+                            class="relative inline-flex items-center cursor-pointer"
+                        >
+                            <input
+                                class="sr-only peer"
+                                id="teacher-view-dashboard"
+                                type="checkbox"
+                            />
+                            <div
+                                class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-primary"
+                            ></div>
+                        </label>
+                    </div>
+                    <div class="flex items-center justify-between py-2">
+                        <label
+                            class="text-gray-700 dark:text-gray-300 font-medium"
+                            for="staff-view-dashboard"
+                            >Staff can view dashboard</label
+                        >
+                        <label
+                            class="relative inline-flex items-center cursor-pointer"
+                        >
+                            <input
+                                class="sr-only peer"
+                                id="staff-view-dashboard"
+                                type="checkbox"
+                            />
+                            <div
+                                class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-primary"
+                            ></div>
+                        </label>
+                    </div>
+                    <!-- Upcoming Exams List (Hidden by default) -->
+                    <div id="upcoming-exams-container" class="hidden mt-4 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                        <h4 class="text-sm font-semibold text-blue-800 dark:text-blue-200 mb-3 flex items-center gap-2">
+                            <span class="material-symbols-outlined text-blue-600 dark:text-blue-400">event_upcoming</span>
+                            Upcoming Exams
+                        </h4>
+                        <p class="text-xs text-blue-700 dark:text-blue-300 mb-3">
+                            Select exams that students should be excluded from when this setting is enabled:
+                        </p>
+                        <div id="upcoming-exams-list" class="space-y-2 max-h-60 overflow-y-auto">
+                            <!-- Upcoming exams will be populated here dynamically -->
+                            <div class="text-center py-4 text-blue-700 dark:text-blue-300">
+                                <span class="material-symbols-outlined text-2xl mb-1">hourglass_empty</span>
+                                <p>Loading upcoming exams...</p>
+                            </div>
+                        </div>
+                        <div class="mt-3 pt-3 border-t border-blue-200 dark:border-blue-800">
+                            <button id="save-exceptions-btn" class="px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-lg font-semibold text-sm hover:shadow-lg transition-all duration-200">
+                                Save Exception Settings
+                            </button>
+                        </div>
+                    </div>
+                    <!-- Exception Classes List (Hidden by default) -->
+                    <div id="exception-classes-container" class="hidden mt-4 p-4 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800">
+                        <h4 class="text-sm font-semibold text-red-800 dark:text-red-200 mb-3 flex items-center gap-2">
+                            <span class="material-symbols-outlined text-red-600 dark:text-red-400">warning</span>
+                            Classes That Cannot Write Exams
+                        </h4>
+                        <p class="text-xs text-red-700 dark:text-red-300 mb-3">
+                            The following classes will be excluded from writing exams even when this setting is enabled:
+                        </p>
+                        <div id="exception-classes-list" class="space-y-2">
+                            <!-- Exception classes will be populated here dynamically -->
+                            <div class="text-center py-4 text-red-700 dark:text-red-300">
+                                <span class="material-symbols-outlined text-2xl mb-1">hourglass_empty</span>
+                                <p>Loading exception classes...</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div>
+                        <label
+                            class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+                            for="admin-role"
+                            >Default Role for New Staff</label
+                        >
+                        <select
+                            style="
+                                --select-button-svg: url(&quot;data:image/svg+xml,%3csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%2724px%27 height=%2724px%27 fill=%27rgb(107, 114, 128)%27 viewBox=%270 0 256 256%27%3e%3cpath d=%27M215.39,92.61a8,8,0,0,0-11.32,0L128,168.69,51.93,92.61a8,8,0,0,0-11.32,11.32l82.07,82.06a8,8,0,0,0,11.32,0l82.07-82.06a8,8,0,0,0,0-11.32Z%27%3e%3c/path%3e%3c/svg%3e&quot;);
+                                background-image: var(--select-button-svg);
+                                background-repeat: no-repeat;
+                                background-position: right 0.75rem center;
+                            "
+                            class="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition appearance-none"
+                            id="admin-role"
+                        >
+                            <option>Teacher</option>
+                            <option>Invigilator</option>
+                            <option>Content Manager</option>
+                        </select>
+                    </div>
+                </div>
+            </details>
+        </div>
+
+        <!-- School Information -->
+        <div
+            class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 border border-gray-100 dark:border-gray-700"
+        >
+            <details>
+                <summary
+                    class="flex items-center justify-between cursor-pointer mb-4"
+                >
+                    <h2
+                        class="text-xl font-semibold text-gray-900 dark:text-white flex items-center gap-2"
+                    >
+                        <span class="material-symbols-outlined text-primary"
+                            >business</span
+                        >
+                        School Information
+                    </h2>
+                    <span
+                        class="material-symbols-outlined text-gray-500 dark:text-gray-400 transform transition-transform duration-200"
+                        >expand_more</span
+                    >
+                </summary>
+                <div
+                    class="space-y-4 pt-4 border-t border-gray-200 dark:border-gray-700"
+                >
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label
+                                class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+                                for="school-name"
+                                >School Name</label
+                            >
+                            <input
+                                class="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition"
+                                id="school-name"
+                                type="text"
+                                placeholder="Springfield High School"
+                            />
+                        </div>
+                        <div>
+                            <label
+                                class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+                                for="school-code"
+                                >School Code</label
+                            >
+                            <input
+                                class="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition"
+                                id="school-code"
+                                type="text"
+                                placeholder="SHS001"
+                            />
+                        </div>
+                    </div>
+                    <div>
+                        <label
+                            class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+                            for="school-motto"
+                            >School Motto</label
+                        >
+                        <input
+                            class="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition"
+                            id="school-motto"
+                            type="text"
+                            placeholder="Excellence in Education"
+                        />
+                    </div>
+                    <div>
+                        <label
+                            class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+                            for="school-address"
+                            >Address</label
+                        >
+                        <textarea
+                            class="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition"
+                            id="school-address"
+                            rows="2"
+                            placeholder="123 Main Street, Springfield"
+                        ></textarea>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label
+                                class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+                                for="school-phone"
+                                >Phone Number</label
+                            >
+                            <input
+                                class="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition"
+                                id="school-phone"
+                                type="tel"
+                                placeholder="+1 234 567 8900"
+                            />
+                        </div>
+                        <div>
+                            <label
+                                class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+                                for="school-contact"
+                                >Contact Email</label
+                            >
+                            <input
+                                class="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition"
+                                id="school-contact"
+                                type="email"
+                                placeholder="contact@springfield.edu"
+                            />
+                        </div>
+                    </div>
+                    <div>
+                        <label
+                            class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+                            for="school-website"
+                            >Website</label
+                        >
+                        <input
+                            class="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition"
+                            id="school-website"
+                            type="url"
+                            placeholder="https://www.springfield.edu"
+                        />
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label
+                                class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+                                for="principal-name"
+                                >Principal Name</label
+                            >
+                            <input
+                                class="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition"
+                                id="principal-name"
+                                type="text"
+                                placeholder="Dr. John Smith"
+                            />
+                        </div>
+                        <div>
+                            <label
+                                class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+                                for="established-date"
+                                >Established Date</label
+                            >
+                            <input
+                                class="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition"
+                                id="established-date"
+                                type="date"
+                            />
+                        </div>
+                    </div>
+                    <div>
+                        <label
+                            class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+                            for="school-logo"
+                            >School Logo</label
+                        >
+                        <div class="flex items-center gap-4">
+                            <div class="flex-shrink-0">
+                                <div
+                                    id="logo-preview"
+                                    class="w-20 h-20 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600 flex items-center justify-center bg-gray-50 dark:bg-gray-700"
+                                >
+                                    <span
+                                        class="material-symbols-outlined text-gray-400 text-3xl"
+                                        >school</span
+                                    >
+                                </div>
+                            </div>
+                            <div class="flex-1">
+                                <input
+                                    class="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20"
+                                    id="school-logo"
+                                    type="file"
+                                    accept="image/*"
+                                />
+                                <p
+                                    class="text-xs text-gray-500 dark:text-gray-400 mt-1"
+                                >
+                                    Recommended: Square image, max 2MB
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Save Button -->
+                    <div
+                        class="pt-4 border-t border-gray-200 dark:border-gray-600"
+                    >
+                        <button
+                            type="button"
+                            id="save-school-info-btn"
+                            class="px-6 py-2 bg-gradient-to-r from-primary to-blue-600 hover:from-primary hover:to-blue-700 text-white rounded-lg font-semibold hover:shadow-lg transition-all duration-200 flex items-center gap-2"
+                        >
+                            <span class="material-symbols-outlined text-sm"
+                                >save</span
+                            >
+                            Save School Information
+                        </button>
+                    </div>
+                </div>
+            </details>
+        </div>
+        <!-- Academic Sessions & Terms Management -->
+        <div
+            class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 border border-gray-100 dark:border-gray-700"
+        >
+            <details>
+                <summary
+                    class="flex items-center justify-between cursor-pointer mb-4"
+                >
+                    <h2
+                        class="text-xl font-semibold text-gray-900 dark:text-white flex items-center gap-2"
+                    >
+                        <span class="material-symbols-outlined text-primary"
+                            >calendar_today</span
+                        >
+                        Academic Sessions & Terms
+                    </h2>
+                    <span
+                        class="material-symbols-outlined text-gray-500 dark:text-gray-400 transform transition-transform duration-200"
+                        >expand_more</span
+                    >
+                </summary>
+                <div
+                    class="space-y-6 pt-4 border-t border-gray-200 dark:border-gray-700"
+                >
+                    <!-- Add New Term Button -->
+                    <div class="flex justify-between items-center">
+                        <p class="text-sm text-gray-600 dark:text-gray-400">
+                            Manage academic sessions and terms for your school
+                        </p>
+                        <button
+                            id="add-term-btn"
+                            class="px-4 py-2 bg-gradient-to-r from-primary to-blue-600 hover:from-primary hover:to-blue-700 text-white rounded-lg font-semibold hover:shadow-lg transition-all duration-200 flex items-center gap-2"
+                        >
+                            <span class="material-symbols-outlined text-sm"
+                                >add</span
+                            >
+                            Add Term
+                        </button>
+                    </div>
+
+                    <!-- Add/Edit Term Form (Hidden by default) -->
+                    <div
+                        id="term-form-container"
+                        class="hidden bg-gray-50 dark:bg-gray-700/50 rounded-xl p-4 border border-gray-200 dark:border-gray-600"
+                    >
+                        <div class="flex justify-between items-center mb-4">
+                            <h3
+                                class="text-lg font-semibold text-gray-900 dark:text-white"
+                            >
+                                <span id="form-title">Add New Term</span>
+                            </h3>
+                            <button
+                                id="close-form-btn"
+                                class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                            >
+                                <span class="material-symbols-outlined"
+                                    >close</span
+                                >
+                            </button>
+                        </div>
+                        <form id="term-form" class="space-y-4">
+                            <input type="hidden" id="term-id" />
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div>
+                                    <label
+                                        class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+                                        for="academic-session"
+                                        >Academic Session</label
+                                    >
+                                    <input
+                                        class="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition"
+                                        id="academic-session"
+                                        type="text"
+                                        placeholder="2024-2025"
+                                        required
+                                    />
+                                </div>
+                                <div>
+                                    <label
+                                        class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+                                        for="term-number"
+                                        >Term</label
+                                    >
+                                    <select
+                                        class="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition"
+                                        id="term-number"
+                                        required
+                                    >
+                                        <option value="">Select Term</option>
+                                        <option value="1">First Term</option>
+                                        <option value="2">Second Term</option>
+                                        <option value="3">Third Term</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div>
+                                <label
+                                    class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+                                    for="term-name"
+                                    >Term Name</label
+                                >
+                                <input
+                                    class="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition"
+                                    id="term-name"
+                                    type="text"
+                                    placeholder="First Term"
+                                    required
+                                />
+                            </div>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div>
+                                    <label
+                                        class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+                                        for="start-date"
+                                        >Start Date</label
+                                    >
+                                    <input
+                                        class="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition"
+                                        id="start-date"
+                                        type="date"
+                                        required
+                                    />
+                                </div>
+                                <div>
+                                    <label
+                                        class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+                                        for="end-date"
+                                        >End Date</label
+                                    >
+                                    <input
+                                        class="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition"
+                                        id="end-date"
+                                        type="date"
+                                        required
+                                    />
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-3">
+                                <input
+                                    class="form-checkbox text-primary focus:ring-primary rounded"
+                                    id="is-active"
+                                    type="checkbox"
+                                    checked
+                                />
+                                <label
+                                    class="text-sm font-medium text-gray-700 dark:text-gray-300"
+                                    for="is-active"
+                                    >Active</label
+                                >
+                            </div>
+                            <div class="flex items-center gap-3">
+                                <input
+                                    class="form-checkbox text-primary focus:ring-primary rounded"
+                                    id="is-current"
+                                    type="checkbox"
+                                />
+                                <label
+                                    class="text-sm font-medium text-gray-700 dark:text-gray-300"
+                                    for="is-current"
+                                    >Set as Current Term</label
+                                >
+                            </div>
+                            <div class="flex justify-end gap-3 pt-2">
+                                <button
+                                    type="button"
+                                    id="cancel-form-btn"
+                                    class="px-4 py-2 bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-white rounded-lg font-semibold hover:bg-gray-300 dark:hover:bg-gray-500 transition-all duration-200"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="submit"
+                                    class="px-4 py-2 bg-gradient-to-r from-primary to-blue-600 hover:from-primary hover:to-blue-700 text-white rounded-lg font-semibold hover:shadow-lg transition-all duration-200"
+                                >
+                                    <span id="submit-btn-text">Save Term</span>
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- Terms List -->
+                    <div class="space-y-3">
+                        <h3
+                            class="text-sm font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide"
+                        >
+                            Existing Terms
+                        </h3>
+                        <div
+                            id="terms-list"
+                            class="space-y-2 max-h-96 overflow-y-auto"
+                        >
+                            <!-- Sample Term Item (to be populated dynamically) -->
+                            <div
+                                class="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg border border-gray-200 dark:border-gray-600 hover:shadow-md transition-all"
+                            >
+                                <div class="flex-1">
+                                    <div class="flex items-center gap-3">
+                                        <div
+                                            class="flex items-center gap-2 text-sm font-semibold text-gray-900 dark:text-white"
+                                        >
+                                            <span
+                                                class="material-symbols-outlined text-primary text-lg"
+                                                >event</span
+                                            >
+                                            <span>First Term</span>
+                                        </div>
+                                        <span
+                                            class="px-2 py-1 text-xs font-medium bg-primary/20 text-primary dark:bg-primary/30 dark:text-white rounded-full"
+                                            >Current</span
+                                        >
+                                        <span
+                                            class="px-2 py-1 text-xs font-medium bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 rounded-full"
+                                            >Active</span
+                                        >
+                                    </div>
+                                    <div
+                                        class="mt-2 flex flex-wrap gap-3 text-xs text-gray-600 dark:text-gray-400"
+                                    >
+                                        <span class="flex items-center gap-1">
+                                            <span
+                                                class="material-symbols-outlined text-sm"
+                                                >school</span
+                                            >
+                                            Session: 2024-2025
+                                        </span>
+                                        <span class="flex items-center gap-1">
+                                            <span
+                                                class="material-symbols-outlined text-sm"
+                                                >calendar_month</span
+                                            >
+                                            Jan 15, 2024 - Apr 20, 2024
+                                        </span>
+                                    </div>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <button
+                                        class="p-2 text-blue-600 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-900/20 rounded-lg transition-all"
+                                        title="Edit Term"
+                                    >
+                                        <span
+                                            class="material-symbols-outlined text-sm"
+                                            >edit</span
+                                        >
+                                    </button>
+                                    <button
+                                        class="p-2 text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20 rounded-lg transition-all"
+                                        title="Delete Term"
+                                    >
+                                        <span
+                                            class="material-symbols-outlined text-sm"
+                                            >delete</span
+                                        >
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Empty State (show when no terms exist) -->
+                            <div
+                                id="empty-state"
+                                class="hidden text-center py-8"
+                            >
+                                <span
+                                    class="material-symbols-outlined text-gray-400 text-5xl mb-3"
+                                    >event_busy</span
+                                >
+                                <p
+                                    class="text-gray-600 dark:text-gray-400 font-medium"
+                                >
+                                    No terms created yet
+                                </p>
+                                <p
+                                    class="text-sm text-gray-500 dark:text-gray-500"
+                                >
+                                    Click "Add Term" to create your first
+                                    academic term
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Quick Stats -->
+                    <div
+                        class="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-4 border-t border-gray-200 dark:border-gray-600"
+                    >
+                        <div
+                            class="text-center p-3 bg-primary/10 dark:bg-primary/20 rounded-lg"
+                        >
+                            <div
+                                class="text-2xl font-bold text-primary dark:text-white"
+                            >
+                                3
+                            </div>
+                            <div
+                                class="text-xs text-gray-600 dark:text-gray-400"
+                            >
+                                Total Terms
+                            </div>
+                        </div>
+                        <div
+                            class="text-center p-3 bg-green-100 dark:bg-green-900/30 rounded-lg"
+                        >
+                            <div
+                                class="text-2xl font-bold text-green-700 dark:text-green-400"
+                            >
+                                1
+                            </div>
+                            <div
+                                class="text-xs text-gray-600 dark:text-gray-400"
+                            >
+                                Current Term
+                            </div>
+                        </div>
+                        <div
+                            class="text-center p-3 bg-blue-100 dark:bg-blue-900/30 rounded-lg"
+                        >
+                            <div
+                                class="text-2xl font-bold text-blue-700 dark:text-blue-400"
+                            >
+                                2024-2025
+                            </div>
+                            <div
+                                class="text-xs text-gray-600 dark:text-gray-400"
+                            >
+                                Active Session
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </details>
+        </div>
+
+        <!-- School Sections -->
+        <div
+            class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 border border-gray-100 dark:border-gray-700"
+        >
+            <details>
+                <summary
+                    class="flex items-center justify-between cursor-pointer mb-4"
+                >
+                    <h2
+                        class="text-xl font-semibold text-gray-900 dark:text-white flex items-center gap-2"
+                    >
+                        <span class="material-symbols-outlined text-primary"
+                            >category</span
+                        >
+                        School Sections
+                    </h2>
+                    <span
+                        class="material-symbols-outlined text-gray-500 dark:text-gray-400 transform transition-transform duration-200"
+                        >expand_more</span
+                    >
+                </summary>
+                <div
+                    class="space-y-6 pt-4 border-t border-gray-200 dark:border-gray-700"
+                >
+                    <p class="text-sm text-gray-600 dark:text-gray-400">
+                        Add sections like Nursery, Primary, Secondary, etc.
+                    </p>
+
+                    <!-- Section Input Form -->
+                    <div id="sections-container" class="space-y-4">
+                        <div class="section-input-row flex items-end gap-3">
+                            <div class="flex-1">
+                                <label
+                                    class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+                                    >Section Name</label
+                                >
+                                <input
+                                    class="section-name w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition"
+                                    type="text"
+                                    placeholder="e.g., Nursery, Primary, Secondary"
+                                    required
+                                />
+                            </div>
+                            <div class="flex-1">
+                                <label
+                                    class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+                                    >Abbreviation</label
+                                >
+                                <input
+                                    class="section-abbr w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition"
+                                    type="text"
+                                    placeholder="e.g., NUR, PRI, SEC"
+                                    required
+                                />
+                            </div>
+                            <div class="flex-1">
+                                <label
+                                    class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+                                    >Level</label
+                                >
+                                <input
+                                    class="section-level w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition"
+                                    type="number"
+                                    placeholder="e.g., 1, 2, 3..."
+                                    min="1"
+                                    max="12"
+                                    required
+                                />
+                            </div>
+                            <button
+                                type="button"
+                                class="remove-section-btn hidden px-3 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-all duration-200"
+                                title="Remove"
+                            >
+                                <span class="material-symbols-outlined text-sm"
+                                    >close</span
+                                >
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Add Another Section Button -->
+                    <button
+                        type="button"
+                        id="add-section-row-btn"
+                        class="px-4 py-2 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-white rounded-lg font-semibold transition-all duration-200 flex items-center gap-2"
+                    >
+                        <span class="material-symbols-outlined text-sm"
+                            >add</span
+                        >
+                        Add Another Section
+                    </button>
+
+                    <!-- Submit Button -->
+                    <div
+                        class="pt-4 border-t border-gray-200 dark:border-gray-600"
+                    >
+                        <button
+                            type="button"
+                            id="save-sections-btn"
+                            class="px-6 py-2 bg-gradient-to-r from-primary to-blue-600 hover:from-primary hover:to-blue-700 text-white rounded-lg font-semibold hover:shadow-lg transition-all duration-200"
+                        >
+                            Save Sections
+                        </button>
+                    </div>
+
+                    <!-- Existing Sections List -->
+                    <div
+                        class="pt-4 border-t border-gray-200 dark:border-gray-600"
+                    >
+                        <h3
+                            class="text-sm font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-3"
+                        >
+                            Existing Sections
+                        </h3>
+                        <div id="existing-sections-list" class="space-y-2">
+                            <!-- Sections will be loaded here -->
+                        </div>
+                    </div>
+                </div>
+            </details>
+        </div>
+
+        <!-- Assessment Types Configuration -->
+        <div
+            class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 border border-gray-100 dark:border-gray-700"
+        >
+            <details open>
+                <summary
+                    class="flex items-center justify-between cursor-pointer mb-4"
+                >
+                    <h2
+                        class="text-xl font-semibold text-gray-900 dark:text-white flex items-center gap-2"
+                    >
+                        <span class="material-symbols-outlined text-primary"
+                            >assignment</span
+                        >
+                        Assessment Types
+                    </h2>
+                    <span
+                        class="material-symbols-outlined text-gray-500 dark:text-gray-400 transform transition-transform duration-200"
+                        >expand_more</span
+                    >
+                </summary>
+                <div
+                    class="space-y-4 pt-4 border-t border-gray-200 dark:border-gray-700"
+                >
+                    <p class="text-sm text-gray-600 dark:text-gray-400">
+                        Configure assessment types (CA, Exam, Quiz, etc.) and their maximum scores.
+                    </p>
+
+                    <!-- Add Assessment Form -->
+                    <div class="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4 space-y-4">
+                        <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide">
+                            Add New Assessment Type
+                        </h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                    Assessment Name
+                                </label>
+                                <input
+                                    type="text"
+                                    id="assessment-name"
+                                    placeholder="e.g., First CA, Quiz, Project"
+                                    class="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition"
+                                />
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                    Code (lowercase, no spaces)
+                                </label>
+                                <input
+                                    type="text"
+                                    id="assessment-code"
+                                    placeholder="e.g., first_ca, quiz, project"
+                                    class="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition"
+                                />
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                    Maximum Score
+                                </label>
+                                <input
+                                    type="number"
+                                    id="assessment-max-score"
+                                    placeholder="e.g., 20, 60, 100"
+                                    min="1"
+                                    step="0.5"
+                                    class="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition"
+                                />
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                    Display Order
+                                </label>
+                                <input
+                                    type="number"
+                                    id="assessment-order"
+                                    placeholder="1, 2, 3..."
+                                    min="1"
+                                    value="1"
+                                    class="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition"
+                                />
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <input
+                                type="checkbox"
+                                id="assessment-cbt-enabled"
+                                class="h-4 w-4 text-primary border-gray-300 rounded focus:ring-primary"
+                            />
+                            <label for="assessment-cbt-enabled" class="text-sm text-gray-700 dark:text-gray-300">
+                                Enable for CBT (Computer-Based Testing)
+                            </label>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                Description (Optional)
+                            </label>
+                            <textarea
+                                id="assessment-description"
+                                rows="2"
+                                placeholder="Brief description of this assessment type"
+                                class="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition resize-none"
+                            ></textarea>
+                        </div>
+                        <div class="flex gap-3">
+                            <button
+                                type="button"
+                                id="add-assessment-btn"
+                                class="px-6 py-2 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white rounded-lg font-semibold hover:shadow-lg transition-all duration-200 flex items-center gap-2"
+                            >
+                                <span class="material-symbols-outlined text-lg">add</span>
+                                Add Assessment Type
+                            </button>
+                            <button
+                                type="button"
+                                id="cancel-edit-btn"
+                                class="hidden px-6 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg font-semibold hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors flex items-center gap-2"
+                            >
+                                <span class="material-symbols-outlined text-lg">close</span>
+                                Cancel
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Existing Assessment Types -->
+                    <div class="pt-4 border-t border-gray-200 dark:border-gray-600">
+                        <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-3">
+                            Current Assessment Types
+                        </h3>
+                        <div id="assessments-list" class="space-y-2">
+                            <!-- Assessments will be loaded here -->
+                            <div class="text-center py-8 text-gray-500 dark:text-gray-400">
+                                <span class="material-symbols-outlined text-4xl mb-2">assignment</span>
+                                <p>Loading assessment types...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </details>
+        </div>
+
+        <!-- System Preferences -->
+        <div
+            class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 border border-gray-100 dark:border-gray-700"
+        >
+            <details>
+                <summary
+                    class="flex items-center justify-between cursor-pointer mb-4"
+                >
+                    <h2
+                        class="text-xl font-semibold text-gray-900 dark:text-white flex items-center gap-2"
+                    >
+                        <span class="material-symbols-outlined text-primary"
+                            >tune</span
+                        >
+                        System Preferences
+                    </h2>
+                    <span
+                        class="material-symbols-outlined text-gray-500 dark:text-gray-400 transform transition-transform duration-200"
+                        >expand_more</span
+                    >
+                </summary>
+                <div
+                    class="space-y-4 pt-4 border-t border-gray-200 dark:border-gray-700"
+                >
+                    <div>
+                        <span
+                            class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3"
+                            >Theme</span
+                        >
+                        <div class="flex items-center gap-4">
+                            <label class="flex items-center gap-2">
+                                <input
+                                    checked
+                                    class="form-radio text-primary focus:ring-primary"
+                                    name="theme"
+                                    type="radio"
+                                />
+                                <span class="text-gray-700 dark:text-gray-300"
+                                    >Light</span
+                                >
+                            </label>
+                            <label class="flex items-center gap-2">
+                                <input
+                                    class="form-radio text-primary focus:ring-primary"
+                                    name="theme"
+                                    type="radio"
+                                />
+                                <span class="text-gray-700 dark:text-gray-300"
+                                    >Dark</span
+                                >
+                            </label>
+                        </div>
+                    </div>
+                    <div>
+                        <label
+                            class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+                            for="language"
+                            >Language</label
+                        >
+                        <select
+                            class="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition"
+                            id="language"
+                        >
+                            <option>English (US)</option>
+                            <option>English (UK)</option>
+                            <option>French</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label
+                            class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+                            for="timezone"
+                            >Timezone</label
+                        >
+                        <select
+                            class="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition"
+                            id="timezone"
+                        >
+                            <option>(GMT-05:00) Eastern Time</option>
+                            <option>(GMT+01:00) West Africa Time</option>
+                        </select>
+                    </div>
+                </div>
+            </details>
+        </div>
+
+        <!-- Question Upload Permissions -->
+        <div
+            class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 border border-gray-100 dark:border-gray-700"
+        >
+            <details>
+                <summary
+                    class="flex items-center justify-between cursor-pointer mb-4"
+                >
+                    <h2
+                        class="text-xl font-semibold text-gray-900 dark:text-white flex items-center gap-2"
+                    >
+                        <span class="material-symbols-outlined text-primary"
+                            >upload</span
+                        >
+                        Question Upload Permissions
+                    </h2>
+                    <span
+                        class="material-symbols-outlined text-gray-500 dark:text-gray-400 transform transition-transform duration-200"
+                        >expand_more</span
+                    >
+                </summary>
+                <div
+                    class="space-y-4 pt-4 border-t border-gray-200 dark:border-gray-700"
+                >
+                    <div class="flex items-center justify-between py-2">
+                        <label
+                            class="text-gray-700 dark:text-gray-300 font-medium"
+                            for="admin-upload-questions"
+                            >Admins can upload questions</label
+                        >
+                        <label
+                            class="relative inline-flex items-center cursor-pointer"
+                        >
+                            <input
+                                checked
+                                class="sr-only peer"
+                                id="admin-upload-questions"
+                                type="checkbox"
+                            />
+                            <div
+                                class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-primary"
+                            ></div>
+                        </label>
+                    </div>
+                    <div class="flex items-center justify-between py-2">
+                        <label
+                            class="text-gray-700 dark:text-gray-300 font-medium"
+                            for="teacher-upload-questions"
+                            >Teachers can upload questions</label
+                        >
+                        <label
+                            class="relative inline-flex items-center cursor-pointer"
+                        >
+                            <input
+                                checked
+                                class="sr-only peer"
+                                id="teacher-upload-questions"
+                                type="checkbox"
+                            />
+                            <div
+                                class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-primary"
+                            ></div>
+                        </label>
+                    </div>
+                    <div>
+                        <label
+                            class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+                            for="current-test-type"
+                            >Current Test Type</label
+                        >
+                        <select
+                            class="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition"
+                            id="current-test-type"
+                        >
+                            <option value="first_ca">First CA</option>
+                            <option value="second_ca">Second CA</option>
+                            <option value="exam">Exam</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label
+                            class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+                            for="question-upload-deadline"
+                            >Question Upload Deadline</label
+                        >
+                        <input
+                            class="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition"
+                            id="question-upload-deadline"
+                            type="datetime-local"
+                        />
+                        <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                            Set the deadline for question uploads. Leave blank for no deadline.
+                        </p>
+                    </div>
+                </div>
+            </details>
+        </div>
+
+        <!-- Security & Access -->
+        <div
+            class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 border border-gray-100 dark:border-gray-700"
+        >
+            <details>
+                <summary
+                    class="flex items-center justify-between cursor-pointer mb-4"
+                >
+                    <h2
+                        class="text-xl font-semibold text-gray-900 dark:text-white flex items-center gap-2"
+                    >
+                        <span class="material-symbols-outlined text-primary"
+                            >security</span
+                        >
+                        Security & Access
+                    </h2>
+                    <span
+                        class="material-symbols-outlined text-gray-500 dark:text-gray-400 transform transition-transform duration-200"
+                        >expand_more</span
+                    >
+                </summary>
+                <div
+                    class="space-y-4 pt-4 border-t border-gray-200 dark:border-gray-700"
+                >
+                    <div class="flex items-center justify-between py-2">
+                        <label
+                            class="text-gray-700 dark:text-gray-300 font-medium"
+                            for="2fa-toggle"
+                            >Enable Two-Factor Authentication (2FA)</label
+                        >
+                        <label
+                            class="relative inline-flex items-center cursor-pointer"
+                        >
+                            <input
+                                checked
+                                class="sr-only peer"
+                                id="2fa-toggle"
+                                type="checkbox"
+                            />
+                            <div
+                                class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-primary"
+                            ></div>
+                        </label>
+                    </div>
+                    <div>
+                        <label
+                            class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+                            for="session-timeout"
+                            >Session Timeout (minutes)</label
+                        >
+                        <input
+                            class="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition"
+                            id="session-timeout"
+                            type="number"
+                            value="30"
+                        />
+                    </div>
+                    <div>
+                        <label
+                            class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+                            for="ip-restrictions"
+                            >IP Address Restrictions (comma-separated)</label
+                        >
+                        <textarea
+                            class="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition"
+                            id="ip-restrictions"
+                            placeholder="e.g., 192.168.1.1, 10.0.0.0/8"
+                            rows="2"
+                        ></textarea>
+                    </div>
+                </div>
+            </details>
+        </div>
+
+        <!-- Data & Reports -->
+        <div
+            class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 border border-gray-100 dark:border-gray-700"
+        >
+            <details>
+                <summary
+                    class="flex items-center justify-between cursor-pointer mb-4"
+                >
+                    <h2
+                        class="text-xl font-semibold text-gray-900 dark:text-white flex items-center gap-2"
+                    >
+                        <span class="material-symbols-outlined text-primary"
+                            >backup</span
+                        >
+                        Data & Reports
+                    </h2>
+                    <span
+                        class="material-symbols-outlined text-gray-500 dark:text-gray-400 transform transition-transform duration-200"
+                        >expand_more</span
+                    >
+                </summary>
+                <div
+                    class="space-y-4 pt-4 border-t border-gray-200 dark:border-gray-700"
+                >
+                    <div class="flex items-center justify-between py-2">
+                        <span
+                            class="text-gray-700 dark:text-gray-300 font-medium"
+                            >Manual Data Backup</span
+                        >
+                        <button
+                            class="px-4 py-2 bg-gradient-to-r from-primary/20 to-primary/10 text-primary dark:from-primary/30 dark:to-primary/20 dark:text-white rounded-lg font-semibold hover:from-primary/30 hover:to-primary/20 dark:hover:from-primary/40 dark:hover:to-primary/30 transition-all duration-200"
+                        >
+                            Backup Now
+                        </button>
+                    </div>
+                    <div>
+                        <label
+                            class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+                            for="backup-freq"
+                            >Automatic Backup Frequency</label
+                        >
+                        <select
+                            class="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition"
+                            id="backup-freq"
+                        >
+                            <option>Daily</option>
+                            <option>Weekly</option>
+                            <option>Monthly</option>
+                        </select>
+                    </div>
+                    <div class="flex items-center justify-between py-2">
+                        <span
+                            class="text-gray-700 dark:text-gray-300 font-medium"
+                            >Export Reports</span
+                        >
+                        <button
+                            class="px-4 py-2 bg-gradient-to-r from-primary/20 to-primary/10 text-primary dark:from-primary/30 dark:to-primary/20 dark:text-white rounded-lg font-semibold hover:from-primary/30 hover:to-primary/20 dark:hover:from-primary/40 dark:hover:to-primary/30 transition-all duration-200"
+                        >
+                            Export Data
+                        </button>
+                    </div>
+                </div>
+            </details>
+        </div>
+    </div>
+
+    <!-- Recent Changes -->
+    <div class="lg:col-span-1">
+        <div
+            class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 border border-gray-100 dark:border-gray-700 sticky top-8"
+        >
+            <h3
+                class="text-xl font-bold text-gray-800 dark:text-white mb-6 flex items-center gap-2"
+            >
+                <span class="material-symbols-outlined text-primary"
+                    >history</span
+                >
+                Recent Changes
+            </h3>
+            <ul class="space-y-4">
+                <li
+                    class="flex items-start gap-4 p-4 rounded-xl bg-gray-50 dark:bg-gray-700/50 hover:shadow-md transition-all border border-gray-100 dark:border-gray-600"
+                >
+                    <div
+                        class="h-10 w-10 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center flex-shrink-0"
+                    >
+                        <span
+                            class="material-symbols-outlined text-white text-sm"
+                            >person</span
+                        >
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <p
+                            class="font-semibold text-gray-800 dark:text-white text-sm mb-1"
+                        >
+                            School Information Updated
+                        </p>
+                        <p
+                            class="text-sm text-gray-600 dark:text-gray-400 mb-2"
+                        >
+                            Jane Doe updated school contact information
+                        </p>
+                        <div
+                            class="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400"
+                        >
+                            <span class="material-symbols-outlined text-sm"
+                                >schedule</span
+                            >
+                            <span>2 hours ago</span>
+                        </div>
+                    </div>
+                </li>
+                <li
+                    class="flex items-start gap-4 p-4 rounded-xl bg-gray-50 dark:bg-gray-700/50 hover:shadow-md transition-all border border-gray-100 dark:border-gray-600"
+                >
+                    <div
+                        class="h-10 w-10 rounded-full bg-gradient-to-br from-green-500 to-green-600 flex items-center justify-center flex-shrink-0"
+                    >
+                        <span
+                            class="material-symbols-outlined text-white text-sm"
+                            >security</span
+                        >
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <p
+                            class="font-semibold text-gray-800 dark:text-white text-sm mb-1"
+                        >
+                            2FA Enabled
+                        </p>
+                        <p
+                            class="text-sm text-gray-600 dark:text-gray-400 mb-2"
+                        >
+                            Admin Name enabled Two-Factor Authentication
+                        </p>
+                        <div
+                            class="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400"
+                        >
+                            <span class="material-symbols-outlined text-sm"
+                                >schedule</span
+                            >
+                            <span>1 day ago</span>
+                        </div>
+                    </div>
+                </li>
+                <li
+                    class="flex items-start gap-4 p-4 rounded-xl bg-gray-50 dark:bg-gray-700/50 hover:shadow-md transition-all border border-gray-100 dark:border-gray-600"
+                >
+                    <div
+                        class="h-10 w-10 rounded-full bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center flex-shrink-0"
+                    >
+                        <span
+                            class="material-symbols-outlined text-white text-sm"
+                            >calendar_today</span
+                        >
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <p
+                            class="font-semibold text-gray-800 dark:text-white text-sm mb-1"
+                        >
+                            Active Term Changed
+                        </p>
+                        <p
+                            class="text-sm text-gray-600 dark:text-gray-400 mb-2"
+                        >
+                            Admin Name changed the active academic term
+                        </p>
+                        <div
+                            class="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400"
+                        >
+                            <span class="material-symbols-outlined text-sm"
+                                >schedule</span
+                            >
+                            <span>3 days ago</span>
+                        </div>
+                    </div>
+                </li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+<!-- Action Buttons -->
+<div class="mt-8 flex justify-end gap-4">
+    <button
+        id="publishAllScoresBtn"
+        class="px-6 py-3 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white rounded-lg font-semibold hover:shadow-lg hover:scale-105 transition-all duration-200"
+    >
+        <span class="material-symbols-outlined mr-2">publish</span>
+        Publish All Scores
+    </button>
+    <button
+        class="px-6 py-3 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white rounded-lg font-semibold hover:bg-gray-300 dark:hover:bg-gray-600 hover:scale-105 transition-all duration-200"
+    >
+        Reset to Default
+    </button>
+    <button
+        class="px-6 py-3 bg-gradient-to-r from-primary to-blue-600 hover:from-primary hover:to-blue-700 text-white rounded-lg font-semibold hover:shadow-lg hover:scale-105 transition-all duration-200"
+    >
+        Save Changes
+    </button>
+</div>
+
+<script src="{{ url_for('static', filename='js/admin/settings.js') }}"></script>
+<script src="{{ url_for('static', filename='js/components/modal.js') }}" defer></script>
+
+<script>
+// Publish All Scores functionality using project modal
+document.getElementById("publishAllScoresBtn").addEventListener("click", function() {
+    // Use project standard confirmation modal
+    showConfirmModal({
+        title: "Publish All Scores",
+        message: "Are you sure you want to publish all scores? This will make all manually entered scores visible in student reports.",
+        confirmText: "Publish",
+        onConfirm: function() {
+            fetch("/admin/publish_all_scores", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showAlert({
+                        type: "success",
+                        message: data.message
+                    });
+                } else {
+                    showAlert({
+                        type: "error",
+                        message: "Error: " + data.message
+                    });
+                }
+            })
+            .catch(error => {
+                console.error("Error:", error);
+                showAlert({
+                    type: "error",
+                    message: "An error occurred while publishing scores."
+                });
+            });
+        }
+    });
+});
+</script>
+
+{% endblock %}

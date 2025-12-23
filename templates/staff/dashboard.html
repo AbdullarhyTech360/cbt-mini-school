@@ -1,0 +1,323 @@
+
+{% extends 'staff/base.html' %}
+
+{% block title %}Staff Dashboard{% endblock %}
+
+{% block sidebar_nav %}
+{{ super() }}
+{% endblock %}
+
+{% block content %}
+<!-- Welcome Section -->
+<div class="mb-8">
+    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-900 dark:text-white mb-2">Welcome back, {{ current_user.full_name() if current_user else 'Staff' }}! 👋</h1>
+            <p class="text-gray-600 dark:text-gray-400">Here's your teaching overview for today.</p>
+        </div>
+        <div class="flex items-center gap-3">
+            <div class="text-sm text-gray-600 dark:text-gray-400">
+                <span class="font-semibold">Today:</span> {{ current_date }}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Search Bar -->
+<div class="mb-8">
+    <div class="relative max-w-2xl">
+        <span class="material-symbols-outlined absolute left-4 top-3.5 text-gray-400">search</span>
+        <input type="text" placeholder="Search for classes, students, or reports..."
+            class="w-full pl-12 pr-4 py-3.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition shadow-sm hover:shadow-md placeholder:text-gray-400 dark:placeholder:text-gray-500" />
+    </div>
+</div>
+
+<!-- Stats Cards -->
+<section class="grid gap-4 md:gap-6 sm:grid-cols-2 lg:grid-cols-4 mb-6 md:mb-8">
+    <div class="group relative overflow-hidden bg-gradient-to-br from-blue-500 to-blue-600 p-4 md:p-6 rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 hover:scale-105">
+        <div class="absolute top-0 right-0 w-20 h-20 md:w-24 md:h-24 bg-white/10 rounded-full -mr-10 md:-mr-12 -mt-10 md:-mt-12"></div>
+        <div class="relative z-10">
+            <div class="flex items-center justify-between mb-3 md:mb-4">
+                <div class="h-10 w-10 md:h-12 md:w-12 rounded-xl bg-white/20 flex items-center justify-center backdrop-blur-sm">
+                    <span class="material-symbols-outlined text-2xl md:text-3xl text-white">group</span>
+                </div>
+                <span class="text-white/80 text-xs md:text-sm font-semibold">+12%</span>
+            </div>
+            <p class="text-white/90 text-xs md:text-sm font-medium mb-1">My Students</p>
+            <h2 class="text-2xl md:text-4xl font-bold text-white">125</h2>
+        </div>
+    </div>
+
+    <div class="group relative overflow-hidden bg-gradient-to-br from-purple-500 to-purple-600 p-4 md:p-6 rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 hover:scale-105">
+        <div class="absolute top-0 right-0 w-20 h-20 md:w-24 md:h-24 bg-white/10 rounded-full -mr-10 md:-mr-12 -mt-10 md:-mt-12"></div>
+        <div class="relative z-10">
+            <div class="flex items-center justify-between mb-3 md:mb-4">
+                <div class="h-10 w-10 md:h-12 md:w-12 rounded-xl bg-white/20 flex items-center justify-center backdrop-blur-sm">
+                    <span class="material-symbols-outlined text-2xl md:text-3xl text-white">quiz</span>
+                </div>
+                <span class="text-white/80 text-xs md:text-sm font-semibold">+24%</span>
+            </div>
+            <p class="text-white/90 text-xs md:text-sm font-medium mb-1">Questions Created</p>
+            <h2 class="text-2xl md:text-4xl font-bold text-white">1,847</h2>
+        </div>
+    </div>
+
+    <div class="group relative overflow-hidden bg-gradient-to-br from-green-500 to-green-600 p-4 md:p-6 rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 hover:scale-105">
+        <div class="absolute top-0 right-0 w-20 h-20 md:w-24 md:h-24 bg-white/10 rounded-full -mr-10 md:-mr-12 -mt-10 md:-mt-12"></div>
+        <div class="relative z-10">
+            <div class="flex items-center justify-between mb-3 md:mb-4">
+                <div class="h-10 w-10 md:h-12 md:w-12 rounded-xl bg-white/20 flex items-center justify-center backdrop-blur-sm">
+                    <span class="material-symbols-outlined text-2xl md:text-3xl text-white">checklist</span>
+                </div>
+                <span class="text-white/80 text-xs md:text-sm font-semibold">+8%</span>
+            </div>
+            <p class="text-white/90 text-xs md:text-sm font-medium mb-1">Attendance Rate</p>
+            <h2 class="text-2xl md:text-4xl font-bold text-white">94%</h2>
+        </div>
+    </div>
+
+    <div class="group relative overflow-hidden bg-gradient-to-br from-orange-500 to-orange-600 p-4 md:p-6 rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 hover:scale-105">
+        <div class="absolute top-0 right-0 w-20 h-20 md:w-24 md:h-24 bg-white/10 rounded-full -mr-10 md:-mr-12 -mt-10 md:-mt-12"></div>
+        <div class="relative z-10">
+            <div class="flex items-center justify-between mb-3 md:mb-4">
+                <div class="h-10 w-10 md:h-12 md:w-12 rounded-xl bg-white/20 flex items-center justify-center backdrop-blur-sm">
+                    <span class="material-symbols-outlined text-2xl md:text-3xl text-white">school</span>
+                </div>
+                <span class="text-white/80 text-xs md:text-sm font-semibold">+5%</span>
+            </div>
+            <p class="text-white/90 text-xs md:text-sm font-medium mb-1">Classes Today</p>
+            <h2 class="text-2xl md:text-4xl font-bold text-white">6</h2>
+        </div>
+    </div>
+</section>
+
+<!-- Quick Actions & Recent Activity Grid -->
+<div class="grid xl:grid-cols-3 gap-4 md:gap-6">
+    <!-- Quick Actions -->
+    <div class="xl:col-span-1">
+        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-4 md:p-6 border border-gray-100 dark:border-gray-700">
+            <h2 class="text-lg md:text-xl font-bold text-gray-800 dark:text-white mb-4 md:mb-6 flex items-center gap-2">
+                <span class="material-symbols-outlined text-primary">bolt</span>
+                Quick Actions
+            </h2>
+            <div class="space-y-3">
+                <a href="/staff/input_scores" class="flex items-center gap-3 p-3 rounded-xl bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 border border-blue-200 dark:border-blue-700 hover:shadow-md transition-all group">
+                    <div class="h-8 w-8 md:h-10 md:w-10 rounded-lg bg-blue-500 flex items-center justify-center">
+                        <span class="material-symbols-outlined text-white text-lg md:text-xl">edit_note</span>
+                    </div>
+                    <div class="flex-1">
+                        <p class="font-semibold text-gray-800 dark:text-white text-sm md:text-base">Input Scores</p>
+                        <p class="text-xs text-gray-600 dark:text-gray-400">Record student grades</p>
+                    </div>
+                    <span class="material-symbols-outlined text-gray-400 group-hover:translate-x-1 transition-transform">arrow_forward</span>
+                </a>
+
+                <a href="/staff/attendance" class="flex items-center gap-3 p-3 rounded-xl bg-gradient-to-r from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/20 border border-purple-200 dark:border-purple-700 hover:shadow-md transition-all group">
+                    <div class="h-8 w-8 md:h-10 md:w-10 rounded-lg bg-purple-500 flex items-center justify-center">
+                        <span class="material-symbols-outlined text-white text-lg md:text-xl">checklist</span>
+                    </div>
+                    <div class="flex-1">
+                        <p class="font-semibold text-gray-800 dark:text-white text-sm md:text-base">Mark Attendance</p>
+                        <p class="text-xs text-gray-600 dark:text-gray-400">Track student presence</p>
+                    </div>
+                    <span class="material-symbols-outlined text-gray-400 group-hover:translate-x-1 transition-transform">arrow_forward</span>
+                </a>
+
+                <a href="/staff/upload_questions/{{ current_user.id }}" class="flex items-center gap-3 p-3 rounded-xl bg-gradient-to-r from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20 border border-green-200 dark:border-green-700 hover:shadow-md transition-all group">
+                    <div class="h-8 w-8 md:h-10 md:w-10 rounded-lg bg-green-500 flex items-center justify-center">
+                        <span class="material-symbols-outlined text-white text-lg md:text-xl">upload_file</span>
+                    </div>
+                    <div class="flex-1">
+                        <p class="font-semibold text-gray-800 dark:text-white text-sm md:text-base">Upload Questions</p>
+                        <p class="text-xs text-gray-600 dark:text-gray-400">Add to question bank</p>
+                    </div>
+                    <span class="material-symbols-outlined text-gray-400 group-hover:translate-x-1 transition-transform">arrow_forward</span>
+                </a>
+                <a href="/staff/bulk_upload_questions" class="flex items-center gap-3 p-3 rounded-xl bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 border border-blue-200 dark:border-blue-700 hover:shadow-md transition-all group">
+                    <div class="h-8 w-8 md:h-10 md:w-10 rounded-lg bg-blue-500 flex items-center justify-center">
+                        <span class="material-symbols-outlined text-white text-lg md:text-xl">file_upload</span>
+                    </div>
+                    <div class="flex-1">
+                        <p class="font-semibold text-gray-800 dark:text-white text-sm md:text-base">Bulk Upload</p>
+                        <p class="text-xs text-gray-600 dark:text-gray-400">Upload multiple questions</p>
+                    </div>
+                    <span class="material-symbols-outlined text-gray-400 group-hover:translate-x-1 transition-transform">arrow_forward</span>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Activity -->
+    <div class="xl:col-span-2">
+        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-4 md:p-6 border border-gray-100 dark:border-gray-700">
+            <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4 md:mb-6">
+                <h2 class="text-lg md:text-xl font-bold text-gray-800 dark:text-white flex items-center gap-2">
+                    <span class="material-symbols-outlined text-primary">history</span>
+                    Recent Activity
+                </h2>
+                <button class="text-primary font-semibold text-xs md:text-sm hover:underline">View All</button>
+            </div>
+            <div class="space-y-3 md:space-y-4">
+                <div class="flex items-start gap-3 md:gap-4 p-3 md:p-4 rounded-xl bg-gray-50 dark:bg-gray-700/50 hover:shadow-md transition-all border border-gray-100 dark:border-gray-600">
+                    <div class="h-10 w-10 md:h-12 md:w-12 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center flex-shrink-0">
+                        <span class="material-symbols-outlined text-white text-lg md:text-xl">edit_note</span>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <p class="font-semibold text-gray-800 dark:text-white text-sm md:text-base mb-1">Scores Updated</p>
+                        <p class="text-xs md:text-sm text-gray-600 dark:text-gray-400 mb-2">Updated mathematics scores for Class 5A students</p>
+                        <div class="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+                            <span class="material-symbols-outlined text-sm">schedule</span>
+                            <span>2 hours ago</span>
+                        </div>
+                    </div>
+                    <button class="text-primary hover:bg-primary/10 px-2 py-1 md:px-3 md:py-1.5 rounded-lg transition-colors text-xs md:text-sm font-medium">View</button>
+                </div>
+
+                <div class="flex items-start gap-3 md:gap-4 p-3 md:p-4 rounded-xl bg-gray-50 dark:bg-gray-700/50 hover:shadow-md transition-all border border-gray-100 dark:border-gray-600">
+                    <div class="h-10 w-10 md:h-12 md:w-12 rounded-full bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center flex-shrink-0">
+                        <span class="material-symbols-outlined text-white text-lg md:text-xl">checklist</span>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <p class="font-semibold text-gray-800 dark:text-white text-sm md:text-base mb-1">Attendance Recorded</p>
+                        <p class="text-xs md:text-sm text-gray-600 dark:text-gray-400 mb-2">Marked attendance for Class 6B Science class</p>
+                        <div class="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+                            <span class="material-symbols-outlined text-sm">schedule</span>
+                            <span>5 hours ago</span>
+                        </div>
+                    </div>
+                    <button class="text-primary hover:bg-primary/10 px-2 py-1 md:px-3 md:py-1.5 rounded-lg transition-colors text-xs md:text-sm font-medium">View</button>
+                </div>
+
+                <div class="flex items-start gap-3 md:gap-4 p-3 md:p-4 rounded-xl bg-gray-50 dark:bg-gray-700/50 hover:shadow-md transition-all border border-gray-100 dark:border-gray-600">
+                    <div class="h-10 w-10 md:h-12 md:w-12 rounded-full bg-gradient-to-br from-green-500 to-green-600 flex items-center justify-center flex-shrink-0">
+                        <span class="material-symbols-outlined text-white text-lg md:text-xl">upload_file</span>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <p class="font-semibold text-gray-800 dark:text-white text-sm md:text-base mb-1">Questions Uploaded</p>
+                        <p class="text-xs md:text-sm text-gray-600 dark:text-gray-400 mb-2">Added 25 new physics questions to the database</p>
+                        <div class="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+                            <span class="material-symbols-outlined text-sm">schedule</span>
+                            <span>1 day ago</span>
+                        </div>
+                    </div>
+                    <button class="text-primary hover:bg-primary/10 px-2 py-1 md:px-3 md:py-1.5 rounded-lg transition-colors text-xs md:text-sm font-medium">View</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- My Classes & Announcements Grid -->
+<div class="grid xl:grid-cols-2 gap-4 md:gap-6 mt-6">
+    <!-- My Classes -->
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-4 md:p-6 border border-gray-100 dark:border-gray-700">
+        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4 md:mb-6">
+            <h2 class="text-lg md:text-xl font-bold text-gray-800 dark:text-white flex items-center gap-2">
+                <span class="material-symbols-outlined text-primary">groups</span>
+                My Classes Today
+            </h2>
+            <a href="/staff/classes" class="text-primary font-semibold text-xs md:text-sm hover:underline">View All</a>
+        </div>
+        <div class="space-y-3">
+            <div class="flex items-center justify-between p-3 md:p-4 rounded-xl bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 border border-blue-200 dark:border-blue-700">
+                <div class="flex items-center gap-3">
+                    <div class="h-8 w-8 md:h-10 md:w-10 rounded-lg bg-blue-500 flex items-center justify-center">
+                        <span class="material-symbols-outlined text-white text-sm md:text-lg">calculate</span>
+                    </div>
+                    <div>
+                        <p class="font-semibold text-gray-800 dark:text-white text-sm md:text-base">Class 5A - Mathematics</p>
+                        <p class="text-xs text-gray-600 dark:text-gray-400">25 Students • 9:00 AM - 10:30 AM</p>
+                    </div>
+                </div>
+                <button class="text-primary hover:bg-primary/10 px-2 py-1 md:px-3 md:py-1.5 rounded-lg transition-colors text-xs md:text-sm font-medium">View</button>
+            </div>
+
+            <div class="flex items-center justify-between p-3 md:p-4 rounded-xl bg-gradient-to-r from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/20 border border-purple-200 dark:border-purple-700">
+                <div class="flex items-center gap-3">
+                    <div class="h-8 w-8 md:h-10 md:w-10 rounded-lg bg-purple-500 flex items-center justify-center">
+                        <span class="material-symbols-outlined text-white text-sm md:text-lg">science</span>
+                    </div>
+                    <div>
+                        <p class="font-semibold text-gray-800 dark:text-white text-sm md:text-base">Class 6B - Science</p>
+                        <p class="text-xs text-gray-600 dark:text-gray-400">22 Students • 11:00 AM - 12:30 PM</p>
+                    </div>
+                </div>
+                <button class="text-primary hover:bg-primary/10 px-2 py-1 md:px-3 md:py-1.5 rounded-lg transition-colors text-xs md:text-sm font-medium">View</button>
+            </div>
+
+            <div class="flex items-center justify-between p-3 md:p-4 rounded-xl bg-gradient-to-r from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20 border border-green-200 dark:border-green-700">
+                <div class="flex items-center gap-3">
+                    <div class="h-8 w-8 md:h-10 md:w-10 rounded-lg bg-green-500 flex items-center justify-center">
+                        <span class="material-symbols-outlined text-white text-sm md:text-lg">menu_book</span>
+                    </div>
+                    <div>
+                        <p class="font-semibold text-gray-800 dark:text-white text-sm md:text-base">Class 7A - English</p>
+                        <p class="text-xs text-gray-600 dark:text-gray-400">28 Students • 2:00 PM - 3:30 PM</p>
+                    </div>
+                </div>
+                <button class="text-primary hover:bg-primary/10 px-2 py-1 md:px-3 md:py-1.5 rounded-lg transition-colors text-xs md:text-sm font-medium">View</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Announcements -->
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-4 md:p-6 border border-gray-100 dark:border-gray-700">
+        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4 md:mb-6">
+            <h2 class="text-lg md:text-xl font-bold text-gray-800 dark:text-white flex items-center gap-2">
+                <span class="material-symbols-outlined text-primary">campaign</span>
+                Recent Announcements
+            </h2>
+            <button class="text-primary font-semibold text-xs md:text-sm hover:underline">View All</button>
+        </div>
+        <div class="space-y-3 md:space-y-4">
+            <div class="p-3 md:p-4 rounded-xl bg-gradient-to-r from-yellow-50 to-orange-50 dark:from-yellow-900/20 dark:to-orange-900/20 border border-yellow-200 dark:border-yellow-700">
+                <div class="flex items-start gap-3">
+                    <div class="h-6 w-6 md:h-8 md:w-8 rounded-lg bg-yellow-500 flex items-center justify-center flex-shrink-0">
+                        <span class="material-symbols-outlined text-white text-xs md:text-sm">event</span>
+                    </div>
+                    <div class="flex-1">
+                        <p class="font-semibold text-gray-800 dark:text-white text-sm md:text-base mb-1">Staff Meeting</p>
+                        <p class="text-xs text-gray-600 dark:text-gray-400 mb-2">Monthly staff meeting scheduled for Monday</p>
+                        <div class="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+                            <span class="material-symbols-outlined text-sm">schedule</span>
+                            <span>Room 201 • 10:00 AM</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="p-3 md:p-4 rounded-xl bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20 border border-blue-200 dark:border-blue-700">
+                <div class="flex items-start gap-3">
+                    <div class="h-6 w-6 md:h-8 md:w-8 rounded-lg bg-blue-500 flex items-center justify-center flex-shrink-0">
+                        <span class="material-symbols-outlined text-white text-xs md:text-sm">groups</span>
+                    </div>
+                    <div class="flex-1">
+                        <p class="font-semibold text-gray-800 dark:text-white text-sm md:text-base mb-1">Parent-Teacher Conference</p>
+                        <p class="text-xs text-gray-600 dark:text-gray-400 mb-2">PTC scheduled for this Wednesday</p>
+                        <div class="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+                            <span class="material-symbols-outlined text-sm">schedule</span>
+                            <span>Main Hall • 4:00 PM - 7:00 PM</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="p-3 md:p-4 rounded-xl bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 border border-green-200 dark:border-green-700">
+                <div class="flex items-start gap-3">
+                    <div class="h-6 w-6 md:h-8 md:w-8 rounded-lg bg-green-500 flex items-center justify-center flex-shrink-0">
+                        <span class="material-symbols-outlined text-white text-xs md:text-sm">quiz</span>
+                    </div>
+                    <div class="flex-1">
+                        <p class="font-semibold text-gray-800 dark:text-white text-sm md:text-base mb-1">Mid-term Exams</p>
+                        <p class="text-xs text-gray-600 dark:text-gray-400 mb-2">Exams begin next week</p>
+                        <div class="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+                            <span class="material-symbols-outlined text-sm">schedule</span>
+                            <span>October 23-27, 2023</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,144 @@
+{% extends "admin/base.html" %}
+
+{% block title %}Generate Reports{% endblock %}
+
+{% block content %}
+<!-- Header -->
+<div class="mb-8">
+    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-900 dark:text-white mb-2">Generate Student Reports</h1>
+            <p class="text-gray-600 dark:text-gray-400">Generate and download student performance reports</p>
+        </div>
+    </div>
+</div>
+
+<!-- Filters -->
+<div class="mb-6 bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 border border-gray-100 dark:border-gray-700">
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Term <span class="text-red-500">*</span>
+                </label>
+                <select id="termFilter" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                    <option value="">Select Term</option>
+                </select>
+                <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Choose the academic term</p>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Class <span class="text-red-500">*</span>
+                </label>
+                <select id="classFilter" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                    <option value="">Select Class</option>
+                </select>
+                <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Choose the class</p>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Report Config</label>
+                <select id="configFilter" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                    <option value="">Default</option>
+                </select>
+                <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Optional: Use specific config</p>
+            </div>
+
+            <div class="flex items-end">
+                <button onclick="loadStudents()" class="w-full flex items-center justify-center gap-2 h-11 px-5 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-lg shadow-md hover:shadow-lg hover:scale-105 transition-all duration-200">
+                    <span class="material-symbols-outlined text-xl">search</span>
+                    <span class="text-sm font-bold">Load Students</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Students List -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-md border border-gray-100 dark:border-gray-700">
+        <div class="p-6 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
+            <h2 class="text-xl font-bold text-gray-900 dark:text-white">Students</h2>
+            <div class="flex gap-3">
+                <button onclick="downloadAllReports()" class="flex items-center gap-2 h-10 px-4 bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white rounded-lg shadow-md hover:shadow-lg hover:scale-105 transition-all duration-200">
+                    <span class="material-symbols-outlined text-lg">download</span>
+                    <span class="text-sm font-bold">Download All</span>
+                </button>
+            </div>
+        </div>
+
+        <div id="studentsList" class="p-4">
+            <p class="text-gray-500 dark:text-gray-400 text-center py-8">Select term and class to load students</p>
+        </div>
+    </div>
+</div>
+
+<!-- Preview Modal Styles -->
+<style>
+    /* Preview Loading Spinner */
+    .preview-loading-spinner {
+        width: 40px;
+        height: 40px;
+        border: 4px solid #e5e7eb;
+        border-top: 4px solid #3b82f6;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+        margin: 0 auto;
+    }
+    
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+    
+    /* Quality Indicator */
+    .quality-indicator.high {
+        background-color: #10b981;
+        color: white;
+        padding: 2px 8px;
+        border-radius: 9999px;
+        font-weight: 500;
+    }
+    
+    /* Toolbar */
+    .preview-toolbar {
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    }
+    
+    /* Responsive adjustments */
+    @media (max-width: 768px) {
+        .preview-toolbar {
+            flex-direction: column;
+            gap: 12px;
+            text-align: center;
+        }
+        
+        .preview-toolbar .flex.items-center.gap-4 {
+            justify-content: center;
+        }
+        
+        .preview-toolbar .flex.items-center.gap-2 {
+            justify-content: center;
+        }
+    }
+</style>
+
+<script src="{{ url_for('static', filename='js/admin/generate_report.js') }}"></script>
+<script>
+    // Add keyboard shortcuts for the preview modal
+    document.addEventListener('keydown', function(event) {
+        // Ctrl/Cmd + P for print
+        if ((event.ctrlKey || event.metaKey) && event.key === 'p') {
+            event.preventDefault();
+            // Print functionality could be added here
+        }
+        
+        // Ctrl/Cmd + D for download
+        if ((event.ctrlKey || event.metaKey) && event.key === 'd') {
+            event.preventDefault();
+            const downloadBtn = document.querySelector('button[title="Download PDF"]');
+            if (downloadBtn) {
+                downloadBtn.click();
+            }
+        }
+    });
+</script>
+{% endblock %}

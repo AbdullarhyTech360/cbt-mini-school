@@ -1,0 +1,704 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Report Card</title>
+    <link href="{{ url_for('static', filename='css/tailwind.css') }}" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/material-symbols.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+    <style>
+        @media print {
+            body {
+                margin: 0;
+                padding: 0;
+                background: white !important;
+            }
+
+            .no-print {
+                display: none !important;
+            }
+
+            .report-card {
+                box-shadow: none !important;
+                margin: 0 !important;
+                padding: 8mm !important;
+                page-break-after: always;
+                width: 100% !important;
+                max-width: none !important;
+                border: none !important;
+            }
+
+            .print-break-inside-avoid {
+                break-inside: avoid;
+            }
+
+            .score-table-container {
+                width: 100% !important;
+                overflow: visible !important;
+            }
+
+            .score-table {
+                table-layout: auto !important;
+                width: 100% !important;
+                font-size: 10px !important;
+            }
+
+            .score-table th,
+            .score-table td {
+                padding: 6px 4px !important;
+            }
+        }
+
+        @page {
+            size: 297mm 280mm;
+            margin: 5mm;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
+            color: #1f2937;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+        }
+
+        .report-card {
+            background: white;
+            width: 297mm;
+            min-height: 270mm;
+            margin: 10px auto;
+            padding: 8mm;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            position: relative;
+            overflow: hidden;
+            font-family: 'Inter', sans-serif;
+        }
+        
+        .header-pattern {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #7c3aed, #a855f7, #7c3aed);
+        }
+        
+        .school-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 8px;
+            padding-bottom: 6px;
+            border-bottom: 1px solid #f3e8ff;
+        }
+        
+        .school-logo {
+            width: 50px;
+            height: 50px;
+            object-fit: contain;
+            border-radius: 6px;
+            border: 1px solid #a855f7;
+            padding: 1px;
+            background: white;
+        }
+        
+        .school-info h1 {
+            font-family: 'Inter', sans-serif;
+            color: #6b21a8;
+            font-size: 16px;
+            font-weight: 700;
+            line-height: 1.1;
+            margin-bottom: 1px;
+        }
+        
+        .report-title {
+            font-size: 12px;
+            font-weight: 700;
+            color: #7c3aed;
+            text-align: center;
+            margin: 6px 0;
+            letter-spacing: 0.3px;
+        }
+        
+        .student-card {
+            background: linear-gradient(135deg, #faf5ff 0%, #f3e8ff 100%);
+            border: 1px solid #e9d5ff;
+            border-radius: 8px;
+            padding: 6px;
+            margin-bottom: 8px;
+            display: grid;
+            grid-template-columns: auto 1fr;
+            gap: 8px;
+        }
+        
+        .student-photo {
+            width: 60px;
+            height: 75px;
+            object-fit: cover;
+            border-radius: 5px;
+            border: 1px solid white;
+            box-shadow: 0 1px 3px -1px rgba(0, 0, 0, 0.1);
+        }
+        
+        .student-details {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 4px;
+        }
+        
+        .detail-item {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .detail-label {
+            font-size: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.02em;
+            color: #7c3aed;
+            margin-bottom: 1px;
+            font-weight: 600;
+        }
+        
+        .detail-value {
+            font-weight: 600;
+            color: #0f172a;
+            font-size: 8px;
+        }
+        
+        .term-info {
+            display: flex;
+            justify-content: space-between;
+            background: white;
+            border: 1px solid #e9d5ff;
+            border-radius: 6px;
+            padding: 5px;
+            margin-bottom: 8px;
+            font-size: 7px;
+        }
+        
+        .term-item {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .term-label {
+            font-size: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.02em;
+            color: #7c3aed;
+            margin-bottom: 1px;
+            font-weight: 600;
+        }
+        
+        .term-value {
+            font-weight: 600;
+            color: #0f172a;
+        }
+        
+        .score-table-container {
+            border-radius: 6px;
+            overflow: hidden;
+            border: 1px solid #e9d5ff;
+            margin-bottom: 8px;
+        }
+        
+        .score-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 7px;
+        }
+        
+        .score-table th {
+            background: linear-gradient(135deg, #7c3aed 0%, #a855f7 100%);
+            color: white;
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 5.5px;
+            letter-spacing: 0.01em;
+            padding: 4px 2px;
+            text-align: center;
+            border-bottom: 1px solid #6b21a8;
+        }
+        
+        .score-table th.text-left {
+            text-align: left;
+        }
+        
+        .score-table td {
+            padding: 3px 2px;
+            border-bottom: 1px solid #f3e8ff;
+            text-align: center;
+            color: #334155;
+            font-size: 6px;
+        }
+        
+        .score-table td.text-left {
+            text-align: left;
+        }
+        
+        .score-table tr:last-child td {
+            border-bottom: none;
+        }
+        
+        .score-table tr:nth-child(even) {
+            background-color: #faf5ff;
+        }
+        
+        .subject-name {
+            font-weight: 600;
+            color: #0f172a;
+        }
+        
+        .grade-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            font-weight: 700;
+            font-size: 7px;
+        }
+        
+        .grade-A { background: linear-gradient(135deg, #10b981, #059669); color: white; }
+        .grade-B { background: linear-gradient(135deg, #3b82f6, #2563eb); color: white; }
+        .grade-C { background: linear-gradient(135deg, #f59e0b, #d97706); color: white; }
+        .grade-D { background: linear-gradient(135deg, #ef4444, #dc2626); color: white; }
+        .grade-F { background: linear-gradient(135deg, #6b7280, #4b5563); color: white; }
+        
+        .remark-excellent { color: #059669; font-weight: 600; font-size: 6px; }
+        .remark-good { color: #2563eb; font-weight: 600; font-size: 6px; }
+        .remark-average { color: #d97706; font-weight: 600; font-size: 6px; }
+        .remark-poor { color: #dc2626; font-weight: 600; font-size: 6px; }
+        .remark-fail { color: #4b5563; font-weight: 600; font-size: 6px; }
+        
+        .cbt-score {
+            position: relative;
+            font-weight: 600;
+            color: #7c3aed;
+            font-size: 6px;
+        }
+        
+        .comments-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 6px;
+            margin-bottom: 6px;
+        }
+        
+        .comment-box {
+            background: #faf5ff;
+            border: 1px solid #e9d5ff;
+            border-radius: 5px;
+            padding: 5px;
+        }
+        
+        .comment-header {
+            display: flex;
+            align-items: center;
+            gap: 3px;
+            margin-bottom: 4px;
+            color: #7c3aed;
+            font-weight: 600;
+            font-size: 7px;
+        }
+        
+        .comment-content {
+            min-height: 20px;
+            font-style: italic;
+            color: #475569;
+            font-size: 7px;
+            line-height: 1.2;
+            border: 1px dashed #d8b4fe;
+            border-radius: 2px;
+            padding: 2px;
+            background: white;
+        }
+        
+        .signature-area {
+            margin-top: 4px;
+            padding-top: 2px;
+            border-top: 1px dashed #d8b4fe;
+            display: flex;
+            justify-content: space-between;
+            font-size: 5px;
+            color: #94a3b8;
+        }
+        
+        .grading-legend {
+            display: flex;
+            justify-content: center;
+            gap: 2px;
+            flex-wrap: wrap;
+            padding-top: 5px;
+            border-top: 1px solid #f3e8ff;
+            margin-bottom: 5px;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 1px;
+            font-size: 5px;
+            color: #64748b;
+            background: white;
+            padding: 1px 3px;
+            border-radius: 8px;
+            border: 1px solid #f3e8ff;
+        }
+        
+        .legend-dot {
+            width: 4px;
+            height: 4px;
+            border-radius: 50%;
+        }
+        
+        .watermark {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) rotate(-30deg);
+            font-size: 30px;
+            font-weight: bold;
+            color: rgba(124, 58, 237, 0.02);
+            pointer-events: none;
+            white-space: nowrap;
+        }
+        
+        .disclaimer {
+            text-align: center;
+            font-size: 5px;
+            color: #94a3b8;
+            padding: 2px;
+            background: #faf5ff;
+            border-radius: 2px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="no-print bg-white border-b border-gray-200 sticky top-0 z-50 shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
+            <h1 class="text-lg font-semibold text-gray-800 flex items-center gap-2">
+                <span class="material-symbols-outlined text-purple-600">description</span>
+                Report Preview
+            </h1>
+            <div class="flex gap-3">
+                <button onclick="window.print()" class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 text-sm font-medium transition-colors shadow-sm">
+                    <span class="material-symbols-outlined text-[20px]">print</span>
+                    Print Report
+                </button>
+                <button onclick="window.close()" class="bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 px-4 py-2 rounded-lg flex items-center gap-2 text-sm font-medium transition-colors">
+                    <span class="material-symbols-outlined text-[20px]">close</span>
+                    Close
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="report-card" id="reportCard">
+        <div class="watermark">OFFICIAL COPY</div>
+        <div class="flex items-center justify-center h-full">
+            <div class="animate-pulse flex flex-col items-center">
+                <div class="h-12 w-12 bg-purple-200 rounded-full mb-4"></div>
+                <div class="h-4 w-48 bg-purple-200 rounded mb-2"></div>
+                <div class="h-3 w-32 bg-purple-200 rounded"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const studentId = "{{ student_id }}";
+
+        async function loadReport() {
+            try {
+                const urlParams = new URLSearchParams(window.location.search);
+                const termId = urlParams.get('term_id');
+                const classRoomId = urlParams.get('class_room_id');
+                const configId = urlParams.get('config_id');
+
+                if (!termId || !classRoomId) {
+                    showError('Missing Required Parameters', 'Please generate report from the reports page.');
+                    return;
+                }
+
+                const response = await fetch('/reports/api/preview', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        student_id: studentId,
+                        term_id: termId,
+                        class_room_id: classRoomId,
+                        config_id: configId
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    renderReport(data.report);
+                } else {
+                    showError('Error Loading Report', data.error);
+                }
+            } catch (error) {
+                console.error('Error loading report:', error);
+                showError('Connection Error', 'Unable to load report. Please try again.');
+            }
+        }
+
+        function showError(title, message) {
+            document.getElementById('reportCard').innerHTML = `
+                <div class="flex flex-col items-center justify-center h-full text-center p-8">
+                    <div class="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mb-4">
+                        <span class="material-symbols-outlined text-red-500 text-3xl">error_outline</span>
+                    </div>
+                    <h3 class="text-xl font-bold text-gray-900 mb-2">${title}</h3>
+                    <p class="text-gray-500 max-w-sm">${message}</p>
+                </div>`;
+        }
+
+        function getGrade(percentage) {
+            if (percentage >= 90) return 'A';
+            if (percentage >= 80) return 'B';
+            if (percentage >= 70) return 'C';
+            if (percentage >= 60) return 'D';
+            return 'F';
+        }
+
+        function getRemark(percentage) {
+            if (percentage >= 90) return { text: 'Excellent', class: 'remark-excellent' };
+            if (percentage >= 80) return { text: 'Very Good', class: 'remark-good' };
+            if (percentage >= 70) return { text: 'Good', class: 'remark-average' };
+            if (percentage >= 60) return { text: 'Fair', class: 'remark-poor' };
+            return { text: 'Needs Improvement', class: 'remark-fail' };
+        }
+
+        function formatPosition(position) {
+            if (!position) return 'N/A';
+            const suffix = position % 10 === 1 && position !== 11 ? 'st' :
+                position % 10 === 2 && position !== 12 ? 'nd' :
+                position % 10 === 3 && position !== 13 ? 'rd' : 'th';
+            return position + suffix;
+        }
+
+        function formatAssessmentName(code) {
+            if (typeof code !== 'string') return code;
+            const specialCases = { 'cbt': 'CBT', 'ca': 'CA', 'exam': 'Exam', 'mid_term': 'Mid-Term' };
+            if (specialCases[code.toLowerCase()]) return specialCases[code.toLowerCase()];
+            return code.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+        }
+
+        function renderReport(report) {
+            const { student, school, term, assessment_types, scores, position, total_students, overall_total, overall_max } = report;
+
+            const assessments = assessment_types
+                .sort((a, b) => (a.order || 0) - (b.order || 0))
+                .map(at => at.code);
+
+            const overallPercentage = overall_max > 0 ? (overall_total / overall_max * 100) : 0;
+            const overallGrade = getGrade(overallPercentage);
+            const overallRemark = getRemark(overallPercentage);
+
+            let html = `
+                <div class="header-pattern"></div>
+                <div class="watermark">OFFICIAL COPY</div>
+                
+                <header class="school-header">
+                    ${school.logo ? 
+                        `<img src="${school.logo}" alt="School Logo" class="school-logo">` : 
+                        `<div class="school-logo bg-purple-100 flex items-center justify-center">
+                            <span class="material-symbols-outlined text-purple-600 text-2xl">school</span>
+                        </div>`
+                    }
+                    <div class="school-info flex-1">
+                        <h1>${school.name.toUpperCase()}</h1>
+                        ${school.motto ? `<p style="font-style: italic; color: #7c3aed; font-size: 8px;">"${school.motto}"</p>` : ''}
+                        <p style="font-size: 7px; color: #64748b;">${school.address || ''} ${school.phone ? '| Tel: ' + school.phone : ''}</p>
+                    </div>
+                </header>
+                
+                <div class="report-title">STUDENT PERFORMANCE REPORT</div>
+
+                <div class="student-card">
+                    ${student.image ? 
+                        `<img src="${student.image}" alt="Student" class="student-photo">` :
+                        `<img src="/static/uploads/profile_images/${student.gender && student.gender.toLowerCase() === 'male' ? 'male_default_avatar.png' : 'female_default_avatar.png'}" alt="Student" class="student-photo" onerror="this.outerHTML='<div class=\"student-photo bg-purple-100 flex items-center justify-center\"><span class=\"material-symbols-outlined text-purple-400 text-2xl\">person</span></div>'">`
+                    }
+                    <div class="student-details">
+                        <div class="detail-item">
+                            <span class="detail-label">Student Name</span>
+                            <span class="detail-value">${student.name}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Admission No.</span>
+                            <span class="detail-value">${student.admission_number || 'N/A'}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Class</span>
+                            <span class="detail-value">${student.class_name}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Position</span>
+                            <span class="detail-value" style="color: #7c3aed;">${formatPosition(position)} of ${total_students}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Total Score</span>
+                            <span class="detail-value">${overall_total.toFixed(1)} / ${overall_max}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Overall Grade</span>
+                            <span class="detail-value">
+                                <span class="grade-badge grade-${overallGrade}" style="width: 18px; height: 18px; font-size: 8px;">${overallGrade}</span>
+                                <span style="margin-left: 2px;">(${overallPercentage.toFixed(1)}%)</span>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="term-info">
+                    <div class="term-item">
+                        <span class="term-label">Term</span>
+                        <span class="term-value">${term.name}</span>
+                    </div>
+                    <div class="term-item">
+                        <span class="term-label">Session</span>
+                        <span class="term-value">${term.session}</span>
+                    </div>
+                    <div class="term-item">
+                        <span class="term-label">Term Begin</span>
+                        <span class="term-value">${term.start_date || 'N/A'}</span>
+                    </div>
+                    <div class="term-item">
+                        <span class="term-label">Term End</span>
+                        <span class="term-value">${term.end_date || 'N/A'}</span>
+                    </div>
+                    <div class="term-item">
+                        <span class="term-label">Resumption</span>
+                        <span class="term-value">${term.end_date ? calculateResumptionDate(term.end_date) : 'N/A'}</span>
+                    </div>
+                </div>
+
+                <div class="score-table-container">
+                    <table class="score-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 25px;">SN</th>
+                                <th class="text-left" style="width: 120px;">Subject</th>
+                                ${assessments.map(code => {
+                                    const at = assessment_types.find(a => a.code === code);
+                                    const name = at ? formatAssessmentName(at.name) : formatAssessmentName(code);
+                                    const max = at ? at.max_score : '-';
+                                    return `<th style="width: 45px;">${name}<br><span style="font-size: 6px;">(${max})</span></th>`;
+                                }).join('')}
+                                <th style="width: 40px;">Total</th>
+                                <th style="width: 30px;">%</th>
+                                <th style="width: 35px;">Grade</th>
+                                <th style="width: 70px;">Remark</th>
+                            </tr>
+                        </thead>
+                        <tbody>`;
+
+            let serialNumber = 1;
+            // Limit to 20 subjects for single page layout
+            const limitedScores = Object.values(scores).slice(0, 20);
+            limitedScores.forEach(subject => {
+                const percentage = subject.max_total > 0 ? (subject.total / subject.max_total * 100) : 0;
+                const grade = getGrade(percentage);
+                const remark = getRemark(percentage);
+
+                html += `
+                    <tr>
+                        <td style="color: #94a3b8; font-size: 8px;">${serialNumber++}</td>
+                        <td class="text-left subject-name" style="font-size: 8px;">${subject.subject_name.length > 20 ? subject.subject_name.substring(0, 20) + '...' : subject.subject_name}</td>`;
+
+                assessments.forEach(code => {
+                    const assessment = subject.assessments[code];
+                    if (assessment) {
+                        const isCBT = assessment.is_cbt || code.toLowerCase().includes('cbt');
+                        html += `<td class="${isCBT ? 'cbt-score' : ''}" style="font-size: 8px;">${assessment.score.toFixed(1)}</td>`;
+                    } else {
+                        html += `<td style="color: #d1d5db; font-size: 7px;">-</td>`;
+                    }
+                });
+
+                html += `
+                        <td style="font-weight: 600; font-size: 8px;">${subject.total.toFixed(1)}</td>
+                        <td style="font-size: 8px;">${percentage.toFixed(1)}</td>
+                        <td><span class="grade-badge grade-${grade}" style="width: 18px; height: 18px; font-size: 8px;">${grade}</span></td>
+                        <td class="${remark.class}">${remark.text.length > 12 ? remark.text.substring(0, 12) + '.' : remark.text}</td>
+                    </tr>`;
+            });
+            
+            // Add indicator if there are more subjects
+            if (Object.values(scores).length > 20) {
+                html += `
+                    <tr>
+                        <td colspan="${4 + assessments.length}" style="text-align: center; font-style: italic; color: #6b7280; font-size: 8px; padding: 4px;">
+                            +${Object.values(scores).length - 20} more subjects not shown
+                        </td>
+                    </tr>`;
+            }
+
+            html += `
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="comments-section">
+                    <div class="comment-box">
+                        <div class="comment-header">
+                            <span class="material-symbols-outlined" style="font-size: 14px;">person_apron</span>
+                            Class Teacher's Remarks
+                        </div>
+                        <div class="comment-content"></div>
+                        <div class="signature-area">
+                            <span>Date: __________</span>
+                            <span>Signature: __________</span>
+                        </div>
+                    </div>
+                    <div class="comment-box">
+                        <div class="comment-header">
+                            <span class="material-symbols-outlined" style="font-size: 14px;">school</span>
+                            Principal's Remarks
+                        </div>
+                        <div class="comment-content"></div>
+                        <div class="signature-area">
+                            <span>Date: __________</span>
+                            <span>Signature: __________</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grading-legend">
+                    <div class="legend-item"><div class="legend-dot" style="background: linear-gradient(135deg, #10b981, #059669);"></div>A (90-100%)</div>
+                    <div class="legend-item"><div class="legend-dot" style="background: linear-gradient(135deg, #3b82f6, #2563eb);"></div>B (80-89%)</div>
+                    <div class="legend-item"><div class="legend-dot" style="background: linear-gradient(135deg, #f59e0b, #d97706);"></div>C (70-79%)</div>
+                    <div class="legend-item"><div class="legend-dot" style="background: linear-gradient(135deg, #ef4444, #dc2626);"></div>D (60-69%)</div>
+                    <div class="legend-item"><div class="legend-dot" style="background: linear-gradient(135deg, #6b7280, #4b5563);"></div>F (<60%)</div>
+                </div>
+
+                <div class="disclaimer">
+                    Official document issued by ${school.name}. Any alteration renders it invalid. Generated on ${new Date().toLocaleDateString()}
+                </div>`;
+
+            document.getElementById('reportCard').innerHTML = html;
+        }
+
+        function calculateResumptionDate(endDateStr) {
+            try {
+                const endDate = new Date(endDateStr);
+                const resumptionDate = new Date(endDate);
+                resumptionDate.setDate(resumptionDate.getDate() + 14);
+                return resumptionDate.toISOString().split('T')[0];
+            } catch (e) {
+                return 'N/A';
+            }
+        }
+
+        loadReport();
+    </script>
+</body>
+</html>

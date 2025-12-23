@@ -1,0 +1,574 @@
+{% extends "admin/base.html" %}
+
+{% block title %}Grade Scales{% endblock %}
+
+{% block content %}
+<div class="mb-6 md:mb-8">
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+            <h1 class="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white mb-2">Grade Scales</h1>
+            <p class="text-gray-600 dark:text-gray-400 text-sm md:text-base">Manage grading scales for report cards</p>
+        </div>
+        <button onclick="openScaleModal()" 
+            class="flex items-center gap-2 px-4 py-2 md:px-5 md:py-2.5 bg-gradient-to-r from-primary to-blue-600 hover:from-primary/90 hover:to-blue-700 text-white rounded-lg shadow-md hover:shadow-lg transition-all duration-200 text-sm md:text-base font-semibold">
+            <span class="material-symbols-outlined text-lg">add</span>
+            <span>New Grade Scale</span>
+        </button>
+    </div>
+</div>
+
+<!-- Stats Cards -->
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 mb-6 md:mb-8">
+    <div class="bg-gradient-to-br from-blue-500 to-blue-600 p-4 md:p-6 rounded-2xl shadow-lg">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-white/90 text-xs md:text-sm font-medium mb-1">Total Scales</p>
+                <p class="text-xl md:text-3xl font-bold text-white" id="totalScales">0</p>
+            </div>
+            <div class="h-10 w-10 md:h-12 md:w-12 rounded-xl bg-white/20 flex items-center justify-center">
+                <span class="material-symbols-outlined text-white text-lg md:text-2xl">scale</span>
+            </div>
+        </div>
+    </div>
+    <div class="bg-gradient-to-br from-green-500 to-green-600 p-4 md:p-6 rounded-2xl shadow-lg">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-white/90 text-xs md:text-sm font-medium mb-1">Active Scales</p>
+                <p class="text-xl md:text-3xl font-bold text-white" id="activeScales">0</p>
+            </div>
+            <div class="h-10 w-10 md:h-12 md:w-12 rounded-xl bg-white/20 flex items-center justify-center">
+                <span class="material-symbols-outlined text-white text-lg md:text-2xl">check_circle</span>
+            </div>
+        </div>
+    </div>
+    <div class="bg-gradient-to-br from-purple-500 to-purple-600 p-4 md:p-6 rounded-2xl shadow-lg">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-white/90 text-xs md:text-sm font-medium mb-1">Default Scales</p>
+                <p class="text-xl md:text-3xl font-bold text-white" id="defaultScales">0</p>
+            </div>
+            <div class="h-10 w-10 md:h-12 md:w-12 rounded-xl bg-white/20 flex items-center justify-center">
+                <span class="material-symbols-outlined text-white text-lg md:text-2xl">star</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Grade Scales List -->
+<div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-100 dark:border-gray-700 overflow-hidden">
+    <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+        <h2 class="text-lg md:text-xl font-bold text-gray-800 dark:text-white">Grade Scales</h2>
+    </div>
+    <div id="scalesList" class="p-6">
+        <!-- Scales will be loaded here -->
+    </div>
+</div>
+
+<!-- Grade Scale Modal -->
+<div id="scaleModal" class="modal-overlay fixed inset-0 bg-black/50 z-50 hidden items-center justify-center p-4">
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+        <div class="p-6">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-xl font-bold text-gray-800 dark:text-white" id="modalTitle">New Grade Scale</h2>
+                <button onclick="closeScaleModal()" class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 rounded-full p-2 hover:bg-gray-100 dark:hover:bg-gray-700 transition">
+                    <span class="material-symbols-outlined text-xl">close</span>
+                </button>
+            </div>
+
+            <form id="scaleForm" class="space-y-6">
+                <input type="hidden" id="scaleId" name="scale_id">
+
+                <!-- Basic Info -->
+                <div class="bg-gray-50 dark:bg-gray-700/30 rounded-xl p-5">
+                    <h3 class="text-lg font-semibold text-gray-800 dark:text-white mb-4 flex items-center">
+                        <span class="material-symbols-outlined mr-2 text-primary">info</span>Basic Information
+                    </h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                Scale Name *
+                            </label>
+                            <input type="text" id="scaleName" name="scaleName" required
+                                class="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition shadow-sm hover:shadow-md placeholder:text-gray-400 dark:placeholder:text-gray-500">
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                Description
+                            </label>
+                            <input type="text" id="scaleDescription" name="scaleDescription"
+                                class="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition shadow-sm hover:shadow-md placeholder:text-gray-400 dark:placeholder:text-gray-500">
+                        </div>
+
+                        <div class="flex items-end">
+                            <label class="flex items-center cursor-pointer">
+                                <input type="checkbox" id="isActive" name="isActive" class="sr-only peer" checked>
+                                <div class="relative w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-primary"></div>
+                                <span class="ms-3 text-sm font-medium text-gray-700 dark:text-gray-300">Active</span>
+                            </label>
+                        </div>
+
+                        <div class="flex items-end">
+                            <label class="flex items-center cursor-pointer">
+                                <input type="checkbox" id="isDefault" name="isDefault" class="sr-only peer">
+                                <div class="relative w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-primary"></div>
+                                <span class="ms-3 text-sm font-medium text-gray-700 dark:text-gray-300">Set as Default</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Grade Ranges -->
+                <div class="bg-gray-50 dark:bg-gray-700/30 rounded-xl p-5">
+                    <h3 class="text-lg font-semibold text-gray-800 dark:text-white mb-4 flex items-center">
+                        <span class="material-symbols-outlined mr-2 text-primary">percent</span>Grade Ranges
+                    </h3>
+                    <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">Define the grade ranges for this scale</p>
+                    
+                    <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-4 mb-5">
+                        <p class="text-xs text-blue-800 dark:text-blue-300">
+                            <span class="material-symbols-outlined mr-1 align-middle text-sm">info</span>
+                            <strong>How it works:</strong> Define grade ranges with minimum and maximum scores. 
+                            For example, an "A" grade might be 70-100%. Remarks are optional but helpful for report cards.
+                        </p>
+                    </div>
+                    
+                    <div id="gradeRangesList" class="space-y-4 mb-4">
+                        <!-- Grade ranges will be added here -->
+                    </div>
+                    
+                    <button type="button" onclick="addGradeRange()" 
+                        class="flex items-center gap-2 px-4 py-2.5 bg-green-100 hover:bg-green-200 dark:bg-green-900/30 dark:hover:bg-green-900/50 text-green-700 dark:text-green-300 rounded-lg text-sm font-medium transition">
+                        <span class="material-symbols-outlined">add</span>Add Grade Range
+                    </button>
+                </div>
+
+                <!-- Actions -->
+                <div class="flex flex-col sm:flex-row justify-end gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
+                    <button type="button" onclick="closeScaleModal()"
+                        class="px-5 py-2.5 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700 transition font-medium">
+                        Cancel
+                    </button>
+                    <button type="submit"
+                        class="px-5 py-2.5 bg-gradient-to-r from-primary to-blue-600 hover:from-primary/90 hover:to-blue-700 text-white rounded-lg shadow transition flex items-center justify-center font-medium">
+                        <span class="material-symbols-outlined mr-2">save</span>Save Grade Scale
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+let currentScaleId = null;
+let gradeRangeCount = 0;
+let loadedScales = [];
+
+// Load initial data
+document.addEventListener('DOMContentLoaded', () => {
+    loadScales();
+});
+
+async function loadScales() {
+    const container = document.getElementById('scalesList');
+    container.innerHTML = `
+        <div class="text-center py-12">
+            <div class="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+            <p class="mt-4 text-gray-600 dark:text-gray-400">Loading grade scales...</p>
+        </div>
+    `;
+
+    try {
+        const response = await fetch('/reports/api/grade-scales');
+        const data = await response.json();
+
+        if (data.success) {
+            loadedScales = data.scales;
+            renderScales(data.scales);
+            updateStats(data.scales);
+        } else {
+            container.innerHTML = `
+                <div class="text-center py-12">
+                    <span class="material-symbols-outlined text-6xl text-red-300 mb-4">error</span>
+                    <p class="text-red-600 dark:text-red-400">Error loading grade scales</p>
+                    <p class="text-sm text-gray-500 dark:text-gray-400 mt-2">${data.error || 'Unknown error'}</p>
+                </div>
+            `;
+            showNotification('Error loading grade scales', 'error');
+        }
+    } catch (error) {
+        console.error('Error loading scales:', error);
+        container.innerHTML = `
+            <div class="text-center py-12">
+                <span class="material-symbols-outlined text-6xl text-red-300 mb-4">wifi_off</span>
+                <p class="text-red-600 dark:text-red-400">Failed to load grade scales</p>
+                <p class="text-sm text-gray-500 dark:text-gray-400 mt-2">Please check your connection and try again</p>
+            </div>
+        `;
+        showNotification('Failed to load grade scales. Please refresh the page.', 'error');
+    }
+}
+
+function updateStats(scales) {
+    // Update total scales
+    document.getElementById('totalScales').textContent = scales.length;
+    
+    // Update active scales
+    const activeScales = scales.filter(scale => scale.is_active).length;
+    document.getElementById('activeScales').textContent = activeScales;
+    
+    // Update default scales
+    const defaultScales = scales.filter(scale => scale.is_default).length;
+    document.getElementById('defaultScales').textContent = defaultScales;
+}
+
+function renderScales(scales) {
+    const container = document.getElementById('scalesList');
+
+    if (scales.length === 0) {
+        container.innerHTML = `
+            <div class="text-center py-12">
+                <div class="mx-auto w-24 h-24 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center mb-4">
+                    <span class="material-symbols-outlined text-5xl text-gray-400">scale</span>
+                </div>
+                <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-1">No grade scales found</h3>
+                <p class="text-gray-500 dark:text-gray-400 mb-4">Get started by creating a new grade scale.</p>
+                <button onclick="openScaleModal()" class="inline-flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary/90 text-white rounded-lg shadow transition font-medium">
+                    <span class="material-symbols-outlined">add</span>Create Grade Scale
+                </button>
+            </div>
+        `;
+        return;
+    }
+
+    container.innerHTML = scales.map(scale => {
+        return `
+            <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5 mb-4 last:mb-0 hover:shadow-md transition-shadow">
+                <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div class="flex-1">
+                        <div class="flex flex-wrap items-center gap-2 mb-2">
+                            <h3 class="scale-name text-lg font-semibold text-gray-800 dark:text-white">${scale.name}</h3>
+                            ${scale.is_default ? '<span class="bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 text-xs px-2.5 py-1 rounded-full font-medium">Default</span>' : ''}
+                            ${!scale.is_active ? '<span class="bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300 text-xs px-2.5 py-1 rounded-full font-medium">Inactive</span>' : ''}
+                        </div>
+                        <p class="text-sm text-gray-600 dark:text-gray-400 mb-3">${scale.description || 'No description'}</p>
+                        <div class="text-sm text-gray-600 dark:text-gray-400">
+                            <p><span class="font-medium">Grade Ranges:</span> ${scale.grade_ranges.length} defined</p>
+                        </div>
+                    </div>
+                    <div class="flex gap-2">
+                        <button onclick="editScale('${scale.scale_id}')" 
+                            class="p-2.5 text-gray-600 hover:text-primary dark:text-gray-400 dark:hover:text-primary rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition"
+                            title="Edit Grade Scale">
+                            <span class="material-symbols-outlined">edit</span>
+                        </button>
+                        <button onclick="deleteScale('${scale.scale_id}', '${scale.name.replace(/'/g, "\\'")}')" 
+                            class="p-2.5 text-gray-600 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-500 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition"
+                            title="Delete Grade Scale">
+                            <span class="material-symbols-outlined">delete</span>
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Preview of grade ranges -->
+                <div class="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
+                    <div class="flex flex-wrap gap-2">
+                        ${scale.grade_ranges.map(range => `
+                            <div class="px-3 py-1.5 bg-gray-100 dark:bg-gray-700 rounded-lg text-sm">
+                                <span class="font-medium">${range.grade}</span>: 
+                                <span>${range.min_score}-${range.max_score}%</span>
+                                ${range.remark ? `<span class="text-gray-500 dark:text-gray-400">(${range.remark})</span>` : ''}
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+function openScaleModal() {
+    currentScaleId = null;
+    document.getElementById('modalTitle').textContent = 'New Grade Scale';
+    document.getElementById('scaleForm').reset();
+    document.getElementById('scaleId').value = '';
+    document.getElementById('isActive').checked = true;
+    document.getElementById('isDefault').checked = false;
+
+    // Clear grade ranges
+    document.getElementById('gradeRangesList').innerHTML = '';
+    gradeRangeCount = 0;
+
+    openModal('scaleModal');
+}
+
+function openEditScaleModal() {
+    // Open the modal without resetting the form
+    openModal('scaleModal');
+}
+
+function closeScaleModal() {
+    closeModal('scaleModal');
+}
+
+async function editScale(scaleId) {
+    // Find the scale in the already loaded data
+    const scale = loadedScales.find(s => s.scale_id === scaleId);
+    
+    if (!scale) {
+        showNotification('Grade scale not found', 'error');
+        return;
+    }
+    
+    try {
+        currentScaleId = scaleId;
+        document.getElementById('modalTitle').textContent = 'Edit Grade Scale';
+        document.getElementById('scaleId').value = scaleId;
+        document.getElementById('scaleName').value = scale.name;
+        document.getElementById('scaleDescription').value = scale.description || '';
+        document.getElementById('isActive').checked = scale.is_active;
+        document.getElementById('isDefault').checked = scale.is_default;
+
+        // Set grade ranges
+        document.getElementById('gradeRangesList').innerHTML = '';
+        gradeRangeCount = 0;
+        scale.grade_ranges.forEach(range => {
+            addGradeRange(range);
+        });
+
+        openEditScaleModal();
+    } catch (error) {
+        console.error('Error loading scale:', error);
+        showNotification('Error loading grade scale. Please try again.', 'error');
+    }
+}
+
+function addGradeRange(existingRange = null) {
+    const rangeId = gradeRangeCount++;
+    const container = document.getElementById('gradeRangesList');
+
+    const rangeDiv = document.createElement('div');
+    rangeDiv.className = 'bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-5';
+    rangeDiv.id = `gradeRange${rangeId}`;
+
+    rangeDiv.innerHTML = `
+        <div class="flex justify-between items-start mb-4">
+            <div class="flex items-center gap-3">
+                <div class="w-8 h-8 bg-primary text-white rounded-full flex items-center justify-center font-bold text-sm">
+                    ${rangeId + 1}
+                </div>
+                <h4 class="font-semibold text-gray-800 dark:text-gray-200">Grade Range ${rangeId + 1}</h4>
+            </div>
+            <button type="button" onclick="removeGradeRange(${rangeId})" 
+                class="text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-500 p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition">
+                <span class="material-symbols-outlined">delete</span>
+            </button>
+        </div>
+        
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Grade Letter *
+                </label>
+                <input type="text" class="grade-letter w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition shadow-sm hover:shadow-md placeholder:text-gray-400 dark:placeholder:text-gray-500" 
+                    placeholder="e.g., A" value="${existingRange ? existingRange.grade : ''}" required maxlength="5">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Min Score (%) *
+                </label>
+                <input type="number" class="min-score w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition shadow-sm hover:shadow-md placeholder:text-gray-400 dark:placeholder:text-gray-500" 
+                    placeholder="0" value="${existingRange ? existingRange.min_score : ''}" required min="0" max="100">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Max Score (%) *
+                </label>
+                <input type="number" class="max-score w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition shadow-sm hover:shadow-md placeholder:text-gray-400 dark:placeholder:text-gray-500" 
+                    placeholder="100" value="${existingRange ? existingRange.max_score : ''}" required min="0" max="100">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Remark (Optional)
+                </label>
+                <input type="text" class="remark w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition shadow-sm hover:shadow-md placeholder:text-gray-400 dark:placeholder:text-gray-500" 
+                    placeholder="e.g., Excellent" value="${existingRange ? (existingRange.remark || '') : ''}">
+            </div>
+        </div>
+    `;
+
+    container.appendChild(rangeDiv);
+}
+
+function removeGradeRange(rangeId) {
+    const rangeDiv = document.getElementById(`gradeRange${rangeId}`);
+    if (rangeDiv) {
+        rangeDiv.remove();
+    }
+}
+
+function showNotification(message, type = 'info') {
+    // Remove any existing notifications
+    const existingNotification = document.querySelector('.notification-toast');
+    if (existingNotification) {
+        existingNotification.remove();
+    }
+
+    const colors = {
+        success: 'bg-green-500',
+        error: 'bg-red-500',
+        info: 'bg-blue-500',
+        warning: 'bg-yellow-500'
+    };
+
+    const icons = {
+        success: 'check_circle',
+        error: 'error',
+        info: 'info',
+        warning: 'warning'
+    };
+
+    const notification = document.createElement('div');
+    notification.className = `notification-toast fixed top-4 right-4 ${colors[type]} text-white px-6 py-4 rounded-xl shadow-lg z-50 transition-opacity duration-300 max-w-md flex items-start`;
+    notification.innerHTML = `
+        <span class="material-symbols-outlined mr-2 text-xl">${icons[type]}</span>
+        <span>${message}</span>
+        <button onclick="this.parentElement.remove()" class="ml-4 text-white hover:text-gray-200">
+            <span class="material-symbols-outlined">close</span>
+        </button>
+    `;
+
+    document.body.appendChild(notification);
+
+    setTimeout(() => {
+        notification.style.opacity = '0';
+        setTimeout(() => notification.remove(), 300);
+    }, 4000);
+}
+
+document.getElementById('scaleForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const scaleId = document.getElementById('scaleId').value;
+    const scaleName = document.getElementById('scaleName').value;
+    const scaleDescription = document.getElementById('scaleDescription').value;
+    const isActive = document.getElementById('isActive').checked;
+    const isDefault = document.getElementById('isDefault').checked;
+
+    // Validation
+    if (!scaleName.trim()) {
+        showNotification('Please enter a scale name', 'warning');
+        return;
+    }
+
+    // Get grade ranges
+    const gradeRanges = [];
+    let isValid = true;
+    
+    document.querySelectorAll('#gradeRangesList > div').forEach(rangeDiv => {
+        const grade = rangeDiv.querySelector('.grade-letter').value.trim();
+        const minScore = parseInt(rangeDiv.querySelector('.min-score').value);
+        const maxScore = parseInt(rangeDiv.querySelector('.max-score').value);
+        const remark = rangeDiv.querySelector('.remark').value.trim();
+
+        if (!grade || isNaN(minScore) || isNaN(maxScore)) {
+            isValid = false;
+            return;
+        }
+
+        if (minScore > maxScore) {
+            showNotification('Min score cannot be greater than max score', 'warning');
+            isValid = false;
+            return;
+        }
+
+        gradeRanges.push({
+            grade: grade,
+            min_score: minScore,
+            max_score: maxScore,
+            remark: remark || ''
+        });
+    });
+
+    if (!isValid) {
+        showNotification('Please fix the errors in grade ranges', 'warning');
+        return;
+    }
+
+    if (gradeRanges.length === 0) {
+        showNotification('Please add at least one grade range', 'warning');
+        return;
+    }
+
+    const data = {
+        name: scaleName,
+        description: scaleDescription,
+        is_active: isActive,
+        is_default: isDefault,
+        grade_ranges: gradeRanges
+    };
+
+    // Disable submit button
+    const submitBtn = e.target.querySelector('button[type="submit"]');
+    const originalText = submitBtn.innerHTML;
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<span class="material-symbols-outlined mr-2 animate-spin">progress_activity</span>Saving...';
+
+    try {
+        const url = scaleId ? `/reports/api/grade-scales/${scaleId}` : '/reports/api/grade-scales';
+        const method = scaleId ? 'PUT' : 'POST';
+
+        const response = await fetch(url, {
+            method: method,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            showNotification(result.message, 'success');
+            closeScaleModal();
+            loadScales(); // Refresh the scales list
+        } else {
+            showNotification('Error: ' + result.error, 'error');
+        }
+    } catch (error) {
+        console.error('Error saving scale:', error);
+        showNotification('Error saving grade scale. Please try again.', 'error');
+    } finally {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalText;
+    }
+});
+
+async function deleteScale(scaleId, scaleName) {
+    showConfirmModal({
+        title: 'Delete Grade Scale',
+        message: `Are you sure you want to delete "${scaleName}"? This action cannot be undone.`,
+        confirmText: 'Delete',
+        cancelText: 'Cancel',
+        confirmClass: 'bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white font-medium',
+        onConfirm: async function () {
+            try {
+                const response = await fetch(`/reports/api/grade-scales/${scaleId}`, {
+                    method: 'DELETE'
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    showNotification(data.message, 'success');
+                    loadScales(); // Refresh the list
+                } else {
+                    showNotification(data.message, 'error');
+                }
+            } catch (error) {
+                console.error('Error deleting scale:', error);
+                showNotification('An error occurred while deleting the scale', 'error');
+            }
+        }
+    });
+}
+</script>
+{% endblock %}

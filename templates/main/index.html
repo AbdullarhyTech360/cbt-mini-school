@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CBT Mini School</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='dist/output.css') }}">
+</head>
+<body class="bg-gray-50 dark:bg-[#0f1419] relative overflow-x-hidden">
+    <!-- Decorative gradients -->
+    <div class="pointer-events-none absolute -top-24 -right-24 h-80 w-80 rounded-full blur-3xl opacity-30 bg-gradient-to-br from-primary to-blue-600"></div>
+    <div class="pointer-events-none absolute top-[40%] -left-24 h-72 w-72 rounded-full blur-3xl opacity-20 bg-gradient-to-br from-purple-500 to-pink-500"></div>
+    <header class="w-full border-b border-gray-200 dark:border-gray-800 bg-white/70 dark:bg-gray-900/40 backdrop-blur supports-[backdrop-filter]:bg-white/50">
+        <div class="max-w-7xl mx-auto px-4 py-4 flex items-center gap-3">
+            {% if school_info.logo_url %}
+            <img src="{{ school_info.logo_url }}" alt="School Logo" class="h-10 w-10 rounded-lg object-cover ring-2 ring-primary/20" />
+            {% else %}
+            <div class="h-10 w-10 rounded-lg bg-gradient-to-br from-primary to-blue-600 flex items-center justify-center text-white font-extrabold">
+                {{ (school_info.name[:2] if school_info and school_info.name else 'SC')|upper }}
+            </div>
+            {% endif %}
+            <div>
+                <div class="text-lg font-extrabold text-gray-900 dark:text-white">{{ school_info.name }}</div>
+                {% if school_info.session %}
+                <div class="text-xs text-gray-500 dark:text-gray-400">Session: {{ school_info.session }}{% if school_info.term %} • Term: {{ school_info.term }}{% endif %}</div>
+                {% endif %}
+            </div>
+            <div class="ml-auto flex items-center gap-3">
+                <a href="{{ url_for('login') }}" class="px-3 py-2 text-sm font-semibold rounded-lg bg-primary text-white hover:bg-primary/90">Login</a>
+                <a href="{{ url_for('register') }}" class="px-3 py-2 text-sm font-semibold rounded-lg border border-primary text-primary hover:bg-primary/10">Register</a>
+            </div>
+        </div>
+    </header>
+
+    <section class="max-w-7xl mx-auto px-4 py-20 relative">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
+            <div>
+                <div class="inline-flex px-3 py-1 rounded-full text-xs font-semibold bg-primary/10 text-primary border border-primary/20">Welcome to {{ school_info.name }}</div>
+                <h1 class="mt-3 text-4xl md:text-6xl font-extrabold tracking-tight text-gray-900 dark:text-white leading-tight">
+                    Empowering Modern Learning with
+                    <span class="bg-gradient-to-r from-primary via-blue-600 to-purple-600 bg-clip-text text-transparent">CBT</span>
+                </h1>
+                <p class="mt-5 text-gray-600 dark:text-gray-400 text-lg md:text-xl">Seamlessly manage classes, assessments, and student progress in one beautiful, efficient platform.</p>
+                <div class="mt-6 flex items-center gap-3">
+                    <a href="{{ url_for('login') }}" class="px-5 py-3 rounded-xl bg-primary text-white font-bold hover:shadow-lg hover:scale-[1.02] transition">Get Started</a>
+                    <a href="{{ url_for('register') }}" class="px-5 py-3 rounded-xl border border-gray-300 dark:border-gray-700 text-gray-800 dark:text-gray-200 font-bold hover:bg-gray-100 dark:hover:bg-gray-800 transition">Create Account</a>
+                </div>
+                {% if school_info.address or school_info.phone or school_info.email %}
+                <div class="mt-8 text-sm text-gray-500 dark:text-gray-400">
+                    {% if school_info.address %}<div>Address: {{ school_info.address }}</div>{% endif %}
+                    {% if school_info.phone %}<div>Phone: {{ school_info.phone }}</div>{% endif %}
+                    {% if school_info.email %}<div>Email: {{ school_info.email }}</div>{% endif %}
+                </div>
+                {% endif %}
+            </div>
+            <div class="bg-white/80 dark:bg-gray-900/60 backdrop-blur rounded-2xl border border-gray-200/80 dark:border-gray-800 p-6 shadow-xl">
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="p-4 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 text-white shadow-md">
+                        <div class="text-3xl font-extrabold">CBT</div>
+                        <div class="text-xs opacity-90">Computer-Based Testing</div>
+                    </div>
+                    <div class="p-4 rounded-xl bg-gradient-to-br from-green-500 to-green-600 text-white shadow-md">
+                        <div class="text-3xl font-extrabold">Classes</div>
+                        <div class="text-xs opacity-90">Organize and manage</div>
+                    </div>
+                    <div class="p-4 rounded-xl bg-gradient-to-br from-purple-500 to-purple-600 text-white shadow-md">
+                        <div class="text-3xl font-extrabold">Students</div>
+                        <div class="text-xs opacity-90">Track progress</div>
+                    </div>
+                    <div class="p-4 rounded-xl bg-gradient-to-br from-orange-500 to-orange-600 text-white shadow-md">
+                        <div class="text-3xl font-extrabold">Reports</div>
+                        <div class="text-xs opacity-90">Insights & analytics</div>
+                    </div>
+                </div>
+        </div>
+    </div>
+    </section>
+</body>
+</html>

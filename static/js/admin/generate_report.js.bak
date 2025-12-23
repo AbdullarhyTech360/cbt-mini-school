@@ -1,0 +1,1951 @@
+let currentStudents = [];
+let currentFilters = {};
+let currentReportData = null;
+
+document.addEventListener('DOMContentLoaded', () => {
+    loadTerms();
+    loadClasses();
+    loadConfigs();
+    
+    // Add keyboard event listener for closing preview with ESC key
+    document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape') {
+            closeCanvasPreviewModal();
+        }
+    });
+});
+async function loadTerms() {
+    const select = document.getElementById('termFilter');
+    select.innerHTML = '<option value="">Loading...</option>';
+    select.disabled = true;
+
+    try {
+        const response = await fetch('/reports/api/terms');
+        const data = await response.json();
+
+        if (data.success && data.terms.length > 0) {
+            select.innerHTML = '<option value="">Select Term</option>';
+            data.terms.forEach(term => {
+                const option = document.createElement('option');
+                option.value = term.term_id;
+                option.textContent = `${term.term_name} - ${term.academic_session}`;
+                if (term.is_current) {
+                    option.textContent += ' (Current)';
+                    option.selected = true;
+                }
+                select.appendChild(option);
+            });
+        } else {
+            select.innerHTML = '<option value="">No terms found</option>';
+        }
+    } catch (error) {
+        console.error('Error loading terms:', error);
+        select.innerHTML = '<option value="">Error loading terms</option>';
+        showNotification('Error loading terms. Please refresh the page.', 'error');
+    } finally {
+        select.disabled = false;
+    }
+}
+
+async function loadClasses() {
+    const select = document.getElementById('classFilter');
+    select.innerHTML = '<option value="">Loading...</option>';
+    select.disabled = true;
+
+    try {
+        const response = await fetch('/reports/api/classes');
+        const data = await response.json();
+
+        if (data.success && data.classes.length > 0) {
+            select.innerHTML = '<option value="">Select Class</option>';
+            data.classes.forEach(cls => {
+                const option = document.createElement('option');
+                option.value = cls.class_room_id;
+                option.textContent = cls.class_name;
+                select.appendChild(option);
+            });
+        } else {
+            select.innerHTML = '<option value="">No classes found</option>';
+        }
+    } catch (error) {
+        console.error('Error loading classes:', error);
+        select.innerHTML = '<option value="">Error loading classes</option>';
+        showNotification('Error loading classes. Please refresh the page.', 'error');
+    } finally {
+        select.disabled = false;
+    }
+}
+
+async function loadConfigs() {
+    const select = document.getElementById('configFilter');
+    select.innerHTML = '<option value="">Loading...</option>';
+    select.disabled = true;
+
+    try {
+        const response = await fetch('/reports/api/configs');
+        const data = await response.json();
+
+        if (data.success) {
+            select.innerHTML = '<option value="">Default</option>';
+            data.configs.forEach(config => {
+                const option = document.createElement('option');
+                option.value = config.config_id;
+                option.textContent = config.config_name;
+                if (config.is_default) {
+                    option.textContent += ' (Default)';
+                }
+                select.appendChild(option);
+            });
+        } else {
+            select.innerHTML = '<option value="">Default</option>';
+        }
+    } catch (error) {
+        console.error('Error loading configs:', error);
+        select.innerHTML = '<option value="">Default</option>';
+    } finally {
+        select.disabled = false;
+    }
+}
+
+function showNotification(message, type = 'info') {
+    // Simple notification function
+    const colors = {
+        success: 'bg-green-500',
+        error: 'bg-red-500',
+        info: 'bg-blue-500',
+        warning: 'bg-yellow-500'
+    };
+
+    const notification = document.createElement('div');
+    notification.className = `fixed top-4 right-4 ${colors[type]} text-white px-6 py-3 rounded-lg shadow-lg z-50 transition-opacity duration-300`;
+    notification.textContent = message;
+
+    document.body.appendChild(notification);
+
+    setTimeout(() => {
+        notification.style.opacity = '0';
+        setTimeout(() => notification.remove(), 300);
+    }, 3000);
+}
+
+// Global loading indicator functions
+function showGlobalLoading(message = 'Processing...') {
+    // Create loading overlay if it doesn't exist
+    let overlay = document.getElementById('global-loading-overlay');
+    if (!overlay) {
+        overlay = document.createElement('div');
+        overlay.id = 'global-loading-overlay';
+        overlay.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+        overlay.innerHTML = `
+            <div class="bg-white dark:bg-gray-800 rounded-xl p-6 flex flex-col items-center shadow-2xl">
+                <div class="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-4"></div>
+                <p class="text-gray-700 dark:text-gray-300 font-medium">${message}</p>
+            </div>
+        `;
+        document.body.appendChild(overlay);
+    } else {
+        // Update message if overlay already exists
+        const messageElement = overlay.querySelector('p');
+        if (messageElement) {
+            messageElement.textContent = message;
+        }
+        overlay.classList.remove('hidden');
+    }
+
+    // Prevent body scrolling
+    document.body.classList.add('overflow-hidden');
+}
+
+function hideGlobalLoading() {
+    const overlay = document.getElementById('global-loading-overlay');
+    if (overlay) {
+        overlay.classList.add('hidden');
+    }
+
+    // Restore body scrolling
+    document.body.classList.remove('overflow-hidden');
+}
+
+async function loadStudents() {
+    const termId = document.getElementById('termFilter').value;
+    const classId = document.getElementById('classFilter').value;
+    const configId = document.getElementById('configFilter').value;
+
+    if (!termId || !classId) {
+        showAlert({
+            title: 'Validation Error',
+            message: 'Please select both term and class',
+            type: 'warning'
+        });
+        return;
+    }
+
+    // Show global loading indicator
+    showGlobalLoading('Loading students...');
+
+    currentFilters = {
+        term_id: termId,
+        class_room_id: classId,
+        config_id: configId || null
+    };
+
+    try {
+        const [studentsResponse] = await Promise.all([
+            fetch(`/reports/api/students?class_id=${classId}`),
+        ]);
+
+        const studentsData = await studentsResponse.json();
+
+        if (studentsData.success) {
+            currentStudents = studentsData.students;
+            renderStudentsTable(currentStudents);
+        } else {
+            showAlert({
+                title: 'Error',
+                message: 'Error loading students: ' + studentsData.error,
+                type: 'error'
+            });
+        }
+    } catch (error) {
+        console.error('Error loading data:', error);
+        showAlert({
+            title: 'Error',
+            message: 'Error loading data. Please try again.',
+            type: 'error'
+        });
+    } finally {
+        // Hide global loading indicator
+        hideGlobalLoading();
+    }
+}
+
+function renderStudentsTable(students) {
+    const container = document.getElementById('studentsList');
+
+    if (students.length === 0) {
+        container.innerHTML = '<p class="text-gray-500 dark:text-gray-400 text-center py-8">No students found in this class</p>';
+        return;
+    }
+
+    container.innerHTML = `
+        <div class="mb-4">
+            <input type="text" id="studentSearch" placeholder="Search students by name or admission number..." 
+                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                onkeyup="filterStudents()">
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full">
+                <thead class="bg-gray-50 dark:bg-gray-700">
+                    <tr>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Student</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Admission No.</th>
+                        <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="studentsTableBody" class="divide-y divide-gray-200 dark:divide-gray-700">
+                    ${students.map(student => `
+                        <tr class="student-row hover:bg-gray-50 dark:hover:bg-gray-700" 
+                            data-name="${student.first_name} ${student.last_name}" 
+                            data-admission="${student.admission_number || ''}">
+                            <td class="px-4 py-3">
+                                <div class="flex items-center">
+                                    ${student.profile_picture ?
+            `<img src="${student.profile_picture}" alt="${student.first_name}" class="w-8 h-8 rounded-full mr-3">` :
+            `<div class="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-white mr-3">${student.first_name[0]}</div>`
+        }
+                                    <span class="text-sm font-medium text-gray-900 dark:text-white">${student.first_name} ${student.last_name}</span>
+                                </div>
+                            </td>
+                            <td class="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">${student.admission_number || 'N/A'}</td>
+                            <td class="px-4 py-3">
+                                <div class="flex items-center justify-center gap-2">
+                                    <button onclick="previewReport('${student.id}')" 
+                                        class="flex items-center gap-1 px-3 py-1.5 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-lg shadow-sm hover:shadow-md hover:scale-105 transition-all duration-200" 
+                                        title="Preview Report">
+                                        <span class="material-symbols-outlined text-sm">visibility</span>
+                                        <span class="text-xs font-medium">Preview</span>
+                                    </button>
+                                    <button onclick="downloadReport('${student.id}')" 
+                                        class="flex items-center gap-1 px-3 py-1.5 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white rounded-lg shadow-sm hover:shadow-md hover:scale-105 transition-all duration-200" 
+                                        title="Download PDF">
+                                        <span class="material-symbols-outlined text-sm">download</span>
+                                        <span class="text-xs font-medium">Download</span>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+        </div>
+        <div class="mt-4 text-sm text-gray-600 dark:text-gray-400">
+            Showing <span id="visibleCount">${students.length}</span> of ${students.length} students
+        </div>
+    `;
+}
+
+function filterStudents() {
+    const searchTerm = document.getElementById('studentSearch').value.toLowerCase();
+    const rows = document.querySelectorAll('.student-row');
+    let visibleCount = 0;
+
+    rows.forEach(row => {
+        const name = row.getAttribute('data-name').toLowerCase();
+        const admission = row.getAttribute('data-admission').toLowerCase();
+
+        if (name.includes(searchTerm) || admission.includes(searchTerm)) {
+            row.style.display = '';
+            visibleCount++;
+        } else {
+            row.style.display = 'none';
+        }
+    });
+
+    document.getElementById('visibleCount').textContent = visibleCount;
+}
+
+// Canvas-Based PDF Preview System
+async function previewReport(studentId) {
+    const termId = document.getElementById('termFilter').value;
+    const classId = document.getElementById('classFilter').value;
+    const configId = document.getElementById('configFilter').value;
+
+    if (!termId || !classId) {
+        showAlert({
+            title: 'Error',
+            message: 'Please select both term and class',
+            type: 'error'
+        });
+        return;
+    }
+
+    showGlobalLoading('Loading preview...');
+
+    try {
+        const params = new URLSearchParams({
+            term_id: termId,
+            class_room_id: classId,
+            config_id: configId || ''
+        });
+
+        const response = await fetch(`/reports/api/student-report/${studentId}?${params.toString()}`);
+        const data = await response.json();
+
+        if (data && data.success && data.report) {
+            await showCanvasBasedPreview(data.report);
+        } else {
+            throw new Error(data.message || 'Failed to load report data');
+        }
+    } catch (error) {
+        console.error('Error loading preview:', error);
+        showAlert({
+            title: 'Error',
+            message: 'Failed to load preview: ' + error.message,
+            type: 'error'
+        });
+    } finally {
+        hideGlobalLoading();
+    }
+}
+
+async function showCanvasBasedPreview(reportData) {
+    try {
+        console.log('Creating canvas-based PDF preview');
+        
+        // Ensure html2canvas is loaded
+        if (typeof html2canvas === 'undefined') {
+            await loadHtml2Canvas();
+        }
+        
+        // Create or get the preview modal
+        let modal = document.getElementById('canvasPdfPreviewModal');
+        if (!modal) {
+            modal = createCanvasPreviewModal();
+        }
+        
+        // Generate HTML content
+        const html = generateReportHTML(reportData);
+        
+        // Create temporary element for rendering
+        const tempDiv = document.createElement('div');
+        tempDiv.style.position = 'absolute';
+        tempDiv.style.left = '-9999px';
+        tempDiv.style.top = '0';
+        tempDiv.style.width = '210mm'; // A4 width
+        tempDiv.style.backgroundColor = 'white';
+        tempDiv.innerHTML = html;
+        document.body.appendChild(tempDiv);
+        
+        // Show loading state
+        const previewContainer = document.getElementById('canvasPreviewContent');
+        previewContainer.innerHTML = `
+            <div class="preview-loading">
+                <div class="preview-loading-spinner"></div>
+                <p style="margin-top: 16px; color: #6b7280;">Generating preview...</p>
+            </div>
+        `;
+        
+        // Show modal
+        modal.classList.remove('hidden');
+        
+        // Wait for images and resources to load
+        await waitForResources(tempDiv);
+        
+        // Render to canvas with PDF-like quality
+        const canvas = await html2canvas(tempDiv, {
+            scale: 2, // High quality
+            useCORS: true,
+            allowTaint: true,
+            backgroundColor: '#ffffff',
+            logging: false,
+            windowWidth: tempDiv.scrollWidth,
+            windowHeight: tempDiv.scrollHeight
+        });
+        
+        // Calculate pages (A4 height in pixels at scale 2)
+        const a4HeightPx = 297 * 3.7795275591 * 2; // mm to px at 96 DPI * scale
+        const totalPages = Math.ceil(canvas.height / a4HeightPx);
+        
+        // Clear preview container
+        previewContainer.innerHTML = '';
+        
+        // Split canvas into pages
+        for (let page = 0; page < totalPages; page++) {
+            const pageCanvas = document.createElement('canvas');
+            pageCanvas.width = canvas.width;
+            pageCanvas.height = Math.min(a4HeightPx, canvas.height - (page * a4HeightPx));
+            pageCanvas.style.width = '210mm';
+            pageCanvas.style.height = 'auto';
+            pageCanvas.style.display = 'block';
+            pageCanvas.style.margin = '20px auto';
+            pageCanvas.style.boxShadow = '0 0 50px rgba(0, 0, 0, 0.3)';
+            pageCanvas.style.backgroundColor = 'white';
+            
+            const ctx = pageCanvas.getContext('2d');
+            ctx.drawImage(
+                canvas,
+                0, page * a4HeightPx,
+                canvas.width, pageCanvas.height,
+                0, 0,
+                pageCanvas.width, pageCanvas.height
+            );
+            
+            previewContainer.appendChild(pageCanvas);
+            
+            // Add page number
+            const pageNum = document.createElement('div');
+            pageNum.textContent = `Page ${page + 1} of ${totalPages}`;
+            pageNum.style.textAlign = 'center';
+            pageNum.style.color = '#9ca3af';
+            pageNum.style.fontSize = '12px';
+            pageNum.style.margin = '10px 0 30px 0';
+            previewContainer.appendChild(pageNum);
+        }
+        
+        // Store data for download
+        window.currentPreviewData = reportData;
+        
+        // Clean up
+        document.body.removeChild(tempDiv);
+        
+        // Update page count in modal
+        const pageCounter = document.getElementById('previewPageCount');
+        if (pageCounter) {
+            pageCounter.textContent = `${totalPages} page${totalPages > 1 ? 's' : ''}`;
+        }
+        
+    } catch (error) {
+        console.error('Error creating canvas preview:', error);
+        showAlert({
+            title: 'Error',
+            message: 'Failed to create preview: ' + error.message,
+            type: 'error'
+        });
+    }
+}
+
+// Load html2canvas library
+async function loadHtml2Canvas() {
+    return new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
+        script.onload = resolve;
+        script.onerror = reject;
+        document.head.appendChild(script);
+    });
+}
+
+// Wait for all resources to load
+function waitForResources(element) {
+    return new Promise((resolve) => {
+        const images = element.getElementsByTagName('img');
+        let loadedCount = 0;
+        const totalImages = images.length;
+        
+        if (totalImages === 0) {
+            resolve();
+            return;
+        }
+        
+        const checkComplete = () => {
+            loadedCount++;
+            if (loadedCount === totalImages) {
+                resolve();
+            }
+        };
+        
+        Array.from(images).forEach(img => {
+            if (img.complete) {
+                checkComplete();
+            } else {
+                img.addEventListener('load', checkComplete);
+                img.addEventListener('error', checkComplete);
+            }
+        });
+        
+        // Timeout after 5 seconds
+        setTimeout(resolve, 5000);
+    });
+}
+
+// Create canvas preview modal
+function createCanvasPreviewModal() {
+    const modal = document.createElement('div');
+    modal.id = 'canvasPdfPreviewModal';
+    modal.className = 'fixed inset-0 bg-black bg-opacity-75 z-50 hidden';
+    modal.innerHTML = `
+        <div class="flex flex-col h-full">
+            <!-- Header -->
+            <div class="preview-toolbar bg-gray-800 text-white p-4 flex items-center justify-between">
+                <div class="flex items-center gap-4">
+                    <h3 class="text-lg font-bold">PDF Preview</h3>
+                    <span id="previewPageCount" class="text-sm text-gray-300 bg-gray-700 px-3 py-1 rounded"></span>
+                    <span class="quality-indicator high text-xs">High Quality</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <!-- Refresh Preview -->
+                    <button onclick="refreshCanvasPreview()" 
+                        class="px-3 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors"
+                        title="Refresh Preview">
+                        <span class="material-symbols-outlined text-sm">refresh</span>
+                    </button>
+                    
+                    <!-- Download Button -->
+                    <button onclick="downloadFromPreview()" 
+                        class="px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg transition-colors flex items-center gap-2"
+                        title="Download PDF">
+                        <span class="material-symbols-outlined text-sm">download</span>
+                        <span>Download PDF</span>
+                    </button>
+                    
+                    <!-- Close Button -->
+                    <button onclick="closeCanvasPreviewModal()" 
+                        class="px-3 py-2 bg-red-600 hover:bg-red-700 rounded-lg transition-colors"
+                        title="Close">
+                        <span class="material-symbols-outlined">close</span>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Preview Container -->
+            <div class="flex-1 overflow-auto bg-gray-900 p-4">
+                <div id="canvasPreviewContent"></div>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    return modal;
+}
+
+// Close canvas preview modal
+function closeCanvasPreviewModal() {
+    const modal = document.getElementById('canvasPdfPreviewModal');
+    if (modal) {
+        modal.classList.add('hidden');
+    }
+}
+
+// Refresh preview
+async function refreshCanvasPreview() {
+    if (window.currentPreviewData) {
+        await showCanvasBasedPreview(window.currentPreviewData);
+    }
+}
+
+// Download from preview
+async function downloadFromPreview() {
+    if (window.currentPreviewData) {
+        try {
+            await generateClientSidePDF(window.currentPreviewData);
+        } catch (error) {
+            console.error('Error downloading PDF from preview:', error);
+            showAlert({
+                title: 'Error',
+                message: 'Failed to download PDF: ' + error.message,
+                type: 'error'
+            });
+        }
+    }
+}
+// renderReportPreview function removed - using full page preview instead
+
+function formatAssessmentName(code) {
+    // If code is already a full name (from assessment_types), return as is
+    if (typeof code !== 'string') {
+        return code;
+    }
+
+    // Special handling for common assessment types
+    const specialCases = {
+        'cbt': 'Computer Based Test',
+        'ca': 'Continuous Assessment',
+        'exam': 'Terminal Examination',
+        'mid_term': 'Mid-Term Exam',
+        'final': 'Final Exam',
+        'quiz': 'Quiz',
+        'assignment': 'Assignment',
+        'project': 'Project'
+    };
+
+    if (specialCases[code.toLowerCase()]) {
+        return specialCases[code.toLowerCase()];
+    }
+
+    return code.split('_').map(word =>
+        word.charAt(0).toUpperCase() + word.slice(1)
+    ).join(' ');
+}
+
+function formatPosition(position) {
+    if (!position) return 'N/A';
+    const suffix = position % 10 === 1 && position !== 11 ? 'st' :
+        position % 10 === 2 && position !== 12 ? 'nd' :
+            position % 10 === 3 && position !== 13 ? 'rd' : 'th';
+    return position + suffix;
+}
+
+function calculateResumptionDate(endDateStr) {
+    if (!endDateStr) return 'N/A';
+
+    try {
+        // Parse the end date
+        const endDate = new Date(endDateStr);
+
+        // Add 14 days (2 weeks) to get resumption date
+        const resumptionDate = new Date(endDate);
+        resumptionDate.setDate(resumptionDate.getDate() + 14);
+
+        // Format as DD/MM/YYYY
+        const day = String(resumptionDate.getDate()).padStart(2, '0');
+        const month = String(resumptionDate.getMonth() + 1).padStart(2, '0');
+        const year = resumptionDate.getFullYear();
+
+        return `${day}/${month}/${year}`;
+    } catch (error) {
+        console.error('Error calculating resumption date:', error);
+        return 'N/A';
+    }
+}
+
+function getGrade(percentage, gradeScale = null) {
+    // If a grade scale is provided, use it
+    if (gradeScale) {
+        // Find the appropriate grade range
+        for (const range of gradeScale.grade_ranges) {
+            if (percentage >= range.min_score && percentage <= range.max_score) {
+                return range.grade;
+            }
+        }
+        // Default to F if no range matches
+        return 'F';
+    }
+
+    // If no grade scale is available, show an error message
+    console.error("No grade scale available. Please ensure the default grade scale is properly configured.");
+    // Default to F if no scale is available
+    return 'F';
+}
+
+// Modal functions removed - using full page preview instead
+
+async function downloadReport(studentId) {
+    // Show loading spinner
+    const originalButtons = document.querySelectorAll(`button[onclick*="downloadReport('${studentId}')"]`);
+    const originalButtonHtml = [];
+
+    // Store original HTML and show loading state
+    originalButtons.forEach(button => {
+        originalButtonHtml.push(button.innerHTML);
+        button.innerHTML = `
+            <div class="flex items-center gap-1">
+                <div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                <span class="text-xs font-medium">Processing...</span>
+            </div>
+        `;
+        button.disabled = true;
+        button.classList.add('opacity-75', 'cursor-not-allowed');
+    });
+
+    try {
+        // Use client-side PDF generation with new API endpoint
+        if (currentReportData && currentReportData.student.id === studentId) {
+            // Generate PDF directly in the browser
+            await generateClientSidePDF(currentReportData);
+        } else {
+            // Fetch report data from new API endpoint and then generate PDF
+            // Build query parameters
+            const params = new URLSearchParams({
+                term_id: currentFilters.term_id,
+                class_room_id: currentFilters.class_room_id,  // Use class_room_id to match backend expectation
+                config_id: currentFilters.config_id || ''
+            });
+
+            const response = await fetch(`/reports/api/student-report/${studentId}?${params.toString()}`);
+
+            const data = await response.json();
+
+            // Check if the response has the expected structure
+            if (data && data.success && data.report) {
+                await generateClientSidePDF(data.report);
+            } else if (data && !data.success) {
+                throw new Error('Failed to fetch report data: ' + (data.message || 'Server error'));
+            } else {
+                throw new Error('Invalid response format from server');
+            }
+        }
+    } catch (error) {
+        console.error('Error downloading report:', error);
+        showAlert({
+            title: 'Error',
+            message: 'Error generating PDF: ' + error.message,
+            type: 'error'
+        });
+    } finally {
+        // Restore original button states
+        originalButtons.forEach((button, index) => {
+            if (index < originalButtonHtml.length) {
+                button.innerHTML = originalButtonHtml[index];
+                button.disabled = false;
+                button.classList.remove('opacity-75', 'cursor-not-allowed');
+            }
+        });
+    }
+}
+
+async function downloadCurrentReport() {
+    if (currentReportData) {
+        // Show loading spinner on download button in preview modal
+        const downloadButton = document.querySelector('button[onclick="downloadCurrentReport()"]');
+        const originalHtml = downloadButton.innerHTML;
+
+        downloadButton.innerHTML = `
+            <div class="flex items-center gap-2">
+                <div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                <span class="text-sm font-bold">Downloading...</span>
+            </div>
+        `;
+        downloadButton.disabled = true;
+        downloadButton.classList.add('opacity-75', 'cursor-not-allowed');
+
+        try {
+            // Use client-side PDF generation
+            await generateClientSidePDF(currentReportData);
+        } catch (error) {
+            console.error('Error downloading report:', error);
+            showAlert({
+                title: 'Error',
+                message: 'Error generating PDF: ' + error.message,
+                type: 'error'
+            });
+        } finally {
+            // Restore original button state
+            downloadButton.innerHTML = originalHtml;
+            downloadButton.disabled = false;
+            downloadButton.classList.remove('opacity-75', 'cursor-not-allowed');
+        }
+    }
+}
+
+async function previewAllReports() {
+    if (currentStudents.length === 0) {
+        showAlert({
+            title: 'Warning',
+            message: 'No students loaded',
+            type: 'warning'
+        });
+        return;
+    }
+
+    showConfirmModal({
+        title: 'Preview All Reports',
+        message: `This will open preview for ${currentStudents.length} students. Continue?`,
+        confirmText: 'Continue',
+        onConfirm: async () => {
+            // Show global loading indicator
+            showGlobalLoading('Opening previews...');
+
+            try {
+                for (const student of currentStudents) {
+                    const params = new URLSearchParams({
+                        ...currentFilters,
+                        student_id: student.id
+                    });
+                    window.open(`/reports/preview/${student.id}?${params.toString()}`, '_blank');
+                    await new Promise(resolve => setTimeout(resolve, 500)); // Delay between opens
+                }
+            } catch (error) {
+                console.error('Error opening previews:', error);
+                showAlert({
+                    title: 'Error',
+                    message: 'Error opening previews. Please try again.',
+                    type: 'error'
+                });
+            } finally {
+                // Hide global loading indicator
+                hideGlobalLoading();
+            }
+        }
+    });
+}
+
+async function downloadAllReports() {
+    if (currentStudents.length === 0) {
+        showAlert({
+            title: 'Warning',
+            message: 'No students loaded',
+            type: 'warning'
+        });
+        return;
+    }
+
+    // Ensure we have required parameters
+    const termId = currentFilters.term_id;
+    const classId = currentFilters.class_room_id; // This was the issue - it's class_room_id in filters but class_id in backend
+
+    if (!termId || !classId) {
+        showAlert({
+            title: 'Error',
+            message: 'Missing required parameters for PDF generation. Please ensure term and class are selected.',
+            type: 'error'
+        });
+        return;
+    }
+
+    showConfirmModal({
+        title: 'Download All Reports',
+        message: `This will download individual PDF reports for all ${currentStudents.length} students. Continue?`,
+        confirmText: 'Download',
+        onConfirm: async () => {
+            // Show loading state for download all button
+            const downloadAllButton = document.querySelector('button[onclick="downloadAllReports()"]');
+            const originalHtml = downloadAllButton.innerHTML;
+
+            downloadAllButton.innerHTML = `
+                <div class="flex items-center gap-2">
+                    <div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    <span class="text-sm font-bold">Processing...</span>
+                </div>
+            `;
+            downloadAllButton.disabled = true;
+            downloadAllButton.classList.add('opacity-75', 'cursor-not-allowed');
+
+            try {
+                // Track successful downloads
+                let successCount = 0;
+                let errorCount = 0;
+
+                // Generate PDF for each student
+                for (let i = 0; i < currentStudents.length; i++) {
+                    const student = currentStudents[i];
+
+                    try {
+                        // Update button text to show progress
+                        downloadAllButton.innerHTML = `
+                            <div class="flex items-center gap-2">
+                                <div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                                <span class="text-sm font-bold">Processing ${i + 1}/${currentStudents.length}...</span>
+                            </div>
+                        `;
+
+                        // Fetch report data for this student
+                        const reportResponse = await fetch(`/reports/api/student-report/${student.id}?term_id=${termId}&class_room_id=${classId}&config_id=${currentFilters.config_id || ''}`);
+
+                        if (!reportResponse.ok) {
+                            throw new Error(`Failed to fetch report data for ${student.name}`);
+                        }
+
+                        const reportData = await reportResponse.json();
+
+                        // Check if the response has the expected structure
+                        if (reportData && reportData.success && reportData.report) {
+                            // Generate PDF for this student using client-side generation
+                            await generateClientSidePDF(reportData.report);
+                        } else if (reportData && !reportData.success) {
+                            throw new Error(`Failed to fetch report data for ${student.name}: ${reportData.message || 'Server error'}`);
+                        } else {
+                            throw new Error(`Invalid response format for ${student.name}`);
+                        }
+
+                        successCount++;
+                    } catch (studentError) {
+                        console.error(`Error generating PDF for student ${student.name}:`, studentError);
+                        errorCount++;
+                    }
+                }
+
+                // Show completion message
+                if (errorCount === 0) {
+                    showAlert({
+                        title: 'Success',
+                        message: `Successfully downloaded ${successCount} PDF reports.`,
+                        type: 'success'
+                    });
+                } else {
+                    showAlert({
+                        title: 'Partial Success',
+                        message: `Downloaded ${successCount} PDF reports. ${errorCount} reports failed to download.`,
+                        type: 'warning'
+                    });
+                }
+            } catch (error) {
+                console.error('Error downloading reports:', error);
+                showAlert({
+                    title: 'Error',
+                    message: 'Error generating reports: ' + error.message,
+                    type: 'error'
+                });
+            } finally {
+                // Restore original button state
+                downloadAllButton.innerHTML = originalHtml;
+                downloadAllButton.disabled = false;
+                downloadAllButton.classList.remove('opacity-75', 'cursor-not-allowed');
+            }
+        }
+    });
+}
+async function pollForCompletion(jobId) {
+    const maxAttempts = 60; // 5 minutes with 5-second intervals
+    let attempts = 0;
+
+    showGlobalLoading('Generating PDF...');
+
+    while (attempts < maxAttempts) {
+        try {
+            const response = await fetch(`/reports/api/status/${jobId}`);
+            const data = await response.json();
+
+            if (data.state === 'SUCCESS') {
+                hideGlobalLoading();
+                await downloadGeneratedFile(jobId);
+                return;
+            } else if (data.state === 'FAILURE') {
+                hideGlobalLoading();
+                showAlert({
+                    title: 'Error',
+                    message: 'PDF generation failed: ' + (data.error || 'Unknown error'),
+                    type: 'error'
+                });
+                return;
+            }
+
+            // Still processing, update progress if available
+            if (data.progress) {
+                showGlobalLoading(`Generating PDF... ${data.progress}%`);
+            }
+
+            // Wait 5 seconds before checking again
+            await new Promise(resolve => setTimeout(resolve, 5000));
+            attempts++;
+        } catch (error) {
+            console.error('Error polling for completion:', error);
+            hideGlobalLoading();
+            showAlert({
+                title: 'Error',
+                message: 'Error checking PDF generation status',
+                type: 'error'
+            });
+            return;
+        }
+    }
+
+    // Timeout
+    hideGlobalLoading();
+    showAlert({
+        title: 'Timeout',
+        message: 'PDF generation is taking longer than expected. Please try again.',
+        type: 'warning'
+    });
+}
+
+async function downloadGeneratedFile(jobId) {
+    try {
+        const response = await fetch(`/reports/api/download/${jobId}`);
+
+        if (response.ok) {
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `report_${jobId}.pdf`;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+        } else {
+            const data = await response.json();
+            showAlert({
+                title: 'Error',
+                message: 'Error downloading file: ' + (data.error || 'Unknown error'),
+                type: 'error'
+            });
+        }
+    } catch (error) {
+        console.error('Error downloading file:', error);
+        showAlert({
+            title: 'Error',
+            message: 'Error downloading generated file',
+            type: 'error'
+        });
+    }
+}
+
+function generateGradingLegend(gradeScale = null) {
+    // If a grade scale is provided, use it
+    if (gradeScale && gradeScale.grade_ranges) {
+        return gradeScale.grade_ranges.map(range => {
+            const colorMap = {
+                'A': 'bg-green-500',
+                'B': 'bg-blue-600',
+                'C': 'bg-yellow-500',
+                'D': 'bg-red-400',
+                'F': 'bg-gray-500'
+            };
+
+            const colorClass = colorMap[range.grade] || 'bg-gray-500';
+            const remark = range.remark || '';
+
+            return `<div class="legend-item"><div class="legend-dot ${colorClass}"></div>${range.grade} (${range.min_score}-${range.max_score}%) ${remark}</div>`;
+        }).join('');
+    }
+
+    // If no grade scale is available, show an error message
+    console.error("No grade scale available. Please ensure the default grade scale is properly configured.");
+    return `<div class="text-red-500">No grading scale configured. Please contact administrator.</div>`;
+}
+
+// Helper function to generate HTML for the report
+/**
+ * Generate HTML for single-page report card matching the provided design
+ * This ensures the report always fits on one A4 page
+ */
+function generateReportHTML(reportData) {
+    const { student, school, term, assessment_types, scores, position, total_students, overall_total, overall_max } = reportData;
+    const teacherComment = reportData.teacher_comment || student.teacher_remarks || "Satisfactory progress.";
+    const principalComment = reportData.principal_comment || student.principal_remarks || "A good result.";
+    const overallPercentage = overall_max > 0 ? (overall_total / overall_max * 100) : 0;
+    const overallGrade = getSimpleGrade(overallPercentage);
+
+    const assessments = assessment_types
+        .sort((a, b) => (a.order || 0) - (b.order || 0))
+        .map(at => at.code);
+
+    let subjectRows = Object.values(scores).map((sub, idx) => {
+        const perc = sub.max_total > 0 ? (sub.total / sub.max_total * 100) : 0;
+        const grade = getSimpleGrade(perc);
+        return `
+            <tr>
+                <td style="text-align: center;">${idx + 1}</td>
+                <td style="text-align: left; font-weight: 500;">${sub.subject_name}</td>
+                ${assessments.map(code => `<td>${Math.round(sub.assessments[code]?.score || 0)}</td>`).join('')}
+                <td style="font-weight: 600;">${Math.round(sub.total)}</td>
+                <td><span class="grade-badge grade-${grade}">${grade}</span></td>
+                <td style="font-size: 7px; color: #6b7280;">${getRemark(grade)}</td>
+            </tr>`;
+    }).join('');
+
+    // Add average row if needed
+    const averageRow = '';
+
+    return `
+    <!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Student Report</title>
+    <style>
+        /* Page Setup */
+        @page {
+            size: A4 portrait;
+            margin: 0.5in;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: #333;
+            background: white;
+            font-size: 10px;
+            line-height: 1.2;
+        }
+
+        /* Container to force single page */
+        .container {
+            width: 100%;
+            max-height: 11.69in; /* A4 height */
+            overflow: hidden;
+            position: relative;
+            box-sizing: border-box;
+            padding: 0.2in;
+            page-break-inside: avoid;
+        }
+
+        /* Header */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.2in;
+            padding-bottom: 0.1in;
+            border-bottom: 2px solid #2563eb;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 0.15in;
+        }
+
+        .school-logo {
+            width: 0.8in;
+            height: 0.8in;
+            object-fit: contain;
+            border-radius: 50%;
+            border: 1px solid #e5e7eb;
+        }
+
+        .school-info h1 {
+            margin: 0;
+            font-size: 14px;
+            color: #1e40af;
+            text-transform: uppercase;
+        }
+
+        .school-info p {
+            margin: 0;
+            font-size: 8px;
+            color: #6b7280;
+        }
+
+        .student-photo-section {
+            text-align: center;
+        }
+
+        .student-photo {
+            width: 0.8in;
+            height: 0.8in;
+            object-fit: cover;
+            border-radius: 50%;
+            border: 2px solid #2563eb;
+            margin-bottom: 0.05in;
+        }
+
+        .student-name-label {
+            font-size: 8px;
+            color: #4b5563;
+            font-weight: 500;
+        }
+
+        .report-title {
+            text-align: center;
+            font-size: 12px;
+            font-weight: bold;
+            color: #1e40af;
+            margin-bottom: 0.15in;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        /* Info Section */
+        .info-section {
+            margin-bottom: 0.15in;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 0.1in;
+        }
+
+        .info-item {
+            display: flex;
+            gap: 0.1in;
+            background: #f9fafb;
+            padding: 0.05in 0.1in;
+            border-radius: 4px;
+            border: 1px solid #e5e7eb;
+        }
+
+        .info-label {
+            font-weight: 600;
+            color: #4b5563;
+            font-size: 8px;
+        }
+
+        .info-value {
+            color: #1f2937;
+            font-size: 8px;
+        }
+
+        /* Term Bar */
+        .term-bar {
+            display: flex;
+            justify-content: space-between;
+            background: #eff6ff;
+            padding: 0.1in;
+            border-radius: 4px;
+            margin-bottom: 0.15in;
+            border: 1px solid #bfdbfe;
+        }
+
+        .term-item {
+            text-align: center;
+            flex: 1;
+        }
+
+        .term-label {
+            font-size: 7px;
+            color: #3b82f6;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .term-value {
+            font-size: 8px;
+            font-weight: 500;
+            color: #1e40af;
+        }
+
+        /* Performance Section */
+        .performance-section {
+            margin-bottom: 0.15in;
+        }
+
+        .section-title {
+            font-size: 10px;
+            font-weight: bold;
+            color: #1e40af;
+            margin-bottom: 0.1in;
+            text-transform: uppercase;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            font-size: 8px;
+            background: white;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        th {
+            background: #3b82f6;
+            color: white;
+            padding: 0.05in 0.1in;
+            text-align: center;
+            font-size: 7px;
+            font-weight: 600;
+            text-transform: uppercase;
+            border-bottom: 1px solid #2563eb;
+        }
+
+        td {
+            padding: 0.05in 0.1in;
+            text-align: center;
+            border-bottom: 1px solid #e5e7eb;
+            font-size: 8px;
+        }
+
+        tr:nth-child(even) {
+            background-color: #f9fafb;
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        .grade-badge {
+            display: inline-block;
+            width: 0.2in;
+            height: 0.2in;
+            border-radius: 50%;
+            color: white;
+            font-weight: bold;
+            line-height: 0.2in;
+            font-size: 7px;
+            text-align: center;
+        }
+
+        .grade-A { background: #10b981; }
+        .grade-B { background: #3b82f6; }
+        .grade-C { background: #f59e0b; }
+        .grade-D { background: #ef4444; }
+        .grade-F { background: #6b7280; }
+
+        /* Comments Section */
+        .comments-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.1in;
+            margin-bottom: 0.1in;
+        }
+
+        .comment-box {
+            border: 1px solid #e5e7eb;
+            border-radius: 4px;
+            padding: 0.1in;
+            background: white;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+        }
+
+        .comment-title {
+            font-size: 8px;
+            font-weight: 600;
+            color: #1e40af;
+            margin-bottom: 0.05in;
+        }
+
+        .comment-space {
+            min-height: 0.4in;
+            border-bottom: 1px solid #e5e7eb;
+            margin-bottom: 0.05in;
+        }
+
+        .signature-line {
+            font-size: 7px;
+            color: #6b7280;
+        }
+
+        /* Grading Scale */
+        .grading-scale {
+            display: flex;
+            justify-content: center;
+            gap: 0.1in;
+            padding: 0.1in;
+            background: #f9fafb;
+            border-radius: 4px;
+            border: 1px solid #e5e7eb;
+            margin-bottom: 0.1in;
+        }
+
+        .scale-item {
+            display: flex;
+            align-items: center;
+            gap: 0.05in;
+            font-size: 7px;
+            color: #4b5563;
+        }
+
+        .scale-dot {
+            width: 0.1in;
+            height: 0.1in;
+            border-radius: 50%;
+        }
+
+        /* Footer */
+        .footer {
+            text-align: center;
+            padding: 0.1in;
+            background: #eff6ff;
+            border: 1px solid #bfdbfe;
+            border-radius: 4px;
+            font-size: 7px;
+            color: #4b5563;
+        }
+
+        /* Watermark */
+        .watermark {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) rotate(-45deg);
+            font-size: 1in;
+            font-weight: 900;
+            color: rgba(59, 130, 246, 0.05);
+            z-index: -1;
+            pointer-events: none;
+            white-space: nowrap;
+        }
+    </style>
+</head>
+<body>
+    <div class="watermark">OFFICIAL COPY</div>
+    
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <div class="header-left">
+                ${school.logo ? 
+                    `<img src="/static/${school.logo}" alt="Logo" class="school-logo" onerror="this.style.display='none'">` : 
+                    `<div class="school-logo" style="display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: bold; color: #3b82f6;">KIS</div>`
+                }
+                <div class="school-info">
+                    <h1>${school.name || "KHULAFA'U INTERNATIONAL SCHOOL"}</h1>
+                    <p>${school.address || 'No. 3 Gaa Road, Shika'} • Tel: ${school.phone || '08008032998966'}</p>
+                </div>
+            </div>
+            <div class="student-photo-section">
+                ${student.image ? 
+                    `<img src="/static/${student.image}" alt="Student" class="student-photo" onerror="this.style.display='none'">` : 
+                    `<div class="student-photo" style="display: flex; align-items: center; justify-content: center; font-size: 30px; font-weight: bold; color: #999;">${student.name ? student.name[0] : '?'}</div>`
+                }
+                <div class="student-name-label">${student.name || 'STUDENT NAME'}</div>
+            </div>
+        </div>
+
+        <div class="report-title">STUDENT PERFORMANCE REPORT</div>
+
+        <!-- Student Information -->
+        <div class="info-section">
+            <div class="info-grid">
+                <div class="info-item">
+                    <div class="info-label">Student Name:</div>
+                    <div class="info-value">${student.name || 'N/A'}</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">Class:</div>
+                    <div class="info-value">${student.class_name || 'N/A'}</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">Admission Number:</div>
+                    <div class="info-value">${student.admission_number || 'N/A'}</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">Position:</div>
+                    <div class="info-value">${formatPosition(position)} of ${total_students}</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Term Information -->
+        <div class="term-bar">
+            <div class="term-item">
+                <div class="term-label">Term</div>
+                <div class="term-value">${term.name || 'N/A'}</div>
+            </div>
+            <div class="term-item">
+                <div class="term-label">Session</div>
+                <div class="term-value">${term.session || 'N/A'}</div>
+            </div>
+            <div class="term-item">
+                <div class="term-label">Term Begin</div>
+                <div class="term-value">${term.start_date || 'N/A'}</div>
+            </div>
+            <div class="term-item">
+                <div class="term-label">Term End</div>
+                <div class="term-value">${term.end_date || 'N/A'}</div>
+            </div>
+            <div class="term-item">
+                <div class="term-label">Resumption</div>
+                <div class="term-value">${term.end_date ? calculateResumptionDate(term.end_date) : 'N/A'}</div>
+            </div>
+        </div>
+
+        <!-- Academic Performance -->
+        <div class="performance-section">
+            <div class="section-title">Academic Performance</div>
+            <table>
+                <thead>
+                    <tr>
+                        <th style="width: 3%;">SN</th>
+                        <th style="width: 20%; text-align: left;">SUBJECT</th>
+                        ${assessments.map(code => {
+                            const assessmentType = assessment_types.find(at => at.code === code);
+                            const name = assessmentType ? formatAssessmentName(assessmentType.name) : formatAssessmentName(code);
+                            return `<th style="width: 8%;">${name}</th>`;
+                        }).join('')}
+                        <th style="width: 8%;">TOTAL</th>
+                        <th style="width: 6%;">GRADE</th>
+                        <th style="width: 15%;">REMARK</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${subjectRows}
+                    ${averageRow}
+                    <tr style="background-color: #3b82f6; color: white; font-weight: bold;">
+                        <td colspan="2">OVERALL TOTAL</td>
+                        <td colspan="${assessments.length}">${Math.round(overall_total)}</td>
+                        <td><span class="grade-badge grade-${overallGrade}">${overallGrade}</span></td>
+                        <td style="font-style: italic; font-size: 7px;">Overall Performance</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Comments Section -->
+        <div class="comments-grid">
+            <div class="comment-box">
+                <div class="comment-title">Class Teacher's Comment:</div>
+                <div class="comment-space"></div>
+                <div class="signature-line">Signature & Date: _____________________</div>
+            </div>
+            <div class="comment-box">
+                <div class="comment-title">Principal's Comment:</div>
+                <div class="comment-space"></div>
+                <div class="signature-line">Signature & Date: _____________________</div>
+            </div>
+        </div>
+
+        <!-- Grading Scale -->
+        <div class="grading-scale">
+            <div class="scale-item">
+                <div class="scale-dot" style="background: #10b981;"></div>
+                <span>A (70-100%) Excellent</span>
+            </div>
+            <div class="scale-item">
+                <div class="scale-dot" style="background: #3b82f6;"></div>
+                <span>B (60-69%) Good</span>
+            </div>
+            <div class="scale-item">
+                <div class="scale-dot" style="background: #f59e0b;"></div>
+                <span>C (50-59%) Satisfactory</span>
+            </div>
+            <div class="scale-item">
+                <div class="scale-dot" style="background: #ef4444;"></div>
+                <span>D (40-49%) Pass</span>
+            </div>
+            <div class="scale-item">
+                <div class="scale-dot" style="background: #6b7280;"></div>
+                <span>F (0-39%) Fail</span>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="footer">
+            <strong>⚠️ OFFICIAL DOCUMENT:</strong> This is an official report card issued by ${school.name || 'the school'}. Any alteration or modification will render this document invalid.
+        </div>
+    </div>
+</body>
+</html>
+    `;
+}
+
+// Helper function to get grade color
+function getGradeColor(grade) {
+    console.log(`Getting color for grade: ${grade}`);
+    const colors = {
+        'A': '#10b981',
+        'B': '#3b82f6',
+        'C': '#f59e0b',
+        'D': '#ef4444',
+        'F': '#6b7280'
+    };
+    const color = colors[grade] || '#000000';
+    console.log(`Grade color for ${grade}: ${color}`);
+    return color;
+}
+
+// Helper function to format position
+function formatPosition(position) {
+    if (!position || typeof position !== 'number') return 'N/A';
+    const suffix = position % 10 === 1 && position !== 11 ? 'st' :
+                   position % 10 === 2 && position !== 12 ? 'nd' :
+                   position % 10 === 3 && position !== 13 ? 'rd' : 'th';
+    return position + suffix;
+}
+
+// Helper function to format assessment name
+function formatAssessmentName(code) {
+    if (typeof code !== 'string') return code || 'N/A';
+    if (!code) return 'N/A';
+    
+    const specialCases = {
+        'cbt': 'FIRST CA',
+        'ca': 'SECOND CA',
+        'exam': 'TERMINAL EXAM',
+        'mid_term': 'MID-TERM',
+        'final': 'FINAL',
+        'quiz': 'QUIZ',
+        'assignment': 'ASSIGNMENT',
+        'project': 'PROJECT'
+    };
+    
+    return specialCases[code.toLowerCase()] || code.toUpperCase();
+}
+
+// Helper function to calculate resumption date
+function calculateResumptionDate(endDateStr) {
+    if (!endDateStr) return 'N/A';
+    try {
+        const endDate = new Date(endDateStr);
+        if (isNaN(endDate.getTime())) return 'N/A';
+        const resumptionDate = new Date(endDate);
+        resumptionDate.setDate(resumptionDate.getDate() + 14);
+        const day = String(resumptionDate.getDate()).padStart(2, '0');
+        const month = String(resumptionDate.getMonth() + 1).padStart(2, '0');
+        const year = resumptionDate.getFullYear();
+        return `${day}/${month}/${year}`;
+    } catch (error) {
+        return 'N/A';
+    }
+}
+
+// Helper function to get grade based on percentage
+function getSimpleGrade(percentage) {
+    if (percentage >= 70) return 'A';
+    if (percentage >= 60) return 'B';
+    if (percentage >= 50) return 'C';
+    if (percentage >= 40) return 'D';
+    return 'F';
+}
+
+// Helper function to get grade color
+function getGradeColor(grade) {
+    const colors = {
+        'A': '#10b981',
+        'B': '#3b82f6',
+        'C': '#f59e0b',
+        'D': '#ef4444',
+        'F': '#6b7280'
+    };
+    return colors[grade] || '#6b7280';
+}
+
+async function generateClientSidePDF(reportData, previewMode = false) {    try {
+        console.log('Starting PDF generation with data:', reportData);
+
+        // Dynamically load html2pdf.js if not already loaded
+        console.log('Checking if html2pdf is already loaded:', typeof html2pdf !== 'undefined');
+        if (typeof html2pdf === 'undefined') {
+            // Try loading from local first
+            try {
+                await new Promise((resolve, reject) => {
+                    const script = document.createElement('script');
+                    script.src = '/static/js/html2pdf/html2pdf.bundle.min.js';
+                    script.onload = () => {
+                        console.log('Local html2pdf.js loaded successfully');
+                        // Verify the library is properly loaded
+                        if (typeof html2pdf !== 'undefined') {
+                            console.log('html2pdf library verified');
+                            resolve();
+                        } else {
+                            console.error('html2pdf library not properly loaded');
+                            reject(new Error('Library not properly loaded'));
+                        }
+                    };
+                    script.onerror = () => {
+                        console.log('Local html2pdf.js failed, trying CDN');
+                        // If local fails, try CDN fallback
+                        const cdnScript = document.createElement('script');
+                        cdnScript.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
+                        cdnScript.onload = () => {
+                            console.log('CDN html2pdf.js loaded successfully');
+                            // Verify the library is properly loaded
+                            if (typeof html2pdf !== 'undefined') {
+                                console.log('html2pdf library verified from CDN');
+                                resolve();
+                            } else {
+                                console.error('html2pdf library not properly loaded from CDN');
+                                reject(new Error('Library not properly loaded from CDN'));
+                            }
+                        };
+                        cdnScript.onerror = () => {
+                            console.error('CDN html2pdf.js also failed');
+                            reject(new Error('Failed to load library from CDN'));
+                        };
+                        document.head.appendChild(cdnScript);
+                    };
+                    document.head.appendChild(script);
+                });
+            } catch (localError) {
+                console.error('Failed to load html2pdf.js from local:', localError);
+                throw new Error('Failed to load PDF generation library: ' + localError.message);
+            }
+        }
+
+        // Verify html2pdf is available
+        if (typeof html2pdf === 'undefined') {
+            throw new Error('html2pdf library is not available');
+        }
+
+        // Additional verification
+        console.log('html2pdf object type:', typeof html2pdf);
+        console.log('html2pdf function keys:', Object.keys(html2pdf || {}));
+
+        // Test if we can create a basic worker
+        try {
+            const testWorker = html2pdf();
+            console.log('Basic worker creation test passed:', typeof testWorker);
+            // Clean up
+            if (testWorker && typeof testWorker.cleanup === 'function') {
+                testWorker.cleanup();
+            }
+        } catch (testError) {
+            console.error('Basic worker creation test failed:', testError);
+        }
+
+        console.log('html2pdf library is ready for use');
+
+        // Generate HTML content for the report
+        console.log('Generating HTML content');
+        let html;
+        try {
+            html = generateReportHTML(reportData);
+            console.log('Generated HTML length:', html.length);
+
+            // Debug: Show the first 500 characters of the HTML
+            console.log('HTML preview:', html.substring(0, 500));
+
+            // Check if HTML is valid
+            if (!html || html.length === 0) {
+                throw new Error('Generated HTML is empty');
+            }
+
+            // Check if HTML contains basic structure
+            if (!html.includes('<html>') || !html.includes('<body>')) {
+                console.error('HTML structure appears to be invalid');
+                throw new Error('Generated HTML structure is invalid');
+            }
+
+            // Additional validation: Check for common HTML issues
+            if (html.includes('undefined') || html.includes('null')) {
+                console.warn('HTML contains undefined/null values, this might cause rendering issues');
+            }
+
+            // Make sure the HTML has a proper DOCTYPE
+            if (!html.trim().startsWith('<!DOCTYPE html>')) {
+                console.warn('HTML might be missing proper DOCTYPE declaration');
+            }
+
+            // Check for balanced HTML tags
+            const tagPattern = /<\/?([a-zA-Z][a-zA-Z0-9]*)[^>]*>/g;
+            const tags = html.match(tagPattern) || [];
+            console.log('HTML tags found:', tags.length);
+
+            // Simple check for unbalanced tags (this is not comprehensive but can catch obvious issues)
+            const openTags = tags.filter(tag => !tag.startsWith('</') && !tag.endsWith('/>')).map(tag => tag.match(/<([a-zA-Z][a-zA-Z0-9]*)/)[1]);
+            const closeTags = tags.filter(tag => tag.startsWith('</')).map(tag => tag.match(/<\/([a-zA-Z][a-zA-Z0-9]*)/)[1]);
+
+            console.log('Open tags:', openTags);
+            console.log('Close tags:', closeTags);
+
+            // Check if there are any obvious mismatches
+            if (openTags.length !== closeTags.length) {
+                console.warn('Potential tag imbalance detected');
+            }
+        } catch (htmlError) {
+            console.error('Error generating HTML:', htmlError);
+            // Generate a simple fallback HTML
+            html = `
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <title>Student Report</title>
+                    <style>
+                        body { font-family: Arial, sans-serif; margin: 20px; }
+                        .error { color: red; font-weight: bold; }
+                    </style>
+                </head>
+                <body>
+                    <h1>Student Report</h1>
+                    <div class="error">Error generating report: ${htmlError.message}</div>
+                    <p>Please try again or contact support.</p>
+                </body>
+                </html>
+            `;
+            console.log('Using fallback HTML due to error');
+        }
+
+        // Create a temporary element to hold the HTML
+        const element = document.createElement('div');
+
+        // Set styles to make content visible during PDF generation
+        element.style.position = 'relative';  // Changed from absolute to relative
+        element.style.left = '0';  // Changed from -9999px to 0
+        element.style.top = '0';
+        element.style.backgroundColor = 'white'; // Changed from red to white
+        element.style.zIndex = '9999'; // Ensure it's on top
+        element.style.width = '100%';
+        element.style.minHeight = '100vh';
+        element.id = 'pdf-generation-temp-element';
+
+        // Add to body but make sure it's visible
+        document.body.appendChild(element);
+
+        // Set the HTML content after appending to DOM
+        element.innerHTML = html;
+
+        // Debug: Check if HTML was parsed correctly
+        console.log('Parsed HTML element after setting innerHTML:', element);
+        console.log('Parsed HTML children count after setting innerHTML:', element.children.length);
+        console.log('Element innerHTML length:', element.innerHTML.length);
+
+        // Debug: Verify element was added to DOM
+        console.log('Element added to DOM:', document.getElementById('pdf-generation-temp-element') === element);
+
+        // Debug: Check if element was created correctly
+        console.log('Created element with children:', element.children.length);
+
+        // Check if html2pdf is properly loaded
+        console.log('html2pdf object:', html2pdf);
+        console.log('html2pdf().set method exists:', typeof html2pdf().set === 'function');
+
+        // Configure html2pdf options with better error handling
+        const opt = {
+            margin: [0.4, 0.4, 0.4, 0.4], // Balanced margins for portrait
+            filename: `report_${(reportData.student?.name || 'student').replace(/\s+/g, '_')}_${(reportData.term?.name || 'term').replace(/\s+/g, '_')}.pdf`,
+            image: { type: 'jpeg', quality: 0.98 },
+            html2canvas: {
+                scale: 2,
+                useCORS: true,
+                logging: true, // Enable logging for debugging
+                allowTaint: true, // Allow cross-origin images
+                backgroundColor: '#ffffff', // Explicit background color
+                onclone: (clonedDoc) => {
+                    console.log('Cloning document for html2canvas');
+                    // Handle missing images by replacing them with placeholders
+                    const images = clonedDoc.getElementsByTagName('img');
+                    for (let img of images) {
+                        // Add crossorigin attribute to handle CORS
+                        img.setAttribute('crossorigin', 'anonymous');
+                        img.onerror = function () {
+                            console.log('Image load error, using placeholder');
+                            // Replace broken images with a placeholder
+                            this.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgZmlsbD0iI2NjYyIvPjx0ZXh0IHg9IjUwIiB5PSI1NSIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjgiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZpbGw9IiM2NjYiPkltYWdlIE5vdCBGb3VuZDwvdGV4dD48L3N2Zz4=';
+                        };
+                    }
+                }
+            },
+            pagebreak: {
+                mode: ['avoid-all', 'css', 'legacy'],
+                before: '.page-break-before',
+                after: '.page-break-after',
+                avoid: 'tr, th, td, .no-page-break'
+            },
+            jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait', compress: true } // Added compression
+        };
+
+        // Validate options
+        console.log('PDF options:', opt);
+        if (!opt.filename || opt.filename.length === 0) {
+            console.warn('PDF filename is empty or invalid');
+            opt.filename = 'report.pdf';
+        }
+
+        // Additional filename validation
+        if (opt.filename && opt.filename.includes('../')) {
+            console.warn('PDF filename contains potentially unsafe path traversal sequences, sanitizing');
+            opt.filename = opt.filename.replace(/\.\./g, '');
+        }
+
+        // Ensure filename ends with .pdf
+        if (opt.filename && !opt.filename.toLowerCase().endsWith('.pdf')) {
+            opt.filename += '.pdf';
+        }
+
+        console.log('Final PDF filename:', opt.filename);
+
+        console.log('Starting PDF generation');
+        // Generate and download the PDF
+        console.log('Creating html2pdf instance');
+        const worker = html2pdf().set(opt);
+        console.log('Worker created:', worker);
+
+        // Validate worker
+        if (!worker || typeof worker !== 'object') {
+            throw new Error('Failed to create html2pdf worker');
+        }
+
+        console.log('Calling from() method');
+        const workerWithElement = worker.from(element);
+        console.log('Element added to worker:', workerWithElement);
+
+        // Validate worker with element
+        if (!workerWithElement || typeof workerWithElement !== 'object') {
+            throw new Error('Failed to add element to html2pdf worker');
+        }
+
+        console.log('Calling save() method');
+        // Add error handling and timeout to prevent hanging
+        try {
+            console.log('Starting PDF save operation');
+            const savePromise = workerWithElement.save();
+
+            // Add additional logging during save
+            savePromise.then(() => {
+                console.log('PDF save promise resolved');
+            }).catch((error) => {
+                console.error('PDF save promise rejected:', error);
+            });
+
+            const timeoutPromise = new Promise((_, reject) =>
+                setTimeout(() => {
+                    console.error('PDF generation timed out after 30 seconds');
+                    reject(new Error('PDF generation timed out after 30 seconds'));
+                }, 30000)
+            );
+
+            console.log('Waiting for PDF generation to complete');
+            await Promise.race([savePromise, timeoutPromise]);
+            console.log('PDF generation completed successfully');
+        } catch (saveError) {
+            console.error('Error during PDF save operation:', saveError);
+            console.error('Save error stack:', saveError.stack);
+            throw new Error('Failed to save PDF: ' + (saveError.message || 'Unknown error'));
+        }
+        console.log('PDF generation completed');
+
+        // Clean up
+        console.log('Cleaning up temporary element');
+        try {
+            // Use the element reference directly instead of querying by ID
+            if (element && element.parentNode) {
+                element.parentNode.removeChild(element);
+                console.log('Temporary element removed from DOM');
+            } else {
+                console.log('Temporary element was not found in DOM or already removed');
+            }
+        } catch (cleanupError) {
+            console.error('Error during cleanup:', cleanupError);
+        }
+        console.log('Cleaned up temporary element');
+    } catch (error) {
+        console.error('Error generating PDF:', error);
+        console.error('Error stack:', error.stack);
+        // Show user-friendly error message
+        alert('Failed to generate PDF. Please check the browser console for details.');
+        throw new Error('Failed to generate PDF: ' + (error.message || 'Unknown error'));
+    }
+}
+
+// Test function for preview functionality
+window.testPreviewFunctionality = async function() {
+    console.log('Testing preview functionality...');
+    
+    // Check if required functions are available
+    const requiredFunctions = [
+        'showCanvasBasedPreview',
+        'previewReport',
+        'generateReportHTML',
+        'showAlert'
+    ];
+    
+    const missingFunctions = [];
+    
+    requiredFunctions.forEach(func => {
+        if (typeof window[func] === 'undefined') {
+            missingFunctions.push(func);
+        }
+    });
+    
+    if (missingFunctions.length > 0) {
+        console.error('Missing functions:', missingFunctions);
+        return false;
+    }
+    
+    console.log('All required functions are available');
+    return true;
+};

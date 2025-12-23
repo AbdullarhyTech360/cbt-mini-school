@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+{% extends "admin/base.html" %}
+
+{% block title %}Manage Students - Admin Panel{% endblock %}
+
+{% block sidebar_nav %}
+{{ super() }}
+{% endblock %}
+
+{% block content %}
+<!-- Header Section -->
+<div class="mb-6 md:mb-8">
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+            <h1 class="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white mb-2">Student Management</h1>
+            <p class="text-gray-600 dark:text-gray-400 text-sm md:text-base">Manage student enrollments, track progress,
+                and handle student records across the school.</p>
+        </div>
+        <div class="flex items-center gap-3">
+            <button onclick="openAddModal()"
+                class="flex items-center gap-2 px-3 py-2 md:px-4 md:py-2 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white rounded-lg shadow-md hover:shadow-lg transition-all duration-200 text-sm md:text-base">
+                <span class="material-symbols-outlined text-lg">person_add</span>
+                <span class="font-semibold">Add Student</span>
+            </button>
+            <button
+                class="flex items-center gap-2 px-3 py-2 md:px-4 md:py-2 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-lg shadow-md hover:shadow-lg transition-all duration-200 text-sm md:text-base"
+                data-modal-target="enrollModal">
+                <span class="material-symbols-outlined text-lg">school</span>
+                <span class="font-semibold">Enroll in Class</span>
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- School Overview Stats -->
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-6 md:mb-8">
+    <div class="bg-gradient-to-br from-blue-500 to-blue-600 p-4 md:p-6 rounded-2xl shadow-lg">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-white/90 text-xs md:text-sm font-medium mb-1">Total Students</p>
+                <p class="text-xl md:text-3xl font-bold text-white">{{ stats.total_students }}</p>
+            </div>
+            <div class="h-10 w-10 md:h-12 md:w-12 rounded-xl bg-white/20 flex items-center justify-center">
+                <span class="material-symbols-outlined text-white text-lg md:text-2xl">groups</span>
+            </div>
+        </div>
+    </div>
+    <div class="bg-gradient-to-br from-green-500 to-green-600 p-4 md:p-6 rounded-2xl shadow-lg">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-white/90 text-xs md:text-sm font-medium mb-1">Active Enrollments</p>
+                <p class="text-xl md:text-3xl font-bold text-white">{{ stats.active_enrollments }}</p>
+            </div>
+            <div class="h-10 w-10 md:h-12 md:w-12 rounded-xl bg-white/20 flex items-center justify-center">
+                <span class="material-symbols-outlined text-white text-lg md:text-2xl">check_circle</span>
+            </div>
+        </div>
+    </div>
+    <div class="bg-gradient-to-br from-purple-500 to-purple-600 p-4 md:p-6 rounded-2xl shadow-lg">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-white/90 text-xs md:text-sm font-medium mb-1">Avg. Performance</p>
+                <p class="text-xl md:text-3xl font-bold text-white">{{ stats.avg_performance }}%</p>
+            </div>
+            <div class="h-10 w-10 md:h-12 md:w-12 rounded-xl bg-white/20 flex items-center justify-center">
+                <span class="material-symbols-outlined text-white text-lg md:text-2xl">trending_up</span>
+            </div>
+        </div>
+    </div>
+    <div class="bg-gradient-to-br from-orange-500 to-orange-600 p-4 md:p-6 rounded-2xl shadow-lg">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-white/90 text-xs md:text-sm font-medium mb-1">Attendance Rate</p>
+                <p class="text-xl md:text-3xl font-bold text-white">{{ stats.attendance_rate }}%</p>
+            </div>
+            <div class="h-10 w-10 md:h-12 md:w-12 rounded-xl bg-white/20 flex items-center justify-center">
+                <span class="material-symbols-outlined text-white text-lg md:text-2xl">percent</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Search and Filter -->
+<div class="mb-6 md:mb-8">
+    <div class="flex flex-col lg:flex-row gap-4">
+        <div class="flex-1 relative">
+            <span class="material-symbols-outlined absolute left-4 top-3.5 text-gray-400">search</span>
+            <input type="text" id="searchInput" placeholder="Search students by name, ID, or email..."
+                class="w-full pl-12 pr-4 py-3.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition shadow-sm hover:shadow-md placeholder:text-gray-400 dark:placeholder:text-gray-500 text-sm md:text-base" />
+        </div>
+        <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+            <select id="classFilter"
+                class="w-full sm:w-auto px-4 py-3.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition shadow-sm hover:shadow-md text-sm md:text-base">
+                <option value="">All Classes</option>
+                {% for class in classes %}
+                <option value="{{ class.class_room_name }}">{{ class.class_room_name }}</option>
+                {% endfor %}
+            </select>
+            <select id="statusFilter"
+                class="w-full sm:w-auto px-4 py-3.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition shadow-sm hover:shadow-md text-sm md:text-base">
+                <option value="">All Status</option>
+                <option value="Active">Active</option>
+                <option value="Inactive">Inactive</option>
+            </select>
+        </div>
+    </div>
+</div>
+
+<!-- Students Management Table -->
+<div
+    class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-100 dark:border-gray-700 overflow-hidden">
+    <div class="p-4 md:p-6 border-b border-gray-100 dark:border-gray-700">
+        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <h2 class="text-lg md:text-xl font-bold text-gray-800 dark:text-white flex items-center gap-2">
+                <span class="material-symbols-outlined text-primary">groups</span>
+                All Students
+            </h2>
+            <div class="flex items-center gap-2">
+                <span class="text-sm text-gray-500 dark:text-gray-400">{{ students|length }} students found</span>
+                <button onclick="window.location.reload()"
+                    class="p-2 text-gray-400 hover:text-primary transition-colors">
+                    <span class="material-symbols-outlined text-lg">refresh</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="overflow-x-auto">
+        <table class="w-full" id="studentsTable">
+            <thead class="bg-gray-50 dark:bg-gray-700/50">
+                <tr>
+                    <th
+                        class="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
+                        Student</th>
+                    <th
+                        class="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
+                        Contact</th>
+                    <th
+                        class="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
+                        Class</th>
+                    <th
+                        class="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
+                        Performance</th>
+                    <th
+                        class="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
+                        Status</th>
+                    <th
+                        class="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
+                        Actions</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200 dark:divide-gray-600">
+                {% for student in students %}
+                <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors student-row"
+                    data-name="{{ student.first_name }} {{ student.last_name }}"
+                    data-id="{{ student.admission_number }}" data-email="{{ student.email }}"
+                    data-class="{{ student.class_name }}" data-status="{{ student.status }}">
+                    <td class="px-4 py-4 whitespace-nowrap">
+                        <div class="flex items-center gap-3">
+                            <div
+                                class="h-12 w-12 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center overflow-hidden">
+                                {% if student.image %}
+                                <img src="{{ student.image }}" alt="{{ student.first_name }}"
+                                    class="h-full w-full object-cover">
+                                {% else %}
+                                <span class="text-white font-bold">{{ student.first_name[0] }}{{ student.last_name[0]
+                                    }}</span>
+                                {% endif %}
+                            </div>
+                            <div>
+                                <p class="text-sm font-semibold text-gray-900 dark:text-white">{{ student.first_name }}
+                                    {{ student.last_name }}</p>
+                                <p class="text-xs text-gray-500 dark:text-gray-400">ID: {{ student.admission_number }}
+                                </p>
+                            </div>
+                        </div>
+                    </td>
+                    <td class="px-4 py-4 whitespace-nowrap">
+                        <div class="text-sm text-gray-900 dark:text-white">
+                            <p>{{ student.email }}</p>
+                            <p class="text-gray-500 dark:text-gray-400">{{ student.phone or 'N/A' }}</p>
+                        </div>
+                    </td>
+                    <td class="px-4 py-4 whitespace-nowrap">
+                        <span
+                            class="px-2 py-1 text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full">{{
+                            student.class_name }}</span>
+                    </td>
+                    <td class="px-4 py-4 whitespace-nowrap">
+                        <div class="flex items-center gap-2">
+                            <div class="w-16 h-2 bg-gray-200 dark:bg-gray-600 rounded-full overflow-hidden">
+                                <div class="h-full bg-green-500 rounded-full"
+                                    style="width: {{ student.performance }}%;"></div>
+                            </div>
+                            <span class="text-sm font-semibold text-green-600 dark:text-green-400">{{
+                                student.performance }}%</span>
+                        </div>
+                    </td>
+                    <td class="px-4 py-4 whitespace-nowrap">
+                        <span
+                            class="px-2 py-1 text-xs font-semibold rounded-full {{ 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300' if student.status == 'Active' else 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300' }}">
+                            {{ student.status }}
+                        </span>
+                    </td>
+                    <td class="px-4 py-4 whitespace-nowrap text-sm font-medium">
+                        <div class="flex items-center gap-2">
+                            <button onclick='editStudent({{ student|tojson }})'
+                                class="p-1 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+                                title="Edit Student">
+                                <span class="material-symbols-outlined text-lg">edit</span>
+                            </button>
+                            <button onclick="deleteStudent('{{ student.id }}')"
+                                class="p-1 text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-colors"
+                                title="Remove Student">
+                                <span class="material-symbols-outlined text-lg">delete</span>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Add/Edit Student Modal -->
+<div id="createStudentModal" class="fixed inset-0 bg-black/50 z-50 hidden items-center justify-center p-4">
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+        <div class="p-6 border-b border-gray-200 dark:border-gray-700">
+            <div class="flex items-center justify-between">
+                <h2 class="text-xl font-bold text-gray-900 dark:text-white" id="modalTitle">Add New Student</h2>
+                <button class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                    onclick="closeModal('createStudentModal')">
+                    <span class="material-symbols-outlined text-2xl">close</span>
+                </button>
+            </div>
+        </div>
+
+        <form id="studentForm" class="p-6 space-y-6">
+            <input type="hidden" id="studentId" name="id">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="md:col-span-2">
+                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Profile Image
+                        (Optional)</label>
+                    <input type="file" name="image" accept="image/*"
+                        class="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition">
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">First Name</label>
+                    <input required type="text" name="first_name" placeholder="Alex"
+                        class="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition">
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Last Name</label>
+                    <input required type="text" name="last_name" placeholder="Turner"
+                        class="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition">
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Email
+                        Address</label>
+                    <input type="email" name="email" placeholder="alex.turner@email.com"
+                        class="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition">
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Parent
+                        Phone</label>
+                    <input type="tel" name="phone" placeholder="+1 (555) 111-2222"
+                        class="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition">
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Date of
+                        Birth</label>
+                    <input required type="date" name="dob"
+                        class="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition">
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Gender</label>
+                    <select required name="gender"
+                        class="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition">
+                        <option value="" disabled selected>Select Gender....</option>
+                        <option value="Male">Male</option>
+                        <option value="Female">Female</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Class Level</label>
+                    <select required name="class_id"
+                        class="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition">
+                        <option value="" disabled selected>Select Class Level....</option>
+                        {% for class in classes %}
+                        <option value="{{ class.class_room_id }}">{{ class.class_room_name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Student ID
+                        (Optional)</label>
+                    <input type="text" name="student_id" placeholder="Auto-generated if empty"
+                        class="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition">
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Address
+                    (Optional)</label>
+                <textarea name="address" rows="2" placeholder="123 Main Street, City, State..."
+                    class="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition resize-none"></textarea>
+            </div>
+
+            <div class="flex flex-col sm:flex-row gap-3 pt-4">
+                <button type="submit"
+                    class="flex-1 bg-gradient-to-r from-primary to-blue-600 hover:from-primary/90 hover:to-blue-600/90 text-white font-semibold py-3 px-6 rounded-xl shadow-md hover:shadow-lg transition-all duration-200">
+                    Save Student
+                </button>
+                <button type="button" onclick="closeModal('createStudentModal')"
+                    class="flex-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-semibold py-3 px-6 rounded-xl hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
+                    Cancel
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Enroll in Class Modal -->
+<div id="enrollModal" class="fixed inset-0 bg-black/50 z-50 hidden items-center justify-center p-4">
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+        <div class="p-6 border-b border-gray-200 dark:border-gray-700">
+            <div class="flex items-center justify-between">
+                <h2 class="text-xl font-bold text-gray-900 dark:text-white">Enroll Students in Class</h2>
+                <button class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                    onclick="closeModal('enrollModal')">
+                    <span class="material-symbols-outlined text-2xl">close</span>
+                </button>
+            </div>
+        </div>
+
+        <form id="enrollForm" class="p-6 space-y-6">
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Select Class</label>
+                <select required name="class_id"
+                    class="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition">
+                    <option value="">Select a class...</option>
+                    {% for class in classes %}
+                    <option value="{{ class.class_room_id }}">{{ class.class_room_name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Select Students to
+                    Enroll</label>
+                <div
+                    class="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-64 overflow-y-auto border border-gray-200 dark:border-gray-700 rounded-xl p-4">
+                    {% for student in students %}
+                    <label
+                        class="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                        <input type="checkbox" name="student_ids" value="{{ student.id }}"
+                            class="h-4 w-4 text-primary border-gray-300 dark:border-gray-600 rounded focus:ring-primary">
+                        <div class="flex items-center gap-2">
+                            <div
+                                class="h-6 w-6 rounded-full bg-blue-500 flex items-center justify-center text-white text-xs font-bold">
+                                {{ student.first_name[0] }}{{ student.last_name[0] }}
+                            </div>
+                            <span class="text-sm text-gray-700 dark:text-gray-300">{{ student.first_name }} {{
+                                student.last_name }}</span>
+                        </div>
+                    </label>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div class="flex gap-3 pt-4">
+                <button type="submit"
+                    class="flex-1 bg-gradient-to-r from-primary to-blue-600 hover:from-primary/90 hover:to-blue-600/90 text-white font-semibold py-3 px-6 rounded-xl shadow-md hover:shadow-lg transition-all duration-200">
+                    Enroll Students
+                </button>
+                <button type="button" onclick="closeModal('enrollModal')"
+                    class="flex-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-semibold py-3 px-6 rounded-xl hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
+                    Cancel
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    // Modal functionality
+    function openModal(modalId) {
+        document.getElementById(modalId).classList.remove('hidden');
+        document.getElementById(modalId).classList.add('flex');
+        document.body.style.overflow = 'hidden';
+    }
+
+    function closeModal(modalId) {
+        document.getElementById(modalId).classList.add('hidden');
+        document.getElementById(modalId).classList.remove('flex');
+        document.body.style.overflow = '';
+    }
+
+    function openAddModal() {
+        document.getElementById('modalTitle').textContent = 'Add New Student';
+        document.getElementById('studentForm').reset();
+        document.getElementById('studentId').value = '';
+        openModal('createStudentModal');
+    }
+
+    function editStudent(student) {
+        document.getElementById('modalTitle').textContent = 'Edit Student';
+        const form = document.getElementById('studentForm');
+        document.getElementById('studentId').value = student.id;
+
+        // Populate form fields
+        form.elements['first_name'].value = student.first_name;
+        form.elements['last_name'].value = student.last_name;
+        form.elements['email'].value = student.email || '';
+        form.elements['phone'].value = student.phone || '';
+        form.elements['dob'].value = student.dob;
+        form.elements['gender'].value = student.gender;
+        form.elements['class_id'].value = student.class_id || '';
+        form.elements['student_id'].value = student.admission_number;
+        form.elements['address'].value = student.address || '';
+
+        openModal('createStudentModal');
+    }
+
+    function deleteStudent(studentId) {
+        showConfirmModal({
+            title: 'Delete Student',
+            message: 'Are you sure you want to delete this student? This action cannot be undone.',
+            confirmText: 'Delete',
+
+            onConfirm: async () => {
+                try {
+                    const response = await fetch(`/admin/students/delete/${studentId}`, {
+                        method: 'DELETE'
+                    });
+
+                    const data = await response.json();
+                    if (data.success) {
+                        showAlert({
+                            title: 'Success',
+                            message: 'Student deleted successfully',
+                            type: 'success',
+                            onConfirm: () => window.location.reload()
+                        });
+                    } else {
+                        showAlert({
+                            title: 'Error',
+                            message: data.message || 'Error deleting student',
+                            type: 'error'
+                        });
+                    }
+                } catch (error) {
+                    console.error('Error:', error);
+                    showAlert({
+                        title: 'Error',
+                        message: 'An error occurred while deleting the student',
+                        type: 'error'
+                    });
+                }
+            }
+        });
+    }
+
+    // Event listeners
+    document.addEventListener('DOMContentLoaded', function () {
+        // Form submissions
+        document.getElementById('studentForm').addEventListener('submit', async function (e) {
+            e.preventDefault();
+            const formData = new FormData(this);
+            const url = studentId ? `/admin/students/update/${studentId}` : '/admin/students/create';
+            const method = studentId ? 'PUT' : 'POST';
+
+            try {
+                const response = await fetch(url, {
+                    method: method,
+                    body: formData
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    showAlert({
+                        title: 'Success',
+                        message: 'Student saved successfully',
+                        type: 'success',
+                        onConfirm: () => window.location.reload()
+                    });
+                } else {
+                    showAlert({
+                        title: 'Error',
+                        message: data.message || 'Error saving student',
+                        type: 'error'
+                    });
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showAlert({
+                    title: 'Error',
+                    message: 'An error occurred while saving the student',
+                    type: 'error'
+                });
+            }
+        });
+
+        document.getElementById('enrollForm').addEventListener('submit', async function (e) {
+            e.preventDefault();
+            const formData = new FormData(this);
+            const studentIds = formData.getAll('student_ids');
+            const classId = formData.get('class_id');
+
+            if (studentIds.length === 0) {
+                showAlert({
+                    title: 'Warning',
+                    message: 'Please select at least one student',
+                    type: 'warning'
+                });
+                return;
+            }
+
+            try {
+                const response = await fetch('/admin/students/enroll', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        class_id: classId,
+                        student_ids: studentIds
+                    })
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    showAlert({
+                        title: 'Success',
+                        message: 'Students enrolled successfully',
+                        type: 'success',
+                        onConfirm: () => window.location.reload()
+                    });
+                } else {
+                    showAlert({
+                        title: 'Error',
+                        message: data.message || 'Error enrolling students',
+                        type: 'error'
+                    });
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showAlert({
+                    title: 'Error',
+                    message: 'An error occurred while enrolling students',
+                    type: 'error'
+                });
+            }
+        });
+
+        // Search and Filter Logic
+        const searchInput = document.getElementById('searchInput');
+        const classFilter = document.getElementById('classFilter');
+        const statusFilter = document.getElementById('statusFilter');
+        const tableRows = document.querySelectorAll('.student-row');
+
+        function filterStudents() {
+            const searchTerm = searchInput.value.toLowerCase();
+            const selectedClass = classFilter.value;
+            const selectedStatus = statusFilter.value;
+
+            tableRows.forEach(row => {
+                const name = row.dataset.name.toLowerCase();
+                const id = row.dataset.id.toLowerCase();
+                const email = row.dataset.email.toLowerCase();
+                const className = row.dataset.class;
+                const status = row.dataset.status;
+
+                const matchesSearch = name.includes(searchTerm) || id.includes(searchTerm) || email.includes(searchTerm);
+                const matchesClass = !selectedClass || className === selectedClass;
+                const matchesStatus = !selectedStatus || status === selectedStatus;
+
+                if (matchesSearch && matchesClass && matchesStatus) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        }
+
+        searchInput.addEventListener('input', filterStudents);
+        classFilter.addEventListener('change', filterStudents);
+        statusFilter.addEventListener('change', filterStudents);
+
+        // Enroll modal
+        document.querySelector('[data-modal-target="enrollModal"]')?.addEventListener('click', () => openModal('enrollModal'));
+
+        // Close modals when clicking outside
+        document.querySelectorAll('[id$="Modal"]').forEach(modal => {
+            modal.addEventListener('click', function (e) {
+                if (e.target === this) {
+                    closeModal(this.id);
+                }
+            });
+        });
+
+        // Close modals on escape key
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape') {
+                document.querySelectorAll('[id$="Modal"]').forEach(modal => {
+                    closeModal(modal.id);
+                });
+            }
+        });
+    });
+</script>
+
+{% endblock %}

@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Access Forbidden - {{ app_name }}</title>
+    <link href="{{ url_for('static', filename='dist/output.css') }}" rel="stylesheet">
+</head>
+<body class="bg-gray-100 min-h-screen flex items-center justify-center">
+    <div class="max-w-md mx-auto text-center">
+        <div class="mb-8">
+            <h1 class="text-9xl font-bold text-yellow-300">403</h1>
+        </div>
+        <div class="mb-8">
+            <h2 class="text-2xl font-semibold text-gray-800 mb-2">Access Forbidden</h2>
+            <p class="text-gray-600">
+                You don't have permission to access this resource.
+                Please contact an administrator if you believe this is an error.
+            </p>
+        </div>
+        <div class="space-y-4">
+            <a href="{{ url_for('index') }}"
+               class="inline-block bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-6 rounded-lg transition duration-200">
+                Go Home
+            </a>
+            <div>
+                <button onclick="history.back()"
+                        class="text-blue-600 hover:text-blue-800 font-medium">
+                    ← Go Back
+                </button>
+            </div>
+        </div>
+        <div class="mt-8">
+            <a href="{{ url_for('login') }}"
+               class="text-sm text-gray-500 hover:text-gray-700">
+                Try logging in with different credentials
+            </a>
+        </div>
+    </div>
+</body>
+</html>

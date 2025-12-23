@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>Demo Question Bank - Student Portal</title>
+    <link href="{{ url_for('static', filename='dist/output.css') }}" rel="stylesheet">
+    <!-- Removed Google Fonts CDN for Material Symbols -->
+    <!-- <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet" /> -->
+    <!-- Removed preload tags to prevent warnings about unused preloaded resources -->
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet" />
+    <style>
+        body {
+            min-height: max(884px, 100dvh);
+        }
+        .material-symbols-outlined,
+        .material-symbols-rounded,
+        .material-symbols-sharp {
+            font-variation-settings:
+                'FILL' 0,
+                'wght' 400,
+                'GRAD' 0,
+                'opsz' 24
+        }
+        :root {
+            --radio-dot-svg: url('data:image/svg+xml,%3csvg viewBox=%270 0 16 16%27 fill=%27rgb(17,114,212)%27 xmlns=%27http://www.w3.org/2000/svg%27%3e%3ccircle cx=%278%27 cy=%278%27 r=%273%27/%3e%3c/svg%3e');
+        }
+    </style>
+</head>
+
+<body class="bg-gray-50 dark:bg-[#0f1419] font-display">
+    <!-- Header -->
+    <header class="bg-white dark:bg-gray-800 p-4 md:p-6 border-b border-gray-200 dark:border-gray-700">
+        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4">
+            <div class="flex items-center space-x-3">
+                <div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-10"
+                    style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuAbO7HAxfFgT4gCYK-cNRKFEIepHt7v69rsG-D8MlFqhuCNTf8nZRsbM3UUc7kpX2qLU7cH9vmrlxUPGxObPM-sMw7903fYoK8984YMifTL9seWAUn2yEuJ9_uZQcVd8QPSi08HNZzSc0tg25R5u3RS_ZNVB-JeRfo8NnAe54nCn-0NciZSbGc9ibyR5FMP0XxRLakCJtrHD1nVmx49f6Dujf6WzKI6lrhq7_oKKg4vSlHvUesYrxGTcsZq25m1oPHUfsq-MRZz31k");'>
+                </div>
+                <div>
+                    <h2 class="text-lg font-bold leading-tight tracking-[-0.015em] text-gray-900 dark:text-white">Student Portal</h2>
+                    <p class="text-sm text-gray-500 dark:text-gray-400">Welcome back!</p>
+                </div>
+            </div>
+            <div class="flex items-center space-x-4 w-full sm:w-auto justify-between sm:justify-end">
+                <div class="text-left sm:text-right">
+                    <p class="text-sm font-semibold text-gray-900 dark:text-white">{{ current_user.full_name() if current_user else 'Student Name' }}</p>
+                    <p class="text-xs text-gray-500 dark:text-gray-400">@{{ current_user.username if current_user else 'student' }}</p>
+                </div>
+                <div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-12"
+                    style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuBmIHg46Ly3sffmtHfhrtbIESLdmwar8eq_0OF01cjx9cYWa7-FWfydtOKwhIBN-XamH95kBFBtncwtHy9veWaPFD1WgNSGywJmWmctD3_XV2lJhp5TXJeIof6ZJjf9u1Y25azZmUq70uA3mXO0Fvk7XARwKaw53awpeYONMtXIkUfuU7d-RT8xoQV6UisMPcx9KcEfa2ziwm-ozi-2m9uI46bz3JJ_IwpS9Nu18FY_Tn6PSuUzKRl2UOiYFB-j8C7tKcocNX83GgE");'>
+                </div>
+                <!-- Logout Button -->
+                <form action="{{ url_for('logout') }}" method="POST" class="inline">
+                    <button type="submit" 
+                        class="flex items-center gap-2 px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors duration-200"
+                        title="Logout">
+                        <span class="material-symbols-outlined text-lg">logout</span>
+                        <span class="hidden sm:inline text-sm font-medium">Logout</span>
+                    </button>
+                </form>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="p-4 md:p-6">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <!-- Header -->
+    <div class="mb-8">
+        <h1 class="text-3xl font-bold text-gray-900 dark:text-white mb-2">Demo Question Bank</h1>
+        <p class="text-gray-600 dark:text-gray-400">Practice with sample questions to prepare for your exams.</p>
+    </div>
+
+    <!-- Stats -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+            <div class="flex items-center">
+                <div class="p-3 bg-blue-500 rounded-lg">
+                    <span class="material-symbols-outlined text-white">quiz</span>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm font-medium text-gray-600 dark:text-gray-400">Total Questions</p>
+                    <p class="text-2xl font-semibold text-gray-900 dark:text-white">{{ total_questions }}</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+            <div class="flex items-center">
+                <div class="p-3 bg-green-500 rounded-lg">
+                    <span class="material-symbols-outlined text-white">book</span>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm font-medium text-gray-600 dark:text-gray-400">Subjects</p>
+                    <p class="text-2xl font-semibold text-gray-900 dark:text-white">{{ subjects|length }}</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+            <div class="flex items-center">
+                <div class="p-3 bg-purple-500 rounded-lg">
+                    <span class="material-symbols-outlined text-white">school</span>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm font-medium text-gray-600 dark:text-gray-400">Practice Mode</p>
+                    <p class="text-2xl font-semibold text-gray-900 dark:text-white">Available</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Subjects Section -->
+    <div class="mb-8">
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6">
+            <h2 class="text-2xl font-bold text-gray-900 dark:text-white">Subjects</h2>
+            <a href="{{ url_for('start_demo_practice') }}" 
+               class="mt-4 sm:mt-0 px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white font-semibold rounded-lg hover:from-blue-600 hover:to-blue-700 transition-all duration-200 shadow-md hover:shadow-lg">
+                Start Practice Session
+            </a>
+        </div>
+
+        {% if subjects %}
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {% for subject_name, questions in subjects.items() %}
+                <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md hover:shadow-lg transition-shadow duration-200 overflow-hidden">
+                    <div class="p-6">
+                        <div class="flex items-start justify-between mb-4">
+                            <div class="flex items-center">
+                                <div class="p-2 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg mr-3">
+                                    <span class="material-symbols-outlined text-white text-2xl">book</span>
+                                </div>
+                                <div>
+                                    <h3 class="text-lg font-bold text-gray-900 dark:text-white">{{ subject_name }}</h3>
+                                    <p class="text-sm text-gray-500 dark:text-gray-400">{{ questions|length }} Questions</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Subject Details -->
+                        <div class="space-y-2 mb-4">
+                            <div class="flex items-center text-sm text-gray-600 dark:text-gray-400">
+                                <span class="material-symbols-outlined text-lg mr-2">question_mark</span>
+                                <span>Practice Questions</span>
+                            </div>
+                            <div class="flex items-center text-sm text-gray-600 dark:text-gray-400">
+                                <span class="material-symbols-outlined text-lg mr-2">auto_mode</span>
+                                <span>Self-Paced Learning</span>
+                            </div>
+                        </div>
+
+                        <!-- Action Button -->
+                        <a href="{{ url_for('start_demo_practice', subject=subject_name) }}" 
+                           class="block w-full text-center bg-gradient-to-r from-primary to-blue-600 text-white font-semibold py-2 rounded-lg hover:from-primary/90 hover:to-blue-600/90 transition-all duration-200 hover:shadow-md">
+                            Practice {{ subject_name }}
+                        </a>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-8 text-center">
+                <span class="material-symbols-outlined text-6xl text-gray-300 dark:text-gray-600 mb-4">quiz</span>
+                <h3 class="text-xl font-semibold text-gray-900 dark:text-white mb-2">No Demo Questions Available</h3>
+                <p class="text-gray-600 dark:text-gray-400">Check back later for practice questions.</p>
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- Instructions -->
+    <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-2xl shadow-sm p-6">
+        <h2 class="text-lg font-semibold text-blue-800 dark:text-blue-200 mb-3">How to Use Demo Practice</h2>
+        <ol class="list-decimal list-inside space-y-2 text-blue-700 dark:text-blue-300">
+            <li>Select a subject or start a general practice session</li>
+            <li>Answer all questions in the timed environment</li>
+            <li>Review your results and identify areas for improvement</li>
+            <li>Practice regularly to improve your test-taking skills</li>
+        </ol>
+    </div>
+        </div>
+    </main>
+</body>
+
+</html>
