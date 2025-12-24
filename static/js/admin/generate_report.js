@@ -13,7 +13,328 @@ document.addEventListener("DOMContentLoaded", () => {
       closeCanvasPreviewModal();
     }
   });
+  
+  // Initialize tab switching functionality
+  initializeTabSwitching();
+  
+  // Initialize broad sheet controls
+  initializeBroadSheetControls();
 });
+
+// Initialize tab switching functionality
+function initializeTabSwitching() {
+  // Tab switching
+  document.querySelectorAll('.report-tab').forEach(tab => {
+    tab.addEventListener('click', function () {
+      // Remove active class from all tabs
+      document.querySelectorAll('.report-tab').forEach(t => {
+        t.classList.remove('bg-white', 'dark:bg-gray-700', 'text-primary', 'shadow-sm');
+        t.classList.add('text-gray-600', 'dark:text-gray-300', 'hover:text-gray-800', 'dark:hover:text-gray-200', 'hover:bg-gray-200', 'dark:hover:bg-gray-700/50');
+      });
+
+      // Add active class to clicked tab
+      this.classList.remove('text-gray-600', 'dark:text-gray-300', 'hover:text-gray-800', 'dark:hover:text-gray-200', 'hover:bg-gray-200', 'dark:hover:bg-gray-700/50');
+      this.classList.add('bg-white', 'dark:bg-gray-700', 'text-primary', 'shadow-sm');
+
+      // Show/hide sections
+      if (this.id === 'individual-reports-tab') {
+        document.getElementById('individual-reports-section').classList.remove('hidden');
+        document.getElementById('broad-sheet-section').classList.add('hidden');
+      } else if (this.id === 'broad-sheet-tab') {
+        document.getElementById('individual-reports-section').classList.add('hidden');
+        document.getElementById('broad-sheet-section').classList.remove('hidden');
+        
+        // Load terms for broad sheet if not already loaded
+        if (document.querySelectorAll('#broadSheetTermFilter option').length <= 1) {
+          loadBroadSheetTerms();
+        }
+        if (document.querySelectorAll('#broadSheetClassFilter option').length <= 1) {
+          loadBroadSheetClasses();
+        }
+      }
+    });
+  });
+}
+
+// Initialize broad sheet controls
+function initializeBroadSheetControls() {
+  // Toggle exam controls visibility
+  const toggleBtn = document.getElementById('toggleExamControls');
+  if (toggleBtn) {
+    toggleBtn.addEventListener('click', function() {
+      const controls = document.getElementById('examToggleControls');
+      if (controls.classList.contains('hidden')) {
+        controls.classList.remove('hidden');
+        this.innerHTML = `
+          <span class="material-symbols-outlined text-sm">visibility_off</span>
+          <span class="text-sm font-bold">Hide Exam Controls</span>
+        `;
+      } else {
+        controls.classList.add('hidden');
+        this.innerHTML = `
+          <span class="material-symbols-outlined text-sm">visibility</span>
+          <span class="text-sm font-bold">Show/Hide Exams</span>
+        `;
+      }
+    });
+  }
+}
+
+// Load terms for broad sheet
+async function loadBroadSheetTerms() {
+  const select = document.getElementById('broadSheetTermFilter');
+  if (!select) return;
+  
+  select.innerHTML = '<option value="">Loading...</option>';
+  select.disabled = true;
+
+  try {
+    const response = await fetch('/reports/api/terms');
+    const data = await response.json();
+
+    if (data.success && data.terms.length > 0) {
+      select.innerHTML = '<option value="">Select Term</option>';
+      data.terms.forEach((term) => {
+        const option = document.createElement('option');
+        option.value = term.term_id;
+        option.textContent = `${term.term_name} - ${term.academic_session}`;
+        if (term.is_current) {
+          option.textContent += ' (Current)';
+          option.selected = true;
+        }
+        select.appendChild(option);
+      });
+    } else {
+      select.innerHTML = '<option value="">No terms found</option>';
+    }
+  } catch (error) {
+    console.error('Error loading terms for broad sheet:', error);
+    select.innerHTML = '<option value="">Error loading terms</option>';
+    showNotification('Error loading terms for broad sheet. Please refresh the page.', 'error');
+  } finally {
+    select.disabled = false;
+  }
+}
+
+// Load classes for broad sheet
+async function loadBroadSheetClasses() {
+  const select = document.getElementById('broadSheetClassFilter');
+  if (!select) return;
+  
+  select.innerHTML = '<option value="">Loading...</option>';
+  select.disabled = true;
+
+  try {
+    const response = await fetch('/reports/api/classes');
+    const data = await response.json();
+
+    if (data.success && data.classes.length > 0) {
+      select.innerHTML = '<option value="">Select Class</option>';
+      data.classes.forEach((cls) => {
+        const option = document.createElement('option');
+        option.value = cls.class_room_id;
+        option.textContent = cls.class_name;
+        select.appendChild(option);
+      });
+    } else {
+      select.innerHTML = '<option value="">No classes found</option>';
+    }
+  } catch (error) {
+    console.error('Error loading classes for broad sheet:', error);
+    select.innerHTML = '<option value="">Error loading classes</option>';
+    showNotification('Error loading classes for broad sheet. Please refresh the page.', 'error');
+  } finally {
+    select.disabled = false;
+  }
+}
+
+// Load broad sheet data
+async function loadBroadSheetData() {
+  const termId = document.getElementById('broadSheetTermFilter').value;
+  const classId = document.getElementById('broadSheetClassFilter').value;
+  const examType = document.getElementById('broadSheetExamTypeFilter').value;
+  const scoreDisplay = document.getElementById('broadSheetScoreDisplay').value;
+  
+  if (!termId || !classId) {
+    showNotification('Please select both term and class', 'error');
+    return;
+  }
+  
+  // Show loading state
+  const container = document.getElementById('broadSheetContainer');
+  container.innerHTML = `
+    <div class="flex justify-center items-center py-12">
+      <div class="preview-loading-spinner"></div>
+      <p class="ml-4 text-gray-500 dark:text-gray-400">Loading broad sheet data...</p>
+    </div>
+  `;
+  
+  try {
+    // Fetch broad sheet data from backend
+    const response = await fetch('/reports/api/broad-sheet', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        term_id: termId,
+        class_room_id: classId,
+        exam_type: examType
+      })
+    });
+    
+    const data = await response.json();
+    
+    if (data.success) {
+      renderBroadSheet(data.data, data.metadata);
+    } else {
+      throw new Error(data.error || 'Failed to load broad sheet data');
+    }
+  } catch (error) {
+    console.error('Error loading broad sheet:', error);
+    container.innerHTML = `
+      <div class="text-center py-8">
+        <p class="text-red-500 dark:text-red-400">Error loading broad sheet: ${error.message}</p>
+        <button onclick="loadBroadSheetData()" class="mt-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">Retry</button>
+      </div>
+    `;
+  }
+}
+
+// Render broad sheet table
+function renderBroadSheet(broadSheetData, metadata) {
+  const container = document.getElementById('broadSheetContainer');
+  
+  if (!broadSheetData || broadSheetData.length === 0) {
+    container.innerHTML = '<p class="text-center py-8 text-gray-500 dark:text-gray-400">No data available for the selected criteria</p>';
+    return;
+  }
+  
+  // Extract all unique subjects from the data
+  const allSubjects = new Set();
+  broadSheetData.forEach(student => {
+    Object.keys(student.subjects).forEach(subject => {
+      allSubjects.add(subject);
+    });
+  });
+  const subjects = Array.from(allSubjects).sort();
+  
+  // Generate the table HTML
+  let tableHTML = `
+    <div class="overflow-x-auto">
+      <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+        <thead class="bg-gray-50 dark:bg-gray-700">
+          <tr>
+            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">S/N</th>
+            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Admission No.</th>
+            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Student Name</th>
+  `;
+  
+  // Add subject headers
+  subjects.forEach(subject => {
+    tableHTML += `<th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">${subject}</th>`;
+  });
+  
+  // Close the header row
+  tableHTML += `
+          </tr>
+        </thead>
+        <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+  `;
+  
+  // Add student rows
+  broadSheetData.forEach((student, index) => {
+    tableHTML += `<tr class="hover:bg-gray-50 dark:hover:bg-gray-700/30">`;
+    tableHTML += `<td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">${index + 1}</td>`;
+    tableHTML += `<td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">${student.admission_number || ''}</td>`;
+    tableHTML += `<td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">${student.student_name}</td>`;
+    
+    // Add subject scores
+    subjects.forEach(subject => {
+      if (student.subjects[subject]) {
+        const subjectData = student.subjects[subject];
+        // Display total score and percentage
+        const scoreText = `${subjectData.total_score}/${subjectData.max_possible} (${subjectData.percentage}%)`;
+        tableHTML += `<td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">${scoreText}</td>`;
+      } else {
+        tableHTML += `<td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">-</td>`;
+      }
+    });
+    
+    tableHTML += '</tr>';
+  });
+  
+  tableHTML += `
+        </tbody>
+      </table>
+    </div>
+  `;
+  
+  container.innerHTML = tableHTML;
+}
+
+// Export broad sheet
+async function exportBroadSheet(format) {
+  const termId = document.getElementById('broadSheetTermFilter').value;
+  const classId = document.getElementById('broadSheetClassFilter').value;
+  const examType = document.getElementById('broadSheetExamTypeFilter').value;
+  const scoreDisplay = document.getElementById('broadSheetScoreDisplay').value;
+  
+  if (!termId || !classId) {
+    showNotification('Please select both term and class', 'error');
+    return;
+  }
+  
+  try {
+    // Show processing notification
+    showNotification(`Exporting broad sheet as ${format.toUpperCase()}...`, 'info');
+    
+    // Fetch export data from backend
+    const response = await fetch(`/reports/api/broad-sheet/export/${format}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        term_id: termId,
+        class_room_id: classId,
+        exam_type: examType,
+        show_exams: true,
+        show_totals: true
+      })
+    });
+    
+    if (response.ok) {
+      // Create a temporary link to download the file
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      
+      // Generate filename based on class and term
+      const termSelect = document.getElementById('broadSheetTermFilter');
+      const classSelect = document.getElementById('broadSheetClassFilter');
+      const termText = termSelect.options[termSelect.selectedIndex].text;
+      const classText = classSelect.options[classSelect.selectedIndex].text;
+      a.download = `BroadSheet_${classText.replace(/\s+/g, '_')}_${termText.replace(/\s+/g, '_').replace('(', '').replace(')', '')}.${format}`;
+      
+      document.body.appendChild(a);
+      a.click();
+      
+      // Clean up
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      
+      showNotification('Broad sheet exported successfully!', 'success');
+    } else {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Export failed');
+    }
+  } catch (error) {
+    console.error('Export error:', error);
+    showNotification(`Export failed: ${error.message}`, 'error');
+  }
+}
 async function loadTerms() {
   const select = document.getElementById("termFilter");
   select.innerHTML = '<option value="">Loading...</option>';
@@ -1217,7 +1538,7 @@ function generateReportHTML(reportData) {
                 width: 210mm;
                 height: 290mm; /* Further reduced to prevent overflow */
                 overflow: hidden;
-                font-size: 8.5pt;
+                font-size: 10pt;
                 line-height: 1.25; /* Even tighter line height */
                 page-break-after: avoid;
                 page-break-inside: avoid;
@@ -1288,7 +1609,7 @@ function generateReportHTML(reportData) {
                 padding: 0 4mm;
             }
             .school-name {
-                font-size: 15pt;
+                font-size: 17pt;
                 font-weight: 800;
                 text-transform: uppercase;
                 margin: 0;
@@ -1300,23 +1621,23 @@ function generateReportHTML(reportData) {
                 color: white;
                 background: var(--primary-blue);
                 font-weight: 700;
-                font-size: 10pt;
-                margin: 1mm auto 0 auto !important;
+                font-size: 12pt;
+                margin: 1mm auto 2mm auto !important;
                 text-transform: uppercase;
                 width: fit-content;
-                padding: 0.5mm 1mm;
+                padding: 2mm;
                 border-radius: 4px;
                 display: block;
                 text-align: center;
             }
      
             .school-motto { 
-                font-size: 7.5pt; 
+                font-size: 9pt; 
                 margin: 1mm 0 0 0; 
                 opacity: 0.95;
                 font-style: italic; 
             }
-            .school-address { font-size: 7.5pt; margin: 1mm 0 0 0; opacity: 0.95; }
+            .school-address { font-size: 9pt; margin: 1mm 0 0 0; opacity: 0.95; }
             
             .school-sections { 
                 margin: 1mm 0; 
@@ -1328,7 +1649,7 @@ function generateReportHTML(reportData) {
             .section-badge {
                 background: linear-gradient(135deg, #8b5cf6 0%, #a855f7 100%);
                 color: white;
-                font-size: 6.5pt;
+                font-size: 8pt;
                 padding: 0.5mm 1mm;
                 border-radius: 3px;
                 display: inline-block;
@@ -1361,7 +1682,7 @@ function generateReportHTML(reportData) {
                 font-weight: 700;
                 text-align: center;
                 text-transform: uppercase;
-                font-size: 9pt;
+                font-size: 11pt;
                 padding: 2mm;
                 border-radius: 4px;
                 margin-bottom: 1mm;
@@ -1373,7 +1694,7 @@ function generateReportHTML(reportData) {
                 width: 100%;
                 border-collapse: separate;
                 border-spacing: 0;
-                font-size: 7.5pt; /* Reduced font size */
+                font-size: 9pt; /* Reduced font size */
                 border: 1px solid #e2e8f0;
                 border-radius: 4px;
             }
@@ -1407,7 +1728,7 @@ function generateReportHTML(reportData) {
                 overflow: hidden;
                 margin-bottom: 1mm; /* Reduced margin */
                 text-align: center;
-                height: 12mm; /* Fixed height to save space */
+                height: fit-content;
             }
             .term-col { padding: 0; border-right: 1px solid #e2e8f0; }
             .term-col:last-child { border-right: none; }
@@ -1415,7 +1736,7 @@ function generateReportHTML(reportData) {
             .term-head {
                 background-color: #4338ca;
                 color: white;
-                font-size: 7.5pt;
+                font-size: 9pt;
                 font-weight: 700;
                 text-transform: uppercase;
                 padding: 1.5mm;
@@ -1423,7 +1744,7 @@ function generateReportHTML(reportData) {
             .term-data {
                 background-color: white;
                 font-weight: 600;
-                font-size: 8pt;
+                font-size: 9.5pt;
                 padding: 1.5mm;
             }
 
@@ -1432,7 +1753,7 @@ function generateReportHTML(reportData) {
                 width: 100%;
                 border-collapse: separate;
                 border-spacing: 0;
-                font-size: 7.5pt; /* Reduced font size */
+                font-size: 9pt; /* Reduced font size */
                 margin-bottom: 1.5mm; /* Reduced margin */
                 border: 1px solid #e2e8f0;
                 border-radius: 6px;
@@ -1444,7 +1765,7 @@ function generateReportHTML(reportData) {
                 font-weight: 700;
                 text-transform: uppercase;
                 padding: 1.5mm 1.2mm; /* Reduced padding */
-                font-size: 7pt; /* Reduced font size */
+                font-size: 8.5pt; /* Reduced font size */
                 border-bottom: 1px solid #312e81;
                 border-right: 1px solid rgba(255,255,255,0.1);
                 letter-spacing: 0.5px;
@@ -1477,7 +1798,7 @@ function generateReportHTML(reportData) {
                 color: white;
                 text-align: center;
                 font-weight: 700;
-                font-size: 7.5pt;
+                font-size: 9pt;
                 box-shadow: 0 1px 2px rgba(0,0,0,0.1);
             }
             .badge-A { background: #059669; }
@@ -1503,12 +1824,12 @@ function generateReportHTML(reportData) {
                 border-radius: 6px;
                 background-color: white;
                 padding: 1mm; /* Reduced padding */
-                height: 22mm; /* Reduced height */
+                height: 30mm; /* Reduced height */
                 position: relative;
                 box-shadow: 0 1px 2px rgba(0,0,0,0.05);
             }
             .comment-header {
-                font-size: 7.5pt;
+                font-size: 9pt;
                 font-weight: 700;
                 color: #4338ca;
                 border-bottom: 1px solid #f1f5f9;
@@ -1516,14 +1837,14 @@ function generateReportHTML(reportData) {
                 margin-bottom: 1mm;
                 text-transform: uppercase;
             }
-            .comment-text { font-size: 8pt; color: #334155; font-style: italic; line-height: 1.3; }
+            .comment-text { font-size: 9.5pt; color: #334155; font-style: italic; line-height: 1.3; }
             .signature-box {
                 position: absolute;
                 bottom: 2mm;
                 width: 90%;
                 border-top: 1px dotted #94a3b8;
                 padding-top: 1mm;
-                font-size: 7pt;
+                font-size: 8.5pt;
                 color: #64748b;
             }
 
@@ -1535,7 +1856,7 @@ function generateReportHTML(reportData) {
                 border: 1px solid #e2e8f0;
                 border-radius: 8px;
                 padding: 1.5mm; /* Reduced padding */
-                font-size: 7pt;
+                font-size: 8.5pt;
                 color: #475569;
                 margin-bottom: 1.5mm; /* Reduced margin */
             }
@@ -1546,13 +1867,19 @@ function generateReportHTML(reportData) {
                 font-weight: 700;
                 margin-right: 2px;
             }
+            
+            .scale-grade {
+                font-size: 9.5pt;
+                padding: 2px 4px;
+                border-radius: 2px;
+            }
 
             .official-warning {
                 background: #fffbeb;
                 border: 1px solid #fcd34d;
                 color: #b45309;
                 text-align: center;
-                font-size: 8pt; /* Slightly smaller */
+                font-size: 9.5pt; /* Slightly smaller */
                 padding: 1mm; /* Reduced padding */
                 border-radius: 2px;
                 margin-top: 1.5mm; /* Reduced margin */
@@ -1707,7 +2034,7 @@ function generateReportHTML(reportData) {
                 }
                 
                 <!-- Student Info Table -->
-                <table class="student-info-table" style="flex: 1; font-size: 7pt;">
+                <table class="student-info-table" style="flex: 1; font-size: 8pt;">
                 <tr>
                     <td class="info-label">Student Name:</td>
                     <td class="info-val">${student.name || ""}</td>
@@ -2125,8 +2452,10 @@ async function generateClientSidePDF(reportData, previewMode = false) {
     element.style.top = "0";
     element.style.backgroundColor = "white"; // Changed from red to white
     element.style.zIndex = "9999"; // Ensure it's on top
-    element.style.width = "100%";
-    element.style.minHeight = "100vh";
+    element.style.width = "816px"; // A4 width in pixels at 96 DPI
+    element.style.height = "auto";
+    element.style.maxHeight = "none";
+    // Preserve default margins to allow PDF margins to work properly
     element.id = "pdf-generation-temp-element";
 
     // Add to body but make sure it's visible
@@ -2158,7 +2487,7 @@ async function generateClientSidePDF(reportData, previewMode = false) {
 
     // Configure html2pdf options with better error handling
     const opt = {
-      margin: [0.2, 0.2, 0.2, 0.2], // Reduced margins to prevent overflow
+      margin: [0.15, 0.15, 0.15, 0.15], // Reduced margins to prevent empty pages while maintaining appearance
       filename: `report_${(reportData.student?.name || "student").replace(
         /\s+/g,
         "_"
@@ -2170,7 +2499,11 @@ async function generateClientSidePDF(reportData, previewMode = false) {
         logging: false, // Reduced logging to prevent potential issues
         allowTaint: true,
         backgroundColor: "#ffffff",
-        windowHeight: document.getElementById("pdf-generation-temp-element")?.scrollHeight || 1122, // A4 height in pixels
+        scrollX: 0,
+        scrollY: 0,
+        width: 816, // A4 width in pixels at 96 DPI
+        height: 1056, // A4 height in pixels at 96 DPI
+        windowHeight: document.getElementById("pdf-generation-temp-element")?.scrollHeight || 1056, // A4 height in pixels
         onclone: (clonedDoc) => {
           console.log("Cloning document for html2canvas");
           
@@ -2180,12 +2513,14 @@ async function generateClientSidePDF(reportData, previewMode = false) {
             clonedElement.style.height = "auto";
             clonedElement.style.maxHeight = "none";
             clonedElement.style.overflow = "visible";
-            // Ensure body doesn't create extra space
+            clonedElement.style.width = "816px"; // Set specific width to match PDF dimensions
+            // Preserve default margins for proper PDF layout
+            // Ensure body doesn't create extra space but preserve margins
             const body = clonedDoc.body;
             body.style.height = "auto";
-            body.style.minHeight = "none";
-            body.style.margin = "0";
-            body.style.padding = "0";
+            body.style.maxHeight = "none";
+            body.style.overflow = "visible";
+            // Keep default body margins to allow PDF margins to work
           }
           
           // Handle missing images by replacing them with placeholders
@@ -2200,7 +2535,7 @@ async function generateClientSidePDF(reportData, previewMode = false) {
         },
       },
       pagebreak: {
-        mode: ["avoid-all"], // Array format for consistency
+        mode: ["css"], // Use CSS for page breaks instead of avoid-all
         before: [],
         after: [],
         avoid: ["tr", "th", "td", "img", "table", "#report-card", ".main-container"]
