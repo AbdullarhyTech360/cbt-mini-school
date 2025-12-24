@@ -1159,3 +1159,463 @@ def grade_scales_page():
     """Grade scales management page"""
     user = User.query.get(session["user_id"])
     return render_template("admin/grade_scales.html", user=user, current_user=user)
+
+
+@report_bp.route("/api/broad-sheet", methods=["POST"])
+@admin_or_staff_required
+def get_broad_sheet_data():
+    """Get broad sheet data for a class"""
+    try:
+        data = request.get_json()
+        class_room_id = data.get("class_room_id")
+        term_id = data.get("term_id")
+        exam_type = data.get("exam_type", "all")  # all, ca, exam, or specific assessment type
+        
+        if not all([class_room_id, term_id]):
+            return jsonify({
+                "success": False,
+                "error": "Missing required parameters"
+            }), 400
+        
+        # Use the helper function to get the data
+        broad_sheet_data, metadata = get_broad_sheet_data_logic(class_room_id, term_id, exam_type)
+        
+        return jsonify({
+            "success": True,
+            "data": broad_sheet_data,
+            "metadata": metadata
+        })
+        
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+def get_grade_from_score(score, term_id):
+    """Get grade from score using the appropriate grade scale"""
+    try:
+        from models.grade_scale import GradeScale
+        from models.school import School
+        
+        # Get the school's default grade scale
+        school = School.query.first()
+        if not school:
+            return "N/A"
+        
+        grade_scale = GradeScale.query.filter_by(
+            school_id=school.school_id,
+            is_default=True
+        ).first()
+        
+        if not grade_scale:
+            # If no default grade scale, use a basic scale
+            if score >= 70:
+                return "A"
+            elif score >= 60:
+                return "B"
+            elif score >= 50:
+                return "C"
+            elif score >= 40:
+                return "D"
+            else:
+                return "F"
+        
+        # Get grade based on the scale's ranges
+        grade_ranges = grade_scale.get_grade_ranges()
+        for grade_range in grade_ranges:
+            if grade_range['min_score'] <= score <= grade_range['max_score']:
+                return grade_range['grade']
+        
+        return "N/A"
+    
+    except Exception as e:
+        print(f"Error getting grade from score: {str(e)}")
+        return "N/A"
+
+
+def get_broad_sheet_data_logic(class_room_id, term_id, exam_type="all"):
+    """Core logic for getting broad sheet data, extracted for reuse"""
+    from models.student import Student
+    from models.exam import Exam
+    from models.subject import Subject
+    from models.assessment_type import AssessmentType
+    from models.exam_record import ExamRecord
+    from models.class_room import ClassRoom
+    from models.school_term import SchoolTerm
+    from models.user import User
+    
+    # Get all students in the class
+    students = User.query.filter_by(
+        class_room_id=class_room_id,
+        role="student",
+        is_active=True
+    ).order_by(User.first_name, User.last_name).all()
+    
+    # Get all subjects offered by the class
+    subjects = db.session.query(Subject).join(
+        Subject.classes
+    ).filter(
+        ClassRoom.class_room_id == class_room_id
+    ).order_by(Subject.subject_name).all()
+    
+    # Get all exams for the term and class
+    exams_query = Exam.query.filter_by(
+        class_room_id=class_room_id,
+        school_term_id=term_id
+    )
+    
+    # Filter by exam type if specified
+    if exam_type != "all":
+        if exam_type == "ca":
+            exams_query = exams_query.filter(
+                Exam.exam_type.ilike("%ca%")
+            )
+        elif exam_type == "exam":
+            exams_query = exams_query.filter(
+                Exam.exam_type.ilike("%exam%")
+            )
+        else:
+            exams_query = exams_query.filter(
+                Exam.exam_type.ilike(f"%{exam_type}%")
+            )
+    
+    exams = exams_query.all()
+    
+    # Prepare the broad sheet data structure
+    broad_sheet_data = []
+    
+    for student in students:
+        student_data = {
+            "student_id": student.id,
+            "student_name": f"{student.first_name} {student.last_name}",
+            "admission_number": student.student.admission_number if hasattr(student, 'student') and student.student and hasattr(student.student, 'admission_number') else None,
+            "subjects": {}
+        }
+        
+        # Get scores for each subject
+        for subject in subjects:
+            subject_scores = []
+            
+            # Get exam records for this student, subject, and term
+            exam_records = ExamRecord.query.join(
+                Exam
+            ).filter(
+                ExamRecord.student_id == student.id,
+                ExamRecord.subject_id == subject.subject_id,
+                Exam.school_term_id == term_id,
+                Exam.class_room_id == class_room_id
+            ).all()
+            
+            for record in exam_records:
+                exam = record.exam
+                subject_scores.append({
+                    "exam_id": exam.id,
+                    "exam_name": exam.name,
+                    "assessment_type": exam.exam_type,
+                    "score": record.raw_score,
+                    "max_score": exam.max_score,
+                    "percentage": round((record.raw_score / exam.max_score) * 100, 1) if exam.max_score and exam.max_score > 0 else 0
+                })
+            
+            # Calculate total and average for the subject
+            total_score = sum(item["score"] for item in subject_scores)
+            max_possible = sum(item["max_score"] for item in subject_scores)
+            subject_total = {
+                "total_score": total_score,
+                "max_possible": max_possible,
+                "percentage": round((total_score / max_possible) * 100, 1) if max_possible and max_possible > 0 else 0,
+                "grade": get_grade_from_score((total_score / max_possible) * 100, term_id) if max_possible and max_possible > 0 else "N/A",
+                "scores": subject_scores
+            }
+            
+            student_data["subjects"][subject.subject_name] = subject_total
+        
+        broad_sheet_data.append(student_data)
+    
+    # Prepare metadata
+    metadata = {
+        "class_name": ClassRoom.query.get(class_room_id).class_room_name,
+        "term_name": SchoolTerm.query.get(term_id).term_name,
+        "exam_type": exam_type,
+        "total_students": len(students),
+        "total_subjects": len(subjects),
+        "exams": [{
+            "exam_id": exam.id,
+            "exam_name": exam.name,
+            "assessment_type": exam.exam_type
+        } for exam in exams]
+    }
+    
+    return broad_sheet_data, metadata
+
+
+@report_bp.route("/api/broad-sheet/export/<format>", methods=["POST"])
+@admin_or_staff_required
+def export_broad_sheet(format):
+    """Export broad sheet data in specified format"""
+    try:
+        if format.lower() not in ['pdf', 'excel']:
+            return jsonify({"success": False, "error": "Invalid format. Use 'pdf' or 'excel'"}), 400
+        
+        from models.school import School
+        school = School.query.first()
+        
+        data = request.get_json()
+        class_room_id = data.get("class_room_id")
+        term_id = data.get("term_id")
+        exam_type = data.get("exam_type", "all")
+        show_exams = data.get("show_exams", True)
+        show_totals = data.get("show_totals", True)
+        
+        # Get broad sheet data by calling the helper function
+        try:
+            # Extract data from request
+            class_room_id = data.get("class_room_id")
+            term_id = data.get("term_id")
+            exam_type = data.get("exam_type", "all")
+            
+            if not all([class_room_id, term_id]):
+                return jsonify({"success": False, "error": "Missing required parameters"}), 400
+            
+            # Get the broad sheet data using the same logic as the main function
+            broad_sheet_data, metadata = get_broad_sheet_data_logic(class_room_id, term_id, exam_type)
+            
+        except Exception as e:
+            return jsonify({"success": False, "error": f"Error getting broad sheet data: {str(e)}"}), 500
+        
+        if format.lower() == 'pdf':
+            return export_broad_sheet_pdf(broad_sheet_data, metadata, school)
+        elif format.lower() == 'excel':
+            return export_broad_sheet_excel(broad_sheet_data, metadata, school)
+            
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+def export_broad_sheet_pdf(broad_sheet_data, metadata, school):
+    """Export broad sheet as PDF"""
+    try:
+        from weasyprint import HTML
+        import tempfile
+        import os
+        
+        # Generate HTML for the broad sheet
+        html_content = generate_broad_sheet_html(broad_sheet_data, metadata, school)
+        
+        # Convert to PDF
+        pdf_bytes = HTML(string=html_content).write_pdf()
+        
+        # Create filename
+        class_name = metadata["class_name"].replace(" ", "_")
+        term_name = metadata["term_name"].replace(" ", "_")
+        filename = f"Broad_Sheet_{class_name}_{term_name}.pdf"
+        
+        return send_file(
+            io.BytesIO(pdf_bytes),
+            mimetype='application/pdf',
+            as_attachment=True,
+            download_name=filename
+        )
+    
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+def export_broad_sheet_excel(broad_sheet_data, metadata, school):
+    """Export broad sheet as Excel"""
+    try:
+        import xlsxwriter
+        
+        # Create in-memory workbook
+        output = io.BytesIO()
+        workbook = xlsxwriter.Workbook(output, {'in_memory': True})
+        worksheet = workbook.add_worksheet('Broad Sheet')
+        
+        # Define formats
+        header_format = workbook.add_format({
+            'bold': True,
+            'bg_color': '#D3D3D3',
+            'border': 1,
+            'align': 'center',
+            'valign': 'vcenter'
+        })
+        
+        cell_format = workbook.add_format({
+            'border': 1,
+            'align': 'center',
+            'valign': 'vcenter'
+        })
+        
+        # Write title
+        worksheet.write('A1', f'BROAD SHEET - {metadata["class_name"]}', 
+                       workbook.add_format({'bold': True, 'font_size': 16, 'align': 'center'}))
+        worksheet.write('A2', f'Term: {metadata["term_name"]}', 
+                       workbook.add_format({'bold': True, 'align': 'center'}))
+        
+        # Write headers
+        row = 3
+        col = 0
+        
+        worksheet.write(row, col, 'S/N', header_format)
+        worksheet.write(row, col + 1, 'Admission No.', header_format)
+        worksheet.write(row, col + 2, 'Student Name', header_format)
+        
+        col_offset = 3
+        
+        # Get all unique subjects
+        subjects = set()
+        for student in broad_sheet_data:
+            subjects.update(student["subjects"].keys())
+        subjects = sorted(list(subjects))
+        
+        # Write subject headers
+        current_col = col_offset
+        subject_cols = {}
+        for subject in subjects:
+            subject_cols[subject] = current_col
+            worksheet.write(row, current_col, subject, header_format)
+            current_col += 1
+        
+        # Write student data
+        row = 4
+        for idx, student in enumerate(broad_sheet_data, 1):
+            worksheet.write(row, 0, idx, cell_format)
+            worksheet.write(row, 1, student["admission_number"], cell_format)
+            worksheet.write(row, 2, student["student_name"], cell_format)
+            
+            # Write subject scores
+            for subject, data in student["subjects"].items():
+                if subject in subject_cols:
+                    col_pos = subject_cols[subject]
+                    # Show total score
+                    score_text = f'{data["total_score"]}/{data["max_possible"]} ({data["percentage"]}%)'
+                    worksheet.write(row, col_pos, score_text, cell_format)
+            
+            row += 1
+        
+        workbook.close()
+        
+        # Create filename
+        class_name = metadata["class_name"].replace(" ", "_")
+        term_name = metadata["term_name"].replace(" ", "_")
+        filename = f"Broad_Sheet_{class_name}_{term_name}.xlsx"
+        
+        output.seek(0)
+        return send_file(
+            output,
+            mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            as_attachment=True,
+            download_name=filename
+        )
+    
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+def generate_broad_sheet_html(broad_sheet_data, metadata, school):
+    """Generate HTML for broad sheet"""
+    html = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="utf-8">
+        <title>Broad Sheet - {metadata['class_name']}</title>
+        <style>
+            body {{
+                font-family: Arial, sans-serif;
+                margin: 20px;
+                background-color: white;
+            }}
+            .header {{
+                text-align: center;
+                margin-bottom: 20px;
+            }}
+            .header h1 {{
+                margin: 0;
+                font-size: 18px;
+                color: #333;
+            }}
+            .header p {{
+                margin: 5px 0;
+                font-size: 14px;
+                color: #666;
+            }}
+            table {{
+                width: 100%;
+                border-collapse: collapse;
+                margin-top: 20px;
+                font-size: 12px;
+            }}
+            th, td {{
+                border: 1px solid #333;
+                padding: 8px;
+                text-align: center;
+            }}
+            th {{
+                background-color: #f2f2f2;
+                font-weight: bold;
+            }}
+            .student-name {{
+                text-align: left;
+            }}
+            .footer {{
+                margin-top: 30px;
+                text-align: center;
+                font-size: 12px;
+                color: #666;
+            }}
+        </style>
+    </head>
+    <body>
+        <div class="header">
+            <h1>BROAD SHEET</h1>
+            <p><strong>School:</strong> {school.school_name if school else 'N/A'}</p>
+            <p><strong>Class:</strong> {metadata['class_name']}</p>
+            <p><strong>Term:</strong> {metadata['term_name']}</p>
+            <p><strong>Generated on:</strong> {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</p>
+        </div>
+        
+        <table>
+            <thead>
+                <tr>
+                    <th>S/N</th>
+                    <th>Admission No.</th>
+                    <th class="student-name">Student Name</th>
+    """
+    
+    # Add subject headers
+    subjects = set()
+    for student in broad_sheet_data:
+        subjects.update(student["subjects"].keys())
+    subjects = sorted(list(subjects))
+    
+    for subject in subjects:
+        html += f"                    <th>{subject}</th>\n"
+    
+    html += "                </tr>\n            </thead>\n            <tbody>\n"
+    
+    # Add student rows
+    for idx, student in enumerate(broad_sheet_data, 1):
+        html += f"                <tr>\n                    <td>{idx}</td>\n                    <td>{student['admission_number'] or ''}</td>\n                    <td class=\"student-name\">{student['student_name']}</td>\n"
+        
+        for subject in subjects:
+            if subject in student["subjects"]:
+                subject_data = student["subjects"][subject]
+                score_text = f"{subject_data['total_score']}/{subject_data['max_possible']} ({subject_data['percentage']}%)"
+                html += f"                    <td>{score_text}</td>\n"
+            else:
+                html += "                    <td>-</td>\n"
+        
+        html += "                </tr>\n"
+    
+    html += "            </tbody>\n        </table>\n        \n        <div class=\"footer\">\n            <p>Generated by CBT Mini School System</p>\n        </div>\n    </body>\n    </html>"
+    
+    return html
+
