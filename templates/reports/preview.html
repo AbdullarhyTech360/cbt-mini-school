@@ -1021,8 +1021,8 @@
                 <div class="student-card">
                     ${
                       student.image
-                        ? `<img src="${student.image}" alt="Student" class="student-photo">`
-                        : `<img src="/static/uploads/profile_images/${student.gender && student.gender.toLowerCase() === 'male' ? 'male_default_avatar.png' : 'female_default_avatar.png'}" alt="Student" class="student-photo" onerror="this.outerHTML='<div class=\"student-photo\" style=\"background-color: #ede9fe; display: flex; align-items: center; justify-content: center;\"><span style=\"font-size: 24px;\">👤</span></div>'">`
+                        ? `<img src="/${student.image.replace(/^static\//, '')}" alt="Student" class="student-photo">`
+                        : `<img src="/uploads/profile_images/${student.gender && student.gender.toLowerCase() === 'male' ? 'male_default_avatar.png' : 'female_default_avatar.png'}" alt="Student" class="student-photo" onerror="this.outerHTML='<div class="student-photo" style="background-color: #ede9fe; display: flex; align-items: center; justify-content: center;"><span style="font-size: 24px;">👤</span></div>'">`
                     }
                     <div class="student-details">
                         <div class="detail-item">

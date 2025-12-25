@@ -286,16 +286,8 @@ document.addEventListener("DOMContentLoaded", function () {
       3: "Third Term",
     };
 
-    const startDate = new Date(term.start_date).toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    });
-    const endDate = new Date(term.end_date).toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    });
+    const startDate = term.start_date;
+    const endDate = term.end_date;
 
     return `
             <div class="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg border border-gray-200 dark:border-gray-600 hover:shadow-md transition-all">
@@ -470,7 +462,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
         // Display logo if exists
         if (school.logo && logoPreview) {
-          logoPreview.innerHTML = `<img src="/static/${school.logo}" alt="School Logo" class="w-full h-full object-cover rounded-lg">`;
+          logoPreview.innerHTML = `<img src="/${school.logo.replace(/^static\//, '')}" alt="School Logo" class="w-full h-full object-cover rounded-lg">`;
         }
       } else if (!data.success && data.data == {}) {
         console.error("School not found");

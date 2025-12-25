@@ -50,12 +50,14 @@ class ReportGenerator:
         candidates = [
             norm_path,
             os.path.join(os.getcwd(), norm_path),
+            os.path.join(os.getcwd(), 'static', norm_path),
+            os.path.join(os.getcwd(), 'static', 'uploads', os.path.basename(norm_path)),
             os.path.join(os.getcwd(), 'uploads', os.path.basename(norm_path)),
             os.path.join(os.getcwd(), 'uploads', 'school_logos',
                          os.path.basename(norm_path)),
+            # Add proper subdirectory support for the actual upload structure
             os.path.join(os.getcwd(), 'static', norm_path),
-            os.path.join(os.getcwd(), 'static', 'uploads',
-                         os.path.basename(norm_path)),
+            os.path.join(os.getcwd(), 'static', 'uploads', norm_path),
         ]
 
         for p in candidates:
@@ -73,6 +75,39 @@ class ReportGenerator:
 
         # If no local file found, return original; renderers with base_url may still handle it
         return path_or_url
+
+    @staticmethod
+    def _get_image_url(path_or_url):
+        """Return a proper URL for an uploaded image.
+
+        Handles various path formats stored in the database and converts them
+        to proper URLs that work with the Flask /uploads route.
+        """
+        if not path_or_url:
+            return ''
+
+        lower = path_or_url.lower()
+        if lower.startswith('data:') or lower.startswith('http://') or lower.startswith('https://'):
+            return path_or_url
+
+        # Clean the path by removing common prefixes
+        clean_path = path_or_url
+        prefixes_to_remove = ['static/uploads/', 'static/']
+        for prefix in prefixes_to_remove:
+            if clean_path.startswith(prefix):
+                clean_path = clean_path[len(prefix):]
+                break
+
+        # Normalize path separators to forward slashes (Flask expects forward slashes)
+        clean_path = clean_path.replace('\\', '/')
+
+        # The Flask route expects the path to be relative to static/uploads/
+        # So if the cleaned path is correct, just prepend / to make it a URL
+        result = f'/{clean_path}'
+        
+
+        
+        return result
 
     @staticmethod
     def get_student_scores(student_id, term_id, class_room_id, config_id=None):
@@ -820,28 +855,39 @@ class ReportGenerator:
             vertical-align: middle;
             text-align: center;
         }}
-        .student-icon {{
+        .student-icon {
             width: 70px;
             height: 70px;
-            background: linear-gradient(135deg, #6366f1, #8b5cf6);
             border-radius: 10px;
             display: inline-flex;
             align-items: center;
             justify-content: center;
             border: 3px solid white;
             box-shadow: 0 2px 5px rgba(99, 102, 241, 0.3);
-        }}
-        .student-icon img {{
+        }
+        .student-icon img {
             width: 64px;
             height: 64px;
             border-radius: 7px;
             object-fit: cover;
-        }}
-        .student-details {{
+        }
+        .student-default {
+            width: 64px;
+            height: 64px;
+            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+            border-radius: 7px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 24px;
+        }
+        .student-details {
             display: table-cell;
             vertical-align: middle;
             padding-left: 15px;
-        }}
+        }
         .student-info-table {{
             width: 100%;
             border-collapse: collapse;
@@ -1076,7 +1122,7 @@ class ReportGenerator:
         <!-- Purple Gradient Header -->
         <div class="header-banner">
             <div class="header-left">
-                {(f'<img src="{ReportGenerator._embed_image(school.get("logo"))}" class="school-logo">') if school.get('logo') else '<div class="school-logo"></div>'}
+                {(lambda logo_url=ReportGenerator._get_image_url(school.get("logo")): f'<img src="{logo_url}" class="school-logo" onerror="console.error(\'Logo failed to load:\', this.src);" onload="console.log(\'Logo loaded successfully:\', this.src);">' if school.get('logo') else '<div class="school-logo"></div>')()}
             </div>
             <div class="header-center">
                 <div class="school-name">{school['name'].upper()}</div>
@@ -1098,16 +1144,24 @@ class ReportGenerator:
             </thead>
             <tbody>
                 <tr>
+                    <td class="label-cell">Student Image:</td>
+                    <td class="value-cell" style="text-align: center;">
+                        {(lambda student_img_url=ReportGenerator._get_image_url(student.get("image")): f'<img src="{student_img_url}" width="60" height="60" style="border-radius: 50%; border: 2px solid #6366f1;" onerror="console.error(\'Student image failed to load:\', this.src);" onload="console.log(\'Student image loaded successfully:\', this.src);">' if student.get('image') else '<div style="width: 60px; height: 60px; border-radius: 50%; border: 2px solid #6366f1; background: linear-gradient(135deg, #6366f1, #8b5cf6); display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 14px;">{student["name"][0].upper()}</div>')()}
+                    </td>
                     <td class="label-cell">Student Name:</td>
                     <td class="value-cell">{student['name'].upper()}</td>
-                    <td class="label-cell">Class:</td>
-                    <td class="value-cell">{student['class_name']}</td>
                 </tr>
                 <tr>
+                    <td class="label-cell">Class:</td>
+                    <td class="value-cell">{student['class_name']}</td>
                     <td class="label-cell">Admission Number:</td>
                     <td class="value-cell">{student.get('admission_number', 'N/A')}</td>
+                </tr>
+                <tr>
                     <td class="label-cell">Position:</td>
                     <td class="value-cell" style="color: #6366f1; font-weight: 700;">{ReportGenerator.format_position(position)} of {total_students}</td>
+                    <td class="label-cell">Total Score:</td>
+                    <td class="value-cell" style="font-weight: 700;">{overall_total:.1f}/{overall_max}</td>
                 </tr>
                 <tr>
                     <td class="label-cell">Overall Grade:</td>
@@ -1115,8 +1169,8 @@ class ReportGenerator:
                         <span class="grade-pill grade-{overall_grade}" style="padding: 3px 10px; font-size: 8pt;">{overall_grade}</span>
                         <span style="font-size: 9pt; color: #64748b; margin-left: 6px; font-weight: 600;">({overall_percentage:.1f}%)</span>
                     </td>
-                    <td class="label-cell">Total Score:</td>
-                    <td class="value-cell" style="font-weight: 700;">{overall_total:.1f}/{overall_max}</td>
+                    <td class="label-cell">Percentage:</td>
+                    <td class="value-cell">{overall_percentage:.1f}%</td>
                 </tr>
             </tbody>
         </table>
@@ -1297,7 +1351,7 @@ class ReportGenerator:
     <table class="header-table">
         <tr>
             <td width="15%" valign="top">
-                {(f'<img src="{_embed_image(school.get("logo"))}" width="100" height="100">') if school.get('logo') else ''}
+                {(lambda logo_url=ReportGenerator._get_image_url(school.get("logo")): f'<img src="{logo_url}" width="100" height="100" onerror="console.error(\'Simple report logo failed to load:\', this.src);" onload="console.log(\'Simple report logo loaded successfully:\', this.src);">' if school.get('logo') else '')()}
             </td>
             <td width="85%" align="center">
                 <div class="school-name">{school['name'].upper()}</div>

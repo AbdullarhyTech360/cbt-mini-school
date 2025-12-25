@@ -136,7 +136,7 @@ def inject_school_info():
         logo_url = None
         if school and school.logo:
             # school.logo is stored as a relative path like uploads/school_logos/filename
-            logo_url = f"/static/{school.logo}"
+            logo_url = f"/{school.logo.replace('static/', '')}"
         return {
             "school_info": {
                 "name": school_name,
@@ -151,6 +151,21 @@ def inject_school_info():
         }
     except Exception:
         return {"school_info": {"name": "Your School", "logo_url": None}}
+
+
+# Route to serve uploaded files
+@app.route('/uploads/<path:filepath>')
+def serve_uploads(filepath):
+    """Serve uploaded files"""
+    upload_dir = os.path.join(os.path.dirname(__file__), 'static', 'uploads')
+    try:
+
+        return send_from_directory(upload_dir, filepath)
+    except FileNotFoundError:
+        # Log the error and return a 404
+        print(f"File not found: {filepath} in directory {upload_dir}")
+        from flask import abort
+        abort(404)
 
 
 # Route to serve node_modules for client-side libraries

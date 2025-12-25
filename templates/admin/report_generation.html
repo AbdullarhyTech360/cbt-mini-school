@@ -200,12 +200,21 @@
                     </select>
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1" for="broad-sheet-exam-type">Exam Type</label>
-                    <select class="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-white focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition" id="broad-sheet-exam-type">
-                        <option value="all">All Exams</option>
-                        <option value="ca">Class Assessment</option>
-                        <option value="exam">Main Exam</option>
-                    </select>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Exam Types</label>
+                    <div class="flex flex-wrap gap-4">
+                        <div class="flex items-center gap-2">
+                            <input type="checkbox" id="exam-type-all" class="rounded text-primary focus:ring-primary">
+                            <label for="exam-type-all" class="text-sm font-medium text-gray-700 dark:text-gray-300">All Exams</label>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <input type="checkbox" id="exam-type-ca" class="rounded text-primary focus:ring-primary">
+                            <label for="exam-type-ca" class="text-sm font-medium text-gray-700 dark:text-gray-300">Class Assessment</label>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <input type="checkbox" id="exam-type-exam" class="rounded text-primary focus:ring-primary">
+                            <label for="exam-type-exam" class="text-sm font-medium text-gray-700 dark:text-gray-300">Main Exam</label>
+                        </div>
+                    </div>
                 </div>
             </div>
             
@@ -259,5 +268,5 @@
     </div>
 </div>
 
-<script src="{{ url_for('static', filename='js/admin/report_generation.js') }}" defer></script>
+<script src="{{ url_for('static', filename='js/admin/generate_broadsheet.js') }}" defer></script>
 {% endblock %}
