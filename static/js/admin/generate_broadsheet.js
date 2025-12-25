@@ -94,7 +94,36 @@ document.addEventListener('DOMContentLoaded', function () {
     document.getElementById('load-broad-sheet')?.addEventListener('click', async function() {
         const classId = document.getElementById('broad-sheet-class').value;
         const termId = document.getElementById('broad-sheet-term').value;
-        const examType = document.getElementById('broad-sheet-exam-type').value;
+        
+        // Get selected exam types from checkboxes
+        const allExamsChecked = document.getElementById('exam-type-all')?.checked || false;
+        
+        // Only consider other checkboxes if they are enabled
+        const caCheckbox = document.getElementById('exam-type-ca');
+        const examCheckbox = document.getElementById('exam-type-exam');
+        
+        const caChecked = caCheckbox && !caCheckbox.disabled && caCheckbox.checked;
+        const examChecked = examCheckbox && !examCheckbox.disabled && examCheckbox.checked;
+        
+        // Determine exam_type based on selections
+        let examType = 'all';
+        if (allExamsChecked) {
+            examType = 'all';
+        } else {
+            // Build exam type string based on checked boxes
+            const selectedTypes = [];
+            if (caChecked) selectedTypes.push('ca');
+            if (examChecked) selectedTypes.push('exam');
+            
+            if (selectedTypes.length === 0) {
+                examType = 'all'; // Default to all if none selected
+            } else if (selectedTypes.length === 1) {
+                examType = selectedTypes[0];
+            } else {
+                examType = selectedTypes.join(','); // Send multiple types separated by comma
+            }
+        }
+        
         const showExams = document.getElementById('show-exams').checked;
         const showTotals = document.getElementById('show-totals').checked;
 
@@ -147,7 +176,36 @@ document.addEventListener('DOMContentLoaded', function () {
     async function exportBroadSheet(format) {
         const classId = document.getElementById('broad-sheet-class').value;
         const termId = document.getElementById('broad-sheet-term').value;
-        const examType = document.getElementById('broad-sheet-exam-type').value;
+        
+        // Get selected exam types from checkboxes
+        const allExamsChecked = document.getElementById('exam-type-all')?.checked || false;
+        
+        // Only consider other checkboxes if they are enabled
+        const caCheckbox = document.getElementById('exam-type-ca');
+        const examCheckbox = document.getElementById('exam-type-exam');
+        
+        const caChecked = caCheckbox && !caCheckbox.disabled && caCheckbox.checked;
+        const examChecked = examCheckbox && !examCheckbox.disabled && examCheckbox.checked;
+        
+        // Determine exam_type based on selections
+        let examType = 'all';
+        if (allExamsChecked) {
+            examType = 'all';
+        } else {
+            // Build exam type string based on checked boxes
+            const selectedTypes = [];
+            if (caChecked) selectedTypes.push('ca');
+            if (examChecked) selectedTypes.push('exam');
+            
+            if (selectedTypes.length === 0) {
+                examType = 'all'; // Default to all if none selected
+            } else if (selectedTypes.length === 1) {
+                examType = selectedTypes[0];
+            } else {
+                examType = selectedTypes.join(','); // Send multiple types separated by comma
+            }
+        }
+        
         const showExams = document.getElementById('show-exams').checked;
         const showTotals = document.getElementById('show-totals').checked;
 
@@ -309,7 +367,37 @@ document.addEventListener('DOMContentLoaded', function () {
     document.querySelectorAll('#load-broad-sheet, #export-broad-sheet-pdf, #export-broad-sheet-excel').forEach(button => {
         button.setAttribute('data-original-text', button.innerHTML);
     });
-
+    
+    // Add event listeners for exam type checkboxes to handle "All Exams" behavior
+    document.getElementById('exam-type-all')?.addEventListener('change', function() {
+        const allChecked = this.checked;
+        
+        if (allChecked) {
+            // If "All Exams" is checked, uncheck and disable other boxes
+            document.getElementById('exam-type-ca').checked = false;
+            document.getElementById('exam-type-exam').checked = false;
+            document.getElementById('exam-type-ca').disabled = true;
+            document.getElementById('exam-type-exam').disabled = true;
+        }
+    });
+    
+    // Add event listeners for individual exam type checkboxes
+    document.getElementById('exam-type-ca')?.addEventListener('change', function() {
+        if (this.checked) {
+            // If any individual exam type is checked, uncheck and enable "All Exams"
+            document.getElementById('exam-type-all').checked = false;
+            document.getElementById('exam-type-all').disabled = false;
+        }
+    });
+    
+    document.getElementById('exam-type-exam')?.addEventListener('change', function() {
+        if (this.checked) {
+            // If any individual exam type is checked, uncheck and enable "All Exams"
+            document.getElementById('exam-type-all').checked = false;
+            document.getElementById('exam-type-all').disabled = false;
+        }
+    });
+    
     // Show alert function (assuming modal.js is available)
     window.showAlert = window.showAlert || function(title, message, type = 'info') {
         alert(`${title}: ${message}`);

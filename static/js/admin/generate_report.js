@@ -995,7 +995,7 @@ function calculateResumptionDate(endDateStr, configResumptionDate = null) {
       const day = String(date.getDate()).padStart(2, "0");
       const month = String(date.getMonth() + 1).padStart(2, "0");
       const year = date.getFullYear();
-      return `${day}/${month}/${year}`;
+      return `${year}-${month}-${day}`;
     } catch (error) {
       console.error("Error formatting configured resumption date:", error);
     }
@@ -1012,12 +1012,12 @@ function calculateResumptionDate(endDateStr, configResumptionDate = null) {
     const resumptionDate = new Date(endDate);
     resumptionDate.setDate(resumptionDate.getDate() + 14);
 
-    // Format as DD/MM/YYYY
+    // Format as YYYY-MM-DD
     const day = String(resumptionDate.getDate()).padStart(2, "0");
     const month = String(resumptionDate.getMonth() + 1).padStart(2, "0");
     const year = resumptionDate.getFullYear();
 
-    return `${day}/${month}/${year}`;
+    return `${year}-${month}-${day}`;
   } catch (error) {
     console.error("Error calculating resumption date:", error);
     return "N/A";
@@ -1987,7 +1987,7 @@ function generateReportHTML(reportData) {
                 <div class="logo-placeholder">
                     ${displaySettings.show_logo
                       ? school.logo
-                        ? `<img src="/static/${school.logo}" class="logo-img" onerror="this.style.display='none'">`
+                        ? `<img src="/${school.logo.replace(/^static\//, '')}" class="logo-img" onerror="console.error('Logo failed to load:', this.src); this.style.display='none';" onload="console.log('Logo loaded successfully:', this.src);">`
                         : `<span style="color:#4f46e5; font-weight:bold; font-size:30pt;">🏫</span>`
                       : ``
                     }
@@ -2011,7 +2011,7 @@ function generateReportHTML(reportData) {
                         })() : ''}
                     </div>
                     <div class="school-address">${school.address || "Address"} ${school.phone ? "• " + school.phone : ""}</div>
-                    <div class="school-motto">${school.motto || "Motto"}</div>
+                    <div class="school-motto">Motto: ${school.motto || "Motto"}</div>
                 </div>
             </div>
             <div class="report-label">STUDENT PERFORMANCE REPORT</div>
@@ -2025,8 +2025,8 @@ function generateReportHTML(reportData) {
                   ? `<div style="display: flex; flex-direction: column; align-items: center; width: 20mm;">
                     <div class="student-photo-frame" style="width: 100%; height: 100%;">
                       ${student.image
-                        ? `<img src="/static/${student.image}" class="student-img" onerror="this.outerHTML='<div style=\'width:100%;height:100%;background:#e2e8f0;display:flex;align-items:center;justify-content:center;\'><svg viewBox=\'0 0 100 100\' width=\'100%\' height=\'100%\'><circle cx=\'50\' cy=\'40\' r=\'20\' fill=\'#94a3b8\'/><path d=\'M30,70 Q50,90 70,70 Q65,85 50,85 Q35,85 30,70\' fill=\'#94a3b8\'/></svg></div>'">`
-                        : `<img src="/static/uploads/profile_images/${student.gender && student.gender.toLowerCase() === 'male' ? 'male_default_avatar.png' : 'female_default_avatar.png'}" class="student-img" onerror="this.outerHTML='<div style=\'width:100%;height:100%;background:#e2e8f0;display:flex;align-items:center;justify-content:center;\'><svg viewBox=\'0 0 100 100\' width=\'100%\' height=\'100%\'><circle cx=\'50\' cy=\'40\' r=\'20\' fill=\'#94a3b8\'/><path d=\'M30,70 Q50,90 70,70 Q65,85 50,85 Q35,85 30,70\' fill=\'#94a3b8\'/></svg></div>'">`
+                        ? `<img src="/${student.image.replace(/^static\//, '')}" class="student-img" onerror="console.error('Student image failed to load:', this.src); this.outerHTML='<div style=\'width:100%;height:100%;background:#e2e8f0;display:flex;align-items:center;justify-content:center;\'><svg viewBox=\'0 0 100 100\' width=\'100%\' height=\'100%\'><circle cx=\'50\' cy=\'40\' r=\'20\' fill=\'#94a3b8\'/><path d=\'M30,70 Q50,90 70,70 Q65,85 50,85 Q35,85 30,70\' fill=\'#94a3b8\'/></svg></div>'" onload="console.log('Student image loaded successfully:', this.src);">`
+                        : `<img src="/uploads/profile_images/${student.gender && student.gender.toLowerCase() === 'male' ? 'male_default_avatar.png' : 'female_default_avatar.png'}" class="student-img" onerror="console.error('Default student image failed to load:', this.src); this.outerHTML='<div style=\'width:100%;height:100%;background:#e2e8f0;display:flex;align-items:center;justify-content:center;\'><svg viewBox=\'0 0 100 100\' width=\'100%\' height=\'100%\'><circle cx=\'50\' cy=\'40\' r=\'20\' fill=\'#94a3b8\'/><path d=\'M30,70 Q50,90 70,70 Q65,85 50,85 Q35,85 30,70\' fill=\'#94a3b8\'/></svg></div>'" onload="console.log('Default student image loaded successfully:', this.src);">`
                       }
                     </div>
                   </div>`
@@ -2067,12 +2067,12 @@ function generateReportHTML(reportData) {
             <!-- Term Bar -->
             <div class="term-grid">
                 <div class="term-col">
-                    <div class="term-head">Term</div>
-                    <div class="term-data">${term.name || "-"}</div>
-                </div>
-                <div class="term-col">
                     <div class="term-head">Session</div>
                     <div class="term-data">${term.session || "-"}</div>
+                </div>
+                <div class="term-col">
+                    <div class="term-head">Term</div>
+                    <div class="term-data">${term.name || "-"}</div>
                 </div>
                 <div class="term-col">
                     <div class="term-head">Term Begin</div>
@@ -2301,6 +2301,80 @@ function getPrincipalComment(grade) {
   return null; // Return null to fall back to dynamic comments
 }
 
+// Function to preload images before PDF generation
+async function preloadImagesForPDF(element) {
+  const images = element.getElementsByTagName("img");
+  const imagePromises = [];
+  
+  console.log(`Found ${images.length} images to preload`);
+  
+  for (let img of images) {
+    // Set crossorigin attribute for all images
+    img.setAttribute("crossorigin", "anonymous");
+    
+    // Create a promise for each image
+    const imgPromise = new Promise((resolve, reject) => {
+      if (img.complete) {
+        console.log("Image already loaded:", img.src);
+        resolve();
+      } else {
+        // Set up load and error handlers
+        img.onload = () => {
+          console.log("Image loaded successfully:", img.src);
+          resolve();
+        };
+        img.onerror = () => {
+          console.error("Image failed to load:", img.src);
+          // Create a fallback canvas image
+          const canvas = document.createElement('canvas');
+          canvas.width = img.width || 100;
+          canvas.height = img.height || 100;
+          const ctx = canvas.getContext('2d');
+          
+          // Draw a placeholder with gradient background
+          const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+          gradient.addColorStop(0, '#f0f0f0');
+          gradient.addColorStop(1, '#e0e0e0');
+          ctx.fillStyle = gradient;
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+          
+          // Draw a border
+          ctx.strokeStyle = '#ccc';
+          ctx.lineWidth = 1;
+          ctx.strokeRect(0, 0, canvas.width, canvas.height);
+          
+          // Draw a generic icon
+          ctx.fillStyle = '#999';
+          ctx.font = Math.max(12, Math.min(20, canvas.width/5)) + 'px Arial';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText('IMG', canvas.width/2, canvas.height/2);
+          
+          // Convert to data URL and set as source
+          img.src = canvas.toDataURL('image/png');
+          resolve();
+        };
+        
+        // If the image hasn't loaded yet, trigger loading
+        if (!img.src) {
+          resolve(); // Skip if no src
+        }
+      }
+    });
+    
+    imagePromises.push(imgPromise);
+  }
+  
+  // Wait for all images to load
+  if (imagePromises.length > 0) {
+    console.log("Waiting for all images to load...");
+    await Promise.all(imagePromises);
+    console.log("All images loaded or handled");
+  } else {
+    console.log("No images found to preload");
+  }
+}
+
 async function generateClientSidePDF(reportData, previewMode = false) {
   try {
     console.log("Starting PDF generation with data:", reportData);
@@ -2464,6 +2538,9 @@ async function generateClientSidePDF(reportData, previewMode = false) {
     // Set the HTML content after appending to DOM
     element.innerHTML = html;
 
+    // Preload all images before PDF generation to ensure they're available to html2canvas
+    await preloadImagesForPDF(element);
+
     // Debug: Check if HTML was parsed correctly
     console.log("Parsed HTML element after setting innerHTML:", element);
     console.log(
@@ -2523,14 +2600,52 @@ async function generateClientSidePDF(reportData, previewMode = false) {
             // Keep default body margins to allow PDF margins to work
           }
           
-          // Handle missing images by replacing them with placeholders
+          // Enhanced image handling for cross-origin images
           const images = clonedDoc.getElementsByTagName("img");
           for (let img of images) {
+            // Set crossorigin attribute for all images
             img.setAttribute("crossorigin", "anonymous");
+            
+            // Add error handling for images that fail to load
             img.onerror = function () {
-              console.log("Image load error, using placeholder");
-              this.src = "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgZmlsbD0iI2NjYyIvPjx0ZXh0IHg9IjUwIiB5PSI1NSIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjgiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZpbGw9IiM2NjYiPkltYWdlIE5vdCBGb3VuZDwvdGV4dD48L3N2Zz4=";
+              console.log("Image load error, using placeholder", this.src);
+              // Create a fallback image with the same dimensions
+              const canvas = document.createElement('canvas');
+              canvas.width = this.width || 100;
+              canvas.height = this.height || 100;
+              const ctx = canvas.getContext('2d');
+              
+              // Draw a placeholder with gradient background
+              const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+              gradient.addColorStop(0, '#f0f0f0');
+              gradient.addColorStop(1, '#e0e0e0');
+              ctx.fillStyle = gradient;
+              ctx.fillRect(0, 0, canvas.width, canvas.height);
+              
+              // Draw a border
+              ctx.strokeStyle = '#ccc';
+              ctx.lineWidth = 1;
+              ctx.strokeRect(0, 0, canvas.width, canvas.height);
+              
+              // Draw a generic icon
+              ctx.fillStyle = '#999';
+              ctx.font = Math.max(12, Math.min(20, canvas.width/5)) + 'px Arial';
+              ctx.textAlign = 'center';
+              ctx.textBaseline = 'middle';
+              ctx.fillText('?', canvas.width/2, canvas.height/2);
+              
+              // Convert to data URL and set as source
+              this.src = canvas.toDataURL('image/png');
             };
+            
+            // Preload images to ensure they're ready for canvas
+            if (img.src && !img.complete) {
+              console.log("Preloading image for PDF generation", img.src);
+              // Trigger a new image load to ensure it's cached
+              const imgCopy = new Image();
+              imgCopy.crossOrigin = "anonymous";
+              imgCopy.src = img.src;
+            }
           }
         },
       },
