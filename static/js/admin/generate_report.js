@@ -2032,7 +2032,7 @@ function generateReportHTML(reportData) {
                   </div>`
                   : ""
                 }
-                
+
                 <!-- Student Info Table -->
                 <table class="student-info-table" style="flex: 1; font-size: 8pt;">
                 <tr>
@@ -2047,7 +2047,7 @@ function generateReportHTML(reportData) {
                     <td class="info-label">Admission No:</td>
                     <td class="info-val">${student.admission_number || ""}</td>
                 </tr>
-                
+
                 <tr>
                     <td class="info-label">Overall Grade:</td>
                     <td class="info-val"><span class="badge badge-${overallGrade}">${overallGrade}</span> <span style="font-weight:400;">(${overallPercentage.toFixed(
