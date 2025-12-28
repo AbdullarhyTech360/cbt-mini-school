@@ -10,6 +10,8 @@ from datetime import date, timedelta
 from flask import Flask, render_template, session, send_from_directory
 import json
 import os
+import ssl
+import logging
 from config import Config
 from models import db, bcrypt
 from routes.auth_routes import auth_routes
@@ -50,6 +52,51 @@ app.config['SESSION_REFRESH_EACH_REQUEST'] = True
 
 db.init_app(app)
 bcrypt.init_app(app)
+
+
+# Custom logging filter to suppress SSL-related bad request errors
+
+class SSLFilter(logging.Filter):
+    def filter(self, record):
+        # Suppress specific SSL/TLS handshake error messages
+        message = record.getMessage()
+        if message.startswith('code 400, message Bad request syntax') or \
+           'Bad request version' in message or \
+           'Bad request syntax' in message or \
+           ('\x16\x03' in message and ('\x01' in message or '\x02' in message or '\x03' in message)):
+            return False
+        return True
+
+
+# Apply the filter to the werkzeug logger to suppress SSL-related errors
+log = logging.getLogger('werkzeug')
+log.addFilter(SSLFilter())
+
+# Reduce werkzeug logging level to reduce noise from malformed requests
+logging.getLogger('werkzeug').setLevel(logging.WARNING)
+
+
+# WSGI middleware to handle malformed SSL handshake requests
+
+class SSLHandshakeMiddleware:
+    def __init__(self, app):
+        self.app = app
+
+    def __call__(self, environ, start_response):
+        # Check if this looks like an SSL handshake request
+        try:
+            # Get the raw request data if possible
+            if 'wsgi.input' in environ:
+                # This is complex to handle at WSGI level, so we'll focus on the logging approach
+                # The main issue is handled by the logging filter above
+                return self.app(environ, start_response)
+        except Exception:
+            # If there's an issue processing the request, let it fail normally
+            return self.app(environ, start_response)
+
+
+# Wrap the app with the middleware
+app.wsgi_app = SSLHandshakeMiddleware(app.wsgi_app)
 
 
 # Initialize Celery
@@ -177,7 +224,16 @@ def serve_node_modules(filepath):
 
 
 if __name__ == "__main__":
+    # Check if SSL certificate files exist, if not, run without SSL
+    ssl_context = None
+    cert_file = os.path.join(os.path.dirname(__file__), 'cert.pem')
+    key_file = os.path.join(os.path.dirname(__file__), 'key.pem')
+    
+    if os.path.exists(cert_file) and os.path.exists(key_file):
+        ssl_context = (cert_file, key_file)
+    
     app.run(host='0.0.0.0',
             port=5000,
             debug=True,
+            ssl_context=ssl_context if ssl_context else None
             )
