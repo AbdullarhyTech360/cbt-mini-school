@@ -539,7 +539,7 @@ class ReportGenerator:
         return {
             'student': {
                 'id': student_id,
-                'name': f"{user.first_name} {user.last_name}",
+                'name': f"{user.first_name} {user.last_name}".upper(),
                 'admission_number': student.admission_number,
                 'image': user.image,
                 'gender': user.gender,
@@ -1388,7 +1388,7 @@ class ReportGenerator:
         <tbody>
             <tr>
                 <td class="label" width="20%">Student Name:</td>
-                <td width="30%">{student['name']}</td>
+                <td width="30%">{student['name'].upper()}</td>
                 <td class="label" width="20%">Class:</td>
                 <td width="30%">{student['class_name']}</td>
             </tr>

@@ -5,7 +5,7 @@ description = "Default template for PDM package"
 authors = [
     {name = "abdullahi", email = "abdullahimaikidandan@gmail.com"},
 ]
-dependencies = ["flask>=3.1.2", "flask-sqlalchemy>=3.1.1", "sqlalchemy>=2.0.44", "python-dotenv>=1.1.1", "flask-login>=0.6.3", "flask-bcrypt>=1.0.1", "flask-wtf>=1.2.2", "uuid>=1.30", "flask-session>=0.8.0", "python-docx>=1.2.0", "weasyprint>=67.0", "docx>=0.2.4", "xhtml2pdf>=0.2.17", "celery>=5.6.0", "redis>=7.1.0", "pypdf>=6.4.1", "fakeredis>=2.32.1", "xlsxwriter>=3.2.9"]
+dependencies = ["flask>=3.1.2", "flask-sqlalchemy>=3.1.1", "sqlalchemy>=2.0.44", "python-dotenv>=1.1.1", "flask-login>=0.6.3", "flask-bcrypt>=1.0.1", "flask-wtf>=1.2.2", "uuid>=1.30", "flask-session>=0.8.0", "python-docx>=1.2.0", "weasyprint>=67.0", "docx>=0.2.4", "xhtml2pdf>=0.2.17", "celery>=5.6.0", "redis>=7.1.0", "pypdf>=6.4.1", "fakeredis>=2.32.1", "xlsxwriter>=3.2.9", "cryptography>=42.0.0"]
 requires-python = ">=3.10"
 readme = "README.md"
 license = {text = "MIT"}
@@ -18,7 +18,7 @@ build-backend = "pdm.backend"
 distribution = false
 
 [tool.pdm.scripts]
-flask = "python -m flask run --host=0.0.0.0 --port=5000 --reload --debug"
+flask = "python app.py"
 # Updated to use the correct input.css path and integrate font rebuilding
 css = "npx tailwindcss -i ./app/static/css/input.css -o ./static/dist/output.css --watch"
 # Consolidated CSS compilation and Material Symbols font management
