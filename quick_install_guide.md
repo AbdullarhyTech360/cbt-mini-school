@@ -110,8 +110,8 @@ Both should show "function".
 
 Already fixed with:
 ```css
--webkit-print-color-adjust: exact !important;
-print-color-adjust: exact !important;
+-webkit-# print-color-adjust: exact !important;
+# print-color-adjust: exact !important;
 ```
 
 ---

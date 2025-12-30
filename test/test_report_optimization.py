@@ -160,7 +160,7 @@ def create_test_data():
 
 def test_report_generation():
     """Test the optimized report generation"""
-    print("Testing optimized report generation...")
+    # print("Testing optimized report generation...")
     
     # Create test data
     test_ids = create_test_data()
@@ -173,45 +173,45 @@ def test_report_generation():
     )
     
     if not report_data:
-        print("❌ Failed to generate report data")
+        # print("❌ Failed to generate report data")
         return False
     
     # Generate HTML report
     html_report = ReportGenerator.generate_report_html(report_data)
     
     if not html_report:
-        print("❌ Failed to generate HTML report")
+        # print("❌ Failed to generate HTML report")
         return False
     
     # Check that the HTML contains improved font sizes
     if 'font-size: 9pt' not in html_report and 'font-size: 8pt' not in html_report:
-        print("❌ Report does not contain improved font sizes")
+        # print("❌ Report does not contain improved font sizes")
         return False
     
     # Check that the HTML contains improved padding
     if 'padding: 4px' not in html_report and 'padding: 5px' not in html_report:
-        print("❌ Report does not contain improved padding")
+        # print("❌ Report does not contain improved padding")
         return False
     
-    print("✅ Report generation test passed")
+    # print("✅ Report generation test passed")
     return True
 
 def main():
     """Main test function"""
-    print("Running Report Card Optimization Tests...\n")
+    # print("Running Report Card Optimization Tests...\n")
     
     try:
         success = test_report_generation()
         
         if success:
-            print("\n🎉 All tests passed! Report card optimization improvements are working correctly.")
+            # print("\n🎉 All tests passed! Report card optimization improvements are working correctly.")
             return 0
         else:
-            print("\n❌ Some tests failed. Please check the implementation.")
+            # print("\n❌ Some tests failed. Please check the implementation.")
             return 1
             
     except Exception as e:
-        print(f"\n💥 Test failed with exception: {e}")
+        # print(f"\n💥 Test failed with exception: {e}")
         import traceback
         traceback.print_exc()
         return 1

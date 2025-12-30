@@ -39,17 +39,6 @@ def auth_routes(app):
             role = data.get("role")
             password = data.get("password")
 
-            print(
-                first_name,
-                last_name,
-                email,
-                dob_str,
-                register_number,
-                class_room_name,
-                role,
-                password,
-            )
-
             # ✅ Validate required fields based on role
             required_fields = [first_name, last_name, dob_str, role, password]
             if role in ["staff", "admin"]:
@@ -66,7 +55,7 @@ def auth_routes(app):
             try:
                 dob = datetime.strptime(dob_str, "%Y-%m-%d").date()
             except Exception as e:
-                print(e)
+                # print(e)
                 return jsonify({"message": "Invalid date format. Use YYYY-MM-DD"}), 400
 
             # Handle Image Upload
@@ -94,7 +83,7 @@ def auth_routes(app):
                         # Store relative path in database
                         image_path = f"uploads/profile_images/{filename}"
                     except Exception as e:
-                        print(f"Error saving image: {e}")
+                        # print(f"Error saving image: {e}")
                         # Continue without image if upload fails
                         pass
 
@@ -144,12 +133,12 @@ def auth_routes(app):
 
                 # Create a student profile linked to this user
                 user.set_password(password)
-                print("Username: ", username)
+                # print("Username: ", username)
                 db.session.add(user)
                 db.session.flush()  # Flush to get the user ID without committing
 
                 student = Student(id=user.id, user_id=user.id)
-                print("First Student: ", student)
+                # print("First Student: ", student)
                 db.session.add(student)
                 db.session.flush()
                 student.admission_number = username
@@ -211,15 +200,15 @@ def auth_routes(app):
                     class_room_id=class_room_id,
                     role=role,
                 )
-                print(register_number, role)
-                print(username)
+                # print(register_number, role)
+                # print(username)
                 user.set_password(password)
                 db.session.add(user)
                 db.session.flush()  # Flush to get the user ID without committing
 
                 # create teacher profile
                 teacher = Teacher(id=user.id, user_id=user.id)
-                print("First Teacher: ", teacher)
+                # print("First Teacher: ", teacher)
                 db.session.add(teacher)
                 db.session.commit()
             return jsonify({"success": True, "username": user.username}), 200
@@ -231,7 +220,7 @@ def auth_routes(app):
         if not permissions:
             return jsonify({"error": "No permission for such action"}), 403
         elif permissions.is_active:
-            print(permissions)
+            # print(permissions)
             class_rooms = ClassRoom.query.all()
 
             # Get school info for the register page
@@ -244,31 +233,31 @@ def auth_routes(app):
     @app.route("/login", methods=["GET", "POST"])
     def login():
         if request.method == "POST":
-            print("Login POST request received")
+            # print("Login POST request received")
             data = request.get_json(silent=True)
             if not data:
-                print("No JSON data received")
+                # print("No JSON data received")
                 return jsonify({"error": "Invalid JSON input"}), 400
 
             username = data.get("username")
             password = data.get("password")
-            print(f"Login attempt: username={username}")
+            # print(f"Login attempt: username={username}")
 
             # Validate required fields
             if not all([username, password]):
-                print("Missing required fields")
+                # print("Missing required fields")
                 return jsonify({"error": "Username and password are required"}), 400
 
             # Check existing user
             user = User.query.filter_by(username=username).first()
-            print(user)
+            # print(user)
             if not user:
-                print(f"User not found: {username}")
+                # print(f"User not found: {username}")
                 return jsonify({"error": "Invalid username or password"}), 401
 
             # Check password
             if not user.check_password(password):
-                print("Password check failed")
+                # print("Password check failed")
                 return jsonify({"error": "Invalid username or password"}), 401
 
             # Create session for successful login
@@ -307,8 +296,6 @@ def auth_routes(app):
                         # Demo users get ALL exams, no restrictions
                         available_exams = Exam.query.order_by(
                             Exam.date.desc()).all()
-                        print(
-                            f"DEBUG: Demo user '{user.username}' logged in - returning ALL {len(available_exams)} exams")
                     else:
                         # Regular students - apply normal filters
                         # Fetch student's enrolled subjects
@@ -380,7 +367,7 @@ def auth_routes(app):
 
                 response_data["available_exams"] = exams_data
 
-            print(f"Login successful: user={user.username}, role={user.role}")
+            # print(f"Login successful: user={user.username}, role={user.role}")
             return jsonify(response_data), 200
 
         # GET request - show login form
@@ -402,7 +389,7 @@ def auth_routes(app):
     @app.route("/check_user", methods=["POST"])
     def check_user():
         data = request.get_json(silent=True)
-        print(f"Data: {data}")
+        # print(f"Data: {data}")
         if not data:
             return jsonify({"error": "Invalid JSON input"}), 400
 
@@ -476,8 +463,6 @@ def auth_routes(app):
                             Exam.is_active == True,
                             Exam.is_finished == False
                         ).order_by(Exam.date.desc()).all()
-                        print(
-                            f"DEBUG: Demo user '{user.username}' - returning {len(upcoming_exams)} active exams")
                     else:
                         # Regular students get only their class exams that are upcoming, active, and not finished
                         upcoming_exams = Exam.query.filter(
@@ -529,7 +514,7 @@ def auth_routes(app):
 
             return jsonify({"exists": False}), 200
         except Exception as e:
-            print("Error checking user:", e)
+            # print("Error checking user:", e)
             return jsonify({"error": str(e)}), 500
 
     @app.route("/forgot_password", methods=["GET", "POST"])
@@ -575,10 +560,10 @@ def auth_routes(app):
                 user.set_password(new_password)
                 db.session.commit()
 
-                print(f"Password reset successful for user: {user.username}")
+                # print(f"Password reset successful for user: {user.username}")
                 return jsonify({"success": True, "message": "Password reset successfully"}), 200
 
             except Exception as e:
                 db.session.rollback()
-                print("Error resetting password:", e)
+                # print("Error resetting password:", e)
                 return jsonify({"error": "Failed to reset password"}), 500

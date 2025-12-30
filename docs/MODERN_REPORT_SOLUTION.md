@@ -17,7 +17,7 @@ This solution addresses all the requirements for a modern, eye-catching report c
 - Carefully calculated proportions to fit all content on one page
 - Responsive design that adapts to different screen sizes
 - Print-specific CSS to ensure perfect PDF output
-- Automatic scaling for print media (0.85 scale factor)
+- Automatic scaling for # print media (0.85 scale factor)
 
 ### 3. Accurate Preview System
 - WYSIWYG (What You See Is What You Get) preview

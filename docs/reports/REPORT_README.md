@@ -182,7 +182,7 @@ Default grading scale:
 - Print-ready quality
 - Proper page breaks for bulk reports
 - Embedded school logo and student photos
-- Fallback to browser print if WeasyPrint not installed
+- Fallback to browser # print if WeasyPrint not installed
 
 ### Preview System
 - Real-time preview before download
@@ -262,7 +262,7 @@ This will check:
 **"PDF download fails"**
 - Install WeasyPrint: `python install_weasyprint.py`
 - Check system dependencies
-- Use browser print as fallback
+- Use browser # print as fallback
 
 **"Position shows N/A"**
 - Need at least 2 students with grades
@@ -338,7 +338,7 @@ This will check:
 │   │   ├── report_config.html    # Configuration page
 │   │   └── generate_report.html  # Generation page
 │   └── reports/
-│       └── preview.html          # Preview/print page
+│       └── preview.html          # Preview/# print page
 ├── static/js/admin/
 │   ├── report_config.js          # Configuration logic
 │   └── generate_report.js        # Generation logic

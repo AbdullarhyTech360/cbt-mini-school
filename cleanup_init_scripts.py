@@ -35,12 +35,12 @@ def delete_files():
             try:
                 os.remove(full_path)
                 deleted_files.append(file_path)
-                print(f"✓ Deleted: {file_path}")
+                # print(f"✓ Deleted: {file_path}")
             except Exception as e:
                 failed_files.append((file_path, str(e)))
-                print(f"✗ Failed to delete {file_path}: {e}")
+                # print(f"✗ Failed to delete {file_path}: {e}")
         else:
-            print(f"- File not found (already deleted): {file_path}")
+            # print(f"- File not found (already deleted): {file_path}")
     
     return deleted_files, failed_files
 
@@ -55,50 +55,50 @@ def delete_directories():
             try:
                 shutil.rmtree(full_path)
                 deleted_dirs.append(dir_path)
-                print(f"✓ Deleted directory: {dir_path}")
+                # print(f"✓ Deleted directory: {dir_path}")
             except Exception as e:
                 failed_dirs.append((dir_path, str(e)))
-                print(f"✗ Failed to delete directory {dir_path}: {e}")
+                # print(f"✗ Failed to delete directory {dir_path}: {e}")
         else:
-            print(f"- Directory not found (already deleted): {dir_path}")
+            # print(f"- Directory not found (already deleted): {dir_path}")
     
     return deleted_dirs, failed_dirs
 
 def main():
     """Main cleanup function"""
-    print("Cleaning up individual initialization scripts...")
-    print("=" * 50)
+    # print("Cleaning up individual initialization scripts...")
+    # print("=" * 50)
     
     # Delete files
     deleted_files, failed_files = delete_files()
     
-    print()
+    # print()
     
     # Delete directories
     deleted_dirs, failed_dirs = delete_directories()
     
-    print("\n" + "=" * 50)
-    print("CLEANUP SUMMARY")
-    print("=" * 50)
+    # print("\n" + "=" * 50)
+    # print("CLEANUP SUMMARY")
+    # print("=" * 50)
     
-    print(f"Files deleted: {len(deleted_files)}")
+    # print(f"Files deleted: {len(deleted_files)}")
     for file_path in deleted_files:
-        print(f"  ✓ {file_path}")
+        # print(f"  ✓ {file_path}")
     
-    print(f"Directories deleted: {len(deleted_dirs)}")
+    # print(f"Directories deleted: {len(deleted_dirs)}")
     for dir_path in deleted_dirs:
-        print(f"  ✓ {dir_path}")
+        # print(f"  ✓ {dir_path}")
     
     if failed_files or failed_dirs:
-        print("\nFailed operations:")
+        # print("\nFailed operations:")
         for file_path, error in failed_files:
-            print(f"  ✗ {file_path}: {error}")
+            # print(f"  ✗ {file_path}: {error}")
         for dir_path, error in failed_dirs:
-            print(f"  ✗ {dir_path}: {error}")
+            # print(f"  ✗ {dir_path}: {error}")
     else:
-        print("\n✅ All cleanup operations completed successfully!")
+        # print("\n✅ All cleanup operations completed successfully!")
     
-    print("\nNote: Only the consolidated initialize_all_data.py script is needed now.")
+    # print("\nNote: Only the consolidated initialize_all_data.py script is needed now.")
 
 if __name__ == "__main__":
     # Confirm with user before proceeding
@@ -106,5 +106,5 @@ if __name__ == "__main__":
     if response.lower() in ['y', 'yes']:
         main()
     else:
-        print("Cleanup cancelled.")
+        # print("Cleanup cancelled.")
 

@@ -87,7 +87,7 @@ Complete redesign of the student report card with modern aesthetics, better spac
 
 ### 9. Performance Optimization
 **Simplified for faster PDF generation:**
-- Removed complex hover effects in print
+- Removed complex hover effects in # print
 - Optimized gradient usage
 - Cleaner CSS structure
 - Reduced unnecessary styling
@@ -169,7 +169,7 @@ Complete redesign of the student report card with modern aesthetics, better spac
 - [ ] Comments section has adequate space
 - [ ] PDF generates in reasonable time (<30 seconds)
 - [ ] Print quality is good
-- [ ] Colors print correctly
+- [ ] Colors # print correctly
 - [ ] All text is readable
 
 ## Date Completed

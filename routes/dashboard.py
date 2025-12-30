@@ -85,7 +85,7 @@ def dashboard_route(app):
         current_user = User.query.get(session["user_id"])
         # Fetch users with role 'student'
         students = User.query.filter_by(role="student").all()
-        print(students)
+        # print(students)
         return render_template(
             "staff/dashboard.html",
             current_date=current_date,
@@ -139,7 +139,7 @@ def dashboard_route(app):
                     Exam.is_active == True,
                     Exam.is_finished == False
                 ).order_by(Exam.date.desc()).all()
-                print(f"DEBUG: Demo user '{current_user.username}' dashboard - showing {len(available_exams)} active exams")
+                # print(f"DEBUG: Demo user '{current_user.username}' dashboard - showing {len(available_exams)} active exams")
             else:
                 # Regular students - apply normal filters
                 # Get exams that:
@@ -204,13 +204,7 @@ def dashboard_route(app):
         total_available_exams = len(available_exams)
         completed_exams = len(completed_exam_ids)
         average_score = 0
-        print("Available exams:", available_exams)
-        print("completed_exam_ids", completed_exam_ids)
-        print(completed_exams)
-        for exam in available_exams:
-            print(exam.class_room_id)
         
-        print(current_user.class_room_id)
         from datetime import datetime
         return render_template(
             "student/dashboard.html",

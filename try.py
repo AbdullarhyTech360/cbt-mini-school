@@ -28,4 +28,4 @@ cursor.execute(
     "SELECT * FROM products"
 )
 
-print(cursor.fetchall())
+# print(cursor.fetchall())
