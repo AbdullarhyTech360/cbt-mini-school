@@ -58,7 +58,7 @@ def admin_action_route(app):
 
         except Exception as e:
             db.session.rollback()
-            print(f"Error deleting user: {str(e)}")
+            # print(f"Error deleting user: {str(e)}")
             return (
                 jsonify(
                     {"success": False,
@@ -198,7 +198,7 @@ def admin_action_route(app):
 
         except Exception as e:
             db.session.rollback()
-            print(f"Error creating user: {str(e)}")
+            # print(f"Error creating user: {str(e)}")
             return jsonify({"success": False, "message": f"Error creating user: {str(e)}"}), 500
 
     @app.route("/admin/update/user/<user_id>", methods=["PUT"])
@@ -255,7 +255,7 @@ def admin_action_route(app):
 
         except Exception as e:
             db.session.rollback()
-            print(f"Error updating user: {str(e)}")
+            # print(f"Error updating user: {str(e)}")
             return jsonify({"success": False, "message": f"Error updating user: {str(e)}"}), 500
 
     @app.route("/admin/publish_all_scores", methods=["POST"])
@@ -285,7 +285,7 @@ def admin_action_route(app):
             
         except Exception as e:
             db.session.rollback()
-            print(f"Error publishing scores: {str(e)}")
+            # print(f"Error publishing scores: {str(e)}")
             return jsonify({
                 "success": False,
                 "message": f"Error publishing scores: {str(e)}"
@@ -312,7 +312,7 @@ def admin_action_route(app):
 
         except Exception as e:
             db.session.rollback()
-            print(f"Error toggling user status: {str(e)}")
+            # print(f"Error toggling user status: {str(e)}")
             return jsonify({"success": False, "message": f"Error toggling user status: {str(e)}"}), 500
 
     @app.route("/admin/upload_questions", methods=["GET", "POST"])
@@ -546,7 +546,7 @@ def admin_action_route(app):
 
             except Exception as e:
                 db.session.rollback()
-                print(f"Error creating question: {str(e)}")
+                # print(f"Error creating question: {str(e)}")
                 return (
                     jsonify(
                         {
@@ -634,7 +634,7 @@ def admin_action_route(app):
             })
 
         except Exception as e:
-            print(f"Error fetching questions preview: {str(e)}")
+            # print(f"Error fetching questions preview: {str(e)}")
             return jsonify({
                 "success": False,
                 "message": "Error fetching questions preview"
@@ -863,7 +863,7 @@ def admin_action_route(app):
 
             except Exception as e:
                 db.session.rollback()
-                print(f"Error processing bulk upload: {str(e)}")
+                # print(f"Error processing bulk upload: {str(e)}")
                 return (
                     jsonify(
                         {
@@ -989,7 +989,7 @@ def admin_action_route(app):
             )
 
         except Exception as e:
-            print(f"Error generating DOCX template: {str(e)}")
+            # print(f"Error generating DOCX template: {str(e)}")
             return jsonify({
                 "success": False,
                 "message": f"Error generating template: {str(e)}"
@@ -1150,7 +1150,7 @@ def admin_action_route(app):
 
             except Exception as e:
                 db.session.rollback()
-                print(f"Error creating exam: {str(e)}")
+                # print(f"Error creating exam: {str(e)}")
                 return (
                     jsonify(
                         {"success": False,
@@ -1257,7 +1257,7 @@ def admin_action_route(app):
             return jsonify({"success": True, "classes": classes_data}), 200
 
         except Exception as e:
-            print(f"Error getting classes by subject: {str(e)}")
+            # print(f"Error getting classes by subject: {str(e)}")
             return jsonify({"success": False, "message": str(e)}), 500
 
     def validate_exam_date(exam_date, term_id):
@@ -1328,7 +1328,7 @@ def admin_action_route(app):
             }), 200
 
         except Exception as e:
-            print(f"Error getting question count: {str(e)}")
+            # print(f"Error getting question count: {str(e)}")
             return jsonify({"success": False, "message": str(e)}), 500
 
     @app.route("/admin/exams/<exam_id>", methods=["GET"])
@@ -1337,14 +1337,14 @@ def admin_action_route(app):
         """Get exam details for editing"""
         try:
             # Debug: Print session info
-            print(f"Session user_id: {session.get('user_id')}")
+            # print(f"Session user_id: {session.get('user_id')}")
             user = User.query.get(session["user_id"])
-            # print(f"User: {user}, Role: {user.role if user else 'None'}")
+            # # print(f"User: {user}, Role: {user.role if user else 'None'}")
 
             exam = Exam.query.get(exam_id)
 
             if not exam:
-                print("Exam not found")
+                # print("Exam not found")
                 return jsonify({"success": False, "message": "Exam not found"}), 404
 
             # Return exam details
@@ -1362,11 +1362,11 @@ def admin_action_route(app):
             #     "invigilator_id": exam.invigilator_id,
             #     "max_score": float(exam.max_score)
             # }
-            print(exam.to_dict())
+            # print(exam.to_dict())
             return jsonify({"success": True, "exam": exam.to_dict()}), 200
 
         except Exception as e:
-            print(f"Error getting exam: {str(e)}")
+            # print(f"Error getting exam: {str(e)}")
             return jsonify({"success": False, "message": str(e)}), 500
 
     @app.route("/admin/exams/<exam_id>", methods=["PUT"])
@@ -1374,9 +1374,9 @@ def admin_action_route(app):
     def update_exam(exam_id):
         try:
             # Debug: Print session info
-            print(f"Session user_id: {session.get('user_id')}")
+            # print(f"Session user_id: {session.get('user_id')}")
             user = User.query.get(session["user_id"])
-            print(f"User: {user}, Role: {user.role if user else 'None'}")
+            # print(f"User: {user}, Role: {user.role if user else 'None'}")
 
             data = request.get_json()
             exam = Exam.query.get(exam_id)
@@ -1441,7 +1441,7 @@ def admin_action_route(app):
 
         except Exception as e:
             db.session.rollback()
-            print(f"Error updating exam: {str(e)}")
+            # print(f"Error updating exam: {str(e)}")
             return (
                 jsonify(
                     {"success": False,
@@ -1455,9 +1455,9 @@ def admin_action_route(app):
     def delete_exam(exam_id):
         try:
             # Debug: Print session info
-            print(f"Session user_id: {session.get('user_id')}")
+            # print(f"Session user_id: {session.get('user_id')}")
             user = User.query.get(session["user_id"])
-            print(f"User: {user}, Role: {user.role if user else 'None'}")
+            # print(f"User: {user}, Role: {user.role if user else 'None'}")
 
             exam = Exam.query.get(exam_id)
 
@@ -1474,7 +1474,7 @@ def admin_action_route(app):
 
         except Exception as e:
             db.session.rollback()
-            print(f"Error deleting exam: {str(e)}")
+            # print(f"Error deleting exam: {str(e)}")
             return (
                 jsonify(
                     {"success": False,
@@ -1521,7 +1521,7 @@ def admin_action_route(app):
             }), 200
 
         except Exception as e:
-            print(f"Error fetching completed exams: {str(e)}")
+            # print(f"Error fetching completed exams: {str(e)}")
             return jsonify({
                 'success': False,
                 'message': str(e)
@@ -1598,14 +1598,12 @@ def admin_action_route(app):
                     db.session.commit()
                     return jsonify({"success": True, "message": "Exam reset successfully"}), 200
             else:
-                print(
-                    f"DEBUG: Demo user '{user_id}' accessing exam {exam_id} - bypassing enrollment and completion checks")
-
+                print('None')
             return jsonify({"success": False, "message": "Invalid user"}), 403
 
         except Exception as e:
             db.session.rollback()
-            print(f"Error resetting exam: {str(e)}")
+            # print(f"Error resetting exam: {str(e)}")
             return jsonify({"success": False, "message": str(e)}), 500
 
     @app.route("/admin/get_subjects", methods=["GET"])
@@ -1628,7 +1626,7 @@ def admin_action_route(app):
             return jsonify({"success": True, "subjects": subjects_data}), 200
 
         except Exception as e:
-            print(f"Error getting subjects: {str(e)}")
+            # print(f"Error getting subjects: {str(e)}")
             return jsonify({"success": False, "message": str(e)}), 500
 
     @app.route("/admin/classes", methods=["GET", "POST"])
@@ -1742,7 +1740,7 @@ def admin_action_route(app):
             )
         except Exception as e:
             db.session.rollback()
-            print(f"Error updating class: {str(e)}")
+            # print(f"Error updating class: {str(e)}")
             return (
                 jsonify(
                     {"success": False,
@@ -1798,7 +1796,7 @@ def admin_action_route(app):
 
         except Exception as e:
             db.session.rollback()
-            print(f"Error updating permission: {str(e)}")
+            # print(f"Error updating permission: {str(e)}")
             return jsonify({"success": False, "message": f"Error updating permission: {str(e)}"}), 500
 
     # New endpoint to get classes that cannot write exams
@@ -1833,7 +1831,7 @@ def admin_action_route(app):
             }), 200
 
         except Exception as e:
-            print(f"Error getting exception classes: {str(e)}")
+            # print(f"Error getting exception classes: {str(e)}")
             return jsonify({
                 "success": False,
                 "message": f"Error getting exception classes: {str(e)}"
@@ -1871,7 +1869,7 @@ def admin_action_route(app):
             }), 200
 
         except Exception as e:
-            print(f"Error getting upcoming exams: {str(e)}")
+            # print(f"Error getting upcoming exams: {str(e)}")
             return jsonify({
                 "success": False,
                 "message": f"Error getting upcoming exams: {str(e)}"
@@ -1890,7 +1888,7 @@ def admin_action_route(app):
 
             # In a real implementation, you would save these settings to a database
             # For now, we'll just log them and return success
-            print(f"Excluded exams: {excluded_exams}")
+            # print(f"Excluded exams: {excluded_exams}")
 
             # Here you would typically:
             # 1. Save the list of excluded exams to a database table
@@ -1903,14 +1901,14 @@ def admin_action_route(app):
             }), 200
 
         except Exception as e:
-            print(f"Error saving exception settings: {str(e)}")
+            # print(f"Error saving exception settings: {str(e)}")
             return jsonify({
                 "success": False,
                 "message": f"Error saving exception settings: {str(e)}"
             }), 500
 
             db.session.rollback()
-            print(f"Error updating class: {str(e)}")
+            # print(f"Error updating class: {str(e)}")
             return (
                 jsonify(
                     {"success": False,
@@ -1936,7 +1934,7 @@ def admin_action_route(app):
             )
         except Exception as e:
             db.session.rollback()
-            print(f"Error deleting class: {str(e)}")
+            # print(f"Error deleting class: {str(e)}")
             return (
                 jsonify(
                     {"success": False,
@@ -1959,7 +1957,7 @@ def admin_action_route(app):
             for class_room in active_classes
             if class_room.form_teacher_id != None
         ]
-        print(assigned_classes)
+        # print(assigned_classes)
         return render_template(
             "admin/teachers.html",
             current_user=current_user,
@@ -1997,7 +1995,7 @@ def admin_action_route(app):
           Returns JSON with updated user data on success.
         """
         current_user = User.query.get(session["user_id"])
-        print(current_user)
+        # print(current_user)
 
         # POST: update profile
         if request.method == "POST":
@@ -2076,7 +2074,7 @@ def admin_action_route(app):
 
             except Exception as e:
                 db.session.rollback()
-                print(f"Error updating admin profile: {str(e)}")
+                # print(f"Error updating admin profile: {str(e)}")
                 return (
                     jsonify(
                         {
@@ -2237,7 +2235,7 @@ def admin_action_route(app):
 
         except Exception as e:
             db.session.rollback()
-            print(f"Error creating student: {str(e)}")
+            # print(f"Error creating student: {str(e)}")
             return jsonify({"success": False, "message": f"Error creating student: {str(e)}"}), 500
 
     @app.route("/admin/students/update/<student_id>", methods=["PUT", "POST"])
@@ -2294,7 +2292,7 @@ def admin_action_route(app):
 
         except Exception as e:
             db.session.rollback()
-            print(f"Error updating student: {str(e)}")
+            # print(f"Error updating student: {str(e)}")
             return jsonify({"success": False, "message": f"Error updating student: {str(e)}"}), 500
 
     @app.route("/admin/students/delete/<student_id>", methods=["DELETE"])
@@ -2315,7 +2313,7 @@ def admin_action_route(app):
 
         except Exception as e:
             db.session.rollback()
-            print(f"Error deleting student: {str(e)}")
+            # print(f"Error deleting student: {str(e)}")
             return jsonify({"success": False, "message": f"Error deleting student: {str(e)}"}), 500
 
     @app.route("/admin/students/enroll", methods=["POST"])
@@ -2350,7 +2348,7 @@ def admin_action_route(app):
 
         except Exception as e:
             db.session.rollback()
-            print(f"Error enrolling students: {str(e)}")
+            # print(f"Error enrolling students: {str(e)}")
             return jsonify({"success": False, "message": f"Error enrolling students: {str(e)}"}), 500
 
     # ===============================
@@ -2364,7 +2362,7 @@ def admin_action_route(app):
         if request.method == "POST":
             try:
                 data = request.get_json()
-                print(data)
+                # print(data)
 
                 # Handle subject_code - convert empty string to None for unique constraint
                 subject_code = data.get("subject_code", "").strip()
@@ -2424,9 +2422,6 @@ def admin_action_route(app):
                                 subject_id=new_subject.subject_id,
                             )
                         )
-                    print(
-                        f"✓ Linked subject {new_subject.subject_name} to class {class_room.class_room_name}"
-                    )
 
                 db.session.commit()
                 return (
@@ -2440,7 +2435,7 @@ def admin_action_route(app):
                 )
             except Exception as e:
                 db.session.rollback()
-                print(f"Error creating subject: {str(e)}")
+                # print(f"Error creating subject: {str(e)}")
                 return (
                     jsonify(
                         {
@@ -2523,7 +2518,7 @@ def admin_action_route(app):
                 ],
             }
             subjects_with_classes.append(subject_data)
-        print(sections)
+        # print(sections)
         # Convert subject category colors to JSON object
         return render_template(
             "admin/subjects.html",
@@ -2539,7 +2534,7 @@ def admin_action_route(app):
     @app.route("/admin/update/subjects/<subject_id>", methods=["PUT"])
     @admin_required
     def edit_subject(subject_id):
-        print("Editing subject: ", subject_id)
+        # print("Editing subject: ", subject_id)
         try:
             data = request.get_json()
             subject = Subject.query.get(subject_id)
@@ -2625,7 +2620,7 @@ def admin_action_route(app):
             )
         except Exception as e:
             db.session.rollback()
-            print(f"Error updating subject: {str(e)}")
+            # print(f"Error updating subject: {str(e)}")
             return (
                 jsonify(
                     {"success": False,
@@ -2652,7 +2647,7 @@ def admin_action_route(app):
             )
         except Exception as e:
             db.session.rollback()
-            print(f"Error deleting subject: {str(e)}")
+            # print(f"Error deleting subject: {str(e)}")
             return (
                 jsonify(
                     {"success": False,
@@ -2674,7 +2669,7 @@ def admin_action_route(app):
             subjects_ids: List[str] = data.get("subjects_ids")
             teacher_id = data.get("teacher_id")
             class_room_id = data.get("class_room_id")
-            print(data)
+            # print(data)
 
             # Validate inputs
             if not subjects_ids or not teacher_id or not class_room_id:
@@ -2776,7 +2771,7 @@ def admin_action_route(app):
 
         except Exception as e:
             db.session.rollback()
-            print(f"Error assigning subject teacher: {str(e)}")
+            # print(f"Error assigning subject teacher: {str(e)}")
             return (
                 jsonify(
                     {"success": False,
@@ -2789,7 +2784,7 @@ def admin_action_route(app):
     @app.route("/admin/subjects/<classroom_id>", methods=["POST"])
     @admin_required
     def subjects_for_classroom(classroom_id):
-        print("Getting subjects for classroom")
+        # print("Getting subjects for classroom")
         try:
             classroom = ClassRoom.query.get(classroom_id)
             if not classroom:
@@ -2811,7 +2806,7 @@ def admin_action_route(app):
             subjects = Subject.query.filter(
                 Subject.subject_id.in_(subject_ids)).all()
 
-            print(subjects)
+            # print(subjects)
             return (
                 jsonify(
                     {
@@ -2824,7 +2819,7 @@ def admin_action_route(app):
 
         except Exception as e:
             db.session.rollback()
-            print(f"Error getting subjects for classroom: {str(e)}")
+            # print(f"Error getting subjects for classroom: {str(e)}")
             return (
                 jsonify(
                     {
@@ -2870,7 +2865,7 @@ def admin_action_route(app):
 
         except Exception as e:
             db.session.rollback()
-            print(f"Error removing subject teacher: {str(e)}")
+            # print(f"Error removing subject teacher: {str(e)}")
             return (
                 jsonify(
                     {
@@ -2940,7 +2935,7 @@ def admin_action_route(app):
 
         except Exception as e:
             db.session.rollback()
-            print(f"Error assigning subject head: {str(e)}")
+            # print(f"Error assigning subject head: {str(e)}")
             return (
                 jsonify(
                     {
@@ -3047,7 +3042,7 @@ def admin_action_route(app):
 
         except Exception as e:
             db.session.rollback()
-            print(f"Error assigning teacher to class: {str(e)}")
+            # print(f"Error assigning teacher to class: {str(e)}")
             return (
                 jsonify(
                     {
@@ -3122,7 +3117,7 @@ def admin_action_route(app):
                         404,
                     )
             except Exception as e:
-                print(f"Error getting school info: {str(e)}")
+                # print(f"Error getting school info: {str(e)}")
                 return (
                     jsonify(
                         {
@@ -3269,7 +3264,7 @@ def admin_action_route(app):
 
         except Exception as e:
             db.session.rollback()
-            print(f"Error saving school info: {str(e)}")
+            # print(f"Error saving school info: {str(e)}")
             return (
                 jsonify(
                     {
@@ -3286,7 +3281,7 @@ def admin_action_route(app):
     def section_management():
         if request.method == "POST":
             data = request.get_json()
-            # print(data)
+            # # print(data)
             section_name = data["name"]
             section_abbreviation = data["abbreviation"]
             section_level = data.get("level")  # Optional field, but can be 0
@@ -3323,7 +3318,7 @@ def admin_action_route(app):
             return body, 200
 
         sections = Section.query.all()
-        # print("Section:", sections)
+        # # print("Section:", sections)
         body = {
             "success": True,
             "sections": [section.to_dict() for section in sections],
@@ -3353,7 +3348,7 @@ def admin_action_route(app):
                 )
             except Exception as e:
                 db.session.rollback()
-                print(f"Error updating section: {str(e)}")
+                # print(f"Error updating section: {str(e)}")
                 return (
                     jsonify(
                         {"success": False,
@@ -3376,7 +3371,7 @@ def admin_action_route(app):
                 )
             except Exception as e:
                 db.session.rollback()
-                print(f"Error deleting section: {str(e)}")
+                # print(f"Error deleting section: {str(e)}")
                 return (
                     jsonify(
                         {"success": False,
@@ -3392,7 +3387,7 @@ def admin_action_route(app):
         if request.method == "POST":
             try:
                 data = request.get_json()
-                print(data)
+                # print(data)
                 term_name = data.get("term_name")
                 academic_session = data.get("academic_session")
 
@@ -3420,8 +3415,6 @@ def admin_action_route(app):
                 )
                 # check if term already exists
                 if SchoolTerm.query.filter_by(term_name=term_name).first():
-                    print(SchoolTerm.query.filter_by(
-                        term_name=term_name).first())
                     body = {
                         "success": False,
                         "message": "Term already exists",
@@ -3446,8 +3439,8 @@ def admin_action_route(app):
 
                 return jsonify(body), 200
             except Exception as e:
-                print("Errors")
-                print(e)
+                # print("Errors")
+                # print(e)
                 body = {
                     "success": False,
                     "message": "Please configure your school settings first",
@@ -3455,7 +3448,7 @@ def admin_action_route(app):
                 return jsonify(body), 500
 
         terms = SchoolTerm.query.all()
-        print("Terms:", terms)
+        # print("Terms:", terms)
         body = {
             "success": True,
             "terms": [
@@ -3530,7 +3523,7 @@ def admin_action_route(app):
 
         except Exception as e:
             db.session.rollback()
-            print(f"Error updating term: {str(e)}")
+            # print(f"Error updating term: {str(e)}")
             return (
                 jsonify(
                     {"success": False,
@@ -3558,7 +3551,7 @@ def admin_action_route(app):
 
         except Exception as e:
             db.session.rollback()
-            print(f"Error deleting term: {str(e)}")
+            # print(f"Error deleting term: {str(e)}")
             return (
                 jsonify(
                     {"success": False,
@@ -3621,7 +3614,7 @@ def admin_action_route(app):
 
             except Exception as e:
                 db.session.rollback()
-                print(f"Error creating assessment type: {str(e)}")
+                # print(f"Error creating assessment type: {str(e)}")
                 return jsonify({"success": False, "message": str(e)}), 500
 
         # GET: Return all assessment types
@@ -3636,7 +3629,7 @@ def admin_action_route(app):
             }), 200
 
         except Exception as e:
-            print(f"Error fetching assessment types: {str(e)}")
+            # print(f"Error fetching assessment types: {str(e)}")
             return jsonify({"success": False, "message": str(e)}), 500
 
     @app.route("/admin/settings/assessments/<assessment_id>", methods=["PUT"])
@@ -3676,7 +3669,7 @@ def admin_action_route(app):
 
         except Exception as e:
             db.session.rollback()
-            print(f"Error updating assessment type: {str(e)}")
+            # print(f"Error updating assessment type: {str(e)}")
             return jsonify({"success": False, "message": str(e)}), 500
 
     @app.route("/admin/settings/assessments/<assessment_id>", methods=["DELETE"])
@@ -3711,7 +3704,7 @@ def admin_action_route(app):
 
         except Exception as e:
             db.session.rollback()
-            print(f"Error deleting assessment type: {str(e)}")
+            # print(f"Error deleting assessment type: {str(e)}")
             return jsonify({"success": False, "message": str(e)}), 500
 
     # Permissions and privileges
@@ -3800,7 +3793,7 @@ def admin_action_route(app):
 
             except Exception as e:
                 db.session.rollback()
-                print(f"Error saving permission: {str(e)}")
+                # print(f"Error saving permission: {str(e)}")
                 return (
                     jsonify(
                         {
@@ -3828,7 +3821,7 @@ def admin_action_route(app):
             )
 
         except Exception as e:
-            print(f"Error retrieving permissions: {str(e)}")
+            # print(f"Error retrieving permissions: {str(e)}")
             return (
                 jsonify(
                     {
@@ -3899,10 +3892,10 @@ def admin_action_route(app):
 
         try:
             db.session.commit()
-            print("Default permissions initialized successfully")
+            # print("Default permissions initialized successfully")
         except Exception as e:
             db.session.rollback()
-            print(f"Error initializing default permissions: {str(e)}")
+            # print(f"Error initializing default permissions: {str(e)}")
 
     # Call initialize_default_permissions when the app starts
     # This should be called once during application startup
@@ -3913,10 +3906,10 @@ def admin_action_route(app):
     def toggle_exam_active(exam_id):
         """Toggle exam active status"""
         try:
-            print(f"Toggle active called for exam: {exam_id}")
+            # print(f"Toggle active called for exam: {exam_id}")
             exam = Exam.query.get(exam_id)
             if not exam:
-                print(f"Exam not found: {exam_id}")
+                # print(f"Exam not found: {exam_id}")
                 return jsonify({"success": False, "message": "Exam not found"}), 404
 
             # Toggle the is_active status
@@ -3925,8 +3918,6 @@ def admin_action_route(app):
             db.session.commit()
 
             status = "activated" if exam.is_active else "deactivated"
-            print(
-                f"Exam {exam.name} toggled from {old_status} to {exam.is_active}")
 
             return jsonify({
                 "success": True,
@@ -3936,7 +3927,7 @@ def admin_action_route(app):
 
         except Exception as e:
             db.session.rollback()
-            print(f"Error toggling exam status: {str(e)}")
+            # print(f"Error toggling exam status: {str(e)}")
             import traceback
             traceback.print_exc()
             return jsonify({"success": False, "message": str(e)}), 500
@@ -3963,7 +3954,7 @@ def admin_action_route(app):
 
         except Exception as e:
             db.session.rollback()
-            print(f"Error finishing exam: {str(e)}")
+            # print(f"Error finishing exam: {str(e)}")
             return jsonify({"success": False, "message": str(e)}), 500
 
     @app.route("/admin/exam/<exam_id>/unfinish", methods=["POST"])
@@ -3989,7 +3980,7 @@ def admin_action_route(app):
 
         except Exception as e:
             db.session.rollback()
-            print(f"Error unfinishing exam: {str(e)}")
+            # print(f"Error unfinishing exam: {str(e)}")
             return jsonify({"success": False, "message": str(e)}), 500
 
     # ===============================
@@ -4051,7 +4042,7 @@ def admin_action_route(app):
             }), 200
 
         except Exception as e:
-            print(f"Error listing questions: {str(e)}")
+            # print(f"Error listing questions: {str(e)}")
             return jsonify({"success": False, "message": str(e)}), 500
 
     @app.route("/admin/questions/<question_id>", methods=["PUT"])
@@ -4087,7 +4078,7 @@ def admin_action_route(app):
 
         except Exception as e:
             db.session.rollback()
-            print(f"Error updating question: {str(e)}")
+            # print(f"Error updating question: {str(e)}")
             return jsonify({"success": False, "message": str(e)}), 500
 
     @app.route("/admin/questions/<question_id>", methods=["DELETE"])
@@ -4109,7 +4100,7 @@ def admin_action_route(app):
 
         except Exception as e:
             db.session.rollback()
-            print(f"Error deleting question: {str(e)}")
+            # print(f"Error deleting question: {str(e)}")
             return jsonify({"success": False, "message": str(e)}), 500
 
     @app.route("/admin/questions/delete-all", methods=["POST"])
@@ -4146,5 +4137,5 @@ def admin_action_route(app):
 
         except Exception as e:
             db.session.rollback()
-            print(f"Error deleting all questions: {str(e)}")
+            # print(f"Error deleting all questions: {str(e)}")
             return jsonify({"success": False, "message": str(e)}), 500

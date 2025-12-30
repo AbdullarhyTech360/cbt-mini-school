@@ -8,7 +8,7 @@ def upgrade():
     with app.app_context():
         # Create the table using SQLAlchemy
         db.create_all()
-        print("✓ Report config table created successfully")
+        # print("✓ Report config table created successfully")
 
 
 def downgrade():
@@ -16,10 +16,10 @@ def downgrade():
     with app.app_context():
         db.session.execute(db.text("DROP TABLE IF EXISTS report_config"))
         db.session.commit()
-        print("✓ Report config table removed")
+        # print("✓ Report config table removed")
 
 
 if __name__ == "__main__":
-    print("Running migration: Add report_config table")
+    # print("Running migration: Add report_config table")
     upgrade()
-    print("Migration completed successfully!")
+    # print("Migration completed successfully!")

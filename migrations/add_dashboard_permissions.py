@@ -51,23 +51,23 @@ def add_dashboard_permissions():
             )
             db.session.add(permission)
             created_count += 1
-            print(f"✓ Created permission: {perm_data['permission_name']}")
+            # print(f"✓ Created permission: {perm_data['permission_name']}")
         else:
             # Update existing permission
             existing.permission_description = perm_data["permission_description"]
             existing.is_active = perm_data["is_active"]
             existing.created_for = perm_data["created_for"]
             updated_count += 1
-            print(f"✓ Updated permission: {perm_data['permission_name']}")
+            # print(f"✓ Updated permission: {perm_data['permission_name']}")
     
     db.session.commit()
     
-    print(f"\n{'='*60}")
-    print("DASHBOARD PERMISSIONS MIGRATION SUMMARY:")
-    print(f"{'='*60}")
-    print(f"Permissions created: {created_count}")
-    print(f"Permissions updated: {updated_count}")
-    print(f"{'='*60}\n")
+    # print(f"\n{'='*60}")
+    # print("DASHBOARD PERMISSIONS MIGRATION SUMMARY:")
+    # print(f"{'='*60}")
+    # print(f"Permissions created: {created_count}")
+    # print(f"Permissions updated: {updated_count}")
+    # print(f"{'='*60}\n")
     
     return {
         "created": created_count,
@@ -76,6 +76,6 @@ def add_dashboard_permissions():
 
 
 if __name__ == "__main__":
-    print("This migration should be run from app.py")
-    print("Usage: from migrations.add_dashboard_permissions import add_dashboard_permissions")
-    print("       add_dashboard_permissions()")
+    # print("This migration should be run from app.py")
+    # print("Usage: from migrations.add_dashboard_permissions import add_dashboard_permissions")
+    # print("       add_dashboard_permissions()")

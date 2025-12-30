@@ -11,7 +11,7 @@ def populate_demo_questions():
     # Check if demo questions already exist
     existing_questions = DemoQuestion.query.count()
     if existing_questions > 0:
-        print(f"Demo questions already exist ({existing_questions} found). Skipping population.")
+        # print(f"Demo questions already exist ({existing_questions} found). Skipping population.")
         return
     
     # Sample demo questions
@@ -264,7 +264,7 @@ def populate_demo_questions():
     
     # Commit all changes
     db.session.commit()
-    print(f"Successfully populated demo question bank with {len(demo_questions_data)} questions.")
+    # print(f"Successfully populated demo question bank with {len(demo_questions_data)} questions.")
 
 if __name__ == "__main__":
     with app.app_context():

@@ -19,7 +19,7 @@ I've completed the full implementation of your student report generation system 
    - ✅ Subject table with scores for each exam type
    - ✅ Total scores and grades
    - ✅ Teacher and principal comment sections
-   - ✅ Professional, print-ready layout
+   - ✅ Professional, # print-ready layout
 
 2. **Flexible Exam Merging** (Your Main Request)
    - ✅ Merge any assessments together (CBT + Exam, CA1 + CA2, etc.)
@@ -45,7 +45,7 @@ I've completed the full implementation of your student report generation system 
    - ✅ Professional A4 format
    - ✅ Print-ready quality
    - ✅ Automatic page breaks for bulk reports
-   - ✅ Fallback to browser print if WeasyPrint not installed
+   - ✅ Fallback to browser # print if WeasyPrint not installed
 
 6. **Configuration System**
    - ✅ Create multiple report configurations
@@ -68,7 +68,7 @@ I've completed the full implementation of your student report generation system 
 ### Frontend Files
 5. ✅ **templates/admin/report_config.html** - Configuration management page
 6. ✅ **templates/admin/generate_report.html** - Report generation page
-7. ✅ **templates/reports/preview.html** - Report preview/print page
+7. ✅ **templates/reports/preview.html** - Report preview/# print page
 8. ✅ **static/js/admin/report_config.js** - Configuration page logic
 9. ✅ **static/js/admin/generate_report.js** - Report generation logic
 
@@ -360,7 +360,7 @@ This checks:
 
 ### "PDF download fails"
 → Install WeasyPrint: `python install_weasyprint.py`
-→ Or use browser print (Ctrl+P)
+→ Or use browser # print (Ctrl+P)
 
 ### "Position shows N/A"
 → Need at least 2 students with grades

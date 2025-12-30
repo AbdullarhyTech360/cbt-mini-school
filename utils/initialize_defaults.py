@@ -30,9 +30,9 @@ def initialize_default_data():
         )
         db.session.add(school)
         db.session.commit()
-        print("Default school created.")
+        # print("Default school created.")
     else:
-        print("School information already exists.")
+        # print("School information already exists.")
 
     # Create default school terms
     # Only create terms if none exist for this session
@@ -73,7 +73,7 @@ def initialize_default_data():
             db.session.add(term)
             db.session.commit()
             current_status = "(Current Term)" if term_data["is_current"] else ""
-            print(f"Created term: {term_data['name']} {current_status}")
+            # print(f"Created term: {term_data['name']} {current_status}")
 
     # Update school current_term to "First Term"
     if school:
@@ -124,7 +124,7 @@ def initialize_default_data():
             )
             db.session.add(assessment)
             db.session.commit()
-            print(
+            # print(
                 f"Created assessment type: {assessment_data['name']} ({assessment_data['max_score']} marks)")
 
     # Create sections (only if none exist)
@@ -152,7 +152,7 @@ def initialize_default_data():
             )
             db.session.add(section)
             db.session.commit()
-            print(f"Created section: {section_data['name']}")
+            # print(f"Created section: {section_data['name']}")
             sections[section_data["abbreviation"]] = section
     else:
         # Load existing sections
@@ -199,7 +199,7 @@ def initialize_default_data():
             )
             db.session.add(classroom)
             db.session.commit()
-            print(f"Created classroom: {classroom_data['name']}")
+            # print(f"Created classroom: {classroom_data['name']}")
         classrooms[classroom_data["name"]] = classroom
 
     # Get or create default class for admin and teachers
@@ -222,9 +222,9 @@ def initialize_default_data():
         admin.set_password("aaaa")
         db.session.add(admin)
         db.session.commit()
-        print("Default admin created: username=admin, password=aaaa")
+        # print("Default admin created: username=admin, password=aaaa")
     else:
-        print("Admin already exists.")
+        # print("Admin already exists.")
 
     # Create default teacher accounts
     teachers_data = [
@@ -403,9 +403,9 @@ def initialize_default_data():
             )
             db.session.add(subject)
             db.session.flush()  # Get the subject ID without committing
-            print(f"Created subject: {subject_data['name']}")
+            # print(f"Created subject: {subject_data['name']}")
         else:
-            print(
+            # print(
                 f"Subject already exists: {subject_data['name']} (using existing)")
         created_subjects.append(subject)
 
@@ -545,8 +545,8 @@ def initialize_default_data():
         db.session.commit()
     except Exception as e:
         db.session.rollback()
-        print(f"Error ensuring default permissions: {e}")
+        # print(f"Error ensuring default permissions: {e}")
 
-    print("\n" + "="*50)
-    print("DEFAULT DATA INITIALIZATION COMPLETE")
-    print("="*50)
+    # print("\n" + "="*50)
+    # print("DEFAULT DATA INITIALIZATION COMPLETE")
+    # print("="*50)

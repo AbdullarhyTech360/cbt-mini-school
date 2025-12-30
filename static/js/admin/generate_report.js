@@ -1465,7 +1465,7 @@ function generateReportHTML(reportData) {
   console.log("[Report HTML] Overall Total:", overall_total);
   console.log("[Report HTML] Overall Max:", overall_max);
 
-  const assessments = assessment_types
+  const assessments = (assessment_types || [])
     .sort((a, b) => (a.order || 0) - (b.order || 0))
     .map((at) => at.code);
 
@@ -1525,8 +1525,8 @@ function generateReportHTML(reportData) {
 
             * {
                 box-sizing: border-box;
-                -webkit-print-color-adjust: exact !important;
-                print-color-adjust: exact !important;
+                -webkit-# print-color-adjust: exact !important;
+                # print-color-adjust: exact !important;
             }
 
             body {
@@ -2284,7 +2284,7 @@ function getDynamicPrincipalComment(grade) {
     C: "Acceptable performance. Encouraged to aim higher.",
     D: "Below expectations. Improvement is essential.",
     E: "Poor performance. Remedial action required.",
-    F: "Unacceptable result. Serious intervention needed."
+    F: "Your performance is weak. Serious intervention is needed."
   };
   return comments[grade] || "A good result.";
 }
@@ -2379,57 +2379,66 @@ async function generateClientSidePDF(reportData, previewMode = false) {
   try {
     console.log("Starting PDF generation with data:", reportData);
 
-    // Dynamically load html2pdf.js if not already loaded
+    // Dynamically load html2pdf.js - try CDN first, then fall back to local
     console.log(
       "Checking if html2pdf is already loaded:",
       typeof html2pdf !== "undefined"
     );
     if (typeof html2pdf === "undefined") {
-      // Try loading from local first
+      // Try loading from CDN first
       try {
         await new Promise((resolve, reject) => {
           const script = document.createElement("script");
-          script.src = "/static/js/html2pdf/html2pdf.bundle.min.js";
+          script.type = "text/javascript";
+          script.src =
+            "https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js";
+          script.integrity = "sha512-GsLlZN/3F2ErC5ifS5QtgpiJtWd43JWSuIgh7mbzZ8zBps+dvLusV+eNQATqgA/HdeKFVgA5v3S/cIrLF7QnIg==";
+          script.crossOrigin = "anonymous";
+          
           script.onload = () => {
-            console.log("Local html2pdf.js loaded successfully");
+            console.log("html2pdf.js loaded successfully from CDN");
             // Verify the library is properly loaded
             if (typeof html2pdf !== "undefined") {
-              console.log("html2pdf library verified");
+              console.log("html2pdf library verified from CDN");
               resolve();
             } else {
-              console.error("html2pdf library not properly loaded");
-              reject(new Error("Library not properly loaded"));
+              console.error("html2pdf library not properly loaded from CDN");
+              reject(new Error("Library not properly loaded from CDN"));
             }
           };
-          script.onerror = () => {
-            console.log("Local html2pdf.js failed, trying CDN");
-            // If local fails, try CDN fallback
-            const cdnScript = document.createElement("script");
-            cdnScript.src =
-              "https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js";
-            cdnScript.onload = () => {
-              console.log("CDN html2pdf.js loaded successfully");
+          
+          script.onerror = (error) => {
+            console.error("html2pdf.js failed to load from CDN:", error);
+            console.log("CDN failed, trying local file");
+            // If CDN fails, try local file as fallback
+            const localScript = document.createElement("script");
+            localScript.type = "text/javascript";
+            localScript.src = "/static/js/html2pdf/html2pdf.bundle.min.js";
+            
+            localScript.onload = () => {
+              console.log("Local html2pdf.js loaded successfully");
               // Verify the library is properly loaded
               if (typeof html2pdf !== "undefined") {
-                console.log("html2pdf library verified from CDN");
+                console.log("html2pdf library verified from local");
                 resolve();
               } else {
-                console.error("html2pdf library not properly loaded from CDN");
-                reject(new Error("Library not properly loaded from CDN"));
+                console.error("html2pdf library not properly loaded from local");
+                reject(new Error("Library not properly loaded from local"));
               }
             };
-            cdnScript.onerror = () => {
-              console.error("CDN html2pdf.js also failed");
-              reject(new Error("Failed to load library from CDN"));
+            
+            localScript.onerror = (localError) => {
+              console.error("Local html2pdf.js also failed:", localError);
+              reject(new Error("Failed to load library from both CDN and local"));
             };
-            document.head.appendChild(cdnScript);
+            document.head.appendChild(localScript);
           };
           document.head.appendChild(script);
         });
-      } catch (localError) {
-        console.error("Failed to load html2pdf.js from local:", localError);
+      } catch (loadError) {
+        console.error("Failed to load html2pdf.js:", loadError);
         throw new Error(
-          "Failed to load PDF generation library: "     +alError.message
+          "Failed to load PDF generation library: " + loadError.message
         );
       }
     }

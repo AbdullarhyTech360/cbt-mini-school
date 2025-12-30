@@ -34,8 +34,8 @@ This document describes the improvements made to the report card generation syst
 
 ### 4. Responsive Layout
 
-- **Print Optimization**: Specific styling for print media to ensure proper scaling
-- **Content Scaling**: Automatic scaling to 89% for print to fit all content
+- **Print Optimization**: Specific styling for # print media to ensure proper scaling
+- **Content Scaling**: Automatic scaling to 89% for # print to fit all content
 - **Page Break Control**: Proper page break handling to prevent content splitting
 
 ## Technical Implementation

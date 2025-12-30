@@ -17,44 +17,44 @@ def create_test_grades():
         # Get first student
         student = User.query.filter_by(role='student').first()
         if not student:
-            print("No students found in database")
+            # print("No students found in database")
             return
             
-        print(f"Creating test data for student: {student.first_name} {student.last_name}")
+        # print(f"Creating test data for student: {student.first_name} {student.last_name}")
         
         # Get first term
         term = SchoolTerm.query.first()
         if not term:
-            print("No terms found in database")
+            # print("No terms found in database")
             return
             
-        print(f"Term: {term.term_name}")
+        # print(f"Term: {term.term_name}")
         
         # Get first class room
         class_room = ClassRoom.query.first()
         if not class_room:
-            print("No class rooms found in database")
+            # print("No class rooms found in database")
             return
             
-        print(f"Class: {class_room.class_room_name}")
+        # print(f"Class: {class_room.class_room_name}")
         
         # Get first subject
         subject = Subject.query.first()
         if not subject:
-            print("No subjects found in database")
+            # print("No subjects found in database")
             return
             
-        print(f"Subject: {subject.subject_name}")
+        # print(f"Subject: {subject.subject_name}")
         
         # Get assessment types
         assessment_types = AssessmentType.query.filter_by(is_active=True).all()
         if not assessment_types:
-            print("No assessment types found in database")
+            # print("No assessment types found in database")
             return
             
-        print("Assessment types:")
+        # print("Assessment types:")
         for at in assessment_types:
-            print(f"  - {at.code}: {at.name} (max: {at.max_score})")
+            # print(f"  - {at.code}: {at.name} (max: {at.max_score})")
         
         # Create test grades for this student
         grades_created = 0
@@ -88,7 +88,7 @@ def create_test_grades():
         # Commit changes
         from models import db
         db.session.commit()
-        print(f"Created {grades_created} test grades for student {student.first_name} {student.last_name}")
+        # print(f"Created {grades_created} test grades for student {student.first_name} {student.last_name}")
 
 if __name__ == "__main__":
     create_test_grades()

@@ -170,7 +170,7 @@ Added imports for:
 ### 1. **Unicode Encoding Issues** ✅
 **Problem**: Emoji characters causing `UnicodeEncodeError` on Windows
 
-**Solution**: Replaced emojis with plain ASCII text in print statements
+**Solution**: Replaced emojis with plain ASCII text in # print statements
 
 ### 2. **Network Accessibility** ✅
 **Problem**: Flask app only accessible on localhost

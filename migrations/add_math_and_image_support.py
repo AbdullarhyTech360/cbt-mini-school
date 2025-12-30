@@ -49,11 +49,11 @@ def upgrade():
                 
                 conn.commit()
             
-            print("✓ Successfully added math and image support columns")
+            # print("✓ Successfully added math and image support columns")
             return True
             
         except Exception as e:
-            print(f"✗ Error during migration: {str(e)}")
+            # print(f"✗ Error during migration: {str(e)}")
             db.session.rollback()
             return False
 
@@ -73,30 +73,30 @@ def downgrade():
                 
                 conn.commit()
             
-            print("✓ Successfully removed math and image support columns")
+            # print("✓ Successfully removed math and image support columns")
             return True
             
         except Exception as e:
-            print(f"✗ Error during downgrade: {str(e)}")
+            # print(f"✗ Error during downgrade: {str(e)}")
             db.session.rollback()
             return False
 
 
 if __name__ == '__main__':
-    print("Adding mathematical notation and image support to database...")
-    print("-" * 50)
+    # print("Adding mathematical notation and image support to database...")
+    # print("-" * 50)
     success = upgrade()
-    print("-" * 50)
+    # print("-" * 50)
     if success:
-        print("Migration complete!")
-        print("\nYour CBT system now supports:")
-        print("- Mathematical equations (LaTeX)")
-        print("- Scientific notation")
-        print("- Images in questions and options")
-        print("- Unicode symbols (√, ∑, ∫, π, etc.)")
-        print("\nNext steps:")
-        print("1. Update routes/student_routes.py (see MANUAL_UPDATE_REQUIRED.md)")
-        print("2. Restart your application")
-        print("3. Test with sample questions")
+        # print("Migration complete!")
+        # print("\nYour CBT system now supports:")
+        # print("- Mathematical equations (LaTeX)")
+        # print("- Scientific notation")
+        # print("- Images in questions and options")
+        # print("- Unicode symbols (√, ∑, ∫, π, etc.)")
+        # print("\nNext steps:")
+        # print("1. Update routes/student_routes.py (see MANUAL_UPDATE_REQUIRED.md)")
+        # print("2. Restart your application")
+        # print("3. Test with sample questions")
     else:
-        print("Migration failed. Please check the error messages above.")
+        # print("Migration failed. Please check the error messages above.")

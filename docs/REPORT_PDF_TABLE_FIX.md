@@ -50,7 +50,7 @@ This saves significant vertical space and balances the layout.
 
 ### 3. Compact Styling
 - Reduced all margins and padding
-- Smaller fonts (7-9pt) optimized for print
+- Smaller fonts (7-9pt) optimized for # print
 - Compact header and footer sections
 - Smaller comment boxes
 - Condensed grading legend
@@ -145,7 +145,7 @@ for assessment in assessments:
 
 ## Recommendations
 - For classes with many assessment types (>6), use report configuration to merge or hide some assessments
-- Test print quality to ensure fonts are readable on your printer
+- Test # print quality to ensure fonts are readable on your printer
 - Adjust font sizes in `services/report_generator.py` if needed (lines 420-650)
 
 ## Date Fixed

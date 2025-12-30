@@ -117,7 +117,7 @@ with app.app_context():
     db.session.add(teacher)
     
     db.session.commit()
-    print("Admin user created successfully!")
+    # print("Admin user created successfully!")
 ```
 
 ### Creating Demo User
@@ -141,7 +141,7 @@ with app.app_context():
     from models.class_room import ClassRoom
     class_room = ClassRoom.query.first()
     if not class_room:
-        print("ERROR: No classes found. Please create a class first.")
+        # print("ERROR: No classes found. Please create a class first.")
     else:
         # Create demo user
         user = User(
@@ -175,7 +175,7 @@ with app.app_context():
         db.session.add(student)
         
         db.session.commit()
-        print("Demo user created successfully!")
+        # print("Demo user created successfully!")
 ```
 
 ## Verifying Users Exist
@@ -199,16 +199,16 @@ with app.app_context():
     # Check admin user
     admin = User.query.filter_by(role="admin").first()
     if admin:
-        print(f"Admin user exists: {admin.username}")
+        # print(f"Admin user exists: {admin.username}")
     else:
-        print("No admin user found")
+        # print("No admin user found")
     
     # Check demo user
     demo = User.query.filter_by(username="demo001").first()
     if demo:
-        print(f"Demo user exists: {demo.username}")
+        # print(f"Demo user exists: {demo.username}")
     else:
-        print("No demo user found")
+        # print("No demo user found")
 ```
 
 ## Changing User Passwords
@@ -239,9 +239,9 @@ with app.app_context():
     if admin:
         admin.set_password("your_new_password")
         db.session.commit()
-        print("Admin password updated successfully!")
+        # print("Admin password updated successfully!")
     else:
-        print("Admin user not found")
+        # print("Admin user not found")
 ```
 
 ### Changing Demo Password
@@ -263,9 +263,9 @@ with app.app_context():
     if demo:
         demo.set_password("your_new_password")
         db.session.commit()
-        print("Demo password updated successfully!")
+        # print("Demo password updated successfully!")
     else:
-        print("Demo user not found")
+        # print("Demo user not found")
 ```
 
 ## Troubleshooting

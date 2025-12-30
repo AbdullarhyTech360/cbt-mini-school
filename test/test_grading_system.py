@@ -14,7 +14,7 @@ from models.school import School
 
 def test_grading_system():
     """Test the configurable grading system"""
-    print("Testing configurable grading system...")
+    # print("Testing configurable grading system...")
     
     # Create a test school if it doesn't exist
     school = School.query.first()
@@ -28,7 +28,7 @@ def test_grading_system():
         )
         db.session.add(school)
         db.session.commit()
-        print("Created test school")
+        # print("Created test school")
     
     # Create a test grade scale
     scale = GradeScale(
@@ -51,7 +51,7 @@ def test_grading_system():
     
     db.session.add(scale)
     db.session.commit()
-    print("Created test grade scale")
+    # print("Created test grade scale")
     
     # Create a test grade
     grade = Grade(
@@ -64,15 +64,15 @@ def test_grading_system():
     grade.calculate_percentage()
     grade.assign_grade_letter(scale)
     
-    print(f"Score: {grade.score}/{grade.max_score}")
-    print(f"Percentage: {grade.percentage}%")
-    print(f"Grade with custom scale: {grade.grade_letter}")
-    print(f"Remarks: {grade.remarks}")
+    # print(f"Score: {grade.score}/{grade.max_score}")
+    # print(f"Percentage: {grade.percentage}%")
+    # print(f"Grade with custom scale: {grade.grade_letter}")
+    # print(f"Remarks: {grade.remarks}")
     
     # Verify the grade is correct
     assert grade.grade_letter == "A", f"Expected A, got {grade.grade_letter}"
     assert grade.remarks == "Excellent", f"Expected 'Excellent', got '{grade.remarks}'"
-    print("✓ Custom scale test passed")
+    # print("✓ Custom scale test passed")
     
     # Test with default grading system (no scale)
     grade2 = Grade(
@@ -83,13 +83,13 @@ def test_grading_system():
     grade2.calculate_percentage()
     grade2.assign_grade_letter()  # No scale provided, should use default
     
-    print(f"\nScore: {grade2.score}/{grade2.max_score}")
-    print(f"Percentage: {grade2.percentage}%")
-    print(f"Grade with default system: {grade2.grade_letter}")
+    # print(f"\nScore: {grade2.score}/{grade2.max_score}")
+    # print(f"Percentage: {grade2.percentage}%")
+    # print(f"Grade with default system: {grade2.grade_letter}")
     
     # With default system, 75% should be an A (70-100)
     assert grade2.grade_letter == "A", f"Expected A, got {grade2.grade_letter}"
-    print("✓ Default scale test passed")
+    # print("✓ Default scale test passed")
     
     # Test edge cases
     edge_cases = [
@@ -105,7 +105,7 @@ def test_grading_system():
         (0, "F", "Fail")
     ]
     
-    print("\nTesting edge cases with custom scale:")
+    # print("\nTesting edge cases with custom scale:")
     for score, expected_grade, expected_remark in edge_cases:
         test_grade = Grade(
             score=score,
@@ -117,21 +117,21 @@ def test_grading_system():
         
         assert test_grade.grade_letter == expected_grade, f"For score {score}: expected {expected_grade}, got {test_grade.grade_letter}"
         assert test_grade.remarks == expected_remark, f"For score {score}: expected '{expected_remark}', got '{test_grade.remarks}'"
-        print(f"✓ Score {score}: Grade {test_grade.grade_letter}, Remark '{test_grade.remarks}'")
+        # print(f"✓ Score {score}: Grade {test_grade.grade_letter}, Remark '{test_grade.remarks}'")
     
     # Clean up
     db.session.delete(scale)
     db.session.commit()
-    print("\n✓ All tests passed!")
+    # print("\n✓ All tests passed!")
     
     return True
 
 if __name__ == "__main__":
     try:
         test_grading_system()
-        print("\n🎉 All grading system tests passed!")
+        # print("\n🎉 All grading system tests passed!")
     except Exception as e:
-        print(f"\n❌ Test failed with error: {e}")
+        # print(f"\n❌ Test failed with error: {e}")
         import traceback
         traceback.print_exc()
         sys.exit(1)

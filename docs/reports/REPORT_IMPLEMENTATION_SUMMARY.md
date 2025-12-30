@@ -50,7 +50,7 @@ Each report includes:
 
 ### ✅ 5. PDF Generation
 - Automatic PDF download (with WeasyPrint)
-- Fallback to browser print
+- Fallback to browser # print
 - Single student PDFs
 - Combined class PDFs with page breaks
 - Professional formatting
@@ -67,7 +67,7 @@ Each report includes:
 ### Frontend
 - ✅ `templates/admin/report_config.html` - Configuration management page
 - ✅ `templates/admin/generate_report.html` - Report generation page
-- ✅ `templates/reports/preview.html` - Report preview/print page
+- ✅ `templates/reports/preview.html` - Report preview/# print page
 - ✅ `static/js/admin/report_config.js` - Configuration page logic
 - ✅ `static/js/admin/generate_report.js` - Report generation logic
 
@@ -319,7 +319,7 @@ position = student_totals.index((student_id, total)) + 1
 ## Known Limitations
 
 1. **Comments**: Teacher/Principal comments are empty boxes (manual entry needed)
-2. **WeasyPrint**: Requires system dependencies (optional, falls back to browser print)
+2. **WeasyPrint**: Requires system dependencies (optional, falls back to browser # print)
 3. **Large Classes**: Bulk PDF generation may be slow for 100+ students
 4. **Images**: Student/school images must be accessible URLs
 
@@ -352,7 +352,7 @@ Potential improvements:
 ### PDF Download Fails
 - Install WeasyPrint: `python install_weasyprint.py`
 - Check system dependencies
-- Use browser print as fallback
+- Use browser # print as fallback
 
 ### Position Shows N/A
 - Need at least 2 students with grades

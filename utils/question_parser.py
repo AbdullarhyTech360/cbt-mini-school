@@ -67,7 +67,7 @@ def parse_json_questions(file_content):
                 parsed_questions.append(question_data)
                 
             except Exception as e:
-                print(f"Error parsing question {idx}: {str(e)}")
+                # print(f"Error parsing question {idx}: {str(e)}")
                 continue
         
         return parsed_questions, None
@@ -121,7 +121,7 @@ def parse_csv_questions(file_content):
                     try:
                         answer_index = int(correct_answer_str)
                     except ValueError:
-                        print(f"Warning: Could not parse answer index '{correct_answer_str}' for row {idx}, defaulting to 0")
+                        # print(f"Warning: Could not parse answer index '{correct_answer_str}' for row {idx}, defaulting to 0")
                         answer_index = 0
                     
                     question_data["options"] = [
@@ -139,7 +139,7 @@ def parse_csv_questions(file_content):
                 parsed_questions.append(question_data)
                 
             except Exception as e:
-                print(f"Error parsing CSV row {idx}: {str(e)}")
+                # print(f"Error parsing CSV row {idx}: {str(e)}")
                 continue
         
         return parsed_questions, None
@@ -179,17 +179,17 @@ def parse_word_questions(file_content):
         
         # Extract all images from the document first
         images_dict = extract_images_from_docx(doc)
-        print(f"=== Found {len(images_dict)} images in document ===")
+        # print(f"=== Found {len(images_dict)} images in document ===")
         
         parsed_questions = []
         current_question = None
         current_options = []
         in_options = False
         
-        print("=== Parsing DOCX file ===")
+        # print("=== Parsing DOCX file ===")
         for idx, para in enumerate(doc.paragraphs):
             text = para.text.strip()
-            print(f"Paragraph {idx}: '{text}'")
+            # print(f"Paragraph {idx}: '{text}'")
             
             if not text:
                 # Check if paragraph contains only an image
@@ -198,20 +198,20 @@ def parse_word_questions(file_content):
                     # Attach image to current question or option
                     if in_options and current_options:
                         current_options[-1]["option_image"] = image_data
-                        print(f"  -> Attached image to last option")
+                        # print(f"  -> Attached image to last option")
                     else:
                         current_question["question_image"] = image_data
-                        print(f"  -> Attached image to question")
+                        # print(f"  -> Attached image to question")
                 continue
             
             # Check for question start
             if text.lower().startswith("question:"):
-                print(f"  -> Found question start")
+                # print(f"  -> Found question start")
                 # Save previous question if exists
                 if current_question:
                     if current_question["question_type"] in ["mcq", "true_false"]:
                         current_question["options"] = current_options
-                        print(f"  -> Saved previous question with {len(current_options)} options")
+                        # print(f"  -> Saved previous question with {len(current_options)} options")
                     parsed_questions.append(current_question)
                 
                 # Process question text for math and images
@@ -238,7 +238,7 @@ def parse_word_questions(file_content):
                 
             elif text.lower().startswith("type:") and current_question:
                 q_type = text[5:].strip().lower()
-                print(f"  -> Found type: {q_type}")
+                # print(f"  -> Found type: {q_type}")
                 if "mcq" in q_type or "multiple" in q_type:
                     current_question["question_type"] = "mcq"
                 elif "true" in q_type or "false" in q_type:
@@ -247,7 +247,7 @@ def parse_word_questions(file_content):
                     current_question["question_type"] = "short_answer"
                     
             elif text.lower().startswith("options:") and current_question:
-                print(f"  -> Found options marker")
+                # print(f"  -> Found options marker")
                 in_options = True
                 
             elif text.lower().startswith("answer:") and current_question:
@@ -257,7 +257,7 @@ def parse_word_questions(file_content):
                 current_question["correct_answer"] = answer_text
                 if has_math:
                     current_question["has_math"] = True
-                print(f"  -> Found answer: {answer_text}")
+                # print(f"  -> Found answer: {answer_text}")
                 in_options = False
                 
             elif in_options and text.startswith("-"):
@@ -285,20 +285,20 @@ def parse_word_questions(file_content):
                 if image_data:
                     option_data["option_image"] = image_data
                 
-                print(f"  -> Found option: {option_text} (correct: {is_correct}, has_math: {has_math})")
+                # print(f"  -> Found option: {option_text} (correct: {is_correct}, has_math: {has_math})")
                 current_options.append(option_data)
         
         # Save last question
         if current_question:
             if current_question["question_type"] in ["mcq", "true_false"]:
                 current_question["options"] = current_options
-                print(f"  -> Saved last question with {len(current_options)} options")
+                # print(f"  -> Saved last question with {len(current_options)} options")
             parsed_questions.append(current_question)
         
-        print(f"=== Total questions parsed: {len(parsed_questions)} ===")
+        # print(f"=== Total questions parsed: {len(parsed_questions)} ===")
         for idx, q in enumerate(parsed_questions):
             has_image = "question_image" in q
-            print(f"Question {idx + 1}: {q['question_type']}, options: {len(q.get('options', []))}, has_math: {q.get('has_math', False)}, has_image: {has_image}")
+            # print(f"Question {idx + 1}: {q['question_type']}, options: {len(q.get('options', []))}, has_math: {q.get('has_math', False)}, has_image: {has_image}")
         
         return parsed_questions, None
         

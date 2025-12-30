@@ -81,8 +81,8 @@ body {
 ### Problem: Colors look different in PDF
 **Solution:** Already handled with:
 ```css
--webkit-print-color-adjust: exact !important;
-print-color-adjust: exact !important;
+-webkit-# print-color-adjust: exact !important;
+# print-color-adjust: exact !important;
 ```
 
 ### Problem: School logo not showing
@@ -221,7 +221,7 @@ If you encounter any issues:
 Your report card is now:
 - ✅ Single page only
 - ✅ Matches your design image
-- ✅ Professional and print-ready
+- ✅ Professional and # print-ready
 - ✅ Canvas preview shows exact output
 
 Enjoy your new report card system! 🚀

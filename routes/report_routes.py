@@ -11,6 +11,7 @@ from functools import wraps
 import io
 from datetime import datetime, date
 # Add GTK3 to PATH for Windows if present
+
 import os
 if os.name == 'nt':
     gtk_paths = [
@@ -26,14 +27,14 @@ try:
     from weasyprint import HTML
     WEASYPRINT_AVAILABLE = True
 except (ImportError, OSError) as e:
-    print(f"WeasyPrint not available: {e}")
+    # print(f"WeasyPrint not available: {e}")
     WEASYPRINT_AVAILABLE = False
 
 try:
     from xhtml2pdf import pisa
     XHTML2PDF_AVAILABLE = True
 except ImportError:
-    print("xhtml2pdf not available")
+    # print("xhtml2pdf not available")
     XHTML2PDF_AVAILABLE = False
 
 report_bp = Blueprint("report", __name__, url_prefix="/reports")
@@ -86,13 +87,6 @@ def get_configs():
     for config in configs:
         configs_list.append(config.to_dict())
     
-    # Print the decoded configurations for debugging
-    print("Decoded configurations:")
-    for config in configs_list:
-        print(config)
-    
-    # configs = configs_list
-
     return jsonify({
         "success": True,
         "configs": [config.to_dict() for config in configs]
@@ -375,15 +369,15 @@ def preview_report():
         config_id = data.get("config_id")
 
         # Debug logging
-        print(f"[DEBUG] Preview request - config_id: {config_id}, type: {type(config_id)}")
+        # print(f"[DEBUG] Preview request - config_id: {config_id}, type: {type(config_id)}")
         if config_id:
             config = ReportConfig.query.get(config_id)
-            # print(f"[DEBUG] Config found: {config is not None}")
+            # # print(f"[DEBUG] Config found: {config is not None}")
             # if config:
-            #     print(f"[DEBUG] Config term_id: {config.term_id}, requested term_id: {term_id}")
-            #     print(f"[DEBUG] Config class_room_id: {config.class_room_id}, requested class_room_id: {class_room_id}")
-            #     print(f"[DEBUG] Config active_assessments: {config.get_active_assessments()}")
-            #     print(f"[DEBUG] Config display_settings: {config.get_display_settings()}")
+            #     # print(f"[DEBUG] Config term_id: {config.term_id}, requested term_id: {term_id}")
+            #     # print(f"[DEBUG] Config class_room_id: {config.class_room_id}, requested class_room_id: {class_room_id}")
+            #     # print(f"[DEBUG] Config active_assessments: {config.get_active_assessments()}")
+            #     # print(f"[DEBUG] Config display_settings: {config.get_display_settings()}")
 
         if not all([student_id, term_id, class_room_id]):
             return jsonify({
@@ -480,7 +474,7 @@ def get_student_report(student_id):
             config_id = None
 
         # Debug logging
-        print(f"DEBUG: API received - student_id: {student_id}, term_id: {term_id}, class_room_id: {class_room_id}, config_id: {config_id}")
+        # print(f"DEBUG: API received - student_id: {student_id}, term_id: {term_id}, class_room_id: {class_room_id}, config_id: {config_id}")
         
         # Validate required parameters
         if not all([student_id, term_id, class_room_id]):
@@ -526,17 +520,17 @@ def get_student_report(student_id):
 def download_single_pdf():
     """Download a single student report as PDF"""
     try:
-        print("DEBUG: Starting download_single_pdf")
+        # print("DEBUG: Starting download_single_pdf")
         data = request.get_json()
         student_id = data.get("student_id")
         term_id = data.get("term_id")
         class_room_id = data.get("class_room_id")
         config_id = data.get("config_id")
         
-        print(f"DEBUG: Received data - student_id: {student_id}, term_id: {term_id}, class_room_id: {class_room_id}, config_id: {config_id}")
+        # print(f"DEBUG: Received data - student_id: {student_id}, term_id: {term_id}, class_room_id: {class_room_id}, config_id: {config_id}")
 
         if not all([student_id, term_id, class_room_id]):
-            print("DEBUG: Missing required parameters")
+            # print("DEBUG: Missing required parameters")
             return jsonify({
                 "success": False,
                 "error": "Missing required parameters"
@@ -551,50 +545,39 @@ def download_single_pdf():
         student_name = f"{student.first_name}_{student.last_name}".replace(' ', '_') if student else 'Unknown'
         term_name = term.term_name.replace(' ', '_') if term else 'Unknown'
         filename = f"Report_{student_name}_{term_name}.pdf"
-        print(f"DEBUG: Generated filename: {filename}")
+        # print(f"DEBUG: Generated filename: {filename}")
 
         # Get report data with performance optimization
-        print("DEBUG: Calling ReportGenerator.get_student_scores")
+        # print("DEBUG: Calling ReportGenerator.get_student_scores")
         report_data = ReportGenerator.get_student_scores(
             student_id, term_id, class_room_id, config_id
         )
-        print(f"DEBUG: Received data from client: {data}")
+        # print(f"DEBUG: Received data from client: {data}")
         if not report_data:
-            print("DEBUG: Could not generate report data")
+            # print("DEBUG: Could not generate report data")
             return jsonify({
                 "success": False,
                 "error": "Could not generate report data"
             }), 404
 
         if WEASYPRINT_AVAILABLE:
-            print(f"Generating report using WeasyPrint for {report_data['student']['name']}...")
+            # print(f"Generating report using WeasyPrint for {report_data['student']['name']}...")
             # Generate HTML with caching to avoid recomputation
             import time
             start_time = time.time()
-            print(f"Generating report for {report_data['student']['name']}...")
+            # print(f"Generating report for {report_data['student']['name']}...")
             
             html_content = ReportGenerator.generate_report_html(report_data)
             html_time = time.time() - start_time
-            print(f"  HTML generated in {html_time:.2f}s")
-            
-            # Debug: Check HTML content
-            print(f"DEBUG: HTML content length: {len(html_content)} characters")
-            if "OFFICIAL DOCUMENT" in html_content:
-                print("DEBUG: Watermark found in HTML content")
-            else:
-                print("DEBUG: Watermark NOT found in HTML content")
-                # Print first 1000 characters of HTML for inspection
-                print(f"DEBUG: First 1000 chars of HTML: {html_content[:1000]}")
+            # print(f"  HTML generated in {html_time:.2f}s")
             
             # Clear image cache periodically to prevent memory buildup
             if hasattr(ReportGenerator, '_image_cache') and len(ReportGenerator._image_cache) > 100:
                 ReportGenerator._image_cache.clear()
-                print("  Image cache cleared to prevent memory buildup")
                 
             # Clear HTML cache periodically to prevent memory buildup
             if hasattr(ReportGenerator, '_html_cache') and len(ReportGenerator._html_cache) > 50:
                 ReportGenerator._html_cache.clear()
-                print("  HTML cache cleared to prevent memory buildup")
 
             # Convert to PDF with optimized settings
             pdf_start = time.time()
@@ -608,7 +591,7 @@ def download_single_pdf():
                 try:
                     import time
                     pdf_start_time = time.time()
-                    print(f"  Starting WeasyPrint PDF generation...")
+                    # print(f"  Starting WeasyPrint PDF generation...")
                     pdf_bytes = HTML(string=html_string).write_pdf(
                         optimize_size=('fonts', 'images'),  # Compress fonts & images
                         presentational_hints=True,  # Use CSS efficiently
@@ -633,7 +616,7 @@ def download_single_pdf():
                         outline=False
                     )
                     pdf_end_time = time.time()
-                    print(f"  WeasyPrint PDF generation completed in {pdf_end_time - pdf_start_time:.2f}s")
+                    # print(f"  WeasyPrint PDF generation completed in {pdf_end_time - pdf_start_time:.2f}s")
                     q.put(('success', pdf_bytes))
                 except Exception as e:
                     q.put(('error', e))
@@ -651,24 +634,24 @@ def download_single_pdf():
                     raise pdf_bytes_or_error
                 pdf_bytes = pdf_bytes_or_error
             except queue.Empty:
-                print("ERROR: PDF generation timed out after 45 seconds")
+                # print("ERROR: PDF generation timed out after 45 seconds")
                 return jsonify({
                     "success": False,
                     "error": "PDF generation timed out. Please try again."
                 }), 500
             pdf_time = time.time() - pdf_start
             total_time = time.time() - start_time
-            print(f"  PDF generated in {pdf_time:.2f}s")
-            print(f"  Total time: {total_time:.2f}s")
+            # print(f"  PDF generated in {pdf_time:.2f}s")
+            # print(f"  Total time: {total_time:.2f}s")
             
             # Log performance metrics for monitoring
             if pdf_time > 10:  # If PDF generation takes more than 10 seconds, log details
-                print(f"  WARNING: Slow PDF generation detected for {report_data['student']['name']}")
-                print(f"    HTML size: {len(html_content)} characters")
+                # print(f"  WARNING: Slow PDF generation detected for {report_data['student']['name']}")
+                # print(f"    HTML size: {len(html_content)} characters")
                 # Count images in HTML
                 import re
                 img_count = len(re.findall(r'<img[^>]+>', html_content))
-                print(f"    Images embedded: {img_count}")
+                # print(f"    Images embedded: {img_count}")
 
             return send_file(
                 io.BytesIO(pdf_bytes),
@@ -713,7 +696,7 @@ def download_single_pdf():
                     raise pisa_status_or_error
                 pisa_status = pisa_status_or_error
             except queue.Empty:
-                print("ERROR: PDF generation timed out after 30 seconds")
+                # print("ERROR: PDF generation timed out after 30 seconds")
                 return jsonify({
                     "success": False,
                     "error": "PDF generation timed out. Please try again."
@@ -736,7 +719,7 @@ def download_single_pdf():
             }), 500
 
     except Exception as e:
-        print(f"Error generating PDF: {str(e)}")
+        # print(f"Error generating PDF: {str(e)}")
         import traceback
         traceback.print_exc()
         return jsonify({"success": False, "error": str(e)}), 500
@@ -787,27 +770,18 @@ def download_class_pdf():
             html_parts = []
             for i, report_data in enumerate(reports):
                 student_name = report_data['student']['name']
-                print(f"DEBUG: Generating HTML for student {i+1}/{len(reports)}: {student_name}")
                 html_content = ReportGenerator.generate_report_html(report_data)
                 html_parts.append(html_content)
-                
-                # Debug: Check if watermark is in the HTML
-                if "OFFICIAL DOCUMENT" in html_content:
-                    print(f"DEBUG: Watermark found in HTML for {student_name}")
-                else:
-                    print(f"DEBUG: Watermark NOT found in HTML for {student_name}")
                 
                 # Clear image cache periodically during bulk operations
                 if hasattr(ReportGenerator, '_image_cache') and len(ReportGenerator._image_cache) > 100:
                     ReportGenerator._image_cache.clear()
-                    print("  Image cache cleared during bulk generation")
                                 
                 # Clear HTML cache periodically during bulk operations
                 if hasattr(ReportGenerator, '_html_cache') and len(ReportGenerator._html_cache) > 50:
                     ReportGenerator._html_cache.clear()
-                    print("  HTML cache cleared during bulk generation")
 
-            print(f"All HTML generated in {time.time() - start_time:.2f}s")
+            # print(f"All HTML generated in {time.time() - start_time:.2f}s")
 
             # Combine with page breaks for single PDF generation
             combined_html = '<div style="page-break-after: always;"></div>'.join(html_parts)
@@ -861,25 +835,25 @@ def download_class_pdf():
                     raise pdf_bytes_or_error
                 pdf_bytes = pdf_bytes_or_error
             except queue.Empty:
-                print("ERROR: Bulk PDF generation timed out after 90 seconds")
+                # print("ERROR: Bulk PDF generation timed out after 90 seconds")
                 return jsonify({
                     "success": False,
                     "error": "Bulk PDF generation timed out. Please try generating fewer reports at once."
                 }), 500
             pdf_time = time.time() - pdf_start
             total_time = time.time() - start_time
-            print(f"PDF conversion took {pdf_time:.2f}s")
-            print(f"Total processing time: {total_time:.2f}s")
+            # print(f"PDF conversion took {pdf_time:.2f}s")
+            # print(f"Total processing time: {total_time:.2f}s")
             
             # Log performance metrics for monitoring
             if pdf_time > 30:  # If PDF generation takes more than 30 seconds, log details
-                print(f"  WARNING: Slow PDF generation detected for class report")
-                print(f"    HTML size: {len(combined_html)} characters")
+                # print(f"  WARNING: Slow PDF generation detected for class report")
+                # print(f"    HTML size: {len(combined_html)} characters")
                 # Count images in HTML
                 import re
                 img_count = len(re.findall(r'<img[^>]+>', combined_html))
-                print(f"    Images embedded: {img_count}")
-                print(f"    Number of students: {len(reports)}")
+                # print(f"    Images embedded: {img_count}")
+                # print(f"    Number of students: {len(reports)}")
 
             return send_file(
                 io.BytesIO(pdf_bytes),
@@ -911,16 +885,10 @@ def download_class_pdf():
             html_parts = []
             for i, report_data in enumerate(reports):
                 student_name = report_data['student']['name']
-                print(f"DEBUG: Generating simple HTML for student {i+1}/{len(reports)}: {student_name}")
+                # print(f"DEBUG: Generating simple HTML for student {i+1}/{len(reports)}: {student_name}")
                 html_content = ReportGenerator.generate_simple_report_html(report_data)
                 html_parts.append(html_content)
                 
-                # Debug: Check if watermark is in the HTML
-                if "OFFICIAL DOCUMENT" in html_content:
-                    print(f"DEBUG: Watermark found in simple HTML for {student_name}")
-                else:
-                    print(f"DEBUG: Watermark NOT found in simple HTML for {student_name}")
-
             # Combine with page breaks (xhtml2pdf uses <pdf:nextpage /> or CSS page-break)
             # xhtml2pdf supports standard CSS page-break-after: always
             combined_html = '<div style="page-break-after: always;"></div>'.join(html_parts)
@@ -956,7 +924,7 @@ def download_class_pdf():
                     raise pisa_status_or_error
                 pisa_status = pisa_status_or_error
             except queue.Empty:
-                print("ERROR: Bulk PDF generation timed out after 60 seconds")
+                # print("ERROR: Bulk PDF generation timed out after 60 seconds")
                 return jsonify({
                     "success": False,
                     "error": "Bulk PDF generation timed out. Please try generating fewer reports at once."
@@ -982,7 +950,7 @@ def download_class_pdf():
         # Log the full error for debugging
         import traceback
         error_msg = f"Error in download_class_pdf: {str(e)}"
-        print(error_msg)
+        # print(error_msg)
         traceback.print_exc()
         return jsonify({"success": False, "error": error_msg}), 500
 
@@ -1177,7 +1145,6 @@ def get_broad_sheet_data():
         class_room_id = data.get("class_room_id")
         term_id = data.get("term_id")
         exam_type = data.get("exam_type", "all")  # all, ca, exam, or specific assessment type
-        
         if not all([class_room_id, term_id]):
             return jsonify({
                 "success": False,
@@ -1186,7 +1153,7 @@ def get_broad_sheet_data():
         
         # Use the helper function to get the data
         broad_sheet_data, metadata = get_broad_sheet_data_logic(class_room_id, term_id, exam_type)
-        
+        # print("Broad Sheet Data:", broad_sheet_data)
         return jsonify({
             "success": True,
             "data": broad_sheet_data,
@@ -1237,20 +1204,42 @@ def get_grade_from_score(score, term_id):
         return "N/A"
     
     except Exception as e:
-        print(f"Error getting grade from score: {str(e)}")
+        # print(f"Error getting grade from score: {str(e)}")
         return "N/A"
 
 
 def get_broad_sheet_data_logic(class_room_id, term_id, exam_type="all"):
     """Core logic for getting broad sheet data, extracted for reuse"""
-    from models.student import Student
-    from models.exam import Exam
     from models.subject import Subject
     from models.assessment_type import AssessmentType
-    from models.exam_record import ExamRecord
     from models.class_room import ClassRoom
     from models.school_term import SchoolTerm
     from models.user import User
+    from models.grade import Grade  # Import Grade model
+    from models.school import School  # Import School model
+    
+    def format_assessment_name(code):
+        """Format assessment code to display name with special handling for common types"""
+        # Special handling for common assessment types
+        special_cases = {
+            'cbt': 'Computer Based Test',
+            'ca': 'Continuous Assessment',
+            'exam': 'Terminal Examination',
+            'mid_term': 'Mid-Term Exam',
+            'final': 'Final Exam',
+            'quiz': 'Quiz',
+            'assignment': 'Assignment',
+            'project': 'Project',
+            'first_ca': 'First CA',
+            'second_ca': 'Second CA',
+            'third_ca': 'Third CA',
+            'fourth_ca': 'Fourth CA',
+        }
+    
+        if code.lower() in special_cases:
+            return special_cases[code.lower()]
+    
+        return ' '.join(word.capitalize() for word in code.split('_'))
     
     # Get all students in the class
     students = User.query.filter_by(
@@ -1266,34 +1255,63 @@ def get_broad_sheet_data_logic(class_room_id, term_id, exam_type="all"):
         ClassRoom.class_room_id == class_room_id
     ).order_by(Subject.subject_name).all()
     
-    # Get all exams for the term and class
-    exams_query = Exam.query.filter_by(
-        class_room_id=class_room_id,
-        school_term_id=term_id
-    )
+    # Get the school to filter assessment types
+    school = School.query.first()
     
-    # Filter by exam type if specified
+    # Get all assessment types for this school (these are the possible assessment types)
+    all_assessment_types = AssessmentType.query.filter_by(
+        school_id=school.school_id if school else None,
+        is_active=True
+    ).order_by(AssessmentType.order).all()
+    # # print("ALL ASSESMENTS: ", all_assessment_types)
+    # Auto-sync CBT exam records to grades before retrieving
+    from utils.grade_sync import sync_all_exam_records
+    sync_all_exam_records(None, class_room_id, term_id)  # Sync all subjects for this class/term
+    
+    # Get all grades for the class and term (instead of exams)
+    grades_query = Grade.query.filter_by(
+        class_room_id=class_room_id,
+        term_id=term_id
+    )
+
+    # Filter by assessment type if specified and not "all"
     if exam_type != "all":
-        # Handle comma-separated exam types
-        exam_types = exam_type.split(',') if ',' in exam_type else [exam_type]
+        # Handle comma-separated assessment types
+        assessment_types = exam_type.split(',') if ',' in exam_type else [exam_type]
         
-        # Build filter conditions for multiple exam types
+        # Build filter conditions for multiple assessment types
         from sqlalchemy import or_
         conditions = []
         
-        for single_type in exam_types:
+        for single_type in assessment_types:
             single_type = single_type.strip().lower()
             if single_type == "ca":
-                conditions.append(Exam.exam_type.ilike("%ca%"))
+                conditions.append(Grade.assessment_type.ilike("%ca%"))
             elif single_type == "exam":
-                conditions.append(Exam.exam_type.ilike("%exam%"))
+                # Match 'exam', 'terminal examination', 'terminal', 'examination', etc.
+                conditions.append(db.or_(
+                    Grade.assessment_type.ilike("%exam%"),
+                    Grade.assessment_type.ilike("%examination%"),
+                    Grade.assessment_type.ilike("%terminal%")
+                ))
             else:
-                conditions.append(Exam.exam_type.ilike(f"%{single_type}%"))
+                conditions.append(Grade.assessment_type.ilike(f"%{single_type}%"))
         
         if conditions:
-            exams_query = exams_query.filter(or_(*conditions))
+            grades_query = grades_query.filter(or_(*conditions))
+        else:
+            # If no conditions, return empty result or all results based on requirements
+            pass
+        
+    all_grades = grades_query.all()
+    # print("DEBUG GRADES: ", all_grades)
+    for grade in all_grades:
+        # print(grade.to_dict())
+        continue
     
-    exams = exams_query.all()
+    # Debug: Print all unique assessment types found
+    unique_assessment_types = set(grade.assessment_type for grade in all_grades)
+    # # print("DEBUG UNIQUE ASSESSMENT TYPES: ", unique_assessment_types)
     
     # Prepare the broad sheet data structure
     broad_sheet_data = []
@@ -1308,28 +1326,61 @@ def get_broad_sheet_data_logic(class_room_id, term_id, exam_type="all"):
         
         # Get scores for each subject
         for subject in subjects:
+            # Filter grades for this specific student and subject
+            subject_grades = [g for g in all_grades if g.student_id == student.id and g.subject_id == subject.subject_id]
+            # print("DEBUG STUDENT: ", subject_grades)
+            # Create a lookup for the student's scores by assessment type
+            grade_lookup = {}
+            for grade in subject_grades:
+                grade_lookup[grade.assessment_type] = {
+                    "exam_id": grade.grade_id,
+                    "exam_name": grade.assessment_name or grade.assessment_type,
+                    "assessment_type": grade.assessment_type,
+                    "formatted_type": format_assessment_name(grade.assessment_type),  # Formatted name for display
+                    "score": grade.score,
+                    "max_score": grade.max_score,
+                    "percentage": round((grade.score / grade.max_score) * 100, 1) if grade.max_score and grade.max_score > 0 else 0,
+                    "is_cbt": grade.is_from_cbt
+                }
+            
+            # Create subject scores only for assessment types that have actual scores
             subject_scores = []
             
-            # Get exam records for this student, subject, and term
-            exam_records = ExamRecord.query.join(
-                Exam
-            ).filter(
-                ExamRecord.student_id == student.id,
-                ExamRecord.subject_id == subject.subject_id,
-                Exam.school_term_id == term_id,
-                Exam.class_room_id == class_room_id
-            ).all()
-            
-            for record in exam_records:
-                exam = record.exam
+            # Add existing scores in the order they appear in the grade data
+            for grade in subject_grades:
                 subject_scores.append({
-                    "exam_id": exam.id,
-                    "exam_name": exam.name,
-                    "assessment_type": exam.exam_type,
-                    "score": record.raw_score,
-                    "max_score": exam.max_score,
-                    "percentage": round((record.raw_score / exam.max_score) * 100, 1) if exam.max_score and exam.max_score > 0 else 0
+                    "exam_id": grade.grade_id,
+                    "exam_name": grade.assessment_name or grade.assessment_type,
+                    "assessment_type": grade.assessment_type,
+                    "formatted_type": format_assessment_name(grade.assessment_type),  # Formatted name for display
+                    "score": grade.score,
+                    "max_score": grade.max_score,
+                    "percentage": round((grade.score / grade.max_score) * 100, 1) if grade.max_score and grade.max_score > 0 else 0,
+                    "is_cbt": grade.is_from_cbt
                 })
+            
+            # Only add placeholder scores for assessment types that match the filter
+            if exam_type == "all":
+                # Get all assessment types that exist in the AssessmentType model for this school
+                all_school_assessment_types = {at.code for at in all_assessment_types}
+                
+                # Add placeholder scores for assessment types that exist in the system but don't have scores for this student
+                existing_types = {score['assessment_type'] for score in subject_scores}
+                missing_types = all_school_assessment_types - existing_types
+                
+                for missing_type_code in missing_types:
+                    matching_assessment_type = next((at for at in all_assessment_types if at.code == missing_type_code), None)
+                    if matching_assessment_type:
+                        subject_scores.append({
+                            "exam_id": None,
+                            "exam_name": matching_assessment_type.name,
+                            "assessment_type": matching_assessment_type.code,
+                            "formatted_type": format_assessment_name(matching_assessment_type.code),  # Formatted name for display
+                            "score": 0,
+                            "max_score": matching_assessment_type.max_score,
+                            "percentage": 0,
+                            "is_cbt": False
+                        })
             
             # Calculate total and average for the subject
             total_score = sum(item["score"] for item in subject_scores)
@@ -1345,19 +1396,40 @@ def get_broad_sheet_data_logic(class_room_id, term_id, exam_type="all"):
             student_data["subjects"][subject.subject_name] = subject_total
         
         broad_sheet_data.append(student_data)
+    print(broad_sheet_data)
+    # Get class room object to access form teacher
+    class_room = ClassRoom.query.get(class_room_id)
+    
+    # Get school information
+    from models.school import School
+    school = School.query.first()
+    
+    # Get assessment types that exist in the grades for this class/term based on the filter (for metadata)
+    # Use the already filtered all_grades from the main logic above
+    unique_assessment_types = set(grade.assessment_type for grade in all_grades)
+    
+    assessment_types_list = list(unique_assessment_types) if unique_assessment_types else []
+    
+    # Get assessment type orders from the AssessmentType model
+    from models.assessment_type import AssessmentType
+    # Get school_id through the section relationship
+    school_id = class_room.section.school_id if class_room.section else None
+    school_assessment_types = AssessmentType.query.filter_by(school_id=school_id).all()
+    assessment_type_orders = {at.code: at.order for at in school_assessment_types}
     
     # Prepare metadata
     metadata = {
-        "class_name": ClassRoom.query.get(class_room_id).class_room_name,
+        "class_name": class_room.class_room_name,
         "term_name": SchoolTerm.query.get(term_id).term_name,
         "exam_type": exam_type,
         "total_students": len(students),
         "total_subjects": len(subjects),
-        "exams": [{
-            "exam_id": exam.id,
-            "exam_name": exam.name,
-            "assessment_type": exam.exam_type
-        } for exam in exams]
+        "assessment_types": assessment_types_list,  # Changed from "exams" to "assessment_types"
+        "assessment_type_orders": assessment_type_orders,  # Include assessment type orders
+        "school_name": school.school_name if school else "N/A",
+        "school_address": school.address if school else "N/A",
+        "form_master": f"{class_room.form_teacher.first_name} {class_room.form_teacher.last_name}" if class_room.form_teacher else "N/A",
+        "academic_session": SchoolTerm.query.get(term_id).academic_session if term_id else "N/A"
     }
     
     return broad_sheet_data, metadata
@@ -1393,7 +1465,6 @@ def export_broad_sheet(format):
             
             # Get the broad sheet data using the same logic as the main function
             broad_sheet_data, metadata = get_broad_sheet_data_logic(class_room_id, term_id, exam_type)
-            
         except Exception as e:
             return jsonify({"success": False, "error": f"Error getting broad sheet data: {str(e)}"}), 500
         
@@ -1464,14 +1535,26 @@ def export_broad_sheet_excel(broad_sheet_data, metadata, school):
             'valign': 'vcenter'
         })
         
-        # Write title
-        worksheet.write('A1', f'BROAD SHEET - {metadata["class_name"]}', 
+        # Write comprehensive header information
+        worksheet.write('A1', 'BROAD SHEET', 
                        workbook.add_format({'bold': True, 'font_size': 16, 'align': 'center'}))
-        worksheet.write('A2', f'Term: {metadata["term_name"]}', 
+        worksheet.write('A2', f'School: {metadata.get("school_name", "N/A")}', 
+                       workbook.add_format({'bold': True, 'align': 'center'}))
+        worksheet.write('A3', f'Address: {metadata.get("school_address", "N/A")}', 
+                       workbook.add_format({'bold': True, 'align': 'center'}))
+        worksheet.write('A4', f'Class: {metadata["class_name"]}', 
+                       workbook.add_format({'bold': True, 'align': 'center'}))
+        worksheet.write('A5', f'Form Master: {metadata.get("form_master", "N/A")}', 
+                       workbook.add_format({'bold': True, 'align': 'center'}))
+        worksheet.write('A6', f'Term: {metadata["term_name"]}', 
+                       workbook.add_format({'bold': True, 'align': 'center'}))
+        worksheet.write('A7', f'Session: {metadata.get("academic_session", "N/A")}', 
                        workbook.add_format({'bold': True, 'align': 'center'}))
         
+        # Add some spacing before the table
+        row = 8
+        
         # Write headers
-        row = 3
         col = 0
         
         worksheet.write(row, col, 'S/N', header_format)
@@ -1573,14 +1656,28 @@ def generate_broad_sheet_html(broad_sheet_data, metadata, school):
             }}
             .header h1 {{
                 margin: 0;
-                font-size: 20px;
+                font-size: 24px;
                 font-weight: bold;
                 color: #333;
+                text-transform: uppercase;
             }}
             .header p {{
                 margin: 5px 0;
                 font-size: 16px;
                 color: #666;
+            }}
+            .school-info {{
+                display: flex;
+                justify-content: space-between;
+                margin: 10px 0;
+                font-size: 14px;
+                border-top: 1px solid #333;
+                border-bottom: 1px solid #333;
+                padding: 8px 0;
+            }}
+            .school-info div {{
+                flex: 1;
+                text-align: center;
             }}
             table {{
                 width: 100%;
@@ -1633,8 +1730,13 @@ def generate_broad_sheet_html(broad_sheet_data, metadata, school):
         <div class="header">
             <h1>BROAD SHEET</h1>
             <p><strong>School:</strong> {school_name}</p>
-            <p><strong>Class:</strong> {metadata_class_name}</p>
-            <p><strong>Term:</strong> {term_name}</p>
+            <p><strong>Address:</strong> {school_address}</p>
+            <div class="school-info">
+                <div><strong>Class:</strong> {metadata_class_name}</div>
+                <div><strong>Form Master:</strong> {form_master}</div>
+                <div><strong>Term:</strong> {term_name}</div>
+                <div><strong>Session:</strong> {academic_session}</div>
+            </div>
             <p><strong>Generated on:</strong> {datetime_str}</p>
         </div>
             
@@ -1645,8 +1747,11 @@ def generate_broad_sheet_html(broad_sheet_data, metadata, school):
                     <th rowspan="2">Admission No.</th>
                     <th rowspan="2" class="student-name">Student Name</th>""".format(
         metadata_class_name=metadata['class_name'],
-        school_name=school.school_name if school else 'N/A',
+        school_name=metadata.get('school_name', school.school_name if school else 'N/A'),
+        school_address=metadata.get('school_address', 'N/A'),
+        form_master=metadata.get('form_master', 'N/A'),
         term_name=metadata['term_name'],
+        academic_session=metadata.get('academic_session', 'N/A'),
         datetime_str=datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     )
     

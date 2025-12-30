@@ -207,9 +207,9 @@ session = ExamSession.query.filter_by(
     is_active=True
 ).first()
 
-print(f"Progress: {session.current_question_index + 1}")
-print(f"Answers: {len(session.get_answers())}")
-print(f"Time left: {session.time_remaining // 60} minutes")
+# print(f"Progress: {session.current_question_index + 1}")
+# print(f"Answers: {len(session.get_answers())}")
+# print(f"Time left: {session.time_remaining // 60} minutes")
 ```
 
 #### Manually Mark Session Complete
@@ -245,7 +245,7 @@ old_sessions = ExamSession.query.filter(
        student_id='student_id',
        exam_id='exam_id'
    ).first()
-   print(f"Active: {session.is_active}")
+   # print(f"Active: {session.is_active}")
    ```
 
 2. Is the student logged in with the correct account?
@@ -264,8 +264,8 @@ db.session.commit()
 **Check:**
 ```python
 # Verify session data
-print(f"Answers: {session.get_answers()}")
-print(f"Question order: {session.get_question_order()}")
+# print(f"Answers: {session.get_answers()}")
+# print(f"Question order: {session.get_question_order()}")
 ```
 
 **Fix:**
@@ -323,10 +323,10 @@ total = len(recent_sessions)
 completed = sum(1 for s in recent_sessions if s.is_completed)
 active = sum(1 for s in recent_sessions if s.is_active)
 
-print(f"Total sessions: {total}")
-print(f"Completed: {completed}")
-print(f"Active: {active}")
-print(f"Completion rate: {completed/total*100:.1f}%")
+# print(f"Total sessions: {total}")
+# print(f"Completed: {completed}")
+# print(f"Active: {active}")
+# print(f"Completion rate: {completed/total*100:.1f}%")
 ```
 
 ---

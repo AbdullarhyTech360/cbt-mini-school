@@ -22,7 +22,7 @@ def upgrade():
                 conn.execute("ALTER TABLE report_config ADD COLUMN grade_scale_id VARCHAR(36)")
                 conn.execute("ALTER TABLE report_config ADD FOREIGN KEY (grade_scale_id) REFERENCES grade_scale(scale_id)")
             except Exception as e:
-                print(f"Column may already exist or other error: {e}")
+                # print(f"Column may already exist or other error: {e}")
                 pass  # Column might already exist
     
     # Create a default grade scale

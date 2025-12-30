@@ -17,36 +17,36 @@ def upgrade():
                     db.text("ALTER TABLE report_config ADD COLUMN resumption_date DATE")
                 )
                 db.session.commit()
-                print("✓ Added resumption_date column to report_config table")
+                # print("✓ Added resumption_date column to report_config table")
             except Exception as e:
                 db.session.rollback()
                 # Column might already exist
                 if "duplicate" in str(e).lower() or "already exists" in str(e).lower():
-                    print("✓ resumption_date column already exists")
+                    # print("✓ resumption_date column already exists")
                 else:
                     raise e
-            print("✓ Added resumption_date column to report_config table")
+            # print("✓ Added resumption_date column to report_config table")
             return True
         except Exception as e:
             db.session.rollback()
             # Column might already exist
             if "duplicate column name" in str(e).lower():
-                print("✓ resumption_date column already exists")
+                # print("✓ resumption_date column already exists")
                 return True
             else:
-                print(f"✗ Failed to add resumption_date column: {str(e)}")
+                # print(f"✗ Failed to add resumption_date column: {str(e)}")
                 return False
 
 def downgrade():
     """Remove resumption_date column from report_config table (SQLite limitation: not supported)"""
     with app.app_context():
-        print("⚠ Column removal not supported in SQLite. Table must be recreated to remove column.")
+        # print("⚠ Column removal not supported in SQLite. Table must be recreated to remove column.")
         return True
 
 if __name__ == "__main__":
-    print("Running migration: Add resumption_date column to report_config table")
+    # print("Running migration: Add resumption_date column to report_config table")
     success = upgrade()
     if success:
-        print("Migration completed successfully!")
+        # print("Migration completed successfully!")
     else:
-        print("Migration failed!")
+        # print("Migration failed!")

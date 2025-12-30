@@ -267,7 +267,6 @@ class ReportGenerator:
                     'max_score': grade.max_score,
                     'percentage': grade.percentage,
                     'is_cbt': grade.is_from_cbt,  # Mark CBT scores for special display
-                    # Link to original CBT exam if applicable
                     'exam_record_id': grade.exam_record_id
                 }
 
