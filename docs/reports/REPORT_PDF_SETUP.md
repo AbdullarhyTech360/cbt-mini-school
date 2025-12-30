@@ -5,7 +5,7 @@
 The report system now supports automatic PDF generation using WeasyPrint. This allows you to:
 - Download individual student reports as PDF
 - Download all class reports as a single combined PDF
-- Generate professional, print-ready report cards
+- Generate professional, # print-ready report cards
 
 ## Installation
 
@@ -37,7 +37,7 @@ pip install weasyprint
 ### Step 2: Verify Installation
 
 ```bash
-python -c "from weasyprint import HTML; print('WeasyPrint installed successfully!')"
+python -c "from weasyprint import HTML; # print('WeasyPrint installed successfully!')"
 ```
 
 If you see the success message, you're ready to go!
@@ -79,7 +79,7 @@ If WeasyPrint is not installed, the system falls back to browser printing:
 1. Click download icon
 2. Opens preview page in new tab
 3. Click "Print" button
-4. Use browser's print-to-PDF feature
+4. Use browser's # print-to-PDF feature
 
 ## PDF Customization
 
@@ -364,8 +364,8 @@ def download_single_pdf():
 If WeasyPrint installation is problematic, use browser printing:
 
 1. System automatically falls back to preview page
-2. Users can print using browser (Ctrl+P / Cmd+P)
-3. Select "Save as PDF" in print dialog
+2. Users can # print using browser (Ctrl+P / Cmd+P)
+3. Select "Save as PDF" in # print dialog
 4. Works on all platforms without additional setup
 
 ## Next Steps

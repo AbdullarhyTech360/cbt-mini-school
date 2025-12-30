@@ -18,7 +18,7 @@
             <div class="report-tab active bg-white dark:bg-gray-700 text-primary shadow-sm cursor-pointer" id="individual-reports-tab">
                 <div class="py-4 px-1 border-b-2 border-transparent text-sm font-medium text-center">
                     <span class="material-symbols-outlined text-lg align-middle mr-2">person</span>
-                    <span class="align-middle">Individual Reports</span>
+                    <span class="align-middle">Report Card</span>
                 </div>
             </div>
             <div class="report-tab text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700/50 cursor-pointer" id="broad-sheet-tab">
@@ -91,7 +91,95 @@
     </div>
 </div>
 
+<!-- Broad Sheet Section -->
+<div id="broad-sheet-section" class="hidden">
+    <!-- Filters -->
+    <div class="mb-6 bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 border border-gray-100 dark:border-gray-700">
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Term <span class="text-red-500">*</span>
+                </label>
+                <select id="broad-sheet-term" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                    <option value="">Select Term</option>
+                </select>
+                <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Choose the academic term</p>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Class <span class="text-red-500">*</span>
+                </label>
+                <select id="broad-sheet-class" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                    <option value="">Select Class</option>
+                </select>
+                <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Choose the class</p>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Exam Types</label>
+                <div class="space-y-2">
+                    <div class="flex items-center">
+                        <input type="checkbox" id="exam-type-all" class="rounded text-blue-600 focus:ring-blue-500" checked>
+                        <label for="exam-type-all" class="ml-2 text-sm text-gray-700 dark:text-gray-300">All Exams</label>
+                    </div>
+                    <div class="flex items-center">
+                        <input type="checkbox" id="exam-type-ca" class="rounded text-blue-600 focus:ring-blue-500">
+                        <label for="exam-type-ca" class="ml-2 text-sm text-gray-700 dark:text-gray-300">CA</label>
+                    </div>
+                    <div class="flex items-center">
+                        <input type="checkbox" id="exam-type-exam" class="rounded text-blue-600 focus:ring-blue-500">
+                        <label for="exam-type-exam" class="ml-2 text-sm text-gray-700 dark:text-gray-300">Exam</label>
+                    </div>
+                    <div class="flex items-center mt-2">
+                        <input type="checkbox" id="show-exams" class="rounded text-blue-600 focus:ring-blue-500" checked>
+                        <label for="show-exams" class="ml-2 text-sm text-gray-700 dark:text-gray-300">Show Individual Exams</label>
+                    </div>
+                    <div class="flex items-center">
+                        <input type="checkbox" id="show-totals" class="rounded text-blue-600 focus:ring-blue-500" checked>
+                        <label for="show-totals" class="ml-2 text-sm text-gray-700 dark:text-gray-300">Show Totals</label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex flex-col gap-3">
+                <div class="flex flex-wrap gap-2">
+                    <button id="preview-broad-sheet" class="flex-1 min-w-[100px] flex items-center justify-center gap-2 h-10 px-3 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-lg shadow-md hover:shadow-lg hover:scale-105 transition-all duration-200">
+                        <span class="material-symbols-outlined text-lg">preview</span>
+                        <span class="text-xs font-bold">Preview</span>
+                    </button>
+                    <button id="export-broad-sheet-pdf" class="flex-1 min-w-[100px] flex items-center justify-center gap-2 h-10 px-3 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white rounded-lg shadow-md hover:shadow-lg hover:scale-105 transition-all duration-200">
+                        <span class="material-symbols-outlined text-lg">download</span>
+                        <span class="text-xs font-bold">PDF</span>
+                    </button>
+                    <button id="export-broad-sheet-excel" class="flex-1 min-w-[100px] flex items-center justify-center gap-2 h-10 px-3 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white rounded-lg shadow-md hover:shadow-lg hover:scale-105 transition-all duration-200">
+                        <span class="material-symbols-outlined text-lg">download</span>
+                        <span class="text-xs font-bold">Excel</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Results Section -->
+    <div id="broad-sheet-results" class="hidden bg-white dark:bg-gray-800 rounded-xl shadow-md border border-gray-100 dark:border-gray-700">
+        <div class="p-6 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
+            <h2 class="text-xl font-bold text-gray-900 dark:text-white">Broad Sheet - <span id="class-info"></span> - <span id="term-info"></span></h2>
+        </div>
+        
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                <thead id="broad-sheet-header" class="bg-gray-50 dark:bg-gray-700">
+                    <!-- Header will be populated dynamically -->
+                </thead>
+                <tbody id="broad-sheet-body" class="divide-y divide-gray-200 dark:divide-gray-700">
+                    <!-- Rows will be populated dynamically -->
+                </tbody>
+            </table>
+        </div>
+    </div>
 </div>
+
 
 <!-- Preview Modal Styles -->
 <style>
@@ -119,12 +207,12 @@
         border-radius: 9999px;
         font-weight: 500;
     }
-    
+
     /* Toolbar */
     .preview-toolbar {
         box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
     }
-    
+
     /* Report tabs */
     .report-tab {
         cursor: pointer;
@@ -149,11 +237,13 @@
     }
 </style>
 
+<script src="{{ url_for('static', filename='js/components/modal.js') }}" defer></script>
 <script src="{{ url_for('static', filename='js/admin/generate_report.js') }}"></script>
+<script src="{{ url_for('static', filename='js/admin/generate_broadsheet.js') }}"></script>
 <script>
     // Add keyboard shortcuts for the preview modal
     document.addEventListener('keydown', function(event) {
-        // Ctrl/Cmd + P for print
+        // Ctrl/Cmd + P for # print
         if ((event.ctrlKey || event.metaKey) && event.key === 'p') {
             event.preventDefault();
             // Print functionality could be added here
@@ -184,11 +274,21 @@
                 this.classList.remove('text-gray-600', 'dark:text-gray-300', 'hover:text-gray-800', 'dark:hover:text-gray-200', 'hover:bg-gray-200', 'dark:hover:bg-gray-700/50');
                 this.classList.add('bg-white', 'dark:bg-gray-700', 'text-primary', 'shadow-sm');
 
-                // Redirect to appropriate pages
+                // Show/hide sections based on clicked tab
                 if (this.id === 'individual-reports-tab') {
-                    window.location.href = '/reports/generate'; // Redirect to individual reports
+                    document.getElementById('individual-reports-section').classList.remove('hidden');
+                    document.getElementById('broad-sheet-section').classList.add('hidden');
                 } else if (this.id === 'broad-sheet-tab') {
-                    window.location.href = '/reports/broadsheet'; // Redirect to broadsheet page
+                    document.getElementById('individual-reports-section').classList.add('hidden');
+                    document.getElementById('broad-sheet-section').classList.remove('hidden');
+                    
+                    // Load classes and terms when broad sheet tab is clicked
+                    if (typeof loadClassesForBroadSheet === 'function') {
+                        loadClassesForBroadSheet();
+                    }
+                    if (typeof loadTermsForBroadSheet === 'function') {
+                        loadTermsForBroadSheet();
+                    }
                 }
             });
         });

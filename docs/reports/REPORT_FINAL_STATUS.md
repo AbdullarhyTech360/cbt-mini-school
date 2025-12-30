@@ -74,7 +74,7 @@
 - ✅ Generate class reports
 - ✅ Preview before download
 - ✅ PDF generation (with WeasyPrint)
-- ✅ Browser print fallback
+- ✅ Browser # print fallback
 
 ### UX Features
 - ✅ Loading spinners
@@ -194,7 +194,7 @@ All endpoints working correctly:
 
 ### Minor Issues (Non-blocking)
 1. **Tracking Prevention Warning** - Safari blocks CDN storage (cosmetic only)
-2. **WeasyPrint Optional** - Falls back to browser print if not installed
+2. **WeasyPrint Optional** - Falls back to browser # print if not installed
 
 ### Not Issues (By Design)
 1. **No school_id in ClassRoom** - System designed for single school

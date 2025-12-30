@@ -12,9 +12,9 @@ from routes.dashboard import staff_required
 
 
 def staff_routes(app):
-    print("=" * 80)
-    print("REGISTERING STAFF ROUTES")
-    print("=" * 80)
+    # print("=" * 80)
+    # print("REGISTERING STAFF ROUTES")
+    # print("=" * 80)
     
     @app.route("/staff/test_icons")
     def test_icons():
@@ -235,7 +235,7 @@ def staff_routes(app):
 
             except Exception as e:
                 db.session.rollback()
-                print(f"Error saving scores: {str(e)}")
+                # print(f"Error saving scores: {str(e)}")
                 return (
                     jsonify(
                         {"success": False, "message": f"Error saving scores: {str(e)}"}
@@ -327,7 +327,7 @@ def staff_routes(app):
                         school_term_id=current_term.term_id
                     ).all()
                     
-                    print(f"Found {len(all_exam_records)} exam records for subject/class/term")
+                    # print(f"Found {len(all_exam_records)} exam records for subject/class/term")
                     
                     if all_exam_records:
                         # Check if there are unsynced exam records
@@ -343,15 +343,15 @@ def staff_routes(app):
                             )
                         ).all()
                         
-                        print(f"Found {len(unsynced_records)} unsynced exam records")
+                        # print(f"Found {len(unsynced_records)} unsynced exam records")
                         
                         if unsynced_records:
-                            print(f"Auto-syncing {len(unsynced_records)} CBT exam records...")
+                            # print(f"Auto-syncing {len(unsynced_records)} CBT exam records...")
                             try:
                                 sync_result = sync_all_exam_records(subject_id, class_id, current_term.term_id)
-                                print(f"Sync result: {sync_result}")
+                                # print(f"Sync result: {sync_result}")
                             except Exception as e:
-                                print(f"Error during auto-sync: {str(e)}")
+                                # print(f"Error during auto-sync: {str(e)}")
                                 import traceback
                                 traceback.print_exc()
                     
@@ -455,7 +455,7 @@ def staff_routes(app):
 
         except Exception as e:
             db.session.rollback()
-            print(f"Error clearing scores: {str(e)}")
+            # print(f"Error clearing scores: {str(e)}")
             return (
                 jsonify(
                     {"success": False, "message": f"Error clearing scores: {str(e)}"}
@@ -464,24 +464,24 @@ def staff_routes(app):
             )
 
     # Test endpoint
-    print("Registering test_moderation route...")
+    # print("Registering test_moderation route...")
     @app.route("/staff/test_moderation/<user_id>", methods=["GET"])
     @staff_required
     def test_moderation(user_id):
-        print(f"Test moderation called for user: {user_id}")
+        # print(f"Test moderation called for user: {user_id}")
         return jsonify({"success": True, "message": "Test route works!"})
-    print("✓ test_moderation route registered")
+    # print("✓ test_moderation route registered")
     
     # Moderate scores endpoint
-    print("Registering moderate_scores route...")
+    # print("Registering moderate_scores route...")
     @app.route("/staff/moderate_scores/<user_id>", methods=["POST"])
     @staff_required
     def moderate_scores(user_id):
         """Apply score moderation (bonus points) to students based on criteria"""
-        print(f"MODERATE_SCORES CALLED for user: {user_id}")
+        # print(f"MODERATE_SCORES CALLED for user: {user_id}")
         try:
-            print(f"Session user_id: {session.get('user_id')}")
-            print(f"URL user_id: {user_id}")
+            # print(f"Session user_id: {session.get('user_id')}")
+            # print(f"URL user_id: {user_id}")
             
             # Verify the logged-in user matches the user_id in the URL
             if session.get("user_id") != user_id:
@@ -492,7 +492,7 @@ def staff_routes(app):
 
             # Get form data
             data = request.get_json()
-            print(f"Received data: {data}")
+            # print(f"Received data: {data}")
             
             if not data:
                 return (
@@ -580,7 +580,6 @@ def staff_routes(app):
                 term_id=term_id
             ).all()
             
-            print(f"Total grades in Grade table for subject/class/term: {len(all_grades)}")
             if all_grades:
                 print(f"Sample grade assessment_names: {[g.assessment_name for g in all_grades[:5]]}")
             
@@ -592,7 +591,7 @@ def staff_routes(app):
                 school_term_id=term_id
             ).all()
             
-            print(f"Total exam records (CBT) for subject/class/term: {len(exam_records)}")
+            # print(f"Total exam records (CBT) for subject/class/term: {len(exam_records)}")
             if exam_records:
                 print(f"Sample exam types: {[e.exam_type for e in exam_records[:5]]}")
             
@@ -604,20 +603,19 @@ def staff_routes(app):
                 assessment_name=assessment_type.name,
             )
             
-            print(f"Looking for assessment_name: '{assessment_type.name}'")
+            # print(f"Looking for assessment_name: '{assessment_type.name}'")
 
             if apply_to == "username" and student_id:
                 query = query.filter_by(student_id=student_id)
-                print(f"Filtering by student_id: {student_id}")
+                # print(f"Filtering by student_id: {student_id}")
             elif apply_to == "range" and threshold is not None:
                 query = query.filter(Grade.score < threshold)
-                print(f"Filtering by score < {threshold}")
+                # print(f"Filtering by score < {threshold}")
             # For 'all', no additional filter needed
 
             # Get grades to moderate from Grade table
             grades_to_moderate = query.all()
             
-            print(f"Found {len(grades_to_moderate)} grades in Grade table to moderate")
             if grades_to_moderate:
                 print(f"Sample grades: {[(g.student_id[:8], g.score) for g in grades_to_moderate[:3]]}")
             
@@ -651,10 +649,10 @@ def staff_routes(app):
                         if should_include:
                             exam_records_to_moderate.append(record)
                 
-                print(f"Found {len(exam_records_to_moderate)} CBT exam records to moderate")
+                # print(f"Found {len(exam_records_to_moderate)} CBT exam records to moderate")
 
             if not grades_to_moderate and not exam_records_to_moderate:
-                print("WARNING: No grades or exam records found matching criteria")
+                # print("WARNING: No grades or exam records found matching criteria")
                 
                 # Provide helpful message
                 if len(all_grades) == 0 and len(exam_records) == 0:
@@ -719,7 +717,7 @@ def staff_routes(app):
                     grade.score + float(bonus_value),
                     assessment_type.max_score
                 )
-                print(f"Moderating Grade: {grade.student_id[:8]} from {grade.score} to {new_score}")
+                # print(f"Moderating Grade: {grade.student_id[:8]} from {grade.score} to {new_score}")
                 grade.score = new_score
                 grade.calculate_percentage()
                 grade.assign_grade_letter()
@@ -732,7 +730,7 @@ def staff_routes(app):
                     record.raw_score + float(bonus_value),
                     record.max_score
                 )
-                print(f"Moderating ExamRecord (CBT): {record.student_id[:8]} from {record.raw_score} to {new_score}")
+                # print(f"Moderating ExamRecord (CBT): {record.student_id[:8]} from {record.raw_score} to {new_score}")
                 record.raw_score = new_score
                 # Recalculate percentage and grade
                 record.score_percentage = (new_score / record.max_score) * 100 if record.max_score > 0 else 0
@@ -786,12 +784,12 @@ def staff_routes(app):
 
         except Exception as e:
             db.session.rollback()
-            print("=" * 80)
-            print(f"ERROR IN MODERATE_SCORES: {str(e)}")
-            print(f"Error type: {type(e).__name__}")
+            # print("=" * 80)
+            # print(f"ERROR IN MODERATE_SCORES: {str(e)}")
+            # print(f"Error type: {type(e).__name__}")
             import traceback
             traceback.print_exc()
-            print("=" * 80)
+            # print("=" * 80)
             return (
                 jsonify(
                     {"success": False, "message": f"Error moderating scores: {str(e)}"}
@@ -799,7 +797,7 @@ def staff_routes(app):
                 500,
             )
     
-    print("✓ moderate_scores route registered")
+    # print("✓ moderate_scores route registered")
     
     # Sync exam records to grades
     @app.route("/staff/sync_cbt_scores/<user_id>", methods=["POST"])
@@ -823,7 +821,7 @@ def staff_routes(app):
             }), 200
             
         except Exception as e:
-            print(f"Error syncing CBT scores: {str(e)}")
+            # print(f"Error syncing CBT scores: {str(e)}")
             import traceback
             traceback.print_exc()
             return jsonify({
@@ -853,7 +851,7 @@ def staff_routes(app):
                 teacher_subject.c.teacher_id == user_id,
             )
         ).fetchall()
-        print("Existing Assignment:", len(existing_assignment))
+        # print("Existing Assignment:", len(existing_assignment))
         subject_teacher = []
         for assignment in existing_assignment:
             class_room = ClassRoom.query.get(assignment[2])
@@ -861,7 +859,7 @@ def staff_routes(app):
 
             # Skip if class or subject not found
             if not class_room or not subject:
-                print(class_room, subject)
+                # print(class_room, subject)
                 continue
 
             subject_teacher.append(
@@ -1005,7 +1003,7 @@ def staff_routes(app):
             )
 
         except Exception as e:
-            print(f"Error getting students: {str(e)}")
+            # print(f"Error getting students: {str(e)}")
             return jsonify({"success": False, "message": str(e)}), 500
 
     @app.route("/staff/attendance/mark/<user_id>", methods=["POST"])
@@ -1110,7 +1108,7 @@ def staff_routes(app):
 
         except Exception as e:
             db.session.rollback()
-            print(f"Error marking attendance: {str(e)}")
+            # print(f"Error marking attendance: {str(e)}")
             return jsonify({"success": False, "message": str(e)}), 500
 
     @app.route("/staff/attendance/history/<user_id>", methods=["GET"])
@@ -1186,7 +1184,7 @@ def staff_routes(app):
             return jsonify({"success": True, "history": history_data})
 
         except Exception as e:
-            print(f"Error getting attendance history: {str(e)}")
+            # print(f"Error getting attendance history: {str(e)}")
             return jsonify({"success": False, "message": str(e)}), 500
 
     @app.route("/staff/upload_questions/<user_id>")
@@ -1256,9 +1254,9 @@ def staff_routes(app):
     @app.route("/staff/upload_questions", methods=["POST"])
     @staff_required
     def staff_upload_question():
-        print("Uploading Questions")
+        # print("Uploading Questions")
         try:
-            print("Uploading Questions")
+            # print("Uploading Questions")
             data = request.get_json()
             if not data:
                 return (
@@ -1350,7 +1348,7 @@ def staff_routes(app):
             # Validate class exists and is assigned to this teacher
             from models.associations import teacher_classroom
 
-            print(current_user.id, class_room_id)
+            # print(current_user.id, class_room_id)
 
             class_room = ClassRoom.query.get(class_room_id)
             if not class_room:
@@ -1470,7 +1468,7 @@ def staff_routes(app):
 
         except Exception as e:
             db.session.rollback()
-            print(f"Error creating question: {str(e)}")
+            # print(f"Error creating question: {str(e)}")
             return (
                 jsonify(
                     {
@@ -1485,7 +1483,7 @@ def staff_routes(app):
     @staff_required
     def staff_questions_preview():
         """Endpoint to get questions preview based on selected criteria"""
-        print("Previewing Questions")
+        # print("Previewing Questions")
         try:
             subject_id = request.args.get("subject_id")
             class_room_id = request.args.get("class_room_id")
@@ -1540,7 +1538,7 @@ def staff_routes(app):
             return jsonify({"success": True, "questions": questions_data}), 200
 
         except Exception as e:
-            print(f"Error fetching questions preview: {str(e)}")
+            # print(f"Error fetching questions preview: {str(e)}")
             return (
                 jsonify(
                     {"success": False, "message": "Error fetching questions preview"}
@@ -1654,7 +1652,7 @@ def staff_routes(app):
             )
 
         except Exception as e:
-            print(f"Error generating DOCX template: {str(e)}")
+            # print(f"Error generating DOCX template: {str(e)}")
             return (
                 jsonify(
                     {
@@ -1668,7 +1666,7 @@ def staff_routes(app):
     @app.route("/staff/bulk_upload_questions/<user_id>", methods=["GET", "POST"])
     @staff_required
     def staff_bulk_upload_questions(user_id):
-        print("Bulk Upload Questions")
+        # print("Bulk Upload Questions")
         # Verify the logged-in user matches the user_id in the URL
         if session.get("user_id") != user_id:
             return jsonify({"success": False, "message": "Access denied"}), 403
@@ -1861,7 +1859,7 @@ def staff_routes(app):
 
             except Exception as e:
                 db.session.rollback()
-                print(f"Error processing bulk upload: {str(e)}")
+                # print(f"Error processing bulk upload: {str(e)}")
                 import traceback
                 traceback.print_exc()
                 return jsonify({
@@ -1957,9 +1955,8 @@ def staff_routes(app):
         return render_template("staff/classes.html", current_user=current_user)
 
     # List all registered routes
-    print("=" * 80)
-    print("REGISTERED STAFF ROUTES:")
+    # print("=" * 80)
+    # print("REGISTERED STAFF ROUTES:")
     for rule in app.url_map.iter_rules():
         if rule.endpoint and 'staff' in rule.rule:
             print(f"  {rule.rule} -> {rule.endpoint} {list(rule.methods)}")
-    print("=" * 80)

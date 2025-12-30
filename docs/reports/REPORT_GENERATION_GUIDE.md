@@ -114,7 +114,7 @@ Rule 2:
 3. **Preview Individual Report**
    - Click the eye icon next to a student
    - Review the report in the preview modal
-   - Click "Download PDF" to print/save
+   - Click "Download PDF" to # print/save
 
 4. **Bulk Operations**
    - **Preview All**: Opens preview for all students
@@ -231,7 +231,7 @@ CREATE TABLE report_config (
 ### Templates
 - `templates/admin/report_config.html` - Configuration management page
 - `templates/admin/generate_report.html` - Report generation page
-- `templates/reports/preview.html` - Report preview/print page
+- `templates/reports/preview.html` - Report preview/# print page
 
 ### JavaScript
 - `static/js/admin/report_config.js` - Configuration page logic
@@ -259,7 +259,7 @@ To customize, modify the `getGrade()` function in:
 Class position is calculated based on total scores across all published grades for the term. Students with equal scores receive the same position.
 
 ### PDF Generation
-The current implementation uses browser print functionality. For automated PDF generation, integrate a library like:
+The current implementation uses browser # print functionality. For automated PDF generation, integrate a library like:
 - **WeasyPrint** (Python)
 - **Puppeteer** (Node.js)
 - **wkhtmltopdf**

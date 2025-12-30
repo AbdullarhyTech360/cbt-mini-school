@@ -14,7 +14,7 @@ def run_migration():
     """Add columns to student_exam table"""
     with app.app_context():
         try:
-            print("Starting migration: Add columns to student_exam table...")
+            # print("Starting migration: Add columns to student_exam table...")
             
             # Check if columns already exist
             inspector = db.inspect(db.engine)
@@ -29,10 +29,10 @@ def run_migration():
                 migrations_needed.append('time_taken')
             
             if not migrations_needed:
-                print("✓ All columns already exist in student_exam table")
+                # print("✓ All columns already exist in student_exam table")
                 return True
             
-            print(f"Adding columns: {', '.join(migrations_needed)}")
+            # print(f"Adding columns: {', '.join(migrations_needed)}")
             
             # Add score column if needed
             if 'score' in migrations_needed:
@@ -40,7 +40,7 @@ def run_migration():
                     ALTER TABLE student_exam 
                     ADD COLUMN score REAL
                 """))
-                print("✓ Added 'score' column")
+                # print("✓ Added 'score' column")
             
             # Add completed_at column if needed
             if 'completed_at' in migrations_needed:
@@ -48,7 +48,7 @@ def run_migration():
                     ALTER TABLE student_exam 
                     ADD COLUMN completed_at DATETIME
                 """))
-                print("✓ Added 'completed_at' column")
+                # print("✓ Added 'completed_at' column")
             
             # Add time_taken column if needed
             if 'time_taken' in migrations_needed:
@@ -56,20 +56,20 @@ def run_migration():
                     ALTER TABLE student_exam 
                     ADD COLUMN time_taken INTEGER
                 """))
-                print("✓ Added 'time_taken' column")
+                # print("✓ Added 'time_taken' column")
             
             db.session.commit()
-            print("✓ Migration completed successfully!")
+            # print("✓ Migration completed successfully!")
             return True
             
         except Exception as e:
             db.session.rollback()
-            print(f"✗ Migration failed: {str(e)}")
+            # print(f"✗ Migration failed: {str(e)}")
             return False
 
 if __name__ == "__main__":
     success = run_migration()
     if success:
-        print("\n✓ Migration completed successfully!")
+        # print("\n✓ Migration completed successfully!")
     else:
-        print("\n✗ Migration failed!")
+        # print("\n✗ Migration failed!")

@@ -49,7 +49,7 @@ def student_route(app):
                     student_subject.c.subject_id == exam.subject_id
                 )
             ).fetchone()
-            print("Enrollment: ", enrollment)
+            # print("Enrollment: ", enrollment)
 
             if not enrollment:
                 # Check if subject is assigned to student's class
@@ -125,7 +125,7 @@ def student_route(app):
 
         # Get exam
         exam = Exam.query.get(exam_id)
-        print("Exam: ", exam.__getattribute__('subject_id'))
+        # print("Exam: ", exam.__getattribute__('subject_id'))
         if not exam:
             flash('Exam not found', 'error')
             return redirect(url_for('student_dashboard'))
@@ -269,14 +269,6 @@ def student_route(app):
         # Get all available questions first
         all_questions = questions_query.all()
 
-        # Debug logging
-        print(f"DEBUG: Fetching questions for exam {exam_id}")
-        print(f"DEBUG: Subject ID: {exam.subject_id}")
-        print(f"DEBUG: Class ID: {exam.class_room_id}")
-        print(f"DEBUG: Found {len(all_questions)} total questions")
-        print(
-            f"DEBUG: Exam number_of_questions setting: {exam.number_of_questions}")
-
         # If no questions, return helpful message
         if not all_questions:
             return jsonify({
@@ -293,16 +285,14 @@ def student_route(app):
         if exam.number_of_questions and exam.number_of_questions < len(all_questions):
             # Randomly select the specified number of questions
             questions = random.sample(all_questions, exam.number_of_questions)
-            print(
-                f"DEBUG: Randomly selected {len(questions)} questions out of {len(all_questions)}")
         else:
             # Use all available questions
             questions = all_questions
-            print(f"DEBUG: Using all {len(questions)} questions")
+            # print(f"DEBUG: Using all {len(questions)} questions")
 
         # IMPORTANT: Shuffle the questions so each student gets them in different order
         random.shuffle(questions)
-        print(f"DEBUG: Questions shuffled - each student will see different question order")
+        # print(f"DEBUG: Questions shuffled - each student will see different question order")
 
         # Prepare questions data with randomized options
         questions_data = []
@@ -422,13 +412,9 @@ def student_route(app):
                 # Note: We score based on submitted answers, not a specific subset
                 questions_to_score = all_questions  # Score any answered questions
                 total_questions = exam.number_of_questions  # But total is based on exam setting
-                print(
-                    f"DEBUG: Scoring based on {total_questions} questions (exam setting)")
             else:
                 questions_to_score = all_questions
                 total_questions = len(all_questions)
-                print(
-                    f"DEBUG: Scoring based on all {total_questions} questions")
 
             # Calculate score - only count answers that were submitted
             correct_answers = 0
@@ -447,9 +433,6 @@ def student_route(app):
                     elif question.question_type == 'short_answer':
                         if student_answer.lower().strip() == question.correct_answer.lower().strip():
                             correct_answers += 1
-
-            print(
-                f"DEBUG: Student answered {len(answers)} questions, got {correct_answers} correct out of {total_questions} total")
 
             # Calculate percentage and letter grade
             score_percentage = (
@@ -551,8 +534,6 @@ def student_route(app):
                     db.session.execute(stmt)
 
                 db.session.commit()
-                print(
-                    f"DEBUG: Exam record saved for regular user '{current_user.username}'")
             else:
                 print(
                     f"DEBUG: Skipping exam record save for demo user '{current_user.username}'")
@@ -614,7 +595,7 @@ def student_route(app):
                 })
 
         except Exception as e:
-            print(f"Error submitting exam: {str(e)}")
+            # print(f"Error submitting exam: {str(e)}")
             db.session.rollback()
             return jsonify({"success": False, "message": "Error processing exam submission"}), 500
 
@@ -666,7 +647,7 @@ def student_route(app):
             })
 
         except Exception as e:
-            print(f"Error saving exam session: {str(e)}")
+            # print(f"Error saving exam session: {str(e)}")
             db.session.rollback()
             return jsonify({"success": False, "message": "Error saving progress"}), 500
 
@@ -702,7 +683,7 @@ def student_route(app):
                 })
 
         except Exception as e:
-            print(f"Error restoring exam session: {str(e)}")
+            # print(f"Error restoring exam session: {str(e)}")
             return jsonify({"success": False, "message": "Error restoring progress"}), 500
 
     @app.route('/student/exam/<exam_id>/session/complete', methods=['POST'])
@@ -732,7 +713,7 @@ def student_route(app):
             return jsonify({"success": True, "message": "Session completed"})
 
         except Exception as e:
-            print(f"Error completing exam session: {str(e)}")
+            # print(f"Error completing exam session: {str(e)}")
             db.session.rollback()
             return jsonify({"success": False, "message": "Error completing session"}), 500
 

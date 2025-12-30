@@ -256,7 +256,7 @@ from models.exam_session import ExamSession
 
 # Count active sessions
 active_count = ExamSession.query.filter_by(is_active=True).count()
-print(f"Active sessions: {active_count}")
+# print(f"Active sessions: {active_count}")
 ```
 
 ### Clean Old Sessions
@@ -282,11 +282,11 @@ db.session.commit()
 ```python
 # Get a specific session
 session = ExamSession.query.get('session_id')
-print(f"Student: {session.student.username}")
-print(f"Exam: {session.exam.name}")
-print(f"Progress: {session.current_question_index + 1}")
-print(f"Answers: {session.get_answers()}")
-print(f"Time left: {session.time_remaining} seconds")
+# print(f"Student: {session.student.username}")
+# print(f"Exam: {session.exam.name}")
+# print(f"Progress: {session.current_question_index + 1}")
+# print(f"Answers: {session.get_answers()}")
+# print(f"Time left: {session.time_remaining} seconds")
 ```
 
 ## Troubleshooting

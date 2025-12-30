@@ -148,7 +148,7 @@ Active Assessments: ☑️ midterm  ☑️ final_exam
 
 ### "PDF download fails"
 → Install WeasyPrint: `python install_weasyprint.py`
-→ Or use browser print (Ctrl+P / Cmd+P)
+→ Or use browser # print (Ctrl+P / Cmd+P)
 
 ---
 
@@ -261,7 +261,7 @@ python install_weasyprint.py
 python setup_sample_reports.py
 
 # Test WeasyPrint
-python -c "from weasyprint import HTML; print('OK')"
+python -c "from weasyprint import HTML; # print('OK')"
 ```
 
 ---

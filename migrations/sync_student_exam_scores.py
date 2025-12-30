@@ -15,7 +15,7 @@ def run_migration():
     """Sync scores from exam_record to student_exam"""
     with app.app_context():
         try:
-            print("Starting migration: Sync scores to student_exam table...")
+            # print("Starting migration: Sync scores to student_exam table...")
             
             # Get all exam records
             query = db.text("""
@@ -32,10 +32,10 @@ def run_migration():
             exam_records = db.session.execute(query).fetchall()
             
             if not exam_records:
-                print("✓ No exam records found to sync")
+                # print("✓ No exam records found to sync")
                 return True
             
-            print(f"Found {len(exam_records)} exam records to sync...")
+            # print(f"Found {len(exam_records)} exam records to sync...")
             
             updated_count = 0
             skipped_count = 0
@@ -99,14 +99,14 @@ def run_migration():
             
             db.session.commit()
             
-            print(f"✓ Updated {updated_count} student_exam records")
-            print(f"✓ Skipped {skipped_count} records")
-            print("✓ Migration completed successfully!")
+            # print(f"✓ Updated {updated_count} student_exam records")
+            # print(f"✓ Skipped {skipped_count} records")
+            # print("✓ Migration completed successfully!")
             return True
             
         except Exception as e:
             db.session.rollback()
-            print(f"✗ Migration failed: {str(e)}")
+            # print(f"✗ Migration failed: {str(e)}")
             import traceback
             traceback.print_exc()
             return False
@@ -114,11 +114,11 @@ def run_migration():
 if __name__ == "__main__":
     success = run_migration()
     if success:
-        print("\n✓ Migration completed successfully!")
-        print("\nNext steps:")
-        print("1. Restart your server")
-        print("2. Test the reset exam feature")
-        print("3. Verify scores are showing correctly")
+        # print("\n✓ Migration completed successfully!")
+        # print("\nNext steps:")
+        # print("1. Restart your server")
+        # print("2. Test the reset exam feature")
+        # print("3. Verify scores are showing correctly")
     else:
-        print("\n✗ Migration failed!")
-        print("Please check the error messages above")
+        # print("\n✗ Migration failed!")
+        # print("Please check the error messages above")

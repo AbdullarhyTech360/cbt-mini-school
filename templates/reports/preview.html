@@ -17,7 +17,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
     <style>
-      @media print {
+      @media # print {
         body {
           margin: 0;
           padding: 0;
@@ -28,7 +28,7 @@
           transform-origin: top left;
           width: 121.95% !important;
         }
-        .no-print {
+        .no-# print {
           display: none !important;
         }
 
@@ -43,7 +43,7 @@
           min-height: auto !important;
         }
 
-        .print-break-inside-avoid {
+        .# print-break-inside-avoid {
           break-inside: avoid;
         }
 
@@ -79,11 +79,11 @@
           padding: 2px 1px !important; /* Reduced padding only */
         }
 
-        /* Ensure watermark is visible in print - FIXED VISIBILITY */
+        /* Ensure watermark is visible in # print - FIXED VISIBILITY */
         .watermark {
           color: rgba(124, 58, 237, 0.12) !important;
-          -webkit-print-color-adjust: exact;
-          print-color-adjust: exact;
+          -webkit-# print-color-adjust: exact;
+          # print-color-adjust: exact;
           font-size: 45px !important;
           z-index: 9999 !important;
           position: absolute !important;
@@ -93,13 +93,13 @@
           pointer-events: none !important;
         }
 
-        /* Ensure icons are visible in print */
+        /* Ensure icons are visible in # print */
         .icon {
-          -webkit-print-color-adjust: exact;
-          print-color-adjust: exact;
+          -webkit-# print-color-adjust: exact;
+          # print-color-adjust: exact;
         }
 
-        /* Minimal vertical spacing in print */
+        /* Minimal vertical spacing in # print */
         .student-card,
         .term-info,
         .comments-section,
@@ -116,7 +116,7 @@
           margin-bottom: 2px !important;
         }
 
-        /* Adjusted comments section for print */
+        /* Adjusted comments section for # print */
         .comment-content {
           min-height: 25px !important;
           padding: 3px 5px !important;
@@ -124,7 +124,7 @@
           font-size: 8px !important; /* Increased from 7px */
         }
 
-        /* Enhanced school header for print */
+        /* Enhanced school header for # print */
         .school-header {
           gap: 6px !important; /* Reduced from 8px */
           padding: 3px !important; /* Reduced from 4px */
@@ -230,7 +230,7 @@
           page-break-inside: avoid;
         }
 
-        /* Enhanced school header for print */
+        /* Enhanced school header for # print */
         .school-header {
           gap: 8px !important;
           padding: 4px !important;
@@ -269,8 +269,8 @@
           sans-serif;
         background-color: #f8fafc;
         color: #1e293b;
-        -webkit-print-color-adjust: exact !important;
-        print-color-adjust: exact !important;
+        -webkit-# print-color-adjust: exact !important;
+        # print-color-adjust: exact !important;
         /* Add padding to account for fixed bottom bar */
         padding-bottom: 80px;
         margin: 0;
@@ -647,8 +647,8 @@
         color: rgba(124, 58, 237, 0.12);
         pointer-events: none;
         white-space: nowrap;
-        -webkit-print-color-adjust: exact;
-        print-color-adjust: exact;
+        -webkit-# print-color-adjust: exact;
+        # print-color-adjust: exact;
         letter-spacing: 2px;
         text-transform: uppercase;
         z-index: 9999; /* Ensure visibility - FIXED */
@@ -764,7 +764,7 @@
 
   <body>
     <div class="report-container">
-      <div class="report-header no-print">
+      <div class="report-header no-# print">
         <h1>Student Report Card</h1>
         <p>Preview and Print</p>
       </div>
@@ -815,7 +815,7 @@
     </div>
 
     <!-- Fixed action bar at the bottom -->
-    <div class="action-bar no-print">
+    <div class="action-bar no-# print">
       <div class="action-buttons">
         <!-- Back button -->
         <button onclick="window.history.back()" class="btn btn-secondary">
@@ -832,7 +832,7 @@
           Download PDF
         </button>
         <!-- Print button -->
-        <button onclick="window.print()" class="btn btn-primary">
+        <button onclick="window.# print()" class="btn btn-primary">
           <span class="icon">&#128424;</span>
           Print Report
         </button>

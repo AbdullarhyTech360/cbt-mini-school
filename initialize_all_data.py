@@ -37,9 +37,9 @@ try:
     from datetime import date
     from services.generate_uuid import generate_uuid
 except ImportError as e:
-    print(f"Error importing modules: {e}")
-    print("Make sure you have installed the required dependencies:")
-    print("pip install flask flask-sqlalchemy sqlalchemy python-dotenv flask-login flask-bcrypt flask-wtf uuid flask-session python-docx weasyprint docx xhtml2pdf")
+    # print(f"Error importing modules: {e}")
+    # print("Make sure you have installed the required dependencies:")
+    # print("pip install flask flask-sqlalchemy sqlalchemy python-dotenv flask-login flask-bcrypt flask-wtf uuid flask-session python-docx weasyprint docx xhtml2pdf")
     sys.exit(1)
 
 def create_school():
@@ -56,10 +56,10 @@ def create_school():
         )
         db.session.add(school)
         db.session.commit()
-        print("✓ Default school created")
+        # print("✓ Default school created")
         return school
     else:
-        print("✓ School already exists")
+        # print("✓ School already exists")
         return school
 
 def create_school_terms(school):
@@ -101,14 +101,14 @@ def create_school_terms(school):
             db.session.add(term)
             db.session.commit()
             current_status = "(Current Term)" if term_data["is_current"] else ""
-            print(f"✓ Created term: {term_data['name']} {current_status}")
+            # print(f"✓ Created term: {term_data['name']} {current_status}")
         
         # Update school current_term to "First Term"
         school.current_term = "First Term"
         db.session.commit()
         return True
     else:
-        print("✓ School terms already exist")
+        # print("✓ School terms already exist")
         return False
 
 def create_assessment_types(school):
@@ -155,10 +155,10 @@ def create_assessment_types(school):
             )
             db.session.add(assessment)
             db.session.commit()
-            print(f"✓ Created assessment type: {assessment_data['name']} ({assessment_data['max_score']} marks)")
+            # print(f"✓ Created assessment type: {assessment_data['name']} ({assessment_data['max_score']} marks)")
         return True
     else:
-        print("✓ Assessment types already exist")
+        # print("✓ Assessment types already exist")
         return False
 
 def create_sections(school):
@@ -183,11 +183,11 @@ def create_sections(school):
             )
             db.session.add(section)
             db.session.commit()
-            print(f"✓ Created section: {section_data['name']}")
+            # print(f"✓ Created section: {section_data['name']}")
             sections[section_data["abbreviation"]] = section
         return sections
     else:
-        print("✓ Sections already exist")
+        # print("✓ Sections already exist")
         # Load existing sections
         sections = {}
         for section in Section.query.filter_by(school_id=school.school_id).all():
@@ -226,11 +226,11 @@ def create_classrooms(sections):
             )
             db.session.add(classroom)
             db.session.commit()
-            print(f"✓ Created classroom: {classroom_data['name']}")
+            # print(f"✓ Created classroom: {classroom_data['name']}")
             classrooms[classroom_data["name"]] = classroom
         return classrooms
     else:
-        print("✓ Classrooms already exist")
+        # print("✓ Classrooms already exist")
         # Load existing classrooms
         classrooms = {}
         for classroom in ClassRoom.query.all():
@@ -241,7 +241,7 @@ def create_admin_user(classrooms):
     """Create default admin user if one doesn't exist"""
     admin = User.query.filter_by(role="admin").first()
     if not admin:
-        print("Creating admin user...")
+        # print("Creating admin user...")
         # Get a default class for the admin user
         default_class = classrooms.get("Primary 1")
         if not default_class:
@@ -263,10 +263,10 @@ def create_admin_user(classrooms):
         admin.set_password("aaaa")  # Default password
         db.session.add(admin)
         db.session.commit()
-        print("✓ Default admin created: username=admin, password=aaaa")
+        # print("✓ Default admin created: username=admin, password=aaaa")
         return admin
     else:
-        print("✓ Admin user already exists")
+        # print("✓ Admin user already exists")
         return admin
 
 def create_teachers(classrooms):
@@ -320,11 +320,11 @@ def create_teachers(classrooms):
             )
             db.session.add(teacher_record)
             db.session.commit()
-            print(f"✓ Created teacher: {teacher_data['first_name']} {teacher_data['last_name']} (username: {teacher_data['username']})")
+            # print(f"✓ Created teacher: {teacher_data['first_name']} {teacher_data['last_name']} (username: {teacher_data['username']})")
             teachers.append(teacher)
         return teachers
     else:
-        print("✓ Teachers already exist")
+        # print("✓ Teachers already exist")
         return User.query.filter_by(role="staff").all()
 
 def create_students(classrooms):
@@ -390,11 +390,11 @@ def create_students(classrooms):
             )
             db.session.add(student_record)
             db.session.commit()
-            print(f"✓ Created student: {student_data['first_name']} {student_data['last_name']} (username: {student_data['username']})")
+            # print(f"✓ Created student: {student_data['first_name']} {student_data['last_name']} (username: {student_data['username']})")
             students.append(student)
         return students
     else:
-        print("✓ Students already exist")
+        # print("✓ Students already exist")
         return User.query.filter_by(role="student").all()
 
 def create_subjects():
@@ -424,12 +424,12 @@ def create_subjects():
             )
             db.session.add(subject)
             db.session.flush()  # Get the subject ID without committing
-            print(f"✓ Created subject: {subject_data['name']}")
+            # print(f"✓ Created subject: {subject_data['name']}")
             created_subjects.append(subject)
         db.session.commit()
         return created_subjects
     else:
-        print("✓ Subjects already exist")
+        # print("✓ Subjects already exist")
         return Subject.query.all()
 
 def link_subjects_to_classes(created_subjects, classrooms):
@@ -502,9 +502,9 @@ def link_subjects_to_classes(created_subjects, classrooms):
                         )
         
         db.session.commit()
-        print("✓ Linked subjects to classrooms")
+        # print("✓ Linked subjects to classrooms")
     else:
-        print("✓ Subject-class links already exist")
+        # print("✓ Subject-class links already exist")
 
 def create_permissions():
     """Create default permissions"""
@@ -538,22 +538,22 @@ def create_permissions():
             )
             db.session.add(perm)
         db.session.commit()
-        print("✓ Default permissions created")
+        # print("✓ Default permissions created")
         return True
     else:
-        print("✓ Permissions already exist")
+        # print("✓ Permissions already exist")
         return False
 
 def update_classroom_student_counts(classrooms):
     """Update student counts for all classrooms"""
     for classroom in classrooms.values():
         classroom.update_student_count()
-    print("✓ Updated classroom student counts")
+    # print("✓ Updated classroom student counts")
 
 def main():
     """Main initialization function"""
-    print("CBT Minischool Platform - Complete Data Initialization")
-    print("=" * 60)
+    # print("CBT Minischool Platform - Complete Data Initialization")
+    # print("=" * 60)
     
     with app.app_context():
         # Ensure database tables exist
@@ -573,21 +573,21 @@ def main():
         create_permissions()
         update_classroom_student_counts(classrooms)
         
-        print("\n" + "=" * 60)
-        print("✅ ALL DEFAULT DATA INITIALIZATION COMPLETE!")
-        print("=" * 60)
-        print("\nDefault Login Credentials:")
-        print("\nAdmin Account:")
-        print("  Username: admin")
-        print("  Password: aaaa")
-        print("\nTeacher Accounts:")
-        print("  Username: teacher1, Password: teacher123")
-        print("  Username: teacher2, Password: teacher123")
-        print("\nStudent Accounts:")
-        print("  Username: student1, Password: student123")
-        print("  Username: student2, Password: student123")
-        print("  Username: student3, Password: student123")
-        print("\n" + "=" * 60)
+        # print("\n" + "=" * 60)
+        # print("✅ ALL DEFAULT DATA INITIALIZATION COMPLETE!")
+        # print("=" * 60)
+        # print("\nDefault Login Credentials:")
+        # print("\nAdmin Account:")
+        # print("  Username: admin")
+        # print("  Password: aaaa")
+        # print("\nTeacher Accounts:")
+        # print("  Username: teacher1, Password: teacher123")
+        # print("  Username: teacher2, Password: teacher123")
+        # print("\nStudent Accounts:")
+        # print("  Username: student1, Password: student123")
+        # print("  Username: student2, Password: student123")
+        # print("  Username: student3, Password: student123")
+        # print("\n" + "=" * 60)
 
 if __name__ == "__main__":
     main()

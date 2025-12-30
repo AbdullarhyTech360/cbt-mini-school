@@ -235,8 +235,8 @@ currentFilters = {
 ```python
 from models.report_config import ReportConfig
 config = ReportConfig.query.first()
-print(config.get_active_assessments())
-print(config.get_display_settings())
+# print(config.get_active_assessments())
+# print(config.get_display_settings())
 ```
 
 ---
@@ -267,12 +267,12 @@ with app.app_context():
     # Get all configs
     configs = ReportConfig.query.all()
     for config in configs:
-        print(f"Config: {config.config_name}")
-        print(f"  Term: {config.term_id}")
-        print(f"  Class: {config.class_room_id}")
-        print(f"  Active Assessments: {config.get_active_assessments()}")
-        print(f"  Display Settings: {config.get_display_settings()}")
-        print()
+        # print(f"Config: {config.config_name}")
+        # print(f"  Term: {config.term_id}")
+        # print(f"  Class: {config.class_room_id}")
+        # print(f"  Active Assessments: {config.get_active_assessments()}")
+        # print(f"  Display Settings: {config.get_display_settings()}")
+        # print()
 ```
 
 ---

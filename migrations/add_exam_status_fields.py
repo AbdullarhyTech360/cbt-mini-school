@@ -25,11 +25,11 @@ def upgrade():
         ))
         
         db.session.commit()
-        print("✅ Successfully added is_active and is_finished columns to exams table")
+        # print("✅ Successfully added is_active and is_finished columns to exams table")
         
     except Exception as e:
         db.session.rollback()
-        print(f"❌ Error adding columns: {str(e)}")
+        # print(f"❌ Error adding columns: {str(e)}")
         raise
 
 def downgrade():
@@ -38,11 +38,11 @@ def downgrade():
         db.session.execute(db.text("ALTER TABLE exams DROP COLUMN is_active"))
         db.session.execute(db.text("ALTER TABLE exams DROP COLUMN is_finished"))
         db.session.commit()
-        print("✅ Successfully removed is_active and is_finished columns from exams table")
+        # print("✅ Successfully removed is_active and is_finished columns from exams table")
         
     except Exception as e:
         db.session.rollback()
-        print(f"❌ Error removing columns: {str(e)}")
+        # print(f"❌ Error removing columns: {str(e)}")
         raise
 
 if __name__ == "__main__":
@@ -56,5 +56,5 @@ if __name__ == "__main__":
     db.init_app(app)
     
     with app.app_context():
-        print("Running migration: Add exam status fields")
+        # print("Running migration: Add exam status fields")
         upgrade()

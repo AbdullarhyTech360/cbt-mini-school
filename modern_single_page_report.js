@@ -38,8 +38,8 @@ function generateReportHTML(reportData) {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            -webkit-print-color-adjust: exact !important;
-            print-color-adjust: exact !important;
+            -webkit-# print-color-adjust: exact !important;
+            # print-color-adjust: exact !important;
         }
 
         body {

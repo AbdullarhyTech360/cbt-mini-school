@@ -9,7 +9,7 @@ from services.report_generator import ReportGenerator
 
 def test_watermark_visibility():
     """Test that watermark is properly implemented in the HTML."""
-    print("Testing watermark implementation...")
+    # print("Testing watermark implementation...")
     
     # Sample report data
     report_data = {
@@ -45,68 +45,68 @@ def test_watermark_visibility():
     
     # Check for watermark
     if 'OFFICIAL DOCUMENT' in html_content and 'watermark' in html_content:
-        print("✓ Watermark found in HTML")
+        # print("✓ Watermark found in HTML")
     else:
-        print("✗ Watermark not found in HTML")
+        # print("✗ Watermark not found in HTML")
         return False
         
     # Check for proper CSS
     if 'z-index: -1' in html_content and 'position: absolute' in html_content:
-        print("✓ Watermark CSS properly implemented")
+        # print("✓ Watermark CSS properly implemented")
     else:
-        print("✗ Watermark CSS not properly implemented")
+        # print("✗ Watermark CSS not properly implemented")
         return False
         
     # Check that content has proper z-index
     if 'z-index: 1' in html_content:
-        print("✓ Content properly positioned above watermark")
+        # print("✓ Content properly positioned above watermark")
     else:
-        print("⚠ Content z-index not found (may still work)")
+        # print("⚠ Content z-index not found (may still work)")
         
     return True
 
 def test_performance_improvements():
     """Test performance improvements in image embedding."""
-    print("\nTesting performance improvements...")
+    # print("\nTesting performance improvements...")
     
     # Clear cache to start fresh
     if hasattr(ReportGenerator, '_image_cache'):
         ReportGenerator._image_cache.clear()
-        print("✓ Image cache cleared")
+        # print("✓ Image cache cleared")
     
     # Test image embedding function
     result = ReportGenerator._embed_image(None)
     if result == "":
-        print("✓ Null image path handled correctly")
+        # print("✓ Null image path handled correctly")
     else:
-        print("✗ Null image path not handled correctly")
+        # print("✗ Null image path not handled correctly")
         return False
     
     # Test with data URI (should be cached)
     data_uri = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg=="
     result = ReportGenerator._embed_image(data_uri)
     if result == data_uri:
-        print("✓ Data URI handled correctly")
+        # print("✓ Data URI handled correctly")
     else:
-        print("✗ Data URI not handled correctly")
+        # print("✗ Data URI not handled correctly")
         return False
     
     return True
 
 def main():
     """Run all tests."""
-    print("Running watermark and performance tests...\n")
+    # print("Running watermark and performance tests...\n")
     
     success = True
     success &= test_watermark_visibility()
     success &= test_performance_improvements()
     
-    print("\n" + "="*50)
+    # print("\n" + "="*50)
     if success:
-        print("✓ All tests passed! Watermark and performance fixes are working.")
+        # print("✓ All tests passed! Watermark and performance fixes are working.")
     else:
-        print("✗ Some tests failed. Please review the implementation.")
-    print("="*50)
+        # print("✗ Some tests failed. Please review the implementation.")
+    # print("="*50)
     
     return success
 
