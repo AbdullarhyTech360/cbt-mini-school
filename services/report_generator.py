@@ -513,7 +513,8 @@ class ReportGenerator:
             else:
                 names = [s['name'] for s in sections_list]
                 last = names.pop()
-                return f"{', '.join(names)} and {last}"
+                # Use Oxford comma for clarity
+                return f"{', '.join(names)}, and {last}"
         
         # Convert sections to dictionary format for JSON serialization
         sections_data = []

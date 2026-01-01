@@ -30,7 +30,7 @@ function closeModal(modalId) {
 }
 
 // Event delegation for close buttons
-document.addEventListener('click', function(e) {
+document.addEventListener('click', function (e) {
     // Close when clicking close button
     if (e.target.closest('.close-modal')) {
         const modalId = e.target.closest('.close-modal').dataset.modal;
@@ -44,7 +44,7 @@ document.addEventListener('click', function(e) {
 });
 
 // Close on escape key
-document.addEventListener('keydown', function(e) {
+document.addEventListener('keydown', function (e) {
     if (e.key === 'Escape') {
         document.querySelectorAll('.modal-overlay').forEach(modal => {
             closeModal(modal.id);
@@ -57,17 +57,17 @@ window.openModal = openModal;
 window.closeModal = closeModal;
 
 // Custom Alert Modal Component
-window.showAlert = function(options) {
+window.showAlert = function (options) {
     // Handle if options is passed as a single argument or if message is an object
     let title = 'Alert';
     let message = '';
     let type = 'info';
     let confirmText = 'OK';
-    let onConfirm = () => {};
-    
+    let onConfirm = () => { };
+
     if (typeof options === 'object' && options !== null) {
         title = options.title || 'Alert';
-        
+
         // Ensure message is always a string
         if (typeof options.message === 'object') {
             console.error('showAlert received object as message:', options.message);
@@ -75,10 +75,10 @@ window.showAlert = function(options) {
         } else {
             message = String(options.message || '');
         }
-        
+
         type = options.type || 'info';
         confirmText = options.confirmText || 'OK';
-        onConfirm = options.onConfirm || (() => {});
+        onConfirm = options.onConfirm || (() => { });
     }
 
     // Icon and color mapping based on type
@@ -149,13 +149,13 @@ window.showAlert = function(options) {
     const confirmBtn = document.getElementById('alertConfirmBtn');
 
     // Handle confirm
-    confirmBtn.addEventListener('click', function() {
+    confirmBtn.addEventListener('click', function () {
         modal.remove();
         onConfirm();
     });
 
     // Close on escape
-    const escapeHandler = function(e) {
+    const escapeHandler = function (e) {
         if (e.key === 'Escape') {
             modal.remove();
             onConfirm();
@@ -169,15 +169,15 @@ window.showAlert = function(options) {
 };
 
 // Confirmation Modal Component
-window.showConfirmModal = function(options) {
+window.showConfirmModal = function (options) {
     const {
         title = 'Confirm Action',
         message = 'Are you sure you want to proceed?',
         confirmText = 'Confirm',
         cancelText = 'Cancel',
         confirmClass = 'bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700',
-        onConfirm = () => {},
-        onCancel = () => {}
+        onConfirm = () => { },
+        onCancel = () => { }
     } = options;
 
     // Remove existing confirmation modal if any
@@ -216,19 +216,19 @@ window.showConfirmModal = function(options) {
     const cancelBtn = document.getElementById('cancelBtn');
 
     // Handle confirm
-    confirmBtn.addEventListener('click', function() {
+    confirmBtn.addEventListener('click', function () {
         modal.remove();
         onConfirm();
     });
 
     // Handle cancel
-    cancelBtn.addEventListener('click', function() {
+    cancelBtn.addEventListener('click', function () {
         modal.remove();
         onCancel();
     });
 
     // Close on escape
-    const escapeHandler = function(e) {
+    const escapeHandler = function (e) {
         if (e.key === 'Escape') {
             modal.remove();
             onCancel();
@@ -238,7 +238,7 @@ window.showConfirmModal = function(options) {
     document.addEventListener('keydown', escapeHandler);
 
     // Close on backdrop click
-    modal.addEventListener('click', function(e) {
+    modal.addEventListener('click', function (e) {
         if (e.target === modal) {
             modal.remove();
             onCancel();

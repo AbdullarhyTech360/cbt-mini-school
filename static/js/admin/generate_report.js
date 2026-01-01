@@ -13,10 +13,10 @@ document.addEventListener("DOMContentLoaded", () => {
       closeCanvasPreviewModal();
     }
   });
-  
+
   // Initialize tab switching functionality
   initializeTabSwitching();
-  
+
   // Initialize broad sheet controls
   initializeBroadSheetControls();
 });
@@ -43,7 +43,7 @@ function initializeTabSwitching() {
       } else if (this.id === 'broad-sheet-tab') {
         document.getElementById('individual-reports-section').classList.add('hidden');
         document.getElementById('broad-sheet-section').classList.remove('hidden');
-        
+
         // Load terms for broad sheet if not already loaded
         if (document.querySelectorAll('#broadSheetTermFilter option').length <= 1) {
           loadBroadSheetTerms();
@@ -61,7 +61,7 @@ function initializeBroadSheetControls() {
   // Toggle exam controls visibility
   const toggleBtn = document.getElementById('toggleExamControls');
   if (toggleBtn) {
-    toggleBtn.addEventListener('click', function() {
+    toggleBtn.addEventListener('click', function () {
       const controls = document.getElementById('examToggleControls');
       if (controls.classList.contains('hidden')) {
         controls.classList.remove('hidden');
@@ -84,7 +84,7 @@ function initializeBroadSheetControls() {
 async function loadBroadSheetTerms() {
   const select = document.getElementById('broadSheetTermFilter');
   if (!select) return;
-  
+
   select.innerHTML = '<option value="">Loading...</option>';
   select.disabled = true;
 
@@ -120,7 +120,7 @@ async function loadBroadSheetTerms() {
 async function loadBroadSheetClasses() {
   const select = document.getElementById('broadSheetClassFilter');
   if (!select) return;
-  
+
   select.innerHTML = '<option value="">Loading...</option>';
   select.disabled = true;
 
@@ -154,12 +154,12 @@ async function loadBroadSheetData() {
   const classId = document.getElementById('broadSheetClassFilter').value;
   const examType = document.getElementById('broadSheetExamTypeFilter').value;
   const scoreDisplay = document.getElementById('broadSheetScoreDisplay').value;
-  
+
   if (!termId || !classId) {
     showNotification('Please select both term and class', 'error');
     return;
   }
-  
+
   // Show loading state
   const container = document.getElementById('broadSheetContainer');
   container.innerHTML = `
@@ -168,7 +168,7 @@ async function loadBroadSheetData() {
       <p class="ml-4 text-gray-500 dark:text-gray-400">Loading broad sheet data...</p>
     </div>
   `;
-  
+
   try {
     // Fetch broad sheet data from backend
     const response = await fetch('/reports/api/broad-sheet', {
@@ -182,9 +182,9 @@ async function loadBroadSheetData() {
         exam_type: examType
       })
     });
-    
+
     const data = await response.json();
-    
+
     if (data.success) {
       renderBroadSheet(data.data, data.metadata);
     } else {
@@ -204,12 +204,12 @@ async function loadBroadSheetData() {
 // Render broad sheet table
 function renderBroadSheet(broadSheetData, metadata) {
   const container = document.getElementById('broadSheetContainer');
-  
+
   if (!broadSheetData || broadSheetData.length === 0) {
     container.innerHTML = '<p class="text-center py-8 text-gray-500 dark:text-gray-400">No data available for the selected criteria</p>';
     return;
   }
-  
+
   // Extract all unique subjects from the data
   const allSubjects = new Set();
   broadSheetData.forEach(student => {
@@ -218,7 +218,7 @@ function renderBroadSheet(broadSheetData, metadata) {
     });
   });
   const subjects = Array.from(allSubjects).sort();
-  
+
   // Generate the table HTML
   let tableHTML = `
     <div class="overflow-x-auto">
@@ -229,26 +229,26 @@ function renderBroadSheet(broadSheetData, metadata) {
             <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Admission No.</th>
             <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Student Name</th>
   `;
-  
+
   // Add subject headers
   subjects.forEach(subject => {
     tableHTML += `<th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">${subject}</th>`;
   });
-  
+
   // Close the header row
   tableHTML += `
           </tr>
         </thead>
         <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
   `;
-  
+
   // Add student rows
   broadSheetData.forEach((student, index) => {
     tableHTML += `<tr class="hover:bg-gray-50 dark:hover:bg-gray-700/30">`;
     tableHTML += `<td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">${index + 1}</td>`;
     tableHTML += `<td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">${student.admission_number || ''}</td>`;
     tableHTML += `<td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">${student.student_name}</td>`;
-    
+
     // Add subject scores
     subjects.forEach(subject => {
       if (student.subjects[subject]) {
@@ -260,16 +260,16 @@ function renderBroadSheet(broadSheetData, metadata) {
         tableHTML += `<td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">-</td>`;
       }
     });
-    
+
     tableHTML += '</tr>';
   });
-  
+
   tableHTML += `
         </tbody>
       </table>
     </div>
   `;
-  
+
   container.innerHTML = tableHTML;
 }
 
@@ -279,16 +279,16 @@ async function exportBroadSheet(format) {
   const classId = document.getElementById('broadSheetClassFilter').value;
   const examType = document.getElementById('broadSheetExamTypeFilter').value;
   const scoreDisplay = document.getElementById('broadSheetScoreDisplay').value;
-  
+
   if (!termId || !classId) {
     showNotification('Please select both term and class', 'error');
     return;
   }
-  
+
   try {
     // Show processing notification
     showNotification(`Exporting broad sheet as ${format.toUpperCase()}...`, 'info');
-    
+
     // Fetch export data from backend
     const response = await fetch(`/reports/api/broad-sheet/export/${format}`, {
       method: 'POST',
@@ -303,28 +303,28 @@ async function exportBroadSheet(format) {
         show_totals: true
       })
     });
-    
+
     if (response.ok) {
       // Create a temporary link to download the file
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      
+
       // Generate filename based on class and term
       const termSelect = document.getElementById('broadSheetTermFilter');
       const classSelect = document.getElementById('broadSheetClassFilter');
       const termText = termSelect.options[termSelect.selectedIndex].text;
       const classText = classSelect.options[classSelect.selectedIndex].text;
       a.download = `BroadSheet_${classText.replace(/\s+/g, '_')}_${termText.replace(/\s+/g, '_').replace('(', '').replace(')', '')}.${format}`;
-      
+
       document.body.appendChild(a);
       a.click();
-      
+
       // Clean up
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
-      
+
       showNotification('Broad sheet exported successfully!', 'success');
     } else {
       const errorData = await response.json();
@@ -569,41 +569,35 @@ function renderStudentsTable(students) {
                 </thead>
                 <tbody id="studentsTableBody" class="divide-y divide-gray-200 dark:divide-gray-700">
                     ${students
-                      .map(
-                        (student) => `
+      .map(
+        (student) => `
                         <tr class="student-row hover:bg-gray-50 dark:hover:bg-gray-700" 
-                            data-name="${student.first_name} ${
-                          student.last_name
-                        }" 
+                            data-name="${student.first_name} ${student.last_name
+          }" 
                             data-admission="${student.admission_number || ""}">
                             <td class="px-4 py-3">
                                 <div class="flex items-center">
-                                    ${
-                                      student.profile_picture
-                                        ? `<img src="${student.profile_picture}" alt="${student.first_name}" class="w-8 h-8 rounded-full mr-3">`
-                                        : `<div class="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-white mr-3">${student.first_name[0]}</div>`
-                                    }
-                                    <span class="text-sm font-medium text-gray-900 dark:text-white">${
-                                      student.first_name
-                                    } ${student.last_name}</span>
+                                    ${student.profile_picture
+            ? `<img src="${student.profile_picture}" alt="${student.first_name}" class="w-8 h-8 rounded-full mr-3">`
+            : `<div class="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-white mr-3">${student.first_name[0]}</div>`
+          }
+                                    <span class="text-sm font-medium text-gray-900 dark:text-white">${student.first_name
+          } ${student.last_name}</span>
                                 </div>
                             </td>
-                            <td class="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">${
-                              student.admission_number || "N/A"
-                            }</td>
+                            <td class="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">${student.admission_number || "N/A"
+          }</td>
                             <td class="px-4 py-3">
                                 <div class="flex items-center justify-center gap-2">
-                                    <button onclick="previewReport('${
-                                      student.id
-                                    }')" 
+                                    <button onclick="previewReport('${student.id
+          }')" 
                                         class="flex items-center gap-1 px-3 py-1.5 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-lg shadow-sm hover:shadow-md hover:scale-105 transition-all duration-200" 
                                         title="Preview Report">
                                         <span class="material-symbols-outlined text-sm">visibility</span>
                                         <span class="text-xs font-medium">Preview</span>
                                     </button>
-                                    <button onclick="downloadReport('${
-                                      student.id
-                                    }')" 
+                                    <button onclick="downloadReport('${student.id
+          }')" 
                                         class="flex items-center gap-1 px-3 py-1.5 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white rounded-lg shadow-sm hover:shadow-md hover:scale-105 transition-all duration-200" 
                                         title="Download PDF">
                                         <span class="material-symbols-outlined text-sm">download</span>
@@ -613,15 +607,14 @@ function renderStudentsTable(students) {
                             </td>
                         </tr>
                     `
-                      )
-                      .join("")}
+      )
+      .join("")}
                 </tbody>
             </table>
         </div>
         <div class="mt-4 text-sm text-gray-600 dark:text-gray-400">
-            Showing <span id="visibleCount">${students.length}</span> of ${
-    students.length
-  } students
+            Showing <span id="visibleCount">${students.length}</span> of ${students.length
+    } students
         </div>
     `;
 }
@@ -805,9 +798,8 @@ async function showCanvasBasedPreview(reportData) {
     // Update page count in modal
     const pageCounter = document.getElementById("previewPageCount");
     if (pageCounter) {
-      pageCounter.textContent = `${totalPages} page${
-        totalPages > 1 ? "s" : ""
-      }`;
+      pageCounter.textContent = `${totalPages} page${totalPages > 1 ? "s" : ""
+        }`;
     }
   } catch (error) {
     console.error("Error creating canvas preview:", error);
@@ -980,10 +972,10 @@ function formatPosition(position) {
     position % 10 === 1 && position !== 11
       ? "st"
       : position % 10 === 2 && position !== 12
-      ? "nd"
-      : position % 10 === 3 && position !== 13
-      ? "rd"
-      : "th";
+        ? "nd"
+        : position % 10 === 3 && position !== 13
+          ? "rd"
+          : "th";
   return position + suffix;
 }
 
@@ -1237,18 +1229,15 @@ async function downloadAllReports() {
             downloadAllButton.innerHTML = `
                             <div class="flex items-center gap-2">
                                 <div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                                <span class="text-sm font-bold">Processing ${
-                                  i + 1
-                                }/${currentStudents.length}...</span>
+                                <span class="text-sm font-bold">Processing ${i + 1
+              }/${currentStudents.length}...</span>
                             </div>
                         `;
 
             // Fetch report data for this student
             const reportResponse = await fetch(
-              `/reports/api/student-report/${
-                student.id
-              }?term_id=${termId}&class_room_id=${classId}&config_id=${
-                currentFilters.config_id || ""
+              `/reports/api/student-report/${student.id
+              }?term_id=${termId}&class_room_id=${classId}&config_id=${currentFilters.config_id || ""
               }`
             );
 
@@ -1266,8 +1255,7 @@ async function downloadAllReports() {
               await generateClientSidePDF(reportData.report);
             } else if (reportData && !reportData.success) {
               throw new Error(
-                `Failed to fetch report data for ${student.name}: ${
-                  reportData.message || "Server error"
+                `Failed to fetch report data for ${student.name}: ${reportData.message || "Server error"
                 }`
               );
             } else {
@@ -1434,17 +1422,17 @@ function generateGradingLegend(gradeScale = null) {
  * This ensures the report always fits on one A4 page
  */
 function generateReportHTML(reportData) {
-  const {
-    student,
-    school,
-    term,
-    assessment_types,
-    scores,
-    position,
-    total_students,
-    overall_total,
-    overall_max,
-  } = reportData;
+  // Robust extraction handling null/undefined
+  // Ensure we have valid objects even if API returns incomplete data
+  const student = reportData.student || {};
+  const schoolObj = reportData.school || {};
+  const term = reportData.term || {};
+  const assessment_types = reportData.assessment_types || [];
+  const scores = reportData.scores || {};
+  const position = reportData.position;
+  const total_students = reportData.total_students;
+  const overall_total = reportData.overall_total || 0;
+  const overall_max = reportData.overall_max || 0;
 
   // Extract configuration settings with defaults
   const config = reportData.config || {};
@@ -1458,9 +1446,10 @@ function generateReportHTML(reportData) {
 
   const gradeScale = reportData.grade_scale || null;
 
+  const scoreCount = Object.keys(scores || {}).length || 1;
   const overallPercentage = displaySettings.treat_total_as_percentage
-    ? overall_total / (Object.keys(scores).length || 1)
-    : (overall_total / (overall_max || 1)) * 100;
+    ? (overall_total || 0) / scoreCount
+    : ((overall_total || 0) / (overall_max || 1)) * 100;
   const overallGrade = getSimpleGrade(overallPercentage, gradeScale);
   console.log("[Report HTML] Overall Total:", overall_total);
   console.log("[Report HTML] Overall Max:", overall_max);
@@ -1469,13 +1458,15 @@ function generateReportHTML(reportData) {
     .sort((a, b) => (a.order || 0) - (b.order || 0))
     .map((at) => at.code);
 
-  let subjectRows = Object.values(scores)
+  let subjectRows = Object.values(scores || {})
     .map((sub, idx) => {
-      // FORCE 100 Max as requested by user
-      sub.max_total = 100.0;
+      // Use actual max_total
+      // sub.max_total = 100.0;
 
-      const isPercentageMode = true; // Hard-forcing true for debugging/user request
-      const perc = sub.total; // Use total directly
+      const isPercentageMode = displaySettings.treat_total_as_percentage;
+      const perc = isPercentageMode
+        ? sub.total || 0
+        : (sub.total / (sub.max_total || 1)) * 100;
 
       const grade = getSimpleGrade(perc, gradeScale);
       const remark = getRemark(grade, gradeScale);
@@ -1485,18 +1476,18 @@ function generateReportHTML(reportData) {
                 <td class="col-sn">${idx + 1}</td>
                 <td class="col-subject">${sub.subject_name}</td>
                 ${assessments
-                  .map((code) => {
-                    const score = sub.assessments[code]?.score;
-                    const val =
-                      score !== undefined && score !== null
-                        ? Math.round(score)
-                        : "-";
-                    return `<td class="col-score text-center">${val}</td>`;
-                  })
-                  .join("")}
+          .map((code) => {
+            const score = sub.assessments[code]?.score;
+            const val =
+              score !== undefined && score !== null
+                ? Math.round(score)
+                : "-";
+            return `<td class="col-score text-center">${val}</td>`;
+          })
+          .join("")}
                 <td class="col-total text-center fw-bold">${Math.round(
-                  sub.total
-                )}</td>
+            sub.total
+          )}</td>
                 <td class="col-grade text-center"><span class="badge badge-${grade}">${grade}</span></td>
                 <td class="col-remark text-center">${remark}</td>
             </tr>`;
@@ -1986,32 +1977,32 @@ function generateReportHTML(reportData) {
             <div class="header-banner">
                 <div class="logo-placeholder">
                     ${displaySettings.show_logo
-                      ? school.logo
-                        ? `<img src="/${school.logo.replace(/^static\//, '')}" class="logo-img" onerror="console.error('Logo failed to load:', this.src); this.style.display='none';" onload="console.log('Logo loaded successfully:', this.src);">`
-                        : `<span style="color:#4f46e5; font-weight:bold; font-size:30pt;">🏫</span>`
-                      : ``
-                    }
+      ? schoolObj.logo
+        ? `<img src="/${schoolObj.logo.replace(/^static\//, '')}" class="logo-img" onerror="console.error('Logo failed to load:', this.src); this.style.display='none';" onload="console.log('Logo loaded successfully:', this.src);">`
+        : `<span style="color:#4f46e5; font-weight:bold; font-size:30pt;">🏫</span>`
+      : ``
+    }
                 </div>
                 <div class="school-text">
-                    <h1 class="school-name">${school.name || "SCHOOL NAME"}</h1>
+                    <h1 class="school-name">${schoolObj.name || "SCHOOL NAME"}</h1>
                     <div class="school-sections">
                         ${reportData.formatted_sections ? (() => {
-                            // Wrap each section name in a badge, keeping commas and 'and' as plain text
-                            const formatted = reportData.formatted_sections || '';
-                            if (!formatted) return '';
-                            
-                            return formatted.split(/(, | and )/).map(part => {
-                                if (part.trim() === ',' || part.trim() === 'and' || part.trim() === ', and') {
-                                    return part.trim() === ',' ? ', ' : part.trim() === 'and' ? ' and ' : part;
-                                } else if (part.trim()) {
-                                    return `<span class="section-badge">${part.trim()}</span>`;
-                                }
-                                return '';
-                            }).join('');
-                        })() : ''}
+      // Wrap each section name in a badge, keeping commas and 'and' as plain text
+      const formatted = reportData.formatted_sections || '';
+      if (!formatted) return '';
+
+      return formatted.split(/(, | and )/).map(part => {
+        if (part.trim() === ',' || part.trim() === 'and' || part.trim() === ', and') {
+          return part.trim() === ',' ? ', ' : part.trim() === 'and' ? ' and ' : part;
+        } else if (part.trim()) {
+          return `<span class="section-badge">${part.trim()}</span>`;
+        }
+        return '';
+      }).join('');
+    })() : ''}
                     </div>
-                    <div class="school-address">${school.address || "Address"} ${school.phone ? "• " + school.phone : ""}</div>
-                    <div class="school-motto">Motto: ${school.motto || "Motto"}</div>
+                    <div class="school-address">${schoolObj.address || "Address"} ${schoolObj.phone ? "• " + schoolObj.phone : ""}</div>
+                    <div class="school-motto">Motto: ${schoolObj.motto || "Motto"}</div>
                 </div>
             </div>
             <div class="report-label">STUDENT PERFORMANCE REPORT</div>
@@ -2022,16 +2013,16 @@ function generateReportHTML(reportData) {
             <div style="display: flex; gap: 4mm; margin-bottom: 1.5mm; align-items: center; justify-content: center; height: 18mm">
                 <!-- Student Photo -->
                 ${displaySettings.show_student_image
-                  ? `<div style="display: flex; flex-direction: column; align-items: center; width: 20mm;">
+      ? `<div style="display: flex; flex-direction: column; align-items: center; width: 20mm;">
                     <div class="student-photo-frame" style="width: 100%; height: 100%;">
                       ${student.image
-                        ? `<img src="/${student.image.replace(/^static\//, '')}" class="student-img" onerror="console.error('Student image failed to load:', this.src); this.outerHTML='<div style=\'width:100%;height:100%;background:#e2e8f0;display:flex;align-items:center;justify-content:center;\'><svg viewBox=\'0 0 100 100\' width=\'100%\' height=\'100%\'><circle cx=\'50\' cy=\'40\' r=\'20\' fill=\'#94a3b8\'/><path d=\'M30,70 Q50,90 70,70 Q65,85 50,85 Q35,85 30,70\' fill=\'#94a3b8\'/></svg></div>'" onload="console.log('Student image loaded successfully:', this.src);">`
-                        : `<img src="/uploads/profile_images/${student.gender && student.gender.toLowerCase() === 'male' ? 'male_default_avatar.png' : 'female_default_avatar.png'}" class="student-img" onerror="console.error('Default student image failed to load:', this.src); this.outerHTML='<div style=\'width:100%;height:100%;background:#e2e8f0;display:flex;align-items:center;justify-content:center;\'><svg viewBox=\'0 0 100 100\' width=\'100%\' height=\'100%\'><circle cx=\'50\' cy=\'40\' r=\'20\' fill=\'#94a3b8\'/><path d=\'M30,70 Q50,90 70,70 Q65,85 50,85 Q35,85 30,70\' fill=\'#94a3b8\'/></svg></div>'" onload="console.log('Default student image loaded successfully:', this.src);">`
-                      }
+        ? `<img src="/${student.image.replace(/^static\//, '')}" class="student-img" onerror="console.error('Student image failed to load:', this.src); this.outerHTML='<div style=\'width:100%;height:100%;background:#e2e8f0;display:flex;align-items:center;justify-content:center;\'><svg viewBox=\'0 0 100 100\' width=\'100%\' height=\'100%\'><circle cx=\'50\' cy=\'40\' r=\'20\' fill=\'#94a3b8\'/><path d=\'M30,70 Q50,90 70,70 Q65,85 50,85 Q35,85 30,70\' fill=\'#94a3b8\'/></svg></div>'" onload="console.log('Student image loaded successfully:', this.src);">`
+        : `<img src="/uploads/profile_images/${student.gender && student.gender.toLowerCase() === 'male' ? 'male_default_avatar.png' : 'female_default_avatar.png'}" class="student-img" onerror="console.error('Default student image failed to load:', this.src); this.outerHTML='<div style=\'width:100%;height:100%;background:#e2e8f0;display:flex;align-items:center;justify-content:center;\'><svg viewBox=\'0 0 100 100\' width=\'100%\' height=\'100%\'><circle cx=\'50\' cy=\'40\' r=\'20\' fill=\'#94a3b8\'/><path d=\'M30,70 Q50,90 70,70 Q65,85 50,85 Q35,85 30,70\' fill=\'#94a3b8\'/></svg></div>'" onload="console.log('Default student image loaded successfully:', this.src);">`
+      }
                     </div>
                   </div>`
-                  : ""
-                }
+      : ""
+    }
 
                 <!-- Student Info Table -->
                 <table class="student-info-table" style="flex: 1; font-size: 8pt;">
@@ -2051,14 +2042,14 @@ function generateReportHTML(reportData) {
                 <tr>
                     <td class="info-label">Overall Grade:</td>
                     <td class="info-val"><span class="badge badge-${overallGrade}">${overallGrade}</span> <span style="font-weight:400;">(${overallPercentage.toFixed(
-                        1
-                      )}%)</span></td>
+      1
+    )}%)</span></td>
                     <td class="info-label">${displaySettings.show_position ? "Position:" : "Total Score:"}</td>
                     <td class="info-val">
-                      ${displaySettings.show_position 
-                        ? `${formatPosition(position)} <span style="font-size:5.5pt; color:#64748b;">of ${total_students}</span>`
-                        : `${Math.round(overall_total)} <span style="font-size:5.5pt; color:#64748b;">/ ${overall_max}</span>`
-                      }
+                      ${displaySettings.show_position
+      ? `${formatPosition(position)} <span style="font-size:5.5pt; color:#64748b;">of ${total_students}</span>`
+      : `${Math.round(overall_total)} <span style="font-size:5.5pt; color:#64748b;">/ ${overall_max}</span>`
+    }
                     </td>
                 </tr>
             </table>
@@ -2097,13 +2088,13 @@ function generateReportHTML(reportData) {
                             <th class="col-sn">SN</th>
                             <th class="col-subject">SUBJECT</th>
                             ${assessments
-                              .map((code) => {
-                                const at = assessment_types.find(
-                                  (a) => a.code === code
-                                );
-                                return `<th>${at ? formatAssessmentName(at.name || at.code) : formatAssessmentName(code).toUpperCase()}</th>`;
-                              })
-                              .join("")}
+      .map((code) => {
+        const at = assessment_types.find(
+          (a) => a.code === code
+        );
+        return `<th>${at ? formatAssessmentName(at.name || at.code) : formatAssessmentName(code).toUpperCase()}</th>`;
+      })
+      .join("")}
                             <th>TOTAL</th>
                             <th>GRADE</th>
                             <th>REMARK</th>
@@ -2142,53 +2133,53 @@ function generateReportHTML(reportData) {
                 <div class="grading-scale">
                     <h4>Grading Scale</h4>
                     ${(gradeScale && gradeScale.grade_ranges
-                      ? gradeScale.grade_ranges
-                      : [
-                          {
-                            grade: "A",
-                            min_score: 70,
-                            max_score: 100,
-                            remark: "Excellent",
-                          },
-                          {
-                            grade: "B",
-                            min_score: 60,
-                            max_score: 69,
-                            remark: "Very Good",
-                          },
-                          {
-                            grade: "C",
-                            min_score: 50,
-                            max_score: 59,
-                            remark: "Good",
-                          },
-                          {
-                            grade: "D",
-                            min_score: 45,
-                            max_score: 49,
-                            remark: "Fair",
-                          },
-                          {
-                            grade: "E",
-                            min_score: 40,
-                            max_score: 44,
-                            remark: "Pass",
-                          },
-                          {
-                            grade: "F",
-                            min_score: 0,
-                            max_score: 39,
-                            remark: "Fail",
-                          },
-                        ])
-                      .map((range) => {
-                        const color = getGradeColor(range.grade);
-                        return `<div><span class="scale-grade" style="background: ${color}">${range.grade}</span> (${range.min_score}-${range.max_score}%) ${range.remark}</div>`;
-                      })
-                      .join('')}
+      ? gradeScale.grade_ranges
+      : [
+        {
+          grade: "A",
+          min_score: 70,
+          max_score: 100,
+          remark: "Excellent",
+        },
+        {
+          grade: "B",
+          min_score: 60,
+          max_score: 69,
+          remark: "Very Good",
+        },
+        {
+          grade: "C",
+          min_score: 50,
+          max_score: 59,
+          remark: "Good",
+        },
+        {
+          grade: "D",
+          min_score: 45,
+          max_score: 49,
+          remark: "Fair",
+        },
+        {
+          grade: "E",
+          min_score: 40,
+          max_score: 44,
+          remark: "Pass",
+        },
+        {
+          grade: "F",
+          min_score: 0,
+          max_score: 39,
+          remark: "Fail",
+        },
+      ])
+      .map((range) => {
+        const color = getGradeColor(range.grade);
+        return `<div><span class="scale-grade" style="background: ${color}">${range.grade}</span> (${range.min_score}-${range.max_score}%) ${range.remark}</div>`;
+      })
+      .join('')}
                 </div>
                 <div class="official-warning">
-                    This report is issued by ${school.name || "the school"}. Any alteration renders this invalid.
+                    This report is issued by ${schoolObj.name || "the school"}. Any alteration renders this invalid.
                 </div>
             </div>
         </div>
@@ -2305,13 +2296,13 @@ function getPrincipalComment(grade) {
 async function preloadImagesForPDF(element) {
   const images = element.getElementsByTagName("img");
   const imagePromises = [];
-  
+
   console.log(`Found ${images.length} images to preload`);
-  
+
   for (let img of images) {
     // Set crossorigin attribute for all images
     img.setAttribute("crossorigin", "anonymous");
-    
+
     // Create a promise for each image
     const imgPromise = new Promise((resolve, reject) => {
       if (img.complete) {
@@ -2330,41 +2321,41 @@ async function preloadImagesForPDF(element) {
           canvas.width = img.width || 100;
           canvas.height = img.height || 100;
           const ctx = canvas.getContext('2d');
-          
+
           // Draw a placeholder with gradient background
           const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
           gradient.addColorStop(0, '#f0f0f0');
           gradient.addColorStop(1, '#e0e0e0');
           ctx.fillStyle = gradient;
           ctx.fillRect(0, 0, canvas.width, canvas.height);
-          
+
           // Draw a border
           ctx.strokeStyle = '#ccc';
           ctx.lineWidth = 1;
           ctx.strokeRect(0, 0, canvas.width, canvas.height);
-          
+
           // Draw a generic icon
           ctx.fillStyle = '#999';
-          ctx.font = Math.max(12, Math.min(20, canvas.width/5)) + 'px Arial';
+          ctx.font = Math.max(12, Math.min(20, canvas.width / 5)) + 'px Arial';
           ctx.textAlign = 'center';
           ctx.textBaseline = 'middle';
-          ctx.fillText('IMG', canvas.width/2, canvas.height/2);
-          
+          ctx.fillText('IMG', canvas.width / 2, canvas.height / 2);
+
           // Convert to data URL and set as source
           img.src = canvas.toDataURL('image/png');
           resolve();
         };
-        
+
         // If the image hasn't loaded yet, trigger loading
         if (!img.src) {
           resolve(); // Skip if no src
         }
       }
     });
-    
+
     imagePromises.push(imgPromise);
   }
-  
+
   // Wait for all images to load
   if (imagePromises.length > 0) {
     console.log("Waiting for all images to load...");
@@ -2394,7 +2385,7 @@ async function generateClientSidePDF(reportData, previewMode = false) {
             "https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js";
           script.integrity = "sha512-GsLlZN/3F2ErC5ifS5QtgpiJtWd43JWSuIgh7mbzZ8zBps+dvLusV+eNQATqgA/HdeKFVgA5v3S/cIrLF7QnIg==";
           script.crossOrigin = "anonymous";
-          
+
           script.onload = () => {
             console.log("html2pdf.js loaded successfully from CDN");
             // Verify the library is properly loaded
@@ -2406,7 +2397,7 @@ async function generateClientSidePDF(reportData, previewMode = false) {
               reject(new Error("Library not properly loaded from CDN"));
             }
           };
-          
+
           script.onerror = (error) => {
             console.error("html2pdf.js failed to load from CDN:", error);
             console.log("CDN failed, trying local file");
@@ -2414,7 +2405,7 @@ async function generateClientSidePDF(reportData, previewMode = false) {
             const localScript = document.createElement("script");
             localScript.type = "text/javascript";
             localScript.src = "/static/js/html2pdf/html2pdf.bundle.min.js";
-            
+
             localScript.onload = () => {
               console.log("Local html2pdf.js loaded successfully");
               // Verify the library is properly loaded
@@ -2426,7 +2417,7 @@ async function generateClientSidePDF(reportData, previewMode = false) {
                 reject(new Error("Library not properly loaded from local"));
               }
             };
-            
+
             localScript.onerror = (localError) => {
               console.error("Local html2pdf.js also failed:", localError);
               reject(new Error("Failed to load library from both CDN and local"));
@@ -2455,7 +2446,7 @@ async function generateClientSidePDF(reportData, previewMode = false) {
     // Test if we can create a basic worker
     try {
       const testWorker = html2pdf();
-          console.log("Basic worker creation test passed:", typeof testWorker);
+      console.log("Basic worker creation test passed:", typeof testWorker);
       // Clean up
       if (testWorker && typeof testWorker.cleanup === "function") {
         testWorker.cleanup();
@@ -2592,7 +2583,7 @@ async function generateClientSidePDF(reportData, previewMode = false) {
         windowHeight: document.getElementById("pdf-generation-temp-element")?.scrollHeight || 1056, // A4 height in pixels
         onclone: (clonedDoc) => {
           console.log("Cloning document for html2canvas");
-          
+
           // Force single page layout
           const clonedElement = clonedDoc.getElementById("pdf-generation-temp-element");
           if (clonedElement) {
@@ -2608,13 +2599,13 @@ async function generateClientSidePDF(reportData, previewMode = false) {
             body.style.overflow = "visible";
             // Keep default body margins to allow PDF margins to work
           }
-          
+
           // Enhanced image handling for cross-origin images
           const images = clonedDoc.getElementsByTagName("img");
           for (let img of images) {
             // Set crossorigin attribute for all images
             img.setAttribute("crossorigin", "anonymous");
-            
+
             // Add error handling for images that fail to load
             img.onerror = function () {
               console.log("Image load error, using placeholder", this.src);
@@ -2623,30 +2614,30 @@ async function generateClientSidePDF(reportData, previewMode = false) {
               canvas.width = this.width || 100;
               canvas.height = this.height || 100;
               const ctx = canvas.getContext('2d');
-              
+
               // Draw a placeholder with gradient background
               const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
               gradient.addColorStop(0, '#f0f0f0');
               gradient.addColorStop(1, '#e0e0e0');
               ctx.fillStyle = gradient;
               ctx.fillRect(0, 0, canvas.width, canvas.height);
-              
+
               // Draw a border
               ctx.strokeStyle = '#ccc';
               ctx.lineWidth = 1;
               ctx.strokeRect(0, 0, canvas.width, canvas.height);
-              
+
               // Draw a generic icon
               ctx.fillStyle = '#999';
-              ctx.font = Math.max(12, Math.min(20, canvas.width/5)) + 'px Arial';
+              ctx.font = Math.max(12, Math.min(20, canvas.width / 5)) + 'px Arial';
               ctx.textAlign = 'center';
               ctx.textBaseline = 'middle';
-              ctx.fillText('?', canvas.width/2, canvas.height/2);
-              
+              ctx.fillText('?', canvas.width / 2, canvas.height / 2);
+
               // Convert to data URL and set as source
               this.src = canvas.toDataURL('image/png');
             };
-            
+
             // Preload images to ensure they're ready for canvas
             if (img.src && !img.complete) {
               console.log("Preloading image for PDF generation", img.src);
@@ -2694,11 +2685,11 @@ async function generateClientSidePDF(reportData, previewMode = false) {
     }
 
     console.log("Final PDF filename:", opt.filename);
-    
+
     // Measure content height before PDF generation
     const contentHeight = element.scrollHeight;
     const a4HeightPx = 297 * 3.7795275591; // A4 height in pixels at 96 DPI
-    
+
     if (contentHeight > a4HeightPx) {
       console.warn(`Content height (${contentHeight}px) exceeds A4 page (${a4HeightPx}px)`);
       console.warn("Consider reducing font sizes or adjusting layout");
