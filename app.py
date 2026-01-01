@@ -7,7 +7,7 @@ from models.school import School
 from models.class_room import ClassRoom
 from models.user import User
 from datetime import date, timedelta
-from flask import Flask, render_template, session, send_from_directory
+from flask import Flask, jsonify, render_template, session, send_from_directory
 import json
 import os
 import ssl
@@ -96,7 +96,7 @@ class SSLHandshakeMiddleware:
 
 
 # Wrap the app with the middleware
-app.wsgi_app = SSLHandshakeMiddleware(app.wsgi_app)
+app.wsgi_app = SSLHandshakeMiddleware(app.wsgi_app) # type: ignore
 
 
 # Initialize Celery
@@ -134,14 +134,12 @@ def debug_session():
 
 @app.route("/current_user")
 def current_user():
-    users = db.session.query(User).all()
-    class_rooms = db.session.query(ClassRoom).all()
-    current_user = User.query.get(session["user_id"])
-    return render_template(
-        users=users,
-        class_rooms=class_rooms,
-        current_user=current_user
-    )
+    # Get the current logged-in user
+    current_user = User.query.get(session.get("user_id"))
+
+    if current_user is None:
+        return jsonify({"error": "User not found"}), 404
+    return jsonify(current_user.to_dict())
 
 
 # Register routes
