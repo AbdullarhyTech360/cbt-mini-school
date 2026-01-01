@@ -1,5 +1,33 @@
 document.addEventListener('DOMContentLoaded', function () {
 
+    // Responsive tweaks for broadsheet action buttons on small screens
+    (function injectResponsiveBroadsheetStyles(){
+        const css = `
+        @media (max-width: 640px) {
+            #export-broad-sheet-pdf, #export-broad-sheet-excel, #preview-broad-sheet {
+                padding: 6px 8px !important;
+                font-size: 12px !important;
+                white-space: nowrap !important;
+                overflow: hidden !important;
+                text-overflow: ellipsis !important;
+                display: inline-flex !important;
+                align-items: center !important;
+                gap: 6px !important;
+            }
+            #export-broad-sheet-pdf span.text-xs, #export-broad-sheet-excel span.text-xs, #preview-broad-sheet span.text-xs {
+                display: none !important; /* hide long text, show icon only */
+            }
+            #export-broad-sheet-pdf .material-symbols-outlined, #export-broad-sheet-excel .material-symbols-outlined, #preview-broad-sheet .material-symbols-outlined {
+                font-size: 18px !important;
+            }
+        }
+        `;
+        const style = document.createElement('style');
+        style.type = 'text/css';
+        style.appendChild(document.createTextNode(css));
+        document.head.appendChild(style);
+    })();
+
     // Function to format assessment names for display
     function formatAssessmentName(code) {
         if (!code) return code;
@@ -134,24 +162,7 @@ document.addEventListener('DOMContentLoaded', function () {
         await loadAndExportBroadSheet('excel');
     });
 
-    // Helper for loading states
-    function showLoadingState(btnId, loadingText) {
-        const btn = document.getElementById(btnId);
-        if (!btn) return null;
-        const originalContent = btn.innerHTML;
-        btn.disabled = true;
-        btn.dataset.originalContent = originalContent;
-        btn.innerHTML = `<span class="material-symbols-outlined animate-spin text-lg">sync</span> <span class="text-xs transition-all animate-pulse">${loadingText}</span>`;
-        return originalContent;
-    }
-
-    function hideLoadingState(btnId) {
-        const btn = document.getElementById(btnId);
-        if (!btn || !btn.dataset.originalContent) return;
-        btn.disabled = false;
-        btn.innerHTML = btn.dataset.originalContent;
-        delete btn.dataset.originalContent;
-    }
+    // Loading-state helpers are defined later once to avoid duplicates
 
     // Preview broad sheet
     document.getElementById('preview-broad-sheet')?.addEventListener('click', async function () {
@@ -510,23 +521,40 @@ document.addEventListener('DOMContentLoaded', function () {
     // Helper function to show loading state on a button
     function showLoadingState(buttonId, loadingText) {
         const button = document.getElementById(buttonId);
-        if (button) {
-            button.disabled = true;
-            button.innerHTML = ` 
-                <span class="material-symbols-outlined animate-spin text-sm">progress_activity</span>
-                <span>${loadingText}</span>
-            `;
+        if (!button) return;
+        // store original HTML if not already stored
+        if (!button.dataset.originalContent) {
+            button.dataset.originalContent = button.innerHTML;
         }
+        button.disabled = true;
+        button.innerHTML = ` 
+            <span class="material-symbols-outlined animate-spin text-sm">progress_activity</span>
+            <span>${loadingText}</span>
+        `;
     }
 
     // Helper function to hide loading state on a button
     function hideLoadingState(buttonId, originalText) {
         const button = document.getElementById(buttonId);
-        if (button) {
-            button.disabled = false;
+        if (!button) return;
+        button.disabled = false;
+        // Prefer explicit originalText param, then dataset.originalContent, then sensible default
+        if (originalText) {
+            const icon = buttonId.includes('preview') ? 'preview' : buttonId.includes('pdf') ? 'download' : buttonId.includes('excel') ? 'download' : '';
             button.innerHTML = ` 
-                <span class="material-symbols-outlined text-lg">${buttonId.includes('preview') ? 'preview' : buttonId.includes('pdf') ? 'download' : 'download'}</span>
+                <span class="material-symbols-outlined text-lg">${icon}</span>
                 <span class="text-xs font-bold">${originalText}</span>
+            `;
+        } else if (button.dataset.originalContent) {
+            button.innerHTML = button.dataset.originalContent;
+            delete button.dataset.originalContent;
+        } else {
+            // Fallback label for small screens or unknown original
+            const fallback = buttonId.includes('preview') ? 'Preview' : buttonId.includes('pdf') ? 'PDF' : buttonId.includes('excel') ? 'Excel' : 'Action';
+            const icon = buttonId.includes('preview') ? 'preview' : buttonId.includes('pdf') ? 'download' : buttonId.includes('excel') ? 'download' : '';
+            button.innerHTML = ` 
+                <span class="material-symbols-outlined text-lg">${icon}</span>
+                <span class="text-xs font-bold">${fallback}</span>
             `;
         }
     }
