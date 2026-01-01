@@ -1207,8 +1207,14 @@ def get_grade_from_score(score, term_id):
         # print(f"Error getting grade from score: {str(e)}")
         return "N/A"
 
-
-def get_broad_sheet_data_logic(class_room_id, term_id, exam_type="all"):
+def get_grade(percentage):
+    if percentage >= 70: return 'A'
+    if percentage >= 60: return 'B'
+    if percentage >= 50: return 'C'
+    if percentage >= 45: return 'D'
+    if percentage >= 40: return 'E'
+    return 'F'
+def get_broad_sheet_data_logic(class_room_id, term_id, exam_type="all", config_id=None):
     """Core logic for getting broad sheet data, extracted for reuse"""
     from models.subject import Subject
     from models.assessment_type import AssessmentType
@@ -1312,75 +1318,134 @@ def get_broad_sheet_data_logic(class_room_id, term_id, exam_type="all"):
     # Debug: Print all unique assessment types found
     unique_assessment_types = set(grade.assessment_type for grade in all_grades)
     # # print("DEBUG UNIQUE ASSESSMENT TYPES: ", unique_assessment_types)
+    # Get all subjects for this class
+    from models.associations import class_subject
+    class_subjects = db.session.query(Subject).join(
+        class_subject, class_subject.c.subject_id == Subject.subject_id
+    ).filter(
+        class_subject.c.class_room_id == class_room_id
+    ).all()
     
-    # Prepare the broad sheet data structure
+    # Get active assessment types
+    all_assessment_types = AssessmentType.query.filter_by(
+        school_id=school.school_id,
+        is_active=True
+    ).order_by(AssessmentType.order).all()
+    
+    # Process Config for Merging
+    merge_config = None
+    active_assessments = []
+    
+    from models.report_config import ReportConfig
+    if config_id:
+        config = ReportConfig.query.get(config_id)
+        if config:
+            merge_config = config.get_merge_config()
+            active_assessments = config.get_active_assessments()
+
+    subjects = [s.subject_name for s in class_subjects]
+    
     broad_sheet_data = []
-    
+
     for student in students:
         student_data = {
             "student_id": student.id,
             "student_name": f"{student.first_name} {student.last_name}",
-            "admission_number": student.student.admission_number if hasattr(student, 'student') and student.student and hasattr(student.student, 'admission_number') else None,
+            "admission_number": student.student.admission_number if student.student else "N/A",
             "subjects": {}
         }
         
-        # Get scores for each subject
-        for subject in subjects:
-            # Filter grades for this specific student and subject
-            subject_grades = [g for g in all_grades if g.student_id == student.id and g.subject_id == subject.subject_id]
-            # print("DEBUG STUDENT: ", subject_grades)
-            # Create a lookup for the student's scores by assessment type
-            grade_lookup = {}
+        # Get all grades for this student
+        student_grades = Grade.query.filter_by(
+            student_id=student.id,
+            term_id=term_id,
+            class_room_id=class_room_id
+        ).all()
+        
+        # Organize grades by subject
+        subject_grade_map = {}
+        for grade in student_grades:
+            if grade.subject_id not in subject_grade_map:
+                subject_grade_map[grade.subject_id] = []
+            subject_grade_map[grade.subject_id].append(grade)
+            
+        for subject in class_subjects:
+            subject_grades = subject_grade_map.get(subject.subject_id, [])
+            
+            # Initialize subject scores structure for merging logic
+            subject_assessments = {}
             for grade in subject_grades:
-                grade_lookup[grade.assessment_type] = {
-                    "exam_id": grade.grade_id,
-                    "exam_name": grade.assessment_name or grade.assessment_type,
-                    "assessment_type": grade.assessment_type,
-                    "formatted_type": format_assessment_name(grade.assessment_type),  # Formatted name for display
+                assess_type = 'cbt' if grade.is_from_cbt else grade.assessment_type
+                subject_assessments[assess_type] = {
                     "score": grade.score,
                     "max_score": grade.max_score,
-                    "percentage": round((grade.score / grade.max_score) * 100, 1) if grade.max_score and grade.max_score > 0 else 0,
-                    "is_cbt": grade.is_from_cbt
+                    "assessment_type": assess_type,
+                    "is_cbt": grade.is_from_cbt,
+                    "formatted_type": format_assessment_name(assess_type),
+                    "grade_id": grade.grade_id,
+                    "assessment_name": grade.assessment_name
                 }
-            
-            # Create subject scores only for assessment types that have actual scores
+                
+            # Apply Merging Logic if Configured
+            if merge_config:
+                merged_assessments_data = {}
+                
+                # Process merged exams
+                for merge_rule in merge_config.get('merged_exams', []):
+                    merge_name = merge_rule['name']
+                    components = merge_rule['components']
+                    display_as = merge_rule.get('display_as', merge_name)
+                    
+                    total_score = 0
+                    total_max = 0
+                    
+                    for component in components:
+                        if component in subject_assessments:
+                            total_score += subject_assessments[component]['score']
+                            total_max += subject_assessments[component]['max_score']
+                            
+                    if total_max > 0:
+                        merged_assessments_data[display_as] = {
+                            "score": total_score,
+                            "max_score": total_max,
+                            "assessment_type": display_as,
+                            "is_cbt": False, # Merged scores aren't purely CBT
+                            "formatted_type": format_assessment_name(display_as),
+                            "is_merged": True
+                        }
+                        
+                        # Remove components
+                        for component in components:
+                            subject_assessments.pop(component, None)
+                            
+                # Add merged assessments back
+                subject_assessments.update(merged_assessments_data)
+                
+                # Filter by active assessments if configured
+                # Identify display names that should be forced active (merged ones)
+                merged_display_names = [rule.get('display_as', rule['name']) for rule in merge_config.get('merged_exams', [])]
+                effective_active = set(active_assessments) | set(merged_display_names)
+                
+                if active_assessments:
+                     subject_assessments = {
+                        k: v for k, v in subject_assessments.items()
+                        if k in effective_active
+                    }
+
+            # Convert back to list for broadsheet structure
             subject_scores = []
-            
-            # Add existing scores in the order they appear in the grade data
-            for grade in subject_grades:
+            for assess_type, data in subject_assessments.items():
                 subject_scores.append({
-                    "exam_id": grade.grade_id,
-                    "exam_name": grade.assessment_name or grade.assessment_type,
-                    "assessment_type": grade.assessment_type,
-                    "formatted_type": format_assessment_name(grade.assessment_type),  # Formatted name for display
-                    "score": grade.score,
-                    "max_score": grade.max_score,
-                    "percentage": round((grade.score / grade.max_score) * 100, 1) if grade.max_score and grade.max_score > 0 else 0,
-                    "is_cbt": grade.is_from_cbt
+                    "exam_id": data.get("grade_id"),
+                    "exam_name": data.get("assessment_name") or data.get("formatted_type", assess_type),
+                    "assessment_type": assess_type,
+                    "formatted_type": data.get("formatted_type", format_assessment_name(assess_type)),
+                    "score": data["score"],
+                    "max_score": data["max_score"],
+                    "percentage": round((data["score"] / data["max_score"]) * 100, 1) if data["max_score"] and data["max_score"] > 0 else 0,
+                    "is_cbt": data.get("is_cbt", False)
                 })
-            
-            # Only add placeholder scores for assessment types that match the filter
-            if exam_type == "all":
-                # Get all assessment types that exist in the AssessmentType model for this school
-                all_school_assessment_types = {at.code for at in all_assessment_types}
-                
-                # Add placeholder scores for assessment types that exist in the system but don't have scores for this student
-                existing_types = {score['assessment_type'] for score in subject_scores}
-                missing_types = all_school_assessment_types - existing_types
-                
-                for missing_type_code in missing_types:
-                    matching_assessment_type = next((at for at in all_assessment_types if at.code == missing_type_code), None)
-                    if matching_assessment_type:
-                        subject_scores.append({
-                            "exam_id": None,
-                            "exam_name": matching_assessment_type.name,
-                            "assessment_type": matching_assessment_type.code,
-                            "formatted_type": format_assessment_name(matching_assessment_type.code),  # Formatted name for display
-                            "score": 0,
-                            "max_score": matching_assessment_type.max_score,
-                            "percentage": 0,
-                            "is_cbt": False
-                        })
+
             
             # Calculate total and average for the subject
             total_score = sum(item["score"] for item in subject_scores)
@@ -1389,7 +1454,7 @@ def get_broad_sheet_data_logic(class_room_id, term_id, exam_type="all"):
                 "total_score": total_score,
                 "max_possible": max_possible,
                 "percentage": round((total_score / max_possible) * 100, 1) if max_possible and max_possible > 0 else 0,
-                "grade": get_grade_from_score((total_score / max_possible) * 100, term_id) if max_possible and max_possible > 0 else "N/A",
+                "grade": get_grade((total_score / max_possible) * 100) if max_possible and max_possible > 0 else "N/A",
                 "scores": subject_scores
             }
             
@@ -1406,7 +1471,12 @@ def get_broad_sheet_data_logic(class_room_id, term_id, exam_type="all"):
     
     # Get assessment types that exist in the grades for this class/term based on the filter (for metadata)
     # Use the already filtered all_grades from the main logic above
-    unique_assessment_types = set(grade.assessment_type for grade in all_grades)
+    unique_assessment_types = set()
+    for grade in all_grades:
+        if grade.is_from_cbt:
+            unique_assessment_types.add('cbt')
+        else:
+            unique_assessment_types.add(grade.assessment_type)
     
     assessment_types_list = list(unique_assessment_types) if unique_assessment_types else []
     
@@ -1417,6 +1487,47 @@ def get_broad_sheet_data_logic(class_room_id, term_id, exam_type="all"):
     school_assessment_types = AssessmentType.query.filter_by(school_id=school_id).all()
     assessment_type_orders = {at.code: at.order for at in school_assessment_types}
     
+    # Get sections for this school
+    from models.section import Section
+    all_sections = Section.query.filter_by(
+        school_id=school.school_id if school else None,
+        is_active=True
+    ).order_by(Section.level).all()
+    
+    # Group similar sections (matching ReportGenerator)
+    grouped_sections = []
+    secondary_added = False
+    for section in all_sections:
+        if section.level in [3, 4]:
+            if not secondary_added:
+                # Create a simple object with a name attribute for the formatter
+                class SimpleSection:
+                    def __init__(self, name):
+                        self.name = name
+                grouped_sections.append(SimpleSection("Secondary"))
+                secondary_added = True
+            continue
+        grouped_sections.append(section)
+    
+    # Format sections with commas and 'and' for display (matching ReportGenerator)
+    def format_sections_for_display(sections_list):
+        if not sections_list:
+            return ''
+        if len(sections_list) == 1:
+            return sections_list[0].name
+        elif len(sections_list) == 2:
+            return f"{sections_list[0].name} and {sections_list[1].name}"
+        else:
+            names = [s.name for s in sections_list]
+            last = names.pop()
+            # Use Oxford comma: include a comma before the 'and' for clarity
+            return f"{', '.join(names)}, and {last}"
+    
+    # Clean school logo path (handle Windows slashes and strip static/)
+    logo_path = school.logo if school and school.logo else None
+    if logo_path:
+        logo_path = logo_path.replace("\\", "/").replace("static/", "", 1).lstrip("/")
+
     # Prepare metadata
     metadata = {
         "class_name": class_room.class_room_name,
@@ -1424,10 +1535,14 @@ def get_broad_sheet_data_logic(class_room_id, term_id, exam_type="all"):
         "exam_type": exam_type,
         "total_students": len(students),
         "total_subjects": len(subjects),
-        "assessment_types": assessment_types_list,  # Changed from "exams" to "assessment_types"
-        "assessment_type_orders": assessment_type_orders,  # Include assessment type orders
+        "assessment_types": assessment_types_list,
+        "assessment_type_orders": assessment_type_orders,
         "school_name": school.school_name if school else "N/A",
         "school_address": school.address if school else "N/A",
+        "school_logo": logo_path,
+        "school_motto": school.motto if school else "N/A",
+        "school_phone": school.phone if school else "N/A",
+        "formatted_sections": format_sections_for_display(grouped_sections),
         "form_master": f"{class_room.form_teacher.first_name} {class_room.form_teacher.last_name}" if class_room.form_teacher else "N/A",
         "academic_session": SchoolTerm.query.get(term_id).academic_session if term_id else "N/A"
     }
@@ -1446,32 +1561,26 @@ def export_broad_sheet(format):
         from models.school import School
         school = School.query.first()
         
-        data = request.get_json()
-        class_room_id = data.get("class_room_id")
-        term_id = data.get("term_id")
-        exam_type = data.get("exam_type", "all")
-        show_exams = data.get("show_exams", True)
-        show_totals = data.get("show_totals", True)
+        data = request.json
+        class_room_id = data.get('class_room_id')
+        term_id = data.get('term_id')
+        exam_type = data.get('exam_type', 'all')
+        fmt = format.lower()
+        config_id = data.get('config_id')
+        subjects_per_page = data.get('subjects_per_page', 5)  # Default 5 subjects per page
+        students_per_page = data.get('students_per_page', 25) # Default 25 students per page
+        font_size = data.get('font_size', 9) # Default font size 9px
         
-        # Get broad sheet data by calling the helper function
-        try:
-            # Extract data from request
-            class_room_id = data.get("class_room_id")
-            term_id = data.get("term_id")
-            exam_type = data.get("exam_type", "all")
+        if not class_room_id or not term_id:
+            return jsonify({"success": False, "error": "Missing required fields"}), 400
             
-            if not all([class_room_id, term_id]):
-                return jsonify({"success": False, "error": "Missing required parameters"}), 400
-            
-            # Get the broad sheet data using the same logic as the main function
-            broad_sheet_data, metadata = get_broad_sheet_data_logic(class_room_id, term_id, exam_type)
-        except Exception as e:
-            return jsonify({"success": False, "error": f"Error getting broad sheet data: {str(e)}"}), 500
+        print(f"EXPORTING BROAD SHEET: class={class_room_id}, term={term_id}, type={exam_type}, format={fmt}")
+        broad_sheet_data, metadata = get_broad_sheet_data_logic(class_room_id, term_id, exam_type, config_id)
         
         if format.lower() == 'pdf':
-            return export_broad_sheet_pdf(broad_sheet_data, metadata, school)
+            return export_broad_sheet_pdf(broad_sheet_data, metadata, school, subjects_per_page, students_per_page, font_size)
         elif format.lower() == 'excel':
-            return export_broad_sheet_excel(broad_sheet_data, metadata, school)
+            return export_broad_sheet_excel(broad_sheet_data, metadata, school, subjects_per_page, students_per_page)
             
     except Exception as e:
         import traceback
@@ -1479,15 +1588,15 @@ def export_broad_sheet(format):
         return jsonify({"success": False, "error": str(e)}), 500
 
 
-def export_broad_sheet_pdf(broad_sheet_data, metadata, school):
+def export_broad_sheet_pdf(broad_sheet_data, metadata, school, subjects_per_page=5, students_per_page=25, font_size=9):
     """Export broad sheet as PDF"""
     try:
         from weasyprint import HTML
         import tempfile
         import os
         
-        # Generate HTML for the broad sheet
-        html_content = generate_broad_sheet_html(broad_sheet_data, metadata, school)
+        # Generate HTML for the broad sheet with pagination
+        html_content = generate_broad_sheet_html(broad_sheet_data, metadata, school, subjects_per_page, students_per_page, font_size)
         
         # Convert to PDF
         pdf_bytes = HTML(string=html_content).write_pdf()
@@ -1510,8 +1619,8 @@ def export_broad_sheet_pdf(broad_sheet_data, metadata, school):
         return jsonify({"success": False, "error": str(e)}), 500
 
 
-def export_broad_sheet_excel(broad_sheet_data, metadata, school):
-    """Export broad sheet as Excel"""
+def export_broad_sheet_excel(broad_sheet_data, metadata, school, subjects_per_page=5, students_per_page=25):
+    """Export broad sheet as Excel (Note: Excel export shows all subjects in one sheet)"""
     try:
         import xlsxwriter
         
@@ -1615,24 +1724,81 @@ def export_broad_sheet_excel(broad_sheet_data, metadata, school):
         return jsonify({"success": False, "error": str(e)}), 500
 
 
-def generate_broad_sheet_html(broad_sheet_data, metadata, school):
-    """Generate HTML for broad sheet"""
-    # Get all unique subjects and assessment types
-    subjects = set()
-    assessment_types = set()
-        
+def generate_broad_sheet_html(broad_sheet_data, metadata, school, subjects_per_page=5, students_per_page=25, font_size=9):
+    """Generate HTML for broad sheet with subject and student pagination and dynamic font size"""
+    from datetime import datetime
+    import math
+    
+    # ... (helper for assessment name formatting) ...
+    def format_assess(code):
+        if not code: return ""
+        special_cases = {
+            'cbt': 'CBT',
+            'ca': 'CA',
+            'exam': 'EXAM',
+            'mid_term': 'MID-TERM',
+            'final': 'FINAL',
+            'quiz': 'QUIZ',
+            'assignment': 'ASSIGNMENT',
+            'project': 'PROJECT',
+            'first_ca': '1ST CA',
+            'second_ca': '2ND CA',
+            'third_ca': '3RD CA',
+            'fourth_ca': '4TH CA',
+        }
+        c = code.lower()
+        if c in special_cases:
+            return special_cases[c]
+        if 'exam' in c: return 'EXAM'
+        if 'ca' in c: return code.upper().replace('_', ' ')
+        return ' '.join(word.capitalize() for word in code.split('_'))
+
+    # ... (pagination logic) ...
+    subjects_set = set()
     for student in broad_sheet_data:
-        subjects.update(student["subjects"].keys())
-        for subject_name, subject_data in student["subjects"].items():
-            if 'scores' in subject_data and subject_data['scores']:
-                for score_item in subject_data['scores']:
-                    assessment_types.add(score_item['assessment_type'])
+        subjects_set.update(student["subjects"].keys())
+    
+    subjects = sorted(list(subjects_set))
+    
+    metadata_class_name = metadata['class_name']
+    school_name = metadata.get('school_name', school.school_name if school else 'N/A')
+    school_address = metadata.get('school_address', 'N/A')
+    form_master = metadata.get('form_master', 'N/A')
+    term_name = metadata['term_name']
+    academic_session = metadata.get('academic_session', 'N/A')
+    datetime_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+
+    # Resolve school logo path to a data URI or safe URL using ReportGenerator helpers
+    try:
+        from services.report_generator import ReportGenerator
+        logo_src = ''
+        if metadata.get('school_logo'):
+            # Prefer embedding the image as data URI so PDF renderer always finds it
+            logo_src = ReportGenerator._embed_image(metadata.get('school_logo'))
+            # If embedding didn't produce a data URI, fall back to URL path
+            if not logo_src.startswith('data:') and not logo_src.startswith('http'):
+                logo_src = '/' + str(metadata.get('school_logo')).lstrip('/')
+        else:
+            logo_src = ''
+    except Exception:
+        # Best-effort fallback to previously used path
+        logo_src = '/' + str(metadata.get('school_logo', '')).lstrip('/') if metadata.get('school_logo') else ''
+    
+    total_subjects = len(subjects)
+    if subjects_per_page == 0 or subjects_per_page >= total_subjects:
+        subject_chunks = [subjects]
+    else:
+        subject_chunks = [subjects[i:i + subjects_per_page] for i in range(0, total_subjects, subjects_per_page)]
         
-    subjects = sorted(list(subjects))
-    assessment_types = sorted(list(assessment_types))
+    total_students = len(broad_sheet_data)
+    if students_per_page == 0 or students_per_page >= total_students:
+        student_chunks = [broad_sheet_data]
+    else:
+        student_chunks = [broad_sheet_data[i:i + students_per_page] for i in range(0, total_students, students_per_page)]
         
-    # Build HTML string using format method to avoid f-string issues
-    html = """
+    total_pages = len(subject_chunks) * len(student_chunks)
+    
+    html = f"""
     <!DOCTYPE html>
     <html>
     <head>
@@ -1641,211 +1807,276 @@ def generate_broad_sheet_html(broad_sheet_data, metadata, school):
         <style>
             @page {{
                 size: A4 landscape;
-                margin: 0.4in;
+                margin: 0.25in;
             }}
             body {{
-                font-family: Arial, sans-serif;
-                margin: 20px;
+                font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                margin: 0;
                 background-color: white;
-                /* size: A4 landscape; */
+                font-size: {font_size}px;
+                color: #1a1a1a;
             }}
             .header {{
                 text-align: center;
-                margin-bottom: 20px;
-                page-break-after: avoid;
+                margin-bottom: 8px;
+                width: 100%;
             }}
-            .header h1 {{
-                margin: 0;
-                font-size: 24px;
-                font-weight: bold;
-                color: #333;
+            .header-banner {{
+                background: linear-gradient(135deg, #4338ca 0%, #312e81 100%);
+                color: white;
+                padding: 3mm 5mm;
+                border-radius: 5px;
+                display: flex;
+                margin: 0 auto 3mm auto;
+                width: 98%;
+                max-width: 98%;
+                align-items: center;
+                justify-content: center;
+                gap: 5mm;
+                box-sizing: border-box;
+            }}
+            .logo-placeholder {{
+                width: 18mm;
+                height: 18mm;
+                background: white;
+                border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                overflow: hidden;
+            }}
+            .logo-img {{ width: 100%; height: 100%; object-fit: contain; }}
+            .school-text {{
+                text-align: center;
+            }}
+            .school-name {{
+                font-size: {font_size + 12}px;
+                font-weight: 800;
                 text-transform: uppercase;
+                margin: 0;
+                line-height: 1.1;
+                letter-spacing: 0.5px;
+                color: white;
             }}
-            .header p {{
-                margin: 5px 0;
-                font-size: 16px;
-                color: #666;
+            .report-title {{
+                font-size: {font_size + 6}px;
+                font-weight: 700;
+                margin-top: 2mm;
+                text-transform: uppercase;
+                letter-spacing: 4px;
+                color: #374151;
             }}
-            .school-info {{
+            .school-motto {{ 
+                font-size: {font_size}px; 
+                margin: 1mm 0 0 0; 
+                opacity: 0.95;
+                font-style: italic; 
+                color: white;
+            }}
+            .section-badge {{
+                background: linear-gradient(135deg, #8b5cf6 0%, #a855f7 100%);
+                color: white;
+                font-size: {font_size - 1}px;
+                padding: 0.5mm 1.5mm;
+                border-radius: 3px;
+                display: inline-block;
+                margin: 0 0.5mm;
+                font-weight: 600;
+            }}
+            .meta-info {{
                 display: flex;
                 justify-content: space-between;
-                margin: 10px 0;
-                font-size: 14px;
-                border-top: 1px solid #333;
-                border-bottom: 1px solid #333;
-                padding: 8px 0;
-            }}
-            .school-info div {{
-                flex: 1;
-                text-align: center;
+                margin-top: 5px;
+                font-size: {font_size + 1}px;
+                font-weight: 600;
+                color: #374151;
+                background: #f8fafc;
+                padding: 2mm;
+                border-radius: 4px;
+                border: 1px solid #e2e8f0;
             }}
             table {{
                 width: 100%;
                 border-collapse: collapse;
-                margin-top: 20px;
-                font-size: 9px;  /* Smaller font to accommodate more columns */
-                page-break-inside: auto;
-            }}
-            thead {{
-                display: table-header-group;
-            }}
-            tfoot {{
-                display: table-footer-group;
+                margin-top: 5px;
+                table-layout: fixed;
             }}
             th, td {{
-                border: 1px solid #333;
-                padding: 3px;  /* Smaller padding to save space */
+                border: 0.5px solid #d1d5db;
+                padding: 4px 2px;
                 text-align: center;
-                page-break-inside: avoid;
                 vertical-align: middle;
-                min-width: 20px;  /* Minimum width for readability */
+                overflow: hidden;
             }}
             th {{
-                background-color: #f2f2f2;
-                font-weight: bold;
-                white-space: nowrap;  /* Prevent header wrapping */
+                background-color: #f8fafc;
+                font-weight: 700;
+                font-size: {font_size - 1}px;
+                color: #334155;
             }}
             .subject-header {{
-                background-color: #e6e6e6;
-                font-size: 8px;  /* Smaller font for subject headers */
+                background-color: #eff6ff;
+                color: #1e40af;
+                font-size: {font_size}px;
+                border-bottom: 1.5px solid #2563eb;
             }}
             .assessment-header {{
-                background-color: #d9d9d9;
-                font-size: 8px;  /* Smaller font for assessment headers */
+                font-size: {font_size - 2}px;
+                text-transform: uppercase;
+                color: #64748b;
+                background-color: #f1f5f9;
+            }}
+            .total-col {{
+                font-weight: 800;
+                background-color: #f1f5f9 !important;
+                color: #0f172a;
+                border-left: 1px solid #94a3b8;
             }}
             .student-name {{
-                text-align: left;
-                min-width: 60px;  /* Ensure student names have enough space */
+                text-align: left !important;
+                padding-left: 6px !important;
+                white-space: nowrap;
+                width: 180px;
+                font-weight: 500;
             }}
-            .footer {{
-                margin-top: 30px;
-                text-align: center;
-                font-size: 14px;
-                color: #666;
-                page-break-before: avoid;
+            tr:nth-child(even) td {{
+                background-color: #f9fafb;
+            }}
+            .sn-col {{ width: 25px; font-weight: 700; color: #64748b; }}
+            .adm-col {{ width: 70px; font-family: monospace; font-size: {font_size - 1}px; }}
+            .text-left {{ text-align: left; }}
+            .score-val {{ font-size: {font_size}px; color: #374151; }}
+            .total-val {{ font-weight: 800; font-size: {font_size + 1}px; }}
+            
+            .footer-strip {{
+                margin-top: 10px;
+                padding-top: 5px;
+                border-top: 1px solid #e5e7eb;
+                display: flex;
+                justify-content: space-between;
+                font-size: {font_size - 2}px;
+                color: #9ca3af;
+                font-style: italic;
             }}
         </style>
     </head>
     <body>
-        <div class="header">
-            <h1>BROAD SHEET</h1>
-            <p><strong>School:</strong> {school_name}</p>
-            <p><strong>Address:</strong> {school_address}</p>
-            <div class="school-info">
-                <div><strong>Class:</strong> {metadata_class_name}</div>
-                <div><strong>Form Master:</strong> {form_master}</div>
-                <div><strong>Term:</strong> {term_name}</div>
-                <div><strong>Session:</strong> {academic_session}</div>
+    """
+
+    current_page = 0
+    # Outer loop: Student Groups (usually people want to see Page 1, Page 2 for first group of subjects first)
+    # Actually, let's do: For each set of subjects, show all students.
+    for s_idx, chunk_subjects in enumerate(subject_chunks):
+        for st_idx, chunk_students in enumerate(student_chunks):
+            current_page += 1
+            if current_page > 1:
+                html += '<div style="page-break-before: always;"></div>'
+
+            html += f"""
+            <div class="header">
+                <div class="header-banner">
+                    <div class="logo-placeholder">
+                        { f'<img src="{logo_src}" class="logo-img">' if logo_src else '<span style="color:#4f46e5; font-weight:bold; font-size:24pt;">🏫</span>' }
+                    </div>
+                    <div class="school-text">
+                        <h1 class="school-name">{school_name}</h1>
+                        <div class="school-motto">Motto: {metadata.get("school_motto", "N/A")}</div>
+                        <div style="margin-top: 1mm; font-size: {font_size + 0}px; color: #eef2ff;">
+                            { metadata.get("formatted_sections") if metadata.get("formatted_sections") else "" }
+                        </div>
+                    </div>
+                </div>
+                <div class="report-title">OFFICIAL BROAD SHEET</div>
+                <div class="meta-info">
+                    <div><strong>CLASS:</strong> {metadata_class_name}</div>
+                    <div><strong>TERM:</strong> {term_name}</div>
+                    <div><strong>SESSION:</strong> {academic_session}</div>
+                    <div><strong>PAGE {current_page} OF {total_pages}</strong></div>
+                </div>
             </div>
-            <p><strong>Generated on:</strong> {datetime_str}</p>
-        </div>
-            
-        <table>
-            <thead>
-                <tr>
-                    <th rowspan="2">S/N</th>
-                    <th rowspan="2">Admission No.</th>
-                    <th rowspan="2" class="student-name">Student Name</th>""".format(
-        metadata_class_name=metadata['class_name'],
-        school_name=metadata.get('school_name', school.school_name if school else 'N/A'),
-        school_address=metadata.get('school_address', 'N/A'),
-        form_master=metadata.get('form_master', 'N/A'),
-        term_name=metadata['term_name'],
-        academic_session=metadata.get('academic_session', 'N/A'),
-        datetime_str=datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-    )
-    
-    # Add multi-level subject headers
-    for subject in subjects:
-        # Count how many assessment types this subject has in the data
-        subject_assessment_count = 0
-        for student in broad_sheet_data:
-            if subject in student["subjects"] and 'scores' in student["subjects"][subject]:
-                subject_assessment_count = max(subject_assessment_count, len(student["subjects"][subject]['scores']))
-            
-        # If no specific assessments found for this subject, default to 1 for total
-        if subject_assessment_count == 0:
-            subject_assessment_count = 1
-            
-        html += "                    <th class=\"subject-header\" colspan=\"{colspan}\">{subject}</th>\n".format(
-            colspan=subject_assessment_count + 1,
-            subject=subject
-        )
-    
-    html += "                </tr>\n                <tr>\n"
-    
-    # Get all possible assessment types for each subject across all students
-    subject_assessment_map = {}
-    for subject in subjects:
-        subject_assessment_types = set()
-        for student in broad_sheet_data:
-            if subject in student["subjects"] and 'scores' in student["subjects"][subject]:
-                for score_item in student["subjects"][subject]['scores']:
-                    subject_assessment_types.add(score_item['assessment_type'])
-        subject_assessment_map[subject] = sorted(list(subject_assessment_types))
-    
-    # Add assessment type headers
-    for subject in subjects:
-        subject_assessment_types_list = subject_assessment_map[subject]
-        
-        # Add individual assessment headers
-        for assessment_type in subject_assessment_types_list:
-            html += "                    <th class=\"assessment-header\">{assessment_type}</th>\n".format(assessment_type=assessment_type)
-        
-        # Add total header for this subject
-        html += "                    <th class=\"assessment-header\">Total</th>\n"
-    
-    html += "                </tr>\n            </thead>\n            <tbody>\n"
-    
-    # Add student rows
-    for idx, student in enumerate(broad_sheet_data, 1):
-        html += "                <tr>\n                    <td>{idx}</td>\n                    <td>{admission_number}</td>\n                    <td class=\"student-name\">{student_name}</td>\n".format(
-            idx=idx,
-            admission_number=student['admission_number'] or '',
-            student_name=student['student_name']
-        )
-        
-        for subject in subjects:
-            subject_assessment_types_list = subject_assessment_map[subject]
-            
-            if subject in student["subjects"]:
-                subject_data = student["subjects"][subject]
                 
-                # Create a lookup for the student's scores by assessment type
-                score_lookup = {}
-                if 'scores' in subject_data and subject_data['scores']:
-                    for score_item in subject_data['scores']:
-                        score_lookup[score_item['assessment_type']] = score_item
+            <table>
+                <thead>
+                    <tr>
+                        <th rowspan="2" class="sn-col">S/N</th>
+                        <th rowspan="2" class="adm-col">Adm No.</th>
+                        <th rowspan="2" class="student-name">Student Name</th>"""
+
+            # Pre-calculate assessment mapping for this chunk of subjects
+            subject_assessment_map = {}
+            for subject in chunk_subjects:
+                atype_set = set()
+                for student in broad_sheet_data: # Check ALL students to ensure header consistency
+                    if subject in student["subjects"] and 'scores' in student["subjects"][subject]:
+                        for s in student["subjects"][subject]['scores']:
+                            atype_set.add(s['assessment_type'])
                 
-                # Add individual assessment scores in the correct order
-                for assessment_type in subject_assessment_types_list:
-                    if assessment_type in score_lookup:
-                        score_item = score_lookup[assessment_type]
-                        score_text = "{score}/{max_score} ({percentage}%)".format(
-                            score=score_item['score'],
-                            max_score=score_item['max_score'],
-                            percentage=score_item['percentage']
-                        )
-                        html += "                    <td>{score_text}</td>\n".format(score_text=score_text)
+                sorted_types = sorted(list(atype_set))
+                subject_assessment_map[subject] = sorted_types
+                colspan = len(sorted_types) + 1 # +1 for Total
+                html += f'<th class="subject-header" colspan="{colspan}">{subject.upper()}</th>'
+
+            html += """
+                    </tr>
+                    <tr>"""
+
+            for subject in chunk_subjects:
+                for atype in subject_assessment_map[subject]:
+                    html += f'<th class="assessment-header">{format_assess(atype)}</th>'
+                html += '<th class="assessment-header total-col">TOTAL</th>'
+
+            html += """
+                    </tr>
+                </thead>
+                <tbody>"""
+
+            for idx, student in enumerate(chunk_students, 1 + st_idx * students_per_page):
+                html += f"""
+                    <tr>
+                        <td class="sn-col">{idx}</td>
+                        <td class="adm-col">{student['admission_number'] or ''}</td>
+                        <td class="student-name text-left">{student['student_name'].upper()}</td>"""
+
+                for subject in chunk_subjects:
+                    if subject in student["subjects"]:
+                        s_data = student["subjects"][subject]
+                        score_lookup = {s['assessment_type']: s for s in s_data.get('scores', [])}
+                        
+                        for atype in subject_assessment_map[subject]:
+                            if atype in score_lookup:
+                                score_val = score_lookup[atype]['score']
+                                # Format as integer if possible
+                                try:
+                                    if float(score_val) == int(float(score_val)):
+                                        score_val = int(float(score_val))
+                                except: pass
+                                html += f'<td class="score-val">{score_val}</td>'
+                            else:
+                                html += "<td>-</td>"
+                        
+                        total_score = s_data['total_score']
+                        try:
+                            if float(total_score) == int(float(total_score)):
+                                total_score = int(float(total_score))
+                        except: pass
+                        html += f'<td class="total-val total-col">{total_score}</td>'
                     else:
-                        # If this student doesn't have this assessment type, show empty
-                        html += "                    <td>-</td>\n"
+                        for _ in range(len(subject_assessment_map[subject]) + 1):
+                            html += "<td>-</td>"
                 
-                # Add total score for this subject
-                total_text = "{total_score}/{max_possible} ({percentage}%)".format(
-                    total_score=subject_data['total_score'],
-                    max_possible=subject_data['max_possible'],
-                    percentage=subject_data['percentage']
-                )
-                html += "                    <td>{total_text}</td>\n".format(total_text=total_text)
-            else:
-                # If student doesn't have this subject, add empty cells for all assessments + total
-                for _ in range(len(subject_assessment_map[subject]) + 1):
-                    html += "                    <td>-</td>\n"
-        
-        html += "                </tr>\n"
-    
-    html += "            </tbody>\n        </table>\n        \n        <div class=\"footer\">\n            <p>Generated by CBT Mini School System</p>\n        </div>\n    </body>\n    </html>"
-    
+                html += "</tr>"
+
+            html += """
+                </tbody>
+            </table>
+            """
+
+    html += f"""
+        <div class="footer-strip">
+            <div>&copy; {datetime.now().year} CBT Mini School System</div>
+            <div>Generated on: {datetime_str}</div>
+        </div>
+    </body>
+    </html>"""
     return html
 

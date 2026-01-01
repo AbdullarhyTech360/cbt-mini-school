@@ -11,17 +11,19 @@
             <p class="text-gray-600 dark:text-gray-400">Generate and download student performance reports</p>
         </div>
     </div>
-    
+
     <!-- Report Type Tabs -->
     <div class="mt-6 border-b border-gray-200 dark:border-gray-700">
         <nav class="-mb-px flex space-x-8">
-            <div class="report-tab active bg-white dark:bg-gray-700 text-primary shadow-sm cursor-pointer" id="individual-reports-tab">
+            <div class="report-tab active bg-white dark:bg-gray-700 text-primary shadow-sm cursor-pointer"
+                id="individual-reports-tab">
                 <div class="py-4 px-1 border-b-2 border-transparent text-sm font-medium text-center">
                     <span class="material-symbols-outlined text-lg align-middle mr-2">person</span>
                     <span class="align-middle">Report Card</span>
                 </div>
             </div>
-            <div class="report-tab text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700/50 cursor-pointer" id="broad-sheet-tab">
+            <div class="report-tab text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700/50 cursor-pointer"
+                id="broad-sheet-tab">
                 <div class="py-4 px-1 border-b-2 border-transparent text-sm font-medium text-center">
                     <span class="material-symbols-outlined text-lg align-middle mr-2">table_chart</span>
                     <span class="align-middle">Broad Sheet</span>
@@ -40,7 +42,8 @@
                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Term <span class="text-red-500">*</span>
                 </label>
-                <select id="termFilter" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                <select id="termFilter"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
                     <option value="">Select Term</option>
                 </select>
                 <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Choose the academic term</p>
@@ -50,7 +53,8 @@
                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Class <span class="text-red-500">*</span>
                 </label>
-                <select id="classFilter" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                <select id="classFilter"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
                     <option value="">Select Class</option>
                 </select>
                 <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Choose the class</p>
@@ -58,14 +62,16 @@
 
             <div>
                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Report Config</label>
-                <select id="configFilter" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                <select id="configFilter"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
                     <option value="">Default</option>
                 </select>
                 <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Optional: Use specific config</p>
             </div>
 
             <div class="flex items-end">
-                <button onclick="loadStudents()" class="w-full flex items-center justify-center gap-2 h-11 px-5 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-lg shadow-md hover:shadow-lg hover:scale-105 transition-all duration-200">
+                <button onclick="loadStudents()"
+                    class="w-full flex items-center justify-center gap-2 h-11 px-5 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-lg shadow-md hover:shadow-lg hover:scale-105 transition-all duration-200">
                     <span class="material-symbols-outlined text-xl">search</span>
                     <span class="text-sm font-bold">Load Students</span>
                 </button>
@@ -78,7 +84,8 @@
         <div class="p-6 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
             <h2 class="text-xl font-bold text-gray-900 dark:text-white">Students</h2>
             <div class="flex gap-3">
-                <button onclick="downloadAllReports()" class="flex items-center gap-2 h-10 px-4 bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white rounded-lg shadow-md hover:shadow-lg hover:scale-105 transition-all duration-200">
+                <button onclick="downloadAllReports()"
+                    class="flex items-center gap-2 h-10 px-4 bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white rounded-lg shadow-md hover:shadow-lg hover:scale-105 transition-all duration-200">
                     <span class="material-symbols-outlined text-lg">download</span>
                     <span class="text-sm font-bold">Download All</span>
                 </button>
@@ -93,205 +100,319 @@
 
 <!-- Broad Sheet Section -->
 <div id="broad-sheet-section" class="hidden">
-    <!-- Filters -->
-    <div class="mb-6 bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 border border-gray-100 dark:border-gray-700">
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div>
-                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Term <span class="text-red-500">*</span>
-                </label>
-                <select id="broad-sheet-term" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
-                    <option value="">Select Term</option>
-                </select>
-                <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Choose the academic term</p>
-            </div>
+    <!-- Filters & Settings -->
+    <div class="mb-8 space-y-6">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- Data Sources Card -->
+            <div
+                class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-8 border border-gray-100 dark:border-gray-700">
+                <div class="flex items-center gap-3 mb-6 text-blue-600 dark:text-blue-400">
+                    <span class="material-symbols-outlined text-xl">database</span>
+                    <h3 class="font-bold uppercase tracking-widest text-xs">Primary Configuration</h3>
+                </div>
+                <div class="space-y-6">
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2.5">
+                            Academic Term <span class="text-red-500">*</span>
+                        </label>
+                        <select id="broad-sheet-term"
+                            class="w-full px-5 py-3 bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all dark:text-white outline-none">
+                            <option value="">Select Term</option>
+                        </select>
+                    </div>
 
-            <div>
-                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Class <span class="text-red-500">*</span>
-                </label>
-                <select id="broad-sheet-class" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
-                    <option value="">Select Class</option>
-                </select>
-                <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Choose the class</p>
-            </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2.5">
+                            Target Class <span class="text-red-500">*</span>
+                        </label>
+                        <select id="broad-sheet-class"
+                            class="w-full px-5 py-3 bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all dark:text-white outline-none">
+                            <option value="">Select Class</option>
+                        </select>
+                    </div>
 
-            <div>
-                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Exam Types</label>
-                <div class="space-y-2">
-                    <div class="flex items-center">
-                        <input type="checkbox" id="exam-type-all" class="rounded text-blue-600 focus:ring-blue-500" checked>
-                        <label for="exam-type-all" class="ml-2 text-sm text-gray-700 dark:text-gray-300">All Exams</label>
-                    </div>
-                    <div class="flex items-center">
-                        <input type="checkbox" id="exam-type-ca" class="rounded text-blue-600 focus:ring-blue-500">
-                        <label for="exam-type-ca" class="ml-2 text-sm text-gray-700 dark:text-gray-300">CA</label>
-                    </div>
-                    <div class="flex items-center">
-                        <input type="checkbox" id="exam-type-exam" class="rounded text-blue-600 focus:ring-blue-500">
-                        <label for="exam-type-exam" class="ml-2 text-sm text-gray-700 dark:text-gray-300">Exam</label>
-                    </div>
-                    <div class="flex items-center mt-2">
-                        <input type="checkbox" id="show-exams" class="rounded text-blue-600 focus:ring-blue-500" checked>
-                        <label for="show-exams" class="ml-2 text-sm text-gray-700 dark:text-gray-300">Show Individual Exams</label>
-                    </div>
-                    <div class="flex items-center">
-                        <input type="checkbox" id="show-totals" class="rounded text-blue-600 focus:ring-blue-500" checked>
-                        <label for="show-totals" class="ml-2 text-sm text-gray-700 dark:text-gray-300">Show Totals</label>
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2.5">Reporting
+                            Configuration</label>
+                        <select id="broad-sheet-config"
+                            class="w-full px-5 py-3 bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all dark:text-white outline-none">
+                            <option value="">Default (Standard)</option>
+                        </select>
+                        <p class="text-[11px] text-gray-400 mt-2 pl-1 italic">Optional: Rules for merging assessments
+                        </p>
                     </div>
                 </div>
             </div>
 
-            <div class="flex flex-col gap-3">
-                <div class="flex flex-wrap gap-2">
-                    <button id="preview-broad-sheet" class="flex-1 min-w-[100px] flex items-center justify-center gap-2 h-10 px-3 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-lg shadow-md hover:shadow-lg hover:scale-105 transition-all duration-200">
-                        <span class="material-symbols-outlined text-lg">preview</span>
-                        <span class="text-xs font-bold">Preview</span>
+            <!-- Page & Layout Card -->
+            <div
+                class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-8 border border-gray-100 dark:border-gray-700">
+                <div class="flex items-center gap-3 mb-6 text-purple-600 dark:text-purple-400">
+                    <span class="material-symbols-outlined text-xl">straighten</span>
+                    <h3 class="font-bold uppercase tracking-widest text-xs">Page & Layout Settings</h3>
+                </div>
+                <div class="grid grid-cols-2 gap-6">
+                    <div class="col-span-2">
+                        <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2.5">Subjects Per
+                            Page</label>
+                        <select id="subjects-per-page"
+                            class="w-full px-5 py-3 bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-4 focus:ring-purple-500/10 focus:border-purple-500 transition-all dark:text-white outline-none">
+                            <option value="3">3 Subjects</option>
+                            <option value="4">4 Subjects</option>
+                            <option value="5" selected>5 Subjects (Best Fit)</option>
+                            <option value="6">6 Subjects</option>
+                            <option value="7">7 Subjects</option>
+                            <option value="0">Continuous (No Pagination)</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label
+                            class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2.5">Students/Page</label>
+                        <select id="students-per-page"
+                            class="w-full px-5 py-3 bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-4 focus:ring-purple-500/10 focus:border-purple-500 transition-all dark:text-white outline-none">
+                            <option value="15">15 Raw</option>
+                            <option value="20">20 Raw</option>
+                            <option value="25" selected>25 Default</option>
+                            <option value="30">30 Dense</option>
+                            <option value="40">40 Ultra</option>
+                            <option value="0">All</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2.5">Base
+                            Font</label>
+                        <select id="broadsheet-font-size"
+                            class="w-full px-5 py-3 bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-4 focus:ring-purple-500/10 focus:border-purple-500 transition-all dark:text-white outline-none">
+                            <option value="7">7px</option>
+                            <option value="8">8px</option>
+                            <option value="9" selected>9px (Std)</option>
+                            <option value="10">10px</option>
+                            <option value="11">11px</option>
+                            <option value="12">12px</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Analysis & Actions Card -->
+            <div
+                class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-8 border border-gray-100 dark:border-gray-700 flex flex-col">
+                <div class="flex items-center gap-3 mb-6 text-emerald-600 dark:text-emerald-400">
+                    <span class="material-symbols-outlined text-xl">tune</span>
+                    <h3 class="font-bold uppercase tracking-widest text-xs">Analysis & Export</h3>
+                </div>
+
+                <div class="space-y-4 mb-auto">
+                    <!-- Restored Exam Types -->
+                    <div
+                        class="p-4 bg-gray-50 dark:bg-gray-700/30 rounded-xl border border-gray-100 dark:border-gray-700">
+                        <label
+                            class="block text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-3">Include
+                            Assessments</label>
+                        <div class="flex flex-wrap gap-4">
+                            <label class="flex items-center gap-2 cursor-pointer group">
+                                <input type="checkbox" id="exam-type-all"
+                                    class="w-4 h-4 rounded text-blue-600 focus:ring-blue-500" checked>
+                                <span
+                                    class="text-xs font-medium text-gray-700 dark:text-gray-300 group-hover:text-blue-500 transition-colors">All</span>
+                            </label>
+                            <label class="flex items-center gap-2 cursor-pointer group">
+                                <input type="checkbox" id="exam-type-ca"
+                                    class="w-4 h-4 rounded text-blue-600 focus:ring-blue-500">
+                                <span
+                                    class="text-xs font-medium text-gray-700 dark:text-gray-300 group-hover:text-blue-500 transition-colors">CA</span>
+                            </label>
+                            <label class="flex items-center gap-2 cursor-pointer group">
+                                <input type="checkbox" id="exam-type-exam"
+                                    class="w-4 h-4 rounded text-blue-600 focus:ring-blue-500">
+                                <span
+                                    class="text-xs font-medium text-gray-700 dark:text-gray-300 group-hover:text-blue-500 transition-colors">Exam</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 gap-3">
+                        <label
+                            class="group flex items-center justify-between px-4 py-3 rounded-xl bg-gray-50 dark:bg-gray-700/50 border border-transparent hover:border-emerald-500/30 transition-all cursor-pointer">
+                            <span class="text-xs font-semibold text-gray-700 dark:text-gray-300">Breakdown View</span>
+                            <input type="checkbox" id="show-exams"
+                                class="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500" checked>
+                        </label>
+
+                        <label
+                            class="group flex items-center justify-between px-4 py-3 rounded-xl bg-gray-50 dark:bg-gray-700/50 border border-transparent hover:border-emerald-500/30 transition-all cursor-pointer">
+                            <span class="text-xs font-semibold text-gray-700 dark:text-gray-300">Show Totals</span>
+                            <input type="checkbox" id="show-totals"
+                                class="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500" checked>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4 mt-8">
+                    <button id="preview-broad-sheet"
+                        class="col-span-2 flex items-center justify-center gap-3 py-4 bg-blue-600 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 active:bg-blue-900 active:scale-[0.98] text-white rounded-xl shadow-lg shadow-blue-500/25 transition-all duration-200 font-bold tracking-wide italic cursor-pointer hover:-translate-y-0.5 transform">
+                        <span class="material-symbols-outlined text-xl">analytics</span>
+                        PREVIEW DATA
                     </button>
-                    <button id="export-broad-sheet-pdf" class="flex-1 min-w-[100px] flex items-center justify-center gap-2 h-10 px-3 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white rounded-lg shadow-md hover:shadow-lg hover:scale-105 transition-all duration-200">
-                        <span class="material-symbols-outlined text-lg">download</span>
-                        <span class="text-xs font-bold">PDF</span>
+                    <button id="export-broad-sheet-pdf"
+                        class="flex items-center justify-center gap-2.5 py-3.5 bg-rose-500 bg-gradient-to-r from-rose-500 to-rose-600 hover:from-rose-600 hover:to-rose-700 text-white rounded-xl active:scale-95 transition-all duration-300 text-sm font-bold shadow-md shadow-rose-500/20 cursor-pointer hover:-translate-y-0.5 transform">
+                        <span class="material-symbols-outlined text-lg">picture_as_pdf</span>
+                        PDF
                     </button>
-                    <button id="export-broad-sheet-excel" class="flex-1 min-w-[100px] flex items-center justify-center gap-2 h-10 px-3 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white rounded-lg shadow-md hover:shadow-lg hover:scale-105 transition-all duration-200">
-                        <span class="material-symbols-outlined text-lg">download</span>
-                        <span class="text-xs font-bold">Excel</span>
+                    <button id="export-broad-sheet-excel"
+                        class="flex items-center justify-center gap-2.5 py-3.5 bg-teal-500 bg-gradient-to-r from-teal-500 to-teal-600 hover:from-teal-600 hover:to-teal-700 text-white rounded-xl active:scale-95 transition-all duration-300 text-sm font-bold shadow-md shadow-teal-500/20 cursor-pointer hover:-translate-y-0.5 transform">
+                        <span class="material-symbols-outlined text-lg">table_view</span>
+                        EXCEL
                     </button>
                 </div>
             </div>
         </div>
+
+        <!-- Results Section -->
+        <div id="broad-sheet-results"
+            class="hidden bg-white dark:bg-gray-800 rounded-xl shadow-md border border-gray-100 dark:border-gray-700">
+            <div class="p-6 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
+                <h2 class="text-xl font-bold text-gray-900 dark:text-white">Broad Sheet - <span id="class-info"></span>
+                    -
+                    <span id="term-info"></span>
+                </h2>
+            </div>
+
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                    <thead id="broad-sheet-header" class="bg-gray-50 dark:bg-gray-700">
+                        <!-- Header will be populated dynamically -->
+                    </thead>
+                    <tbody id="broad-sheet-body" class="divide-y divide-gray-200 dark:divide-gray-700">
+                        <!-- Rows will be populated dynamically -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
     </div>
 
-    <!-- Results Section -->
-    <div id="broad-sheet-results" class="hidden bg-white dark:bg-gray-800 rounded-xl shadow-md border border-gray-100 dark:border-gray-700">
-        <div class="p-6 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
-            <h2 class="text-xl font-bold text-gray-900 dark:text-white">Broad Sheet - <span id="class-info"></span> - <span id="term-info"></span></h2>
-        </div>
-        
-        <div class="overflow-x-auto">
-            <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                <thead id="broad-sheet-header" class="bg-gray-50 dark:bg-gray-700">
-                    <!-- Header will be populated dynamically -->
-                </thead>
-                <tbody id="broad-sheet-body" class="divide-y divide-gray-200 dark:divide-gray-700">
-                    <!-- Rows will be populated dynamically -->
-                </tbody>
-            </table>
-        </div>
-    </div>
-</div>
 
-
-<!-- Preview Modal Styles -->
-<style>
-    /* Preview Loading Spinner */
-    .preview-loading-spinner {
-        width: 40px;
-        height: 40px;
-        border: 4px solid #e5e7eb;
-        border-top: 4px solid #3b82f6;
-        border-radius: 50%;
-        animation: spin 1s linear infinite;
-        margin: 0 auto;
-    }
-    
-    @keyframes spin {
-        0% { transform: rotate(0deg); }
-        100% { transform: rotate(360deg); }
-    }
-    
-    /* Quality Indicator */
-    .quality-indicator.high {
-        background-color: #10b981;
-        color: white;
-        padding: 2px 8px;
-        border-radius: 9999px;
-        font-weight: 500;
-    }
-
-    /* Toolbar */
-    .preview-toolbar {
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-    }
-
-    /* Report tabs */
-    .report-tab {
-        cursor: pointer;
-        transition: all 0.2s ease;
-    }
-    
-    /* Responsive adjustments */
-    @media (max-width: 768px) {
-        .preview-toolbar {
-            flex-direction: column;
-            gap: 12px;
-            text-align: center;
+    <!-- Preview Modal Styles -->
+    <style>
+        /* Preview Loading Spinner */
+        .preview-loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #e5e7eb;
+            border-top: 4px solid #3b82f6;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
         }
-        
-        .preview-toolbar .flex.items-center.gap-4 {
-            justify-content: center;
-        }
-        
-        .preview-toolbar .flex.items-center.gap-2 {
-            justify-content: center;
-        }
-    }
-</style>
 
-<script src="{{ url_for('static', filename='js/components/modal.js') }}" defer></script>
-<script src="{{ url_for('static', filename='js/admin/generate_report.js') }}"></script>
-<script src="{{ url_for('static', filename='js/admin/generate_broadsheet.js') }}"></script>
-<script>
-    // Add keyboard shortcuts for the preview modal
-    document.addEventListener('keydown', function(event) {
-        // Ctrl/Cmd + P for # print
-        if ((event.ctrlKey || event.metaKey) && event.key === 'p') {
-            event.preventDefault();
-            // Print functionality could be added here
-        }
-        
-        // Ctrl/Cmd + D for download
-        if ((event.ctrlKey || event.metaKey) && event.key === 'd') {
-            event.preventDefault();
-            const downloadBtn = document.querySelector('button[title="Download PDF"]');
-            if (downloadBtn) {
-                downloadBtn.click();
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
             }
         }
-    });
-    
-    // Tab switching functionality for report generation page
-    document.addEventListener('DOMContentLoaded', function() {
-        // Tab switching
-        document.querySelectorAll('.report-tab').forEach(tab => {
-            tab.addEventListener('click', function () {
-                // Remove active class from all tabs
-                document.querySelectorAll('.report-tab').forEach(t => {
-                    t.classList.remove('bg-white', 'dark:bg-gray-700', 'text-primary', 'shadow-sm');
-                    t.classList.add('text-gray-600', 'dark:text-gray-300', 'hover:text-gray-800', 'dark:hover:text-gray-200', 'hover:bg-gray-200', 'dark:hover:bg-gray-700/50');
-                });
 
-                // Add active class to clicked tab
-                this.classList.remove('text-gray-600', 'dark:text-gray-300', 'hover:text-gray-800', 'dark:hover:text-gray-200', 'hover:bg-gray-200', 'dark:hover:bg-gray-700/50');
-                this.classList.add('bg-white', 'dark:bg-gray-700', 'text-primary', 'shadow-sm');
+        /* Quality Indicator */
+        .quality-indicator.high {
+            background-color: #10b981;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 9999px;
+            font-weight: 500;
+        }
 
-                // Show/hide sections based on clicked tab
-                if (this.id === 'individual-reports-tab') {
-                    document.getElementById('individual-reports-section').classList.remove('hidden');
-                    document.getElementById('broad-sheet-section').classList.add('hidden');
-                } else if (this.id === 'broad-sheet-tab') {
-                    document.getElementById('individual-reports-section').classList.add('hidden');
-                    document.getElementById('broad-sheet-section').classList.remove('hidden');
-                    
-                    // Load classes and terms when broad sheet tab is clicked
-                    if (typeof loadClassesForBroadSheet === 'function') {
-                        loadClassesForBroadSheet();
-                    }
-                    if (typeof loadTermsForBroadSheet === 'function') {
-                        loadTermsForBroadSheet();
-                    }
+        /* Toolbar */
+        .preview-toolbar {
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+
+        /* Report tabs */
+        .report-tab {
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            .preview-toolbar {
+                flex-direction: column;
+                gap: 12px;
+                text-align: center;
+            }
+
+            .preview-toolbar .flex.items-center.gap-4 {
+                justify-content: center;
+            }
+
+            .preview-toolbar .flex.items-center.gap-2 {
+                justify-content: center;
+            }
+        }
+    </style>
+
+    <script src="{{ url_for('static', filename='js/components/modal.js') }}" defer></script>
+    <script src="{{ url_for('static', filename='js/admin/generate_report.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/admin/generate_broadsheet.js') }}"></script>
+    <script>
+        // Add keyboard shortcuts for the preview modal
+        document.addEventListener('keydown', function (event) {
+            // Ctrl/Cmd + P for # print
+            if ((event.ctrlKey || event.metaKey) && event.key === 'p') {
+                event.preventDefault();
+                // Print functionality could be added here
+            }
+
+            // Ctrl/Cmd + D for download
+            if ((event.ctrlKey || event.metaKey) && event.key === 'd') {
+                event.preventDefault();
+                const downloadBtn = document.querySelector('button[title="Download PDF"]');
+                if (downloadBtn) {
+                    downloadBtn.click();
                 }
+            }
+        });
+
+        // Tab switching functionality for report generation page
+        document.addEventListener('DOMContentLoaded', function () {
+            // Tab switching
+            document.querySelectorAll('.report-tab').forEach(tab => {
+                tab.addEventListener('click', function () {
+                    // Remove active class from all tabs
+                    document.querySelectorAll('.report-tab').forEach(t => {
+                        t.classList.remove('bg-white', 'dark:bg-gray-700', 'text-primary', 'shadow-sm');
+                        t.classList.add('text-gray-600', 'dark:text-gray-300', 'hover:text-gray-800', 'dark:hover:text-gray-200', 'hover:bg-gray-200', 'dark:hover:bg-gray-700/50');
+                    });
+
+                    // Add active class to clicked tab
+                    this.classList.remove('text-gray-600', 'dark:text-gray-300', 'hover:text-gray-800', 'dark:hover:text-gray-200', 'hover:bg-gray-200', 'dark:hover:bg-gray-700/50');
+                    this.classList.add('bg-white', 'dark:bg-gray-700', 'text-primary', 'shadow-sm');
+
+                    // Show/hide sections based on clicked tab
+                    if (this.id === 'individual-reports-tab') {
+                        document.getElementById('individual-reports-section').classList.remove('hidden');
+                        document.getElementById('broad-sheet-section').classList.add('hidden');
+                    } else if (this.id === 'broad-sheet-tab') {
+                        document.getElementById('individual-reports-section').classList.add('hidden');
+                        document.getElementById('broad-sheet-section').classList.remove('hidden');
+
+                        // Load classes and terms when broad sheet tab is clicked
+                        if (typeof loadClassesForBroadSheet === 'function') {
+                            loadClassesForBroadSheet();
+                        }
+                        if (typeof loadTermsForBroadSheet === 'function') {
+                            loadTermsForBroadSheet();
+                        }
+                        if (typeof loadConfigsForBroadSheet === 'function') {
+                            loadConfigsForBroadSheet();
+                        }
+                    }
+                });
             });
         });
-    });
-</script>
-{% endblock %}
+    </script>
+    {% endblock %}
