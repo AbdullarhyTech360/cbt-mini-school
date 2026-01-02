@@ -1,5 +1,0 @@
-1. Layout alignment when a field is disabled from appearing
-2. Report Card not using the current grade scale
-3. Delete unnecessary files such as client_pdf_generator.js
-4. The total subject score to be treated as a percentage or not in the report config
-5. Making header in a block form and passport should be out of header.

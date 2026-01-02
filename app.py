@@ -7,7 +7,7 @@ from models.school import School
 from models.class_room import ClassRoom
 from models.user import User
 from datetime import date, timedelta
-from flask import Flask, jsonify, render_template, session, send_from_directory
+from flask import Flask, jsonify, render_template, session, send_from_directory, request
 import json
 import os
 import ssl
@@ -99,15 +99,6 @@ class SSLHandshakeMiddleware:
 app.wsgi_app = SSLHandshakeMiddleware(app.wsgi_app) # type: ignore
 
 
-# Initialize Celery
-# Celery usage removed as per request
-# from celery_app import make_celery
-# celery = make_celery(app)
-# app.config['CELERY_RESULT_EXPIRES'] = 3600
-
-# Add custom filter for parsing JSON
-
-
 @app.template_filter('from_json')
 def from_json(value):
     try:
@@ -154,16 +145,13 @@ if report_bp:
 # Initialize the database
 with app.app_context():
     db.create_all()
-    print("=" * 80)
-    print("DATABASE INITIALIZED - READY TO SERVE")
-    print("-" * 80)
-    print("To create default data (school, terms, assessments, etc.), run:")
-    print("  python -c \"from app import app; from utils.initialize_defaults import initialize_default_data; app.app_context().push(); initialize_default_data()\"")
-    print("=" * 80)
-    print()
-
-# End of commented initialization code
-
+    # print("=" * 80)
+    # print("DATABASE INITIALIZED - READY TO SERVE")
+    # print("-" * 80)
+    # print("To create default data (school, terms, assessments, etc.), run:")
+    # print("  python -c \"from app import app; from utils.initialize_defaults import initialize_default_data; app.app_context().push(); initialize_default_data()\"")
+    # print("=" * 80)
+    # print()
 
 # Root route
 @app.route("/")
@@ -196,6 +184,30 @@ def inject_school_info():
         }
     except Exception:
         return {"school_info": {"name": "Your School", "logo_url": None}}
+
+
+# Error handlers to render custom templates for HTML requests
+@app.errorhandler(404)
+def handle_404(err):
+    # Return JSON for API/JSON requests, HTML template for browsers
+    try:
+        if request.path.startswith('/api') or (request.accept_mimetypes.accept_json and not request.accept_mimetypes.accept_html):
+            return jsonify({"error": "Not found"}), 404
+    except Exception:
+        pass
+    return render_template('errors/404.html'), 404
+
+
+@app.errorhandler(500)
+def handle_500(err):
+    # Log the exception and return appropriate response
+    logging.exception(err)
+    try:
+        if request.path.startswith('/api') or (request.accept_mimetypes.accept_json and not request.accept_mimetypes.accept_html):
+            return jsonify({"error": "Server error"}), 500
+    except Exception:
+        pass
+    return render_template('errors/500.html'), 500
 
 
 # Route to serve uploaded files

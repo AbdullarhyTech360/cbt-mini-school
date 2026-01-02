@@ -149,7 +149,14 @@ pdm run css-with-fonts
 After the first setup, you may need to initialize default data:
 
 ```bash
+# Initialize all default data (including demo questions)
+python scripts/setup/initialize_all_data.py
+
+# Or initialize only the basic default data
 python -c "from app import app; from utils.initialize_defaults import initialize_default_data; app.app_context().push(); initialize_default_data()"
+
+# Populate demo questions separately
+python scripts/data/populate_demo_questions.py
 ```
 
 This will create:
@@ -157,6 +164,7 @@ This will create:
 - Assessment types (Test, Exam)
 - School terms
 - Default permissions
+- Demo questions for practice
 
 ## Project Structure
 
@@ -170,9 +178,18 @@ cbt-mini-school/
 ├── migrations/          # Database migration scripts
 ├── models/              # Database models
 ├── routes/              # Flask route definitions
-├── scripts/             # Build and utility scripts
+├── scripts/             # Utility scripts
+│   ├── data/            # Data population scripts
+│   └── setup/           # Setup and configuration scripts
 ├── services/            # Business logic services
-├── static/              # Static assets (CSS, JS, images)
+├── static/              # Static assets
+│   ├── css/           # Stylesheets
+│   ├── js/            # JavaScript files
+│   ├── images/        # Images and icons
+│   ├── fonts/         # Font files
+│   └── uploads/       # User-uploaded content
+│       ├── profile_images/
+│       └── school_logos/
 ├── templates/           # HTML templates
 ├── test/                # Test files
 ├── utils/               # Utility functions
