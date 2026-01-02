@@ -59,7 +59,7 @@ def sync_exam_record_to_grade(exam_record):
             existing_grade.assign_grade_letter()
             existing_grade.updated_at = datetime.utcnow()
             grade = existing_grade
-            # print(f"Updated existing grade for student {exam_record.student_id[:8]}")
+        
         else:
             # No changes needed, return existing grade
             grade = existing_grade
@@ -83,7 +83,7 @@ def sync_exam_record_to_grade(exam_record):
         grade.assign_grade_letter()
         
         db.session.add(grade)
-        # print(f"Created new grade for student {exam_record.student_id[:8]}")
+    
     
     return grade
 
@@ -119,7 +119,7 @@ def sync_all_exam_records(subject_id=None, class_id=None, term_id=None):
             else:
                 updated_count += 1
         except Exception as e:
-            # print(f"Error syncing exam record {record.id}: {str(e)}")
+        
             error_count += 1
     
     db.session.commit()
@@ -163,7 +163,7 @@ def sync_student_exam_records(student_id, subject_id=None, class_id=None, term_i
             else:
                 updated_count += 1
         except Exception as e:
-            # print(f"Error syncing exam record {record.id}: {str(e)}")
+        
             error_count += 1
     
     db.session.commit()

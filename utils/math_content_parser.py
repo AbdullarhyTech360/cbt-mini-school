@@ -88,7 +88,7 @@ def extract_images_from_docx(doc):
                 images[rel.rId] = f"data:image/{image_format};base64,{image_base64}"
     
     except Exception as e:
-        # print(f"Error extracting images: {str(e)}")
+    
     
     return images
 
@@ -110,7 +110,7 @@ def get_paragraph_image(paragraph, images_dict):
                     if embed and embed in images_dict:
                         return images_dict[embed]
     except Exception as e:
-        # print(f"Error getting paragraph image: {str(e)}")
+    
     
     return None
 
@@ -157,7 +157,7 @@ def convert_office_math_to_latex(math_element):
         return None
         
     except Exception as e:
-        # print(f"Error converting Office Math to LaTeX: {str(e)}")
+    
         return None
 
 
@@ -184,7 +184,7 @@ def get_full_paragraph_text(paragraph):
         
         return ' '.join(full_text).strip()
     except Exception as e:
-        # print(f"Error extracting full paragraph text: {str(e)}")
+    
         return paragraph.text.strip()
 
 
@@ -212,7 +212,7 @@ def extract_math_ml_from_docx(paragraph):
                 return f'${combined}$', True
                 
     except Exception as e:
-        # print(f"Error extracting MathML: {str(e)}")
+    
     
     return None, False
 

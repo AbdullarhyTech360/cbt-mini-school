@@ -67,7 +67,7 @@ def parse_json_questions(file_content):
                 parsed_questions.append(question_data)
                 
             except Exception as e:
-                # print(f"Error parsing question {idx}: {str(e)}")
+            
                 continue
         
         return parsed_questions, None
@@ -121,7 +121,7 @@ def parse_csv_questions(file_content):
                     try:
                         answer_index = int(correct_answer_str)
                     except ValueError:
-                        # print(f"Warning: Could not parse answer index '{correct_answer_str}' for row {idx}, defaulting to 0")
+
                         answer_index = 0
                     
                     question_data["options"] = [
@@ -139,7 +139,7 @@ def parse_csv_questions(file_content):
                 parsed_questions.append(question_data)
                 
             except Exception as e:
-                # print(f"Error parsing CSV row {idx}: {str(e)}")
+            
                 continue
         
         return parsed_questions, None
@@ -179,14 +179,14 @@ def parse_word_questions(file_content):
         
         # Extract all images from the document first
         images_dict = extract_images_from_docx(doc)
-        # print(f"=== Found {len(images_dict)} images in document ===")
+    
         
         parsed_questions = []
         current_question = None
         current_options = []
         in_options = False
         
-        # print("=== Parsing DOCX file ===")
+    
         for idx, para in enumerate(doc.paragraphs):
             text = para.text.strip()
             # print(f"Paragraph {idx}: '{text}'")
