@@ -243,7 +243,7 @@ if __name__ == "__main__":
         ssl_context = (cert_file, key_file)
     
     app.run(host='0.0.0.0',
-            port=5000,
+            port=8000,
             debug=True,
             ssl_context=ssl_context if ssl_context else None
             )
