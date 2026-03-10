@@ -218,6 +218,7 @@ class TestReportOptimization(unittest.TestCase):
             self.assertEqual(report_data_1, report_data_2)
 
     def test_report_optimization_for_large_datasets(self):
+        
         """Test report optimization for large datasets"""
         # Create additional grades to simulate a larger dataset
         for i in range(50):  # Add 50 more grades
