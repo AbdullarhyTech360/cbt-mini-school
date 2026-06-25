@@ -46,6 +46,198 @@
         color: #d1d5db;
         background-color: rgba(156, 163, 175, 0.1);
     }
+
+    /* ── AI Chat Section - High Contrast ── */
+    #aiChatSection {
+        height: calc(100vh - 220px);
+        min-height: 600px;
+        position: relative;
+        background: #f3f4f6;
+        border-radius: 24px;
+        overflow: hidden;
+        border: 1px solid #d1d5db;
+    }
+    .dark #aiChatSection {
+        background: #1f2937;
+        border-color: #374151;
+    }
+    .chat-container {
+        background: #ffffff;
+        border-bottom: 1px solid #d1d5db;
+    }
+    .dark .chat-container {
+        background: #1f2937;
+        border-bottom-color: #374151;
+    }
+    .chat-input-area {
+        background: #ffffff;
+        border: 1px solid #d1d5db;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+    .dark .chat-input-area {
+        background: #374151;
+        border-color: #4b5563;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    }
+    .workspace-sidebar {
+        background: #ffffff;
+        border-left: 1px solid #d1d5db;
+        box-shadow: -2px 0 12px rgba(0, 0, 0, 0.1);
+    }
+    .dark .workspace-sidebar {
+        background: #1f2937;
+        border-left-color: #374151;
+        box-shadow: -2px 0 12px rgba(0, 0, 0, 0.3);
+    }
+    #chatMessages {
+        scrollbar-width: thin;
+        scrollbar-color: #9ca3af transparent;
+    }
+    #chatMessages::-webkit-scrollbar { width: 6px; }
+    #chatMessages::-webkit-scrollbar-thumb { background: #9ca3af; border-radius: 99px; }
+    .chat-bubble-user {
+        background: #4f46e5;
+        color: #ffffff;
+        border-radius: 20px 20px 4px 20px;
+        box-shadow: 0 2px 8px rgba(79, 70, 229, 0.3);
+    }
+    .chat-bubble-ai {
+        background: #ffffff;
+        border: 1px solid #d1d5db;
+        border-radius: 20px 20px 20px 4px;
+        color: #111827;
+        box-shadow: 0 1px 4px rgba(0,0,0,.1);
+    }
+    .dark .chat-bubble-ai {
+        background: #374151;
+        border-color: #4b5563;
+        color: #f9fafb;
+    }
+    .chat-bubble-error {
+        background: #fef2f2;
+        border: 1px solid #fecaca;
+        border-radius: 20px 20px 20px 4px;
+        color: #dc2626;
+    }
+    .dark .chat-bubble-error {
+        background: #7f1d1d;
+        border-color: #991b1b;
+        color: #fecaca;
+    }
+    .ai-typing-dot {
+        width: 8px; height: 8px;
+        background: #6b7280;
+        border-radius: 50%;
+        animation: aiBounce 1.2s ease-in-out infinite;
+    }
+    .ai-typing-dot:nth-child(2) { animation-delay: .2s; }
+    .ai-typing-dot:nth-child(3) { animation-delay: .4s; }
+    @keyframes aiBounce {
+        0%, 80%, 100% { transform: translateY(0); opacity: .5; }
+        40% { transform: translateY(-8px); opacity: 1; }
+    }
+    @keyframes fadeInUp {
+        from { opacity: 0; transform: translateY(16px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    .chat-message-appear {
+        animation: fadeInUp 0.4s ease-out;
+    }
+    /* file chip */
+    .ai-file-chip {
+        display: inline-flex; align-items: center; gap: 6px;
+        padding: 6px 12px; border-radius: 99px;
+        font-size: 12px; font-weight: 500;
+        background: #e0e7ff;
+        border: 1px solid #c7d2fe;
+        color: #4338ca;
+    }
+    .dark .ai-file-chip { background: #312e81; border-color: #4338ca; color: #c7d2fe; }
+    /* workspace question card */
+    .ws-question-card {
+        border: 1px solid #d1d5db;
+        border-radius: 16px;
+        background: #ffffff;
+        transition: all .3s ease;
+    }
+    .dark .ws-question-card { background: #374151; border-color: #4b5563; }
+    .ws-question-card:hover { box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); border-color: #6366f1; transform: translateY(-2px); }
+    .ws-option-row input[type=radio],
+    .ws-option-row input[type=checkbox] { accent-color: #4f46e5; }
+    .ws-badge {
+        display: inline-flex; align-items: center;
+        padding: 3px 12px; border-radius: 99px; font-size: 11px; font-weight: 600; letter-spacing: .4px; text-transform: uppercase;
+    }
+    .ws-badge-mcq { background: #e0e7ff; color: #4338ca; }
+    .ws-badge-tf  { background: #f3e8ff; color: #7c3aed; }
+    .ws-badge-sa  { background: #dcfce7; color: #15803d; }
+    .dark .ws-badge-mcq { background: #312e81; color: #c7d2fe; }
+    .dark .ws-badge-tf  { background: #581c87; color: #d8b4fe; }
+    .dark .ws-badge-sa  { background: #14532d; color: #86efac; }
+    /* textarea auto-grow */
+    .auto-grow { field-sizing: content; min-height: 2.5rem; }
+    /* send button pulse on loading */
+    @keyframes aiSpin { to { transform: rotate(360deg); } }
+    .ai-spin { animation: aiSpin .7s linear infinite; display: inline-block; }
+    /* Sidebar transition */
+    .workspace-sidebar {
+        transition: transform 0.3s ease, opacity 0.3s ease;
+    }
+    .workspace-sidebar.hidden-sidebar {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    /* Quick prompt buttons */
+    .ai-quick-prompt {
+        background: #ffffff;
+        border: 1px solid #d1d5db;
+        transition: all 0.2s ease;
+    }
+    .ai-quick-prompt:hover {
+        background: #f9fafb;
+        border-color: #4f46e5;
+        transform: translateY(-1px);
+    }
+    .dark .ai-quick-prompt {
+        background: #374151;
+        border-color: #4b5563;
+    }
+    .dark .ai-quick-prompt:hover {
+        background: #4b5563;
+        border-color: #6366f1;
+    }
+
+    .extract-progress-fill {
+        background: linear-gradient(90deg, #1172d4 0%, #60a5fa 50%, #1172d4 100%);
+        background-size: 200% 100%;
+        animation: extractProgressShift 2.4s linear infinite;
+    }
+
+    .extract-pulse-dot {
+        animation: extractPulse 1.8s ease-in-out infinite;
+    }
+
+    .extract-status-chip {
+        transition: all 0.25s ease;
+    }
+
+    .extract-stage-item {
+        transition: transform 0.2s ease, border-color 0.2s ease, background-color 0.2s ease;
+    }
+
+    .extract-stage-item[data-stage-state="active"] {
+        transform: translateY(-1px);
+    }
+
+    @keyframes extractProgressShift {
+        0% { background-position: 0% 50%; }
+        100% { background-position: 200% 50%; }
+    }
+
+    @keyframes extractPulse {
+        0%, 100% { opacity: 0.45; transform: scale(0.92); }
+        50% { opacity: 1; transform: scale(1); }
+    }
 </style>
 
 <!-- Tab Navigation -->
@@ -61,6 +253,18 @@
             <span class="flex items-center gap-2">
                 <span class="material-symbols-outlined text-lg">upload</span>
                 <span>Bulk Upload</span>
+            </span>
+        </button>
+        <button id="extractUploadTab" class="px-4 py-2 font-medium text-sm rounded-t-lg transition-colors inactive-tab">
+            <span class="flex items-center gap-2">
+                <span class="material-symbols-outlined text-lg">filter_drama</span>
+                <span>Extract</span>
+            </span>
+        </button>
+        <button id="aiChatTab" class="px-4 py-2 font-medium text-sm rounded-t-lg transition-colors inactive-tab">
+            <span class="flex items-center gap-2">
+                <span class="material-symbols-outlined text-lg">chat</span>
+                <span>AI Chat</span>
             </span>
         </button>
     </div>
@@ -366,32 +570,261 @@
     </div>
 </div>
 
+<!-- Extraction Upload Section -->
+<div id="extractSection" class="hidden">
+    <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-2xl shadow-sm p-6 mb-6">
+        <h2 class="text-lg font-semibold text-blue-800 dark:text-blue-200 mb-3">Extract Questions from Document</h2>
+        <ol class="list-decimal list-inside space-y-2 text-blue-700 dark:text-blue-300">
+            <li>Select the class & subject for your questions</li>
+            <li>Upload a PDF, DOCX, or image file</li>
+            <li>Optionally add a custom prompt to guide extraction</li>
+            <li>Click "Extract" and review results before saving</li>
+        </ol>
+    </div>
+
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-100 dark:border-gray-700 p-6">
+        <h2 class="text-xl font-bold text-gray-900 dark:text-white mb-6">Extract Questions</h2>
+
+        <form id="extractForm" class="space-y-6">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                    <label for="extractClassSubject" class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Select Class & Subject *</label>
+                    <select id="extractClassSubject" name="class_subject" required
+                        class="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition">
+                        <option value="">Select a class and subject</option>
+                        {% for item in assigned_subjects %}
+                        <option value="{{ item.subject_id }},{{ item.class_room_id }}" data-subject-id="{{ item.subject_id }}" data-class-id="{{ item.class_room_id }}">{{ item.display_name }}</option>
+                        {% endfor %}
+                    </select>
+                    <input type="hidden" id="extract_subject_id" name="subject_id">
+                    <input type="hidden" id="extract_class_room_id" name="class_room_id">
+                </div>
+
+                <div>
+                    <label for="extractTerm" class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Term *</label>
+                    <select id="extractTerm" name="term_id" required
+                        class="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition">
+                        <option value="">Select a term</option>
+                        {% for term in school_terms %}
+                        <option value="{{ term.term_id }}" {% if current_term_id and term.term_id == current_term_id %}selected{% endif %}>{{ term.term_name }} - {{ term.academic_session }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div>
+                    <label for="extractExamType" class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Exam Type *</label>
+                    <select id="extractExamType" name="exam_type_id" required
+                        class="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition">
+                        <option value="">Select exam type</option>
+                        {% for assessment in assessment_types %}
+                        <option value="{{ assessment.assessment_type_id }}">
+                            {{ assessment.name }} ({{ assessment.max_score|int }} marks)
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+
+            <div>
+                <label for="extractFile" class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Select Files (up to 4)</label>
+                <div class="flex items-center gap-3">
+                    <input type="file" id="extractFile" accept=".pdf,.docx,.jpg,.jpeg,.png,.tiff" multiple required
+                        class="flex-1 px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition">
+                    <button type="submit" id="extractSubmitBtn"
+                        class="px-4 py-3 bg-gradient-to-r from-primary to-blue-600 hover:from-primary/90 hover:to-blue-600/90 text-white font-semibold rounded-xl shadow-md hover:shadow-lg transition-all duration-200">
+                        Extract
+                    </button>
+                </div>
+                <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">Supported formats: PDF, DOCX, JPG, PNG, TIFF (Max 4 files, 10MB each)</p>
+            </div>
+
+            <div>
+                <label for="customPrompt" class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Custom Prompt (optional)</label>
+                <textarea id="customPrompt" name="custom_prompt" rows="3"
+                    class="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition"
+                    placeholder="Give specific instructions to improve extraction (optional)"></textarea>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Extraction Loading State -->
+<div id="extractLoadingState" class="hidden bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-100 dark:border-gray-700 p-6 mt-6">
+    <div class="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4 mb-6">
+        <div>
+            <div class="flex items-center gap-3 mb-2">
+                <span class="extract-pulse-dot inline-flex h-3 w-3 rounded-full bg-primary"></span>
+                <h2 class="text-xl font-bold text-gray-900 dark:text-white">Extraction In Progress</h2>
+            </div>
+            <p id="extractLoadingMessage" class="text-sm text-gray-600 dark:text-gray-400">Waiting to start extraction.</p>
+        </div>
+        <div class="flex flex-wrap gap-2">
+            <button type="button" id="extractRetryBtn"
+                class="hidden px-4 py-2 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-medium hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
+                Retry
+            </button>
+            <button type="button" id="extractCancelBtn"
+                class="px-4 py-2 rounded-xl bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 font-medium hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors">
+                Cancel
+            </button>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 xl:grid-cols-[minmax(0,1.3fr)_minmax(320px,0.9fr)] gap-6">
+        <div class="space-y-5">
+            <div class="rounded-2xl border border-gray-200 dark:border-gray-700 p-5 bg-gray-50 dark:bg-gray-900/40">
+                <div class="flex items-center justify-between gap-4 mb-3">
+                    <div>
+                        <p class="text-sm font-semibold text-gray-900 dark:text-white">Live Progress</p>
+                        <p class="text-xs text-gray-500 dark:text-gray-400">The bar advances as each extraction milestone is reached.</p>
+                    </div>
+                    <span id="extractProgressValue" class="text-sm font-semibold text-primary">0%</span>
+                </div>
+                <div class="h-3 w-full rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden">
+                    <div id="extractProgressBar" class="extract-progress-fill h-full rounded-full" style="width: 0%;"></div>
+                </div>
+                <div class="mt-3 flex flex-wrap gap-2 text-xs">
+                    <span id="extractActivityBadge" class="extract-status-chip inline-flex items-center rounded-full px-3 py-1 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300">Active</span>
+                    <span id="extractNetworkBadge" class="extract-status-chip inline-flex items-center rounded-full px-3 py-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300">Stream connected</span>
+                    <span id="extractElapsedTime" class="inline-flex items-center rounded-full px-3 py-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300">Elapsed: 0s</span>
+                </div>
+            </div>
+
+            <div class="rounded-2xl border border-gray-200 dark:border-gray-700 p-5">
+                <div class="flex items-center justify-between gap-4 mb-4">
+                    <div>
+                        <p class="text-sm font-semibold text-gray-900 dark:text-white">Milestones</p>
+                        <p class="text-xs text-gray-500 dark:text-gray-400">Each stage updates as the backend streams extraction progress.</p>
+                    </div>
+                    <span id="extractCurrentStageLabel" class="text-xs font-medium text-gray-500 dark:text-gray-400">Queued</span>
+                </div>
+                <div id="extractStagesList" class="space-y-3">
+                    <div class="extract-stage-item rounded-xl border border-gray-200 dark:border-gray-700 p-4 bg-white dark:bg-gray-900/30" data-stage-id="initializing-model-pipeline" data-stage-state="pending">
+                        <div class="flex items-start justify-between gap-3">
+                            <div>
+                                <p class="font-semibold text-gray-900 dark:text-white">Initializing model pipeline</p>
+                                <p class="text-sm text-gray-500 dark:text-gray-400" data-stage-message>Pending</p>
+                            </div>
+                            <span class="text-xs rounded-full px-2.5 py-1 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300" data-stage-badge>Pending</span>
+                        </div>
+                    </div>
+                    <div class="extract-stage-item rounded-xl border border-gray-200 dark:border-gray-700 p-4 bg-white dark:bg-gray-900/30" data-stage-id="processing-input-text" data-stage-state="pending">
+                        <div class="flex items-start justify-between gap-3">
+                            <div>
+                                <p class="font-semibold text-gray-900 dark:text-white">Processing input text</p>
+                                <p class="text-sm text-gray-500 dark:text-gray-400" data-stage-message>Pending</p>
+                            </div>
+                            <span class="text-xs rounded-full px-2.5 py-1 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300" data-stage-badge>Pending</span>
+                        </div>
+                    </div>
+                    <div class="extract-stage-item rounded-xl border border-gray-200 dark:border-gray-700 p-4 bg-white dark:bg-gray-900/30" data-stage-id="extracting-core-question-entities" data-stage-state="pending">
+                        <div class="flex items-start justify-between gap-3">
+                            <div>
+                                <p class="font-semibold text-gray-900 dark:text-white">Extracting core question entities</p>
+                                <p class="text-sm text-gray-500 dark:text-gray-400" data-stage-message>Pending</p>
+                            </div>
+                            <span class="text-xs rounded-full px-2.5 py-1 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300" data-stage-badge>Pending</span>
+                        </div>
+                    </div>
+                    <div class="extract-stage-item rounded-xl border border-gray-200 dark:border-gray-700 p-4 bg-white dark:bg-gray-900/30" data-stage-id="generating-structured-question-output" data-stage-state="pending">
+                        <div class="flex items-start justify-between gap-3">
+                            <div>
+                                <p class="font-semibold text-gray-900 dark:text-white">Generating structured question output</p>
+                                <p class="text-sm text-gray-500 dark:text-gray-400" data-stage-message>Pending</p>
+                            </div>
+                            <span class="text-xs rounded-full px-2.5 py-1 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300" data-stage-badge>Pending</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="space-y-5">
+            <div class="rounded-2xl border border-gray-200 dark:border-gray-700 p-5 bg-gray-50 dark:bg-gray-900/40">
+                <div class="flex items-center justify-between gap-3 mb-4">
+                    <div>
+                        <p class="text-sm font-semibold text-gray-900 dark:text-white">Active Model</p>
+                        <p class="text-xs text-gray-500 dark:text-gray-400">Always shows the model currently handling extraction work.</p>
+                    </div>
+                    <span id="extractModelProvider" class="text-xs rounded-full px-3 py-1 bg-primary/10 text-primary dark:bg-primary/20">Waiting</span>
+                </div>
+                <div class="space-y-3">
+                    <div>
+                        <p class="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">Model Name</p>
+                        <p id="extractActiveModelName" class="text-base font-semibold text-gray-900 dark:text-white">Not assigned yet</p>
+                    </div>
+                    <div>
+                        <p class="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">Model Identifier</p>
+                        <p id="extractActiveModelIdentifier" class="text-sm text-gray-700 dark:text-gray-300 break-all">Pending</p>
+                    </div>
+                    <div>
+                        <p class="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">Current Activity</p>
+                        <p id="extractModelActivity" class="text-sm text-gray-700 dark:text-gray-300">Preparing extraction session.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="rounded-2xl border border-gray-200 dark:border-gray-700 p-5">
+                <div class="flex items-center justify-between gap-3 mb-4">
+                    <div>
+                        <p class="text-sm font-semibold text-gray-900 dark:text-white">Session Notes</p>
+                        <p class="text-xs text-gray-500 dark:text-gray-400">Live notes make delays and failures clear instead of ambiguous.</p>
+                    </div>
+                </div>
+                <div id="extractEventLog" class="space-y-2 max-h-72 overflow-y-auto pr-1">
+                    <p class="text-sm text-gray-500 dark:text-gray-400">No updates yet.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- File Preview Section -->
 <div id="filePreviewSection" class="hidden bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-100 dark:border-gray-700 p-6 mt-6">
-    <div class="flex items-center justify-between mb-6">
-        <h2 class="text-xl font-bold text-gray-900 dark:text-white">File Preview</h2>
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+        <div>
+            <h2 class="text-xl font-bold text-gray-900 dark:text-white">File Preview</h2>
+            <p id="extractModelInfo" class="text-sm text-gray-500 dark:text-gray-400 mt-2">Extracted questions will appear here after processing.</p>
+        </div>
         <button id="closePreviewBtn" class="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300">
             <span class="material-symbols-outlined text-2xl">close</span>
         </button>
     </div>
     
-    <div class="overflow-x-auto">
-        <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-            <thead class="bg-gray-50 dark:bg-gray-700">
-                <tr>
-                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Question Text</th>
-                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Type</th>
-                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Subject</th>
-                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Class</th>
-                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Status</th>
-                </tr>
-            </thead>
-            <tbody id="previewTableBody" class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                <!-- Preview rows will be added here dynamically -->
-            </tbody>
-        </table>
+    <div class="mb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+            <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Extracted questions</h3>
+            <p class="text-sm text-gray-500 dark:text-gray-400">Review extracted questions and edit or delete items before saving.</p>
+        </div>
+        <div class="relative w-full sm:w-96">
+            <input id="searchExtractedQuestions" type="search" placeholder="Search extracted questions..."
+                class="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition" />
+        </div>
     </div>
+
+    <div class="mb-4 flex items-center justify-between gap-4">
+        <span id="questionCount" class="text-sm text-gray-600 dark:text-gray-400">0 questions</span>
+    </div>
+
+    <div id="noExtractedQuestions" class="text-center text-gray-500 dark:text-gray-400 py-10">
+        No extracted questions found yet.
+    </div>
+
+    <div id="questionCardsContainer" class="grid gap-4"></div>
 </div>
+
+<script>
+    window.MathJax = {
+        tex: {
+            inlineMath: [['$', '$'], ['\\(', '\\)']],
+            displayMath: [['$$', '$$'], ['\\[', '\\]']]
+        },
+        svg: {
+            fontCache: 'global'
+        }
+    };
+</script>
+<script src="{{ url_for('static', filename='dist/mathjax/tex-mml-chtml.js') }}" id="MathJax-script"></script>
 
 <!-- Upload Results Section -->
 <div id="uploadResultsSection" class="hidden bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-100 dark:border-gray-700 p-6 mt-6">
@@ -476,26 +909,203 @@
     </div>
 </div>
 
+<!-- AI Chat Section (Glassmorphism Single-Column) -->
+<div id="aiChatSection" class="hidden relative">
+    <!-- Main Chat Area -->
+    <div class="flex flex-col h-full">
+        <!-- Chat Header -->
+        <div class="chat-container px-6 py-4 flex items-center justify-between border-b border-gray-200 dark:border-gray-700">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg">
+                    <span class="material-symbols-outlined text-white text-xl">smart_toy</span>
+                </div>
+                <div>
+                    <h3 class="font-semibold text-gray-900 dark:text-white">AI Question Generator</h3>
+                    <span class="text-xs text-gray-600 dark:text-gray-400">Powered by Gemini</span>
+                </div>
+            </div>
+            <div class="flex items-center gap-2">
+                <button id="aiChatClearBtn" title="Clear conversation" class="p-2 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                    <span class="material-symbols-outlined text-xl">delete_sweep</span>
+                </button>
+                <button id="wsToggleBtn" title="Toggle workspace" class="p-2 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                    <span class="material-symbols-outlined text-xl">assignment</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Messages Area -->
+        <div id="chatMessages" class="flex-1 overflow-y-auto px-4 py-6 space-y-6" style="max-height: calc(100vh - 380px)">
+            <div id="chatEmptyState" class="flex flex-col items-center justify-center h-full text-center py-12">
+                <div class="w-20 h-20 rounded-3xl bg-gradient-to-br from-indigo-100 to-indigo-200 dark:from-indigo-900 dark:to-indigo-800 flex items-center justify-center mb-6 shadow-xl">
+                    <span class="material-symbols-outlined text-4xl text-indigo-600 dark:text-indigo-300">auto_awesome</span>
+                </div>
+                <h4 class="text-xl font-semibold text-gray-900 dark:text-white mb-2">Start Generating Questions</h4>
+                <p class="text-sm text-gray-700 dark:text-gray-300 max-w-sm mb-6">Upload a document or type instructions below. I'll generate structured questions for you to review and save.</p>
+                <div class="grid grid-cols-1 gap-3 w-full max-w-sm">
+                    <button class="ai-quick-prompt text-left text-sm px-4 py-3 rounded-xl text-gray-800 dark:text-gray-200" data-prompt="Generate 10 multiple choice questions on photosynthesis for SS2 Biology">💡 Generate 10 MCQs on photosynthesis</button>
+                    <button class="ai-quick-prompt text-left text-sm px-4 py-3 rounded-xl text-gray-800 dark:text-gray-200" data-prompt="Generate 5 true/false questions on Nigeria's independence history">📜 5 True/False on Nigerian history</button>
+                    <button class="ai-quick-prompt text-left text-sm px-4 py-3 rounded-xl text-gray-800 dark:text-gray-200" data-prompt="Create 8 short answer questions on basic algebra for JSS3 Mathematics">➗ 8 Short answers on basic algebra</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- File Attachment Preview -->
+        <div id="chatFilePreview" class="px-6 py-2 hidden">
+            <div id="chatFileChips" class="flex flex-wrap gap-2"></div>
+        </div>
+
+        <!-- Chat Input Area (ChatGPT-style) -->
+        <div class="px-6 py-4 pb-6">
+            <div class="chat-input-area rounded-2xl p-2 flex items-end gap-2 max-w-4xl mx-auto">
+                <label for="aiChatFileInput" id="aiChatFileUploadBtn" title="Attach file" class="flex-shrink-0 p-2.5 rounded-xl text-gray-500 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-gray-100 dark:hover:bg-gray-600 transition-all cursor-pointer">
+                    <span class="material-symbols-outlined text-xl">attach_file</span>
+                </label>
+                <input type="file" id="aiChatFileInput" accept=".pdf,.docx,.jpg,.jpeg,.png,.tiff" multiple class="hidden">
+                <div class="flex-1 relative">
+                    <textarea id="aiChatInput" rows="1"
+                        class="auto-grow w-full px-4 py-3 bg-transparent text-gray-800 dark:text-white outline-none resize-none text-base leading-relaxed"
+                        placeholder="Give instructions to AI… (e.g. Generate 5 MCQs on photosynthesis)"
+                        style="max-height:150px; min-height:44px;"></textarea>
+                </div>
+                <button type="button" id="aiChatSendBtn"
+                    class="flex-shrink-0 p-2.5 bg-gradient-to-br from-indigo-500 to-purple-600 text-white rounded-xl shadow-lg hover:shadow-xl hover:from-indigo-600 hover:to-purple-700 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed">
+                    <span class="material-symbols-outlined text-xl" id="aiSendIcon">send</span>
+                </button>
+            </div>
+            <p class="text-xs text-gray-600 dark:text-gray-400 mt-2 text-center">Supports PDF, DOCX, JPG, PNG · <kbd class="px-1.5 py-0.5 bg-gray-200 dark:bg-gray-700 rounded text-xs">Ctrl+Enter</kbd> to send</p>
+        </div>
+    </div>
+
+    <!-- Collapsible Workspace Sidebar -->
+    <div id="workspaceSidebar" class="workspace-sidebar hidden-sidebar absolute right-0 top-0 bottom-0 w-96 z-10 overflow-hidden">
+        <div class="flex flex-col h-full">
+            <!-- Sidebar Header -->
+            <div class="px-5 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow">
+                        <span class="material-symbols-outlined text-white text-lg">assignment</span>
+                    </div>
+                    <div>
+                        <h3 class="font-semibold text-gray-900 dark:text-white text-sm">Question Workspace</h3>
+                        <span id="wsQuestionCount" class="text-xs text-gray-600 dark:text-gray-400">No questions yet</span>
+                    </div>
+                </div>
+                <button id="wsCloseBtn" class="p-1.5 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                    <span class="material-symbols-outlined text-lg">close</span>
+                </button>
+            </div>
+
+            <!-- Metadata Form (staff-specific - no teacher selection) -->
+            <div id="wsMetadata" class="px-4 py-3 border-b border-gray-200 dark:border-gray-700 space-y-3">
+                <div>
+                    <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Class &amp; Subject</label>
+                    <select id="wsClassSubject" class="w-full text-xs px-3 py-2 rounded-lg bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500/50">
+                        <option value="">Select class & subject</option>
+                        {% for assignment in current_user.teacher_assignments %}
+                        <option value="{{ assignment.class_room_id }}-{{ assignment.subject_id }}">{{ assignment.class_room.name }} - {{ assignment.subject.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Term</label>
+                    <select id="wsTerm" class="w-full text-xs px-3 py-2 rounded-lg bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500/50">
+                        <option value="">Select term</option>
+                        {% for term in school_terms %}
+                        <option value="{{ term.term_id }}" {% if current_term_id and term.term_id == current_term_id %}selected{% endif %}>{{ term.term_name }} - {{ term.academic_session }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Exam Type</label>
+                    <select id="wsExamType" class="w-full text-xs px-3 py-2 rounded-lg bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500/50">
+                        <option value="">Select exam type</option>
+                        <option value="first_ca">First CA</option>
+                        <option value="second_ca">Second CA</option>
+                        <option value="exam">Exam</option>
+                    </select>
+                </div>
+                <button id="wsAddQuestionBtn" class="w-full flex items-center justify-center gap-1 text-xs px-3 py-2 rounded-lg border-2 border-dashed border-indigo-300 dark:border-indigo-600 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-colors">
+                    <span class="material-symbols-outlined text-base">add</span> Add Blank Question
+                </button>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="px-4 py-3 flex gap-2 border-b border-gray-200 dark:border-gray-700">
+                <button id="wsExportBtn" class="flex-1 flex items-center justify-center gap-1.5 text-xs px-3 py-2 rounded-lg bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors">
+                    <span class="material-symbols-outlined text-base">download</span>
+                    Export
+                </button>
+                <button id="wsSaveBtn" class="flex-1 flex items-center justify-center gap-1.5 text-xs px-3 py-2 rounded-lg bg-gradient-to-r from-emerald-500 to-teal-600 text-white font-semibold shadow transition-all hover:from-emerald-600 hover:to-teal-700">
+                    <span class="material-symbols-outlined text-base">save</span>
+                    Save All
+                </button>
+            </div>
+
+            <!-- Question List -->
+            <div id="wsQuestionList" class="flex-1 overflow-y-auto px-4 py-4 space-y-4">
+                <div id="wsEmptyState" class="flex flex-col items-center justify-center h-full text-center py-12">
+                    <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-gray-200/80 to-gray-300/80 dark:from-gray-700/50 dark:to-gray-600/50 backdrop-blur-sm flex items-center justify-center mb-4">
+                        <span class="material-symbols-outlined text-2xl text-gray-500 dark:text-gray-400">quiz</span>
+                    </div>
+                    <h4 class="font-semibold text-gray-500 dark:text-gray-400 text-sm mb-1">Workspace is empty</h4>
+                    <p class="text-xs text-gray-400 dark:text-gray-500 max-w-xs">Send a message to the AI to generate questions, or click "Add Blank Question" to create one manually.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Export Modal -->
+<div id="wsExportModal" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-sm p-6">
+        <h3 class="font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2"><span class="material-symbols-outlined text-blue-500">download</span> Export Questions</h3>
+        <div class="space-y-3">
+            <button id="exportPdfBtn" class="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-red-500 hover:bg-red-600 text-white font-semibold transition-colors">
+                <span class="material-symbols-outlined">picture_as_pdf</span> Export as PDF
+            </button>
+            <button id="exportDocxBtn" class="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-blue-500 hover:bg-blue-600 text-white font-semibold transition-colors">
+                <span class="material-symbols-outlined">description</span> Export as DOCX
+            </button>
+            <button id="closeExportModal" class="w-full px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">Cancel</button>
+        </div>
+    </div>
+</div>
+
 <script>
     // Tab switching functionality
     document.addEventListener('DOMContentLoaded', function() {
         const singleUploadTab = document.getElementById('singleUploadTab');
         const bulkUploadTab = document.getElementById('bulkUploadTab');
+        const extractUploadTab = document.getElementById('extractUploadTab');
+        const aiChatTab = document.getElementById('aiChatTab');
         const singleUploadSection = document.getElementById('singleUploadSection');
         const bulkUploadSection = document.getElementById('bulkUploadSection');
+        const extractSection = document.getElementById('extractSection');
+        const aiChatSection = document.getElementById('aiChatSection');
         
         // Initialize with single upload active
-        if (singleUploadTab && bulkUploadTab && singleUploadSection && bulkUploadSection) {
+        if (singleUploadTab && bulkUploadTab && extractUploadTab && singleUploadSection && bulkUploadSection && extractSection) {
             singleUploadTab.addEventListener('click', function() {
                 // Update tab styles
                 singleUploadTab.classList.remove('inactive-tab');
                 singleUploadTab.classList.add('active-tab');
                 bulkUploadTab.classList.remove('active-tab');
                 bulkUploadTab.classList.add('inactive-tab');
+                extractUploadTab.classList.remove('active-tab');
+                extractUploadTab.classList.add('inactive-tab');
+                if (aiChatTab) {
+                    aiChatTab.classList.remove('active-tab');
+                    aiChatTab.classList.add('inactive-tab');
+                }
                 
-                // Show single upload section, hide bulk upload section
+                // Show single upload section, hide others
                 singleUploadSection.classList.remove('hidden');
                 bulkUploadSection.classList.add('hidden');
+                extractSection.classList.add('hidden');
+                if (aiChatSection) {
+                    aiChatSection.classList.add('hidden');
+                }
             });
             
             bulkUploadTab.addEventListener('click', function() {
@@ -504,11 +1114,76 @@
                 bulkUploadTab.classList.add('active-tab');
                 singleUploadTab.classList.remove('active-tab');
                 singleUploadTab.classList.add('inactive-tab');
+                extractUploadTab.classList.remove('active-tab');
+                extractUploadTab.classList.add('inactive-tab');
+                if (aiChatTab) {
+                    aiChatTab.classList.remove('active-tab');
+                    aiChatTab.classList.add('inactive-tab');
+                }
                 
-                // Show bulk upload section, hide single upload section
+                // Show bulk upload section, hide others
                 bulkUploadSection.classList.remove('hidden');
                 singleUploadSection.classList.add('hidden');
+                extractSection.classList.add('hidden');
+                if (aiChatSection) {
+                    aiChatSection.classList.add('hidden');
+                }
             });
+
+            extractUploadTab.addEventListener('click', function() {
+                extractUploadTab.classList.remove('inactive-tab');
+                extractUploadTab.classList.add('active-tab');
+                bulkUploadTab.classList.remove('active-tab');
+                bulkUploadTab.classList.add('inactive-tab');
+                singleUploadTab.classList.remove('active-tab');
+                singleUploadTab.classList.add('inactive-tab');
+                if (aiChatTab) {
+                    aiChatTab.classList.remove('active-tab');
+                    aiChatTab.classList.add('inactive-tab');
+                }
+
+                extractSection.classList.remove('hidden');
+                bulkUploadSection.classList.add('hidden');
+                singleUploadSection.classList.add('hidden');
+                if (aiChatSection) {
+                    aiChatSection.classList.add('hidden');
+                }
+            });
+
+            if (aiChatTab && aiChatSection) {
+                aiChatTab.addEventListener('click', function() {
+                    aiChatTab.classList.remove('inactive-tab');
+                    aiChatTab.classList.add('active-tab');
+                    bulkUploadTab.classList.remove('active-tab');
+                    bulkUploadTab.classList.add('inactive-tab');
+                    singleUploadTab.classList.remove('active-tab');
+                    singleUploadTab.classList.add('inactive-tab');
+                    extractUploadTab.classList.remove('active-tab');
+                    extractUploadTab.classList.add('inactive-tab');
+
+                    aiChatSection.classList.remove('hidden');
+                    bulkUploadSection.classList.add('hidden');
+                    singleUploadSection.classList.add('hidden');
+                    extractSection.classList.add('hidden');
+                });
+            }
+
+            // Workspace sidebar toggle
+            const wsToggleBtn = document.getElementById('wsToggleBtn');
+            const wsCloseBtn = document.getElementById('wsCloseBtn');
+            const workspaceSidebar = document.getElementById('workspaceSidebar');
+
+            if (wsToggleBtn && workspaceSidebar) {
+                wsToggleBtn.addEventListener('click', () => {
+                    workspaceSidebar.classList.toggle('hidden-sidebar');
+                });
+            }
+
+            if (wsCloseBtn && workspaceSidebar) {
+                wsCloseBtn.addEventListener('click', () => {
+                    workspaceSidebar.classList.add('hidden-sidebar');
+                });
+            }
         }
     });
 </script>

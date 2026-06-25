@@ -1,4 +1,4 @@
-from flask import render_template, request, jsonify, session, redirect, url_for, flash
+from flask import Response, jsonify, render_template, request, session, redirect, stream_with_context, url_for, flash
 from datetime import datetime
 
 from sqlalchemy.sql.functions import current_user
@@ -832,12 +832,17 @@ def staff_routes(app):
     @app.route("/staff/subjects/<user_id>")
     @staff_required
     def get_assigned_subjects(user_id):
-        # Verify the logged-in user matches the user_id in the URL
-        if session.get("user_id") != user_id:
+        # Verify the logged-in user matches the user_id in the URL but allow admin
+
+        # Note: User ID is not necessarily the same as the session ID, since admin can log in as a different user to upload questions
+        user = User.query.get(session.get("user_id"))
+        is_admin = user and user.role == "admin"
+        if session.get("user_id") != user_id and not is_admin:
             return jsonify({"success": False, "message": "Access denied"}), 403
 
         user = User.query.get(user_id)
         if not user:
+            print("User not present")
             return jsonify({"success": False, "message": "User not found"}), 404
 
         return jsonify({"success": True, "subjects": grab_staff_subjects(user_id)})
@@ -1923,6 +1928,459 @@ def staff_routes(app):
             current_term=current_term,
             assessment_types=assessment_types,
         )
+
+    @app.route("/staff/extract_questions", methods=["POST"])
+    @staff_required
+    def staff_extract_questions():
+        """Stream extraction milestones and final parsed questions for review."""
+        try:
+            import json
+            import os
+            import queue
+            import tempfile
+            import threading
+            import time
+
+            # Verify user
+            current_user = User.query.get(session["user_id"]) if session.get("user_id") else None
+            if not current_user:
+                return jsonify({"success": False, "message": "Unauthorized access"}), 403
+
+            # Validate multipart - accept multiple files (up to 4)
+            files = request.files.getlist('file')
+            if not files or all(not f or f.filename == '' for f in files):
+                return jsonify({"success": False, "message": "No file uploaded"}), 400
+
+            # Filter out empty files and limit to 4 files
+            files = [f for f in files if f and f.filename != '']
+            if len(files) > 4:
+                return jsonify({"success": False, "message": "Maximum 4 files allowed at once"}), 400
+
+            if len(files) == 0:
+                return jsonify({"success": False, "message": "No file selected"}), 400
+
+            # Get metadata
+            subject_id = request.form.get('subject_id')
+            class_room_id = request.form.get('class_room_id')
+            term_id = request.form.get('term_id')
+            exam_type_id = request.form.get('exam_type_id')
+            custom_prompt = request.form.get('custom_prompt')
+
+            if not subject_id or not class_room_id or not term_id or not exam_type_id:
+                return jsonify({"success": False, "message": "Subject, Class, Term, and Exam Type are required"}), 400
+
+            # Verify teacher assignment
+            from models.associations import teacher_subject
+            assignment = (
+                db.session.query(teacher_subject)
+                .filter_by(teacher_id=current_user.id, subject_id=subject_id, class_room_id=class_room_id)
+                .first()
+            )
+            if not assignment:
+                return jsonify({"success": False, "message": "You are not assigned to this subject-class combination"}), 403
+
+            # Save all files to temporary files
+            temp_files = []
+            filenames = []
+            for file in files:
+                filename = file.filename or ''
+                filenames.append(filename)
+                suffix = ''
+                if '.' in filename:
+                    suffix = '.' + filename.rsplit('.', 1)[1].lower()
+                tmp = tempfile.NamedTemporaryFile(delete=False, suffix=suffix)
+                file.save(tmp.name)
+                tmp.close()
+                temp_files.append(tmp.name)
+
+            from services.gemini_extractor import extract_questions_from_file
+
+            event_queue = queue.Queue()
+            result_holder = {"questions": [], "error": None, "model_name": None}
+            worker_done = threading.Event()
+
+            def stream_event(payload):
+                event_queue.put(payload)
+
+            def extractor_worker():
+                try:
+                    all_questions = []
+                    for idx, (tmp_file, filename) in enumerate(zip(temp_files, filenames)):
+                        # Add file index to progress events
+                        def wrapped_stream_event(payload):
+                            payload_with_file = payload.copy()
+                            payload_with_file["file_index"] = idx + 1
+                            payload_with_file["total_files"] = len(temp_files)
+                            payload_with_file["file_name"] = filename
+                            event_queue.put(payload_with_file)
+
+                        questions, error, model_name = extract_questions_from_file(
+                            tmp_file,
+                            custom_prompt=custom_prompt,
+                            progress_callback=wrapped_stream_event,
+                        )
+                        if error:
+                            result_holder["error"] = f"Error processing {filename}: {error}"
+                            break
+                        if questions:
+                            all_questions.extend(questions)
+                        result_holder["model_name"] = model_name
+
+                    result_holder["questions"] = all_questions
+                except Exception as worker_error:
+                    result_holder["error"] = str(worker_error)
+                finally:
+                    worker_done.set()
+
+            threading.Thread(target=extractor_worker, daemon=True).start()
+
+            def build_event(event, **payload):
+                response_payload = {"event": event, **payload}
+                return json.dumps(response_payload) + "\n"
+
+            @stream_with_context
+            def generate():
+                last_emit_at = time.time()
+                last_progress = 2
+                file_list = ", ".join(filenames) if len(filenames) <= 3 else f"{filenames[0]}, {filenames[1]} and {len(filenames) - 2} more"
+                yield build_event(
+                    "milestone",
+                    progress=2,
+                    status="running",
+                    stage_id="initializing-model-pipeline",
+                    stage_label="Initializing model pipeline",
+                    message=f"Upload received. Starting extraction workflow for {len(files)} file(s): {file_list}",
+                    file_count=len(files),
+                    file_names=filenames,
+                )
+
+                try:
+                    while not worker_done.is_set() or not event_queue.empty():
+                        try:
+                            payload = event_queue.get(timeout=1.0)
+                            last_emit_at = time.time()
+                            if payload.get("progress") is not None:
+                                last_progress = payload.get("progress")
+                            yield build_event(payload.pop("event", "milestone"), **payload)
+                        except queue.Empty:
+                            if worker_done.is_set():
+                                break
+                            if time.time() - last_emit_at >= 2:
+                                last_emit_at = time.time()
+                                yield build_event(
+                                    "heartbeat",
+                                    progress=last_progress,
+                                    status="waiting",
+                                    stage_id="processing-input-text",
+                                    stage_label="Processing input text",
+                                    message="Extraction is still active. The current model is working on your document.",
+                                )
+
+                    while not event_queue.empty():
+                        payload = event_queue.get_nowait()
+                        yield build_event(payload.pop("event", "milestone"), **payload)
+
+                    if result_holder["error"]:
+                        yield build_event(
+                            "error",
+                            success=False,
+                            message=result_holder["error"],
+                        )
+                        return
+
+                    questions = result_holder["questions"] or []
+                    if not questions:
+                        yield build_event(
+                            "error",
+                            success=False,
+                            message="No questions extracted",
+                        )
+                        return
+
+                    yield build_event(
+                        "complete",
+                        success=True,
+                        progress=100,
+                        status="completed",
+                        stage_id="generating-structured-question-output",
+                        stage_label="Generating structured question output",
+                        message=f"Extraction completed successfully with {len(questions)} question(s) from {len(files)} file(s).",
+                        model_name=result_holder["model_name"],
+                        questions=questions,
+                        file_count=len(files),
+                    )
+                finally:
+                    # Clean up all temporary files
+                    for tmp_file in temp_files:
+                        try:
+                            os.unlink(tmp_file)
+                        except OSError:
+                            pass
+
+            response = Response(generate(), mimetype="application/x-ndjson")
+            response.headers["Cache-Control"] = "no-cache"
+            response.headers["X-Accel-Buffering"] = "no"
+            return response
+
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            return jsonify({"success": False, "message": str(e)}), 500
+
+    @app.route("/staff/ai_chat_generate", methods=["POST"])
+    @staff_required
+    def staff_ai_chat_generate():
+        """AI Chat endpoint for generating questions from uploaded documents or text prompts with system prompt."""
+        try:
+            import os
+            import tempfile
+            import json
+
+            # Verify user
+            current_user = User.query.get(session["user_id"]) if session.get("user_id") else None
+            if not current_user:
+                return jsonify({"success": False, "error": "Unauthorized access"}), 403
+
+            # Get files and instruction
+            files = request.files.getlist('files')
+            instruction = request.form.get('instruction', '')
+            conversation_history_str = request.form.get('conversation_history', '[]')
+
+            # Filter out empty files
+            files = [f for f in files if f and f.filename != '']
+            
+            if not files and not instruction:
+                return jsonify({"success": False, "error": "Please provide files or instructions"}), 400
+
+            # System prompt for AI
+            system_prompt = """You are an academic assistant helping teachers create assessment questions. 
+Generate questions based on the uploaded documents and user instructions.
+Format questions according to the system's question structure (question_text, question_type, options, correct_answer, has_math, context).
+Support MCQ, True/False, and Short Answer question types.
+For MCQ: provide at least 3-4 options with exactly one correct answer.
+For True/False: represent as MCQ with exactly 2 options (True and False).
+Include context field for tables, diagrams, formulas referenced in questions."""
+
+            # Decode conversation history
+            try:
+                conversation_history = json.loads(conversation_history_str)
+            except Exception:
+                conversation_history = []
+
+            # Format conversation history for context
+            history_prompt = ""
+            if conversation_history:
+                history_prompt = "Here is the conversation history so far for reference:\n"
+                for msg in conversation_history:
+                    # Ignore the initial empty state message
+                    if msg.get("content") and "Start a conversation" not in msg.get("content"):
+                        role = "User" if msg.get("type") == "user" else "Assistant"
+                        history_prompt += f"{role}: {msg.get('content')}\n"
+                history_prompt += "\n"
+
+            # Combine system prompt with user instruction and history
+            full_prompt = f"{system_prompt}\n\n{history_prompt}User instruction: {instruction}"
+
+            from services.gemini_extractor import extract_questions_from_file, generate_questions_from_prompt
+
+            all_questions = []
+            model_name = None
+            error = None
+
+            if files:
+                # Save files to temporary files
+                temp_files = []
+                for file in files:
+                    filename = file.filename or ''
+                    suffix = ''
+                    if '.' in filename:
+                        suffix = '.' + filename.rsplit('.', 1)[1].lower()
+                    tmp = tempfile.NamedTemporaryFile(delete=False, suffix=suffix)
+                    file.save(tmp.name)
+                    tmp.close()
+                    temp_files.append(tmp.name)
+
+                for tmp_file in temp_files:
+                    questions, err, model = extract_questions_from_file(
+                        tmp_file,
+                        custom_prompt=full_prompt,
+                        progress_callback=None  # No streaming for chat interface
+                    )
+                    if err:
+                        error = err
+                        break
+                    if questions:
+                        all_questions.extend(questions)
+                    model_name = model
+
+                # Clean up temporary files
+                for tmp_file in temp_files:
+                    try:
+                        os.unlink(tmp_file)
+                    except OSError:
+                        pass
+            else:
+                # Text-only generation if no files were uploaded
+                questions, err, model = generate_questions_from_prompt(
+                    full_prompt,
+                    progress_callback=None
+                )
+                if err:
+                    error = err
+                if questions:
+                    all_questions.extend(questions)
+                model_name = model
+
+            if error:
+                return jsonify({"success": False, "error": error}), 500
+
+            if not all_questions:
+                return jsonify({"success": False, "error": "No questions generated"}), 400
+
+            return jsonify({
+                "success": True,
+                "message": f"Successfully generated {len(all_questions)} question(s)",
+                "questions": all_questions,
+                "model_used": model_name
+            })
+
+        except Exception as e:
+            return jsonify({"success": False, "error": str(e)}), 500
+
+
+    @app.route("/staff/create_questions_from_json", methods=["POST"])
+    @staff_required
+    def staff_create_questions_from_json():
+        """Create questions from a JSON payload (used after AI extraction review).
+        Expects JSON: { subject_id, class_room_id, term_id, exam_type_id, questions: [...] }
+        """
+        try:
+            data = request.get_json()
+            if not data:
+                return jsonify({"success": False, "message": "No data provided"}), 400
+
+            current_user = User.query.get(session["user_id"]) if session.get("user_id") else None
+            if not current_user:
+                return jsonify({"success": False, "message": "Unauthorized access"}), 403
+
+            subject_id = data.get('subject_id')
+            class_room_id = data.get('class_room_id')
+            term_id = data.get('term_id')
+            exam_type_id = data.get('exam_type_id')
+            questions = data.get('questions', [])
+
+            if not subject_id or not class_room_id or not term_id or not exam_type_id:
+                return jsonify({"success": False, "message": "Subject, Class, Term, and Exam Type are required"}), 400
+
+            from models.associations import teacher_subject
+            assignment = (
+                db.session.query(teacher_subject)
+                .filter_by(teacher_id=current_user.id, subject_id=subject_id, class_room_id=class_room_id)
+                .first()
+            )
+            if not assignment:
+                return jsonify({"success": False, "message": "You are not assigned to this subject-class combination"}), 403
+
+            from models.question import Question, Option
+            from models.school_term import SchoolTerm
+
+            created_questions = []
+            errors = []
+
+            for i, question_data in enumerate(questions, 1):
+                try:
+                    question_text = question_data.get('question_text', '').strip()
+                    question_type = question_data.get('question_type', '').strip().lower()
+                    options_data = question_data.get('options', [])
+                    correct_answer = question_data.get('correct_answer', '')
+
+                    if not question_text:
+                        errors.append(f"Question {i}: Question text is required")
+                        continue
+
+                    # Infer type if omitted; default to MCQ for questions with options.
+                    if not question_type:
+                        if options_data:
+                            question_type = 'mcq'
+                        elif correct_answer:
+                            question_type = 'short_answer'
+                        else:
+                            errors.append(f"Question {i}: Question type is required")
+                            continue
+
+                    if question_type == 'true_false':
+                        question_type = 'mcq'
+
+                    valid_types = ["mcq", "short_answer"]
+                    if question_type not in valid_types:
+                        errors.append(f"Question {i}: Invalid question type '{question_type}'")
+                        continue
+
+                    if question_type == "mcq":
+                        if not options_data or len(options_data) == 0:
+                            errors.append(f"Question {i}: Options are required for MCQ questions")
+                            continue
+                        correct_options = [opt for opt in options_data if opt.get('is_correct', False)]
+                        if not correct_options:
+                            errors.append(f"Question {i}: At least one correct option is required")
+                            continue
+
+                    new_question = Question()
+                    new_question.question_text = question_text
+                    new_question.question_type = question_type
+                    new_question.subject_id = subject_id
+                    new_question.teacher_id = current_user.id
+                    new_question.class_room_id = class_room_id
+                    new_question.term_id = term_id
+                    new_question.exam_type_id = exam_type_id
+                    new_question.has_math = question_data.get('has_math', False)
+                    new_question.question_image = question_data.get('question_image')
+
+                    if question_type == 'short_answer':
+                        new_question.correct_answer = correct_answer
+
+                    db.session.add(new_question)
+                    db.session.flush()
+
+                    if question_type == "mcq":
+                        for j, option_data in enumerate(options_data):
+                            option_text = option_data.get('text', '').strip()
+                            is_correct = option_data.get('is_correct', False)
+                            if option_text:
+                                opt = Option()
+                                opt.text = option_text
+                                opt.is_correct = is_correct
+                                opt.order = j
+                                opt.question_id = new_question.id
+                                opt.has_math = option_data.get('has_math', False)
+                                opt.option_image = option_data.get('option_image')
+                                db.session.add(opt)
+
+                    db.session.commit()
+                    created_questions.append(new_question.id)
+
+                except Exception as e:
+                    db.session.rollback()
+                    errors.append(f"Question {i}: Error creating question - {str(e)}")
+                    continue
+
+            response_data = {
+                'success': True,
+                'message': f"Successfully created {len(created_questions)} questions",
+                'created_count': len(created_questions),
+                'error_count': len(errors)
+            }
+            if errors:
+                response_data['message'] += f" with {len(errors)} errors"
+                response_data['errors'] = errors
+
+            return jsonify(response_data), 200
+
+        except Exception as e:
+            db.session.rollback()
+            import traceback
+            traceback.print_exc()
+            return jsonify({'success': False, 'message': str(e)}), 500
 
     @app.route("/staff/profile/<user_id>")
     @staff_required

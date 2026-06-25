@@ -517,6 +517,11 @@ document.addEventListener("DOMContentLoaded", function () {
               if (el) el.checked = !!p.is_active;
               break;
             }
+            case "demo_question_bank": {
+              const el = document.getElementById("demo-test-toggle");
+              if (el) el.checked = !!p.is_active;
+              break;
+            }
             default:
               break;
           }
@@ -564,6 +569,7 @@ document.addEventListener("DOMContentLoaded", function () {
       { id: "student-view-dashboard", name: "students_can_view_dashboard" },
       { id: "teacher-view-dashboard", name: "teachers_can_view_dashboard" },
       { id: "staff-view-dashboard", name: "staff_can_view_dashboard" },
+      { id: "demo-test-toggle", name: "demo_question_bank" },
     ];
 
     mapping.forEach((m) => {

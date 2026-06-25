@@ -44,7 +44,6 @@ def create_test_grades():
             # print("No subjects found in database")
             return
             
-        # print(f"Subject: {subject.subject_name}")
         
         # Get assessment types
         assessment_types = AssessmentType.query.filter_by(is_active=True).all()
@@ -54,7 +53,7 @@ def create_test_grades():
             
         # print("Assessment types:")
         for at in assessment_types:
-            # print(f"  - {at.code}: {at.name} (max: {at.max_score})")
+            print(f"  - {at.code}: {at.name} (max: {at.max_score})")
         
         # Create test grades for this student
         grades_created = 0
