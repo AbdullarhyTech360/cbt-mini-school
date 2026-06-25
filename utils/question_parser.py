@@ -42,16 +42,25 @@ def parse_json_questions(file_content):
             try:
                 question_data = {
                     "question_text": q.get("question_text", "").strip(),
-                    "question_type": q.get("question_type", "mcq").lower(),
+                    "question_type": (q.get("question_type", "") or "").strip().lower(),
                 }
-                
+
                 if not question_data["question_text"]:
                     continue
-                
+
+                if not question_data["question_type"]:
+                    if q.get("options"):
+                        question_data["question_type"] = "mcq"
+                    elif q.get("correct_answer"):
+                        question_data["question_type"] = "short_answer"
+                    else:
+                        question_data["question_type"] = "mcq"
+
+                if question_data["question_type"] == "true_false":
+                    question_data["question_type"] = "mcq"
+
                 # Handle different question types
-                if question_data["question_type"] in ["mcq", "true_false"]:
-                    options = q.get("options", [])
-                    answer_index = q.get("answer", 0)
+                if question_data["question_type"] == "mcq":
                     
                     if not options:
                         continue
@@ -97,16 +106,25 @@ def parse_csv_questions(file_content):
             try:
                 question_data = {
                     "question_text": row.get("question_text", "").strip(),
-                    "question_type": row.get("question_type", "mcq").lower().strip(),
+                    "question_type": (row.get("question_type", "") or "").lower().strip(),
                 }
-                
+
                 if not question_data["question_text"]:
                     continue
-                
+
+                if not question_data["question_type"]:
+                    if row.get("options"):
+                        question_data["question_type"] = "mcq"
+                    elif row.get("correct_answer"):
+                        question_data["question_type"] = "short_answer"
+                    else:
+                        question_data["question_type"] = "mcq"
+
+                if question_data["question_type"] == "true_false":
+                    question_data["question_type"] = "mcq"
+
                 # Handle different question types
-                if question_data["question_type"] in ["mcq", "true_false"]:
-                    options_str = row.get("options", "[]").strip()
-                    correct_answer_str = row.get("correct_answer", "0").strip()
+                if question_data["question_type"] == "mcq":
                     
                     # Remove quotes if present
                     if correct_answer_str.startswith('"') and correct_answer_str.endswith('"'):

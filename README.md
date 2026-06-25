@@ -36,8 +36,6 @@ A comprehensive Computer-Based Testing platform for educational institutions wit
 - Flask web framework
 - SQLAlchemy ORM
 - SQLite database (with option to switch to other databases)
-- Celery for background tasks
-- Redis for caching and session storage
 
 ### Frontend
 - HTML5, CSS3, JavaScript ES6+
@@ -56,7 +54,6 @@ A comprehensive Computer-Based Testing platform for educational institutions wit
 
 - Python 3.10 or higher
 - Node.js 18+ and npm
-- Redis server (for production) or fakeredis (for development)
 - Git
 
 ## Installation
@@ -82,7 +79,7 @@ A comprehensive Computer-Based Testing platform for educational institutions wit
    ```
 
 4. **Setup environment**
-   Create a `.env` file in the project root (optional, as the project uses default development settings)
+   Configure any required environment variables before running the app.
 
 5. **Initialize the database**
    ```bash
@@ -104,7 +101,7 @@ For production deployment, make sure to:
 - Change the `SECRET_KEY` to a strong, random value
 - Configure a production database (PostgreSQL, MySQL, etc.)
 - Set `SESSION_COOKIE_SECURE = True` when using HTTPS
-- Configure proper Redis connection
+- Configure production-specific environment settings
 
 ## Usage
 
@@ -194,7 +191,6 @@ cbt-mini-school/
 ├── test/                # Test files
 ├── utils/               # Utility functions
 ├── app.py              # Main Flask application
-├── celery_app.py       # Celery configuration
 ├── config.py           # Configuration settings
 ├── package.json        # Node.js dependencies
 ├── pyproject.toml      # Python dependencies

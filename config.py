@@ -2,12 +2,14 @@ import os
 from datetime import timedelta
 
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
+INSTANCE_DIR = os.path.join(BASE_DIR, "instance")
+os.makedirs(INSTANCE_DIR, exist_ok=True)
 
 
 class Config:
     SECRET_KEY = "dev-secret-key-change-in-production"  # Proper secret key for sessions
     SQLALCHEMY_DATABASE_URI = "sqlite:///" + os.path.join(
-        BASE_DIR, "instance", "users.db"
+        INSTANCE_DIR, "users.db"
     )
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
@@ -26,3 +28,6 @@ class Config:
     SCHOOL_LOGO_FOLDER = os.path.join(UPLOAD_FOLDER, "school_logos")
     MAX_CONTENT_LENGTH = 2 * 1024 * 1024  # 2MB max file size
     ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "gif", "webp"}
+
+    # Auto-initialization Configuration
+    AUTO_INITIALIZE_DATA = os.environ.get("AUTO_INITIALIZE_DATA", "true").lower() == "true"

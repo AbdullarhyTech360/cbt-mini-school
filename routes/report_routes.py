@@ -9,6 +9,8 @@ from models.user import User
 from services.report_generator import ReportGenerator
 from functools import wraps
 import io
+import contextlib
+import importlib
 from datetime import datetime, date
 # Add GTK3 to PATH for Windows if present
 
@@ -24,10 +26,11 @@ if os.name == 'nt':
             os.environ['PATH'] += os.pathsep + path
 
 try:
+    with contextlib.redirect_stderr(io.StringIO()):
+        _weasyprint = importlib.import_module('weasyprint')
     from weasyprint import HTML
     WEASYPRINT_AVAILABLE = True
-except (ImportError, OSError) as e:
-    # print(f"WeasyPrint not available: {e}")
+except (ImportError, OSError):
     WEASYPRINT_AVAILABLE = False
 
 try:

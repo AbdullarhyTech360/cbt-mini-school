@@ -21,19 +21,7 @@ from routes.staff_routes import staff_routes
 from routes.student_routes import student_route
 from routes.session_monitor_routes import session_monitor_routes
 
-# Conditionally import report routes and initialize Celery based on availability
-use_fakeredis = os.environ.get('USE_FAKEREDIS', '').lower() == 'true'
-
-if use_fakeredis:
-    # Use fakeredis for development
-    try:
-        import fakeredis
-        # Set up fakeredis
-        os.environ.setdefault('REDIS_URL', 'redis://localhost:6379/0')
-        # We'll initialize the actual fake Redis server when needed
-    except ImportError:
-        pass
-
+# Conditionally import report routes based on availability
 try:
     from routes.report_routes import report_bp
 except (ImportError, OSError) as e:
@@ -49,6 +37,9 @@ app.config.from_object(Config)
 # Explicitly set session configuration
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=1)
 app.config['SESSION_REFRESH_EACH_REQUEST'] = True
+
+# Increase max content length for file uploads (100MB)
+app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024
 
 db.init_app(app)
 bcrypt.init_app(app)
@@ -145,13 +136,41 @@ if report_bp:
 # Initialize the database
 with app.app_context():
     db.create_all()
-    # print("=" * 80)
-    # print("DATABASE INITIALIZED - READY TO SERVE")
-    # print("-" * 80)
-    # print("To create default data (school, terms, assessments, etc.), run:")
-    # print("  python -c \"from app import app; from utils.initialize_defaults import initialize_default_data; app.app_context().push(); initialize_default_data()\"")
-    # print("=" * 80)
-    # print()
+    
+    # Auto-initialize default data on first startup if enabled
+    if app.config.get('AUTO_INITIALIZE_DATA', True):
+        instance_dir = os.path.join(os.path.dirname(__file__), "instance")
+        flag_file = os.path.join(instance_dir, ".initialized")
+        
+        if not os.path.exists(flag_file):
+            try:
+                print("=" * 80)
+                print("FIRST TIME STARTUP - INITIALIZING DEFAULT DATA...")
+                print("=" * 80)
+                from initialize_all_data import main as initialize_main
+                initialize_main()
+                print("=" * 80)
+                print("✅ DEFAULT DATA INITIALIZATION COMPLETE!")
+                print("=" * 80)
+                print("\nDefault Login Credentials:")
+                print("\nAdmin Account:")
+                print("  Username: admin")
+                print("  Password: aaaa")
+                print("\nTeacher Accounts:")
+                print("  Username: teacher1, Password: teacher123")
+                print("  Username: teacher2, Password: teacher123")
+                print("\nStudent Accounts:")
+                print("  Username: student1, Password: student123")
+                print("  Username: student2, Password: student123")
+                print("  Username: student3, Password: student123")
+                print("=" * 80)
+            except Exception as e:
+                print(f"⚠️  Error during data initialization: {e}")
+                print("Continuing with app startup...")
+        else:
+            print("✓ App already initialized - skipping default data creation")
+    else:
+        print("AUTO_INITIALIZE_DATA is disabled - skipping default data creation")
 
 # Root route
 @app.route("/")

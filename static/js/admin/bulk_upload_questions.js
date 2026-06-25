@@ -10,7 +10,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const validateFileBtn = document.getElementById('validateFileBtn');
     const downloadCsvTemplateBtn = document.getElementById('downloadCsvTemplate');
     const downloadJsonTemplateBtn = document.getElementById('downloadJsonTemplate');
-    const filePreviewSection = document.getElementById('filePreviewSection');
+    const filePreviewSection = document.getElementById('bulkFilePreviewSection');
     const previewTableBody = document.getElementById('previewTableBody');
     const closePreviewBtn = document.getElementById('closePreviewBtn');
     const uploadResultsSection = document.getElementById('uploadResultsSection');

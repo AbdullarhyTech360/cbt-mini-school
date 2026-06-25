@@ -865,3 +865,72 @@ def student_route(app):
             "questions": questions_data,
             "total_questions": len(questions_data)
         })
+
+    @app.route('/student/demo_questions/submit', methods=['POST'])
+    def submit_demo_practice():
+        """Submit demo practice answers and calculate score (not saved to database)"""
+        if 'user_id' not in session:
+            return jsonify({"success": False, "message": "Authentication required"}), 401
+
+        current_user = User.query.get(session['user_id'])
+        if not current_user:
+            return jsonify({"success": False, "message": "User not found"}), 404
+
+        # Check if demo practice is enabled
+        from models import is_permission_active
+        demo_enabled = is_permission_active("demo_question_bank")
+
+        if not demo_enabled:
+            return jsonify({"success": False, "message": "Demo practice is disabled"}), 403
+
+        try:
+            data = request.get_json()
+            answers = data.get('answers', {})
+
+            # Get demo question IDs from session
+            question_ids = session.get('demo_questions', [])
+            if not question_ids:
+                return jsonify({"success": False, "message": "No questions found"}), 404
+
+            # Get questions
+            from models.demo_question import DemoQuestion, DemoOption
+            questions = DemoQuestion.query.filter(
+                DemoQuestion.id.in_(question_ids)).all()
+
+            # Calculate score
+            correct_count = 0
+            total_questions = len(questions)
+
+            for question in questions:
+                student_answer = answers.get(question.id)
+
+                if question.question_type == 'short_answer':
+                    # For short answer, check if answer matches (case-insensitive)
+                    if student_answer and student_answer.strip().lower() == question.correct_answer.strip().lower():
+                        correct_count += 1
+                else:
+                    # For MCQ and True/False, check if selected option is correct
+                    if student_answer:
+                        option = DemoOption.query.filter_by(
+                            id=student_answer,
+                            question_id=question.id
+                        ).first()
+                        if option and option.is_correct:
+                            correct_count += 1
+
+            score_percentage = round((correct_count / total_questions) * 100) if total_questions > 0 else 0
+
+            # Clear demo session
+            session.pop('demo_questions', None)
+            session.pop('demo_started', None)
+
+            return jsonify({
+                "success": True,
+                "correct_answers": correct_count,
+                "total_questions": total_questions,
+                "score_percentage": score_percentage
+            })
+
+        except Exception as e:
+            print(f"Error submitting demo practice: {e}")
+            return jsonify({"success": False, "message": "Error processing answers"}), 500

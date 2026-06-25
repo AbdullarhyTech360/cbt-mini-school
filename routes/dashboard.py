@@ -28,17 +28,17 @@ def admin_required(f):
 
 def staff_required(f):
     """Decorator to require staff role for accessing staff routes"""
-
+    print("DEBUG: STAFF_REQUIRED")
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if "user_id" not in session:
             return redirect(url_for("login"))
-
+        
         user = User.query.get(session["user_id"])
-        if not user or user.role != "staff":
-            flash("Access denied. Staff privileges required.", "error")
+        if not user or user.role not in ["staff", "admin"]:
+            flash("Access denied. Staff or admin privileges required.", "error")
             return redirect(url_for("login"))
-
+        
         return f(*args, **kwargs)
 
     return decorated_function
