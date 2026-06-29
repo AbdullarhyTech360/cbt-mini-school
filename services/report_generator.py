@@ -716,7 +716,152 @@ class ReportGenerator:
 
     @staticmethod
     def generate_report_html(report_data):
-        """Generate HTML for a student report card - Modern Single Page Design Optimized for GTK3"""
+        """Generate HTML for a student report card using dynamic layout system or fallback"""
+        from flask import current_app
+        
+        config = report_data.get('config')
+        
+        # Check if config has layout_config
+        if config and config.get('layout_config'):
+            try:
+                return ReportGenerator.generate_report_with_layout(report_data, config['layout_config'])
+            except Exception as e:
+                print(f"Error generating report with layout: {str(e)}")
+                # Fallback to default HTML generation
+                return ReportGenerator._generate_default_html(report_data)
+        else:
+            # Use default hardcoded layout
+            return ReportGenerator._generate_default_html(report_data)
+
+    @staticmethod
+    def generate_report_with_layout(report_data, layout_config):
+        """Generate HTML using dynamic layout configuration and template engine"""
+        from flask import render_template
+        import copy
+
+        template_name = layout_config.get('template', 'modern_portrait')
+        page_settings = layout_config.get('page_settings', {
+            'orientation': 'portrait',
+            'margin': '8mm',
+            'size': 'A4'
+        })
+        sections = layout_config.get('sections', [])
+        custom_css = layout_config.get('custom_css', '')
+
+        # Sort sections by order
+        sections = sorted(sections, key=lambda x: x.get('order', 0))
+
+        # Make a shallow copy so we can resolve image URLs for template rendering
+        template_data = copy.copy(report_data)
+
+        # Deep-copy the nested dicts we'll mutate (student, school)
+        student = dict(report_data.get('student', {}))
+        school = dict(report_data.get('school', {}))
+
+        # Resolve image URLs so templates get proper /uploads/... paths
+        if student.get('image'):
+            student['image'] = ReportGenerator._get_image_url(student['image'])
+        if school.get('logo'):
+            school['logo'] = ReportGenerator._get_image_url(school['logo'])
+
+        template_data = dict(report_data)
+        template_data['student'] = student
+        template_data['school'] = school
+
+        # Render using template
+        try:
+            html = render_template(
+                f'report_layouts/{template_name}.html',
+                report_data=template_data,
+                layout_config=layout_config,
+                page_settings=page_settings,
+                sections=sections,
+                custom_css=custom_css,
+            )
+            return html
+        except Exception as e:
+            print(f"Template rendering error: {str(e)}")
+            import traceback
+            traceback.print_exc()
+            # Fallback to base template with manual rendering
+            return ReportGenerator._render_with_base_template(
+                template_data, layout_config, page_settings, sections, custom_css
+            )
+
+    @staticmethod
+    def _get_sample_report_data():
+        """Generate sample report data for layout preview (no real student needed)"""
+        return {
+            'student': {
+                'id': 'sample',
+                'name': 'SAMPLE STUDENT',
+                'admission_number': 'SMP/001',
+                'image': '',
+                'gender': 'Male',
+                'class_name': 'JSS 1A',
+                'class_id': 'sample'
+            },
+            'school': {
+                'name': 'Sample School International',
+                'logo': '',
+                'address': '123 Education Lane, Sample City',
+                'phone': '+234 123 456 7890',
+                'motto': 'Excellence in Education'
+            },
+            'sections': [],
+            'formatted_sections': 'Nursery, Primary, and Secondary',
+            'term': {
+                'name': 'First Term',
+                'session': '2025/2026',
+                'start_date': '2025-09-01',
+                'end_date': '2025-12-15'
+            },
+            'assessment_types': [
+                {'code': 'ca', 'name': 'CA', 'max_score': 40, 'order': 1},
+                {'code': 'exam', 'name': 'Exam', 'max_score': 60, 'order': 2}
+            ],
+            'scores': {
+                'sub1': {'subject_name': 'Mathematics', 'assessments': {'ca': {'score': 30, 'max_score': 40}, 'exam': {'score': 50, 'max_score': 60}}, 'total': 80, 'max_total': 100},
+                'sub2': {'subject_name': 'English Language', 'assessments': {'ca': {'score': 35, 'max_score': 40}, 'exam': {'score': 55, 'max_score': 60}}, 'total': 90, 'max_total': 100},
+                'sub3': {'subject_name': 'Basic Science', 'assessments': {'ca': {'score': 28, 'max_score': 40}, 'exam': {'score': 42, 'max_score': 60}}, 'total': 70, 'max_total': 100},
+                'sub4': {'subject_name': 'Social Studies', 'assessments': {'ca': {'score': 32, 'max_score': 40}, 'exam': {'score': 48, 'max_score': 60}}, 'total': 80, 'max_total': 100},
+            },
+            'position': 5,
+            'total_students': 30,
+            'overall_total': 320,
+            'overall_max': 400,
+            'config': {
+                'resumption_date': None
+            },
+            'grade_scale': {
+                'grade_ranges': [
+                    {'grade': 'A', 'min_score': 70, 'max_score': 100, 'remark': 'Excellent'},
+                    {'grade': 'B', 'min_score': 60, 'max_score': 69, 'remark': 'Very Good'},
+                    {'grade': 'C', 'min_score': 50, 'max_score': 59, 'remark': 'Good'},
+                    {'grade': 'D', 'min_score': 45, 'max_score': 49, 'remark': 'Fair'},
+                    {'grade': 'E', 'min_score': 40, 'max_score': 44, 'remark': 'Pass'},
+                    {'grade': 'F', 'min_score': 0, 'max_score': 39, 'remark': 'Fail'},
+                ]
+            }
+        }
+
+    @staticmethod
+    def _render_with_base_template(report_data, layout_config, page_settings, sections, custom_css):
+        """Fallback rendering using base template manually"""
+        from flask import render_template
+        
+        return render_template(
+            'report_layouts/base.html',
+            report_data=report_data,
+            layout_config=layout_config,
+            page_settings=page_settings,
+            sections=sections,
+            custom_css=custom_css,
+        )
+
+    @staticmethod
+    def _generate_default_html(report_data):
+        """Generate HTML for a student report card - Modern Single Page Design Optimized for GTK3 (Legacy Fallback)"""
         student = report_data['student']
         school = report_data['school']
         term = report_data['term']

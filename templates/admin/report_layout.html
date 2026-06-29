@@ -1,0 +1,465 @@
+{% extends "admin/base.html" %} {% block title %}Report Layout Designer{%
+endblock %} {% block content %}
+<style>
+    /* Properties panel smooth transitions */
+    #propertiesContent {
+        opacity: 0;
+        transform: translateY(8px);
+        transition:
+            opacity 0.25s ease,
+            transform 0.25s ease;
+    }
+    #propertiesContent.show {
+        opacity: 1;
+        transform: translateY(0);
+    }
+    /* Validation error indicator */
+    .input-invalid {
+        ring: 2px solid #f87171 !important;
+        border-color: #f87171 !important;
+    }
+    /* Section list items active/selected glow */
+    .section-item-selected {
+        box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.3);
+    }
+</style>
+
+<div class="mb-6">
+    <div
+        class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
+    >
+        <div>
+            <h1
+                class="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white mb-2"
+            >
+                Report Layout Designer
+            </h1>
+            <p class="text-gray-600 dark:text-gray-400 text-sm md:text-base">
+                Drag, edit, and style your report card layout in real-time
+            </p>
+        </div>
+        <div class="flex items-center gap-3">
+            <button
+                onclick="ReportLayoutEditor.undo()"
+                class="p-2 text-gray-600 hover:text-primary dark:text-gray-400 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition"
+                title="Undo"
+            >
+                <span class="material-symbols-outlined">undo</span>
+            </button>
+            <button
+                onclick="ReportLayoutEditor.redo()"
+                class="p-2 text-gray-600 hover:text-primary dark:text-gray-400 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition"
+                title="Redo"
+            >
+                <span class="material-symbols-outlined">redo</span>
+            </button>
+            <div class="w-px h-8 bg-gray-200 dark:bg-gray-700"></div>
+            <select
+                id="configSelector"
+                class="px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-white text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
+            >
+                <option value="">Select a Config</option>
+            </select>
+            <div
+                id="draftBadge"
+                class="hidden px-2 py-1 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300 text-xs rounded-full font-medium"
+            >
+                Unsaved Draft
+            </div>
+            <button
+                onclick="ReportLayoutEditor.publishChanges()"
+                class="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-primary to-blue-600 hover:from-primary/90 hover:to-blue-700 text-white rounded-lg shadow-md hover:shadow-lg transition text-sm font-semibold"
+            >
+                <span class="material-symbols-outlined text-lg">publish</span>
+                Publish Changes
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- 3-Column Layout -->
+<div class="flex gap-4 h-[calc(100vh-180px)]">
+    <!-- Left: Component Library + Section List -->
+    <div class="w-64 flex-shrink-0 flex flex-col gap-4 overflow-y-auto">
+        <div
+            class="bg-white dark:bg-gray-800 rounded-xl shadow border border-gray-100 dark:border-gray-700 p-4"
+        >
+            <h3
+                class="text-sm font-bold text-gray-800 dark:text-white mb-3 flex items-center gap-2"
+            >
+                <span class="material-symbols-outlined text-primary text-lg"
+                    >widgets</span
+                >
+                Components
+            </h3>
+            <div class="space-y-2">
+                <button
+                    onclick="ReportLayoutEditor.addElement('text')"
+                    class="w-full flex items-center gap-2 p-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg transition border border-dashed border-gray-200 dark:border-gray-600"
+                >
+                    <span
+                        class="material-symbols-outlined text-base text-gray-400"
+                        >text_fields</span
+                    >
+                    Text Block
+                </button>
+                <button
+                    onclick="ReportLayoutEditor.addElement('image')"
+                    class="w-full flex items-center gap-2 p-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg transition border border-dashed border-gray-200 dark:border-gray-600"
+                >
+                    <span
+                        class="material-symbols-outlined text-base text-gray-400"
+                        >image</span
+                    >
+                    Image
+                </button>
+                <button
+                    onclick="ReportLayoutEditor.addElement('divider')"
+                    class="w-full flex items-center gap-2 p-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg transition border border-dashed border-gray-200 dark:border-gray-600"
+                >
+                    <span
+                        class="material-symbols-outlined text-base text-gray-400"
+                        >horizontal_rule</span
+                    >
+                    Divider
+                </button>
+                <button
+                    onclick="ReportLayoutEditor.addElement('table')"
+                    class="w-full flex items-center gap-2 p-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg transition border border-dashed border-gray-200 dark:border-gray-600"
+                >
+                    <span
+                        class="material-symbols-outlined text-base text-gray-400"
+                        >table</span
+                    >
+                    Data Table
+                </button>
+                <button
+                    onclick="ReportLayoutEditor.addElement('grades')"
+                    class="w-full flex items-center gap-2 p-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg transition border border-dashed border-gray-200 dark:border-gray-600"
+                >
+                    <span
+                        class="material-symbols-outlined text-base text-gray-400"
+                        >table_chart</span
+                    >
+                    Grades Table
+                </button>
+                <button
+                    onclick="ReportLayoutEditor.addElement('custom')"
+                    class="w-full flex items-center gap-2 p-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg transition border border-dashed border-gray-200 dark:border-gray-600"
+                >
+                    <span
+                        class="material-symbols-outlined text-base text-gray-400"
+                        >code</span
+                    >
+                    Custom HTML
+                </button>
+            </div>
+        </div>
+
+        <div
+            class="bg-white dark:bg-gray-800 rounded-xl shadow border border-gray-100 dark:border-gray-700 p-4 flex-1"
+        >
+            <h3
+                class="text-sm font-bold text-gray-800 dark:text-white mb-3 flex items-center gap-2"
+            >
+                <span class="material-symbols-outlined text-primary text-lg"
+                    >reorder</span
+                >
+                Sections
+            </h3>
+            <div id="sectionList" class="space-y-1"></div>
+        </div>
+    </div>
+
+    <!-- Center: Live Preview Canvas -->
+    <div class="flex-1 flex flex-col min-w-0">
+        <div
+            class="bg-white dark:bg-gray-800 rounded-t-xl shadow border border-b-0 border-gray-100 dark:border-gray-700 px-4 py-2 flex items-center gap-4"
+        >
+            <select
+                id="pageOrientation"
+                class="px-2 py-1 rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-white text-xs"
+            >
+                <option value="portrait">Portrait</option>
+                <option value="landscape">Landscape</option>
+            </select>
+            <select
+                id="pageSize"
+                class="px-2 py-1 rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-white text-xs"
+            >
+                <option value="A4">A4</option>
+                <option value="Letter">Letter</option>
+            </select>
+            <select
+                id="pageMargin"
+                class="px-2 py-1 rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-white text-xs"
+            >
+                <option value="5mm">Narrow</option>
+                <option value="8mm" selected>Default</option>
+                <option value="10mm">Normal</option>
+                <option value="15mm">Wide</option>
+            </select>
+            <div class="flex-1"></div>
+            <button
+                onclick="ReportLayoutEditor.zoomIn()"
+                class="p-1 text-gray-500 hover:text-primary"
+            >
+                <span class="material-symbols-outlined text-lg">zoom_in</span>
+            </button>
+            <span id="zoomLevel" class="text-xs text-gray-500 font-mono"
+                >100%</span
+            >
+            <button
+                onclick="ReportLayoutEditor.zoomOut()"
+                class="p-1 text-gray-500 hover:text-primary"
+            >
+                <span class="material-symbols-outlined text-lg">zoom_out</span>
+            </button>
+        </div>
+        <div
+            class="flex-1 bg-gray-100 dark:bg-gray-900 rounded-b-xl shadow border border-t-0 border-gray-100 dark:border-gray-700 overflow-auto p-4 flex items-start justify-center"
+        >
+            <div id="canvasWrapper" class="origin-top transition-transform">
+                <iframe
+                    id="previewFrame"
+                    class="bg-white shadow-lg border border-gray-200"
+                    style="width: 210mm; min-height: 297mm"
+                ></iframe>
+            </div>
+        </div>
+    </div>
+
+    <!-- Right: Properties Panel -->
+    <div class="w-72 flex-shrink-0 overflow-y-auto">
+        <div
+            class="bg-white dark:bg-gray-800 rounded-xl shadow border border-gray-100 dark:border-gray-700"
+        >
+            <div id="propertiesPanel" class="p-4">
+                <h3
+                    class="text-sm font-bold text-gray-800 dark:text-white mb-3 flex items-center gap-2"
+                >
+                    <span class="material-symbols-outlined text-primary text-lg"
+                        >tune</span
+                    >
+                    Properties
+                </h3>
+                <div
+                    id="propertiesEmpty"
+                    class="text-center py-8 text-gray-400 dark:text-gray-500 text-sm"
+                >
+                    Select a section to edit its properties
+                </div>
+                <div
+                    id="propertiesContent"
+                    style="display: none"
+                    class="space-y-3"
+                >
+                    <div>
+                        <label
+                            class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1"
+                            >Section Name</label
+                        >
+                        <input
+                            id="propName"
+                            type="text"
+                            class="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-white text-sm focus:ring-1 focus:ring-primary outline-none"
+                        />
+                    </div>
+                    <label
+                        class="flex items-center p-2 border border-gray-200 dark:border-gray-700 rounded-lg cursor-pointer"
+                    >
+                        <input
+                            type="checkbox"
+                            id="propVisible"
+                            class="sr-only peer"
+                        />
+                        <div
+                            class="relative w-9 h-5 bg-gray-200 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary mr-2"
+                        ></div>
+                        <span class="text-xs text-gray-700 dark:text-gray-300"
+                            >Visible</span
+                        >
+                    </label>
+                    <div>
+                        <label
+                            class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1"
+                            >Background</label
+                        >
+                        <div class="flex items-center gap-2">
+                            <input
+                                type="color"
+                                id="propBgColor"
+                                class="w-7 h-7 rounded cursor-pointer border-0 flex-shrink-0"
+                            />
+                            <input
+                                type="text"
+                                id="propBg"
+                                placeholder="e.g. #fff or linear-gradient(...)"
+                                class="flex-1 px-2 py-1.5 rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-white text-xs focus:ring-1 focus:ring-primary outline-none"
+                            />
+                        </div>
+                    </div>
+                    <div>
+                        <label
+                            class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1"
+                            >Text Color</label
+                        >
+                        <div class="flex items-center gap-2">
+                            <input
+                                type="color"
+                                id="propTextColor"
+                                class="w-7 h-7 rounded cursor-pointer border-0 flex-shrink-0"
+                            />
+                            <input
+                                type="text"
+                                id="propColor"
+                                class="flex-1 px-2 py-1.5 rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-white text-xs focus:ring-1 focus:ring-primary outline-none"
+                            />
+                        </div>
+                    </div>
+                    <div>
+                        <label
+                            class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1"
+                            >Font Size</label
+                        >
+                        <input
+                            type="text"
+                            id="propFontSize"
+                            placeholder="e.g. 7.5pt"
+                            class="w-full px-2 py-1.5 rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-white text-xs focus:ring-1 focus:ring-primary outline-none"
+                        />
+                    </div>
+                    <div>
+                        <label
+                            class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1"
+                            >Padding</label
+                        >
+                        <input
+                            type="text"
+                            id="propPadding"
+                            placeholder="e.g. 10px"
+                            class="w-full px-2 py-1.5 rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-white text-xs focus:ring-1 focus:ring-primary outline-none"
+                        />
+                    </div>
+                    <div>
+                        <label
+                            class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1"
+                            >Border</label
+                        >
+                        <input
+                            type="text"
+                            id="propBorder"
+                            placeholder="e.g. 1px solid #e5e7eb"
+                            class="w-full px-2 py-1.5 rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-white text-xs focus:ring-1 focus:ring-primary outline-none"
+                        />
+                    </div>
+                    <div>
+                        <label
+                            class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1"
+                            >Border Radius</label
+                        >
+                        <input
+                            type="text"
+                            id="propBorderRadius"
+                            placeholder="e.g. 6px"
+                            class="w-full px-2 py-1.5 rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-white text-xs focus:ring-1 focus:ring-primary outline-none"
+                        />
+                    </div>
+                    <div id="propComponents" style="display: none">
+                        <label
+                            class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1"
+                            >Components</label
+                        >
+                        <div id="propComponentsList" class="space-y-1"></div>
+                    </div>
+                    <div id="propColumns" style="display: none">
+                        <label
+                            class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1"
+                            >Table Columns</label
+                        >
+                        <div id="propColumnsList" class="space-y-1"></div>
+                    </div>
+                    <div id="propGradesOptions" style="display: none">
+                        <label
+                            class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1"
+                            >Header Color</label
+                        >
+                        <div class="flex items-center gap-2">
+                            <input
+                                type="color"
+                                id="propHeaderColor"
+                                class="w-7 h-7 rounded cursor-pointer border-0 flex-shrink-0"
+                            />
+                            <input
+                                type="text"
+                                id="propHeaderColorText"
+                                placeholder="#6366f1"
+                                class="flex-1 px-2 py-1.5 rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-white text-xs focus:ring-1 focus:ring-primary outline-none"
+                            />
+                        </div>
+                        <label
+                            class="flex items-center p-2 border border-gray-200 dark:border-gray-700 rounded-lg cursor-pointer mt-2"
+                        >
+                            <input
+                                type="checkbox"
+                                id="propAlternatingRows"
+                                class="sr-only peer"
+                            />
+                            <div
+                                class="relative w-9 h-5 bg-gray-200 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[\u0027\u0027] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary mr-2"
+                            ></div>
+                            <span
+                                class="text-xs text-gray-700 dark:text-gray-300"
+                                >Alternating Row Colors</span
+                            >
+                        </label>
+                    </div>
+                    <div id="propCustomContent" style="display: none">
+                        <label
+                            class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1"
+                            >Content (HTML)</label
+                        >
+                        <textarea
+                            id="propContent"
+                            rows="4"
+                            class="w-full px-2 py-1.5 rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-white text-xs font-mono focus:ring-1 focus:ring-primary outline-none"
+                        ></textarea>
+                    </div>
+                    <div
+                        class="pt-3 border-t border-gray-200 dark:border-gray-700"
+                    >
+                        <button
+                            onclick="ReportLayoutEditor.deleteSelectedSection()"
+                            class="flex items-center gap-1 px-3 py-1.5 bg-red-50 hover:bg-red-100 dark:bg-red-900/20 dark:hover:bg-red-900/40 text-red-600 dark:text-red-400 rounded-lg text-xs font-medium transition w-full justify-center"
+                        >
+                            <span class="material-symbols-outlined text-sm"
+                                >delete</span
+                            >
+                            Remove Section
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="border-t border-gray-200 dark:border-gray-700 p-4">
+                <h3
+                    class="text-sm font-bold text-gray-800 dark:text-white mb-2 flex items-center gap-2"
+                >
+                    <span class="material-symbols-outlined text-primary text-lg"
+                        >code</span
+                    >
+                    Custom CSS
+                </h3>
+                <textarea
+                    id="customCssEditor"
+                    rows="4"
+                    placeholder="/* Custom CSS overrides */"
+                    class="w-full px-2 py-1.5 rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-white text-xs font-mono focus:ring-1 focus:ring-primary outline-none"
+                ></textarea>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="{{ url_for('static', filename='js/admin/report_layout_editor.js') }}"></script>
+{% endblock %}
