@@ -1,0 +1,130 @@
+{% set components = section.components|default(['student_image', 'student_name', 'admission_number', 'class', 'position', 'grade']) %}
+{% set student = report_data.student %}
+{% set layout = section.layout|default('horizontal') %}
+{% set position = report_data.position %}
+{% set total_students = report_data.total_students %}
+{% set overall_percentage = (report_data.overall_total / report_data.overall_max * 100) if report_data.overall_max > 0 else 0 %}
+{% set grade_scale = report_data.grade_scale %}
+
+<div class="student-card" style="display: table; width: 100%; padding: 10px; border-radius: 6px;">
+    {% if layout == 'horizontal' %}
+        <div class="student-icon-cell" style="display: table-cell; width: 80px; vertical-align: middle; text-align: center;">
+            <div class="student-icon" style="width: 70px; height: 70px; border-radius: 10px; display: inline-flex; align-items: center; justify-content: center; border: 3px solid white; box-shadow: 0 2px 5px rgba(99, 102, 241, 0.3);">
+                {% if 'student_image' in components and student.image %}
+                    <img src="{{ student.image }}" style="width: 64px; height: 64px; border-radius: 7px; object-fit: cover;" alt="{{ student.name }}">
+                {% else %}
+                    <div class="student-default" style="width: 64px; height: 64px; background: linear-gradient(135deg, #6366f1, #8b5cf6); border-radius: 7px; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 24px;">
+                        {{ student.name[0] }}
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+        <div class="student-details" style="display: table-cell; vertical-align: middle; padding-left: 15px;">
+            <table class="student-info-table" style="width: 100%; border-collapse: collapse; margin-top: 5px;">
+                {% if 'student_name' in components %}
+                    <tr>
+                        <td class="info-label" style="font-size: 7.5pt; color: #64748b; font-weight: 600; letter-spacing: 0.3px; width: 35%; text-align: right; padding-right: 10px; padding: 4px 10px 4px 0; vertical-align: middle;">Student Name:</td>
+                        <td class="info-value" style="font-size: 9pt; color: #0f172a; font-weight: 700; width: 15%; text-align: left; padding: 4px 10px 4px 0; vertical-align: middle;">{{ student.name }}</td>
+                    </tr>
+                {% endif %}
+                {% if 'admission_number' in components %}
+                    <tr>
+                        <td class="info-label" style="font-size: 7.5pt; color: #64748b; font-weight: 600; letter-spacing: 0.3px; width: 35%; text-align: right; padding-right: 10px; padding: 4px 10px 4px 0; vertical-align: middle;">Admission No:</td>
+                        <td class="info-value" style="font-size: 9pt; color: #0f172a; font-weight: 700; width: 15%; text-align: left; padding: 4px 10px 4px 0; vertical-align: middle;">{{ student.admission_number }}</td>
+                    </tr>
+                {% endif %}
+                {% if 'class' in components %}
+                    <tr>
+                        <td class="info-label" style="font-size: 7.5pt; color: #64748b; font-weight: 600; letter-spacing: 0.3px; width: 35%; text-align: right; padding-right: 10px; padding: 4px 10px 4px 0; vertical-align: middle;">Class:</td>
+                        <td class="info-value" style="font-size: 9pt; color: #0f172a; font-weight: 700; width: 15%; text-align: left; padding: 4px 10px 4px 0; vertical-align: middle;">{{ student.class_name }}</td>
+                    </tr>
+                {% endif %}
+                {% if 'position' in components and position %}
+                    <tr>
+                        <td class="info-label" style="font-size: 7.5pt; color: #64748b; font-weight: 600; letter-spacing: 0.3px; width: 35%; text-align: right; padding-right: 10px; padding: 4px 10px 4px 0; vertical-align: middle;">Position:</td>
+                        <td class="info-value" style="font-size: 9pt; color: #0f172a; font-weight: 700; width: 15%; text-align: left; padding: 4px 10px 4px 0; vertical-align: middle;">{{ position }}/{{ total_students }}</td>
+                    </tr>
+                {% endif %}
+                {% if 'grade' in components %}
+                    <tr>
+                        <td class="info-label" style="font-size: 7.5pt; color: #64748b; font-weight: 600; letter-spacing: 0.3px; width: 35%; text-align: right; padding-right: 10px; padding: 4px 10px 4px 0; vertical-align: middle;">Overall Grade:</td>
+                        <td class="info-value" style="font-size: 9pt; color: #0f172a; font-weight: 700; width: 15%; text-align: left; padding: 4px 10px 4px 0; vertical-align: middle;">
+                            <span class="grade-pill" style="display: inline-block; padding: 2px 8px; border-radius: 10px; font-weight: 700; font-size: 7pt; color: white;">
+                                {% if grade_scale %}
+                                    {% set overall_grade = None %}
+                                    {% for range_item in grade_scale.grade_ranges %}
+                                        {% if range_item.min_score <= overall_percentage <= range_item.max_score %}
+                                            {% set overall_grade = range_item.grade %}
+                                        {% endif %}
+                                    {% endfor %}
+                                    {{ overall_grade|default('N/A') }}
+                                {% else %}
+                                    {% if overall_percentage >= 70 %}A{% elif overall_percentage >= 60 %}B{% elif overall_percentage >= 50 %}C{% elif overall_percentage >= 45 %}D{% elif overall_percentage >= 40 %}E{% else %}F{% endif %}
+                                {% endif %}
+                            </span>
+                        </td>
+                    </tr>
+                {% endif %}
+            </table>
+        </div>
+    {% else %}
+        <!-- Vertical layout -->
+        <div style="display: block; text-align: center;">
+            <div class="student-icon" style="width: 70px; height: 70px; border-radius: 10px; display: inline-flex; align-items: center; justify-content: center; border: 3px solid white; box-shadow: 0 2px 5px rgba(99, 102, 241, 0.3); margin-bottom: 10px;">
+                {% if 'student_image' in components and student.image %}
+                    <img src="{{ student.image }}" style="width: 64px; height: 64px; border-radius: 7px; object-fit: cover;" alt="{{ student.name }}">
+                {% else %}
+                    <div class="student-default" style="width: 64px; height: 64px; background: linear-gradient(135deg, #6366f1, #8b5cf6); border-radius: 7px; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 24px;">
+                        {{ student.name[0] }}
+                    </div>
+                {% endif %}
+            </div>
+            <table class="student-info-table" style="width: 100%; border-collapse: collapse; margin-top: 5px;">
+                {% if 'student_name' in components %}
+                    <tr>
+                        <td class="info-label" style="font-size: 7.5pt; color: #64748b; font-weight: 600; letter-spacing: 0.3px; width: 35%; text-align: right; padding-right: 10px; padding: 4px 10px 4px 0; vertical-align: middle;">Student Name:</td>
+                        <td class="info-value" style="font-size: 9pt; color: #0f172a; font-weight: 700; width: 15%; text-align: left; padding: 4px 10px 4px 0; vertical-align: middle;">{{ student.name }}</td>
+                    </tr>
+                {% endif %}
+                {% if 'admission_number' in components %}
+                    <tr>
+                        <td class="info-label" style="font-size: 7.5pt; color: #64748b; font-weight: 600; letter-spacing: 0.3px; width: 35%; text-align: right; padding-right: 10px; padding: 4px 10px 4px 0; vertical-align: middle;">Admission No:</td>
+                        <td class="info-value" style="font-size: 9pt; color: #0f172a; font-weight: 700; width: 15%; text-align: left; padding: 4px 10px 4px 0; vertical-align: middle;">{{ student.admission_number }}</td>
+                    </tr>
+                {% endif %}
+                {% if 'class' in components %}
+                    <tr>
+                        <td class="info-label" style="font-size: 7.5pt; color: #64748b; font-weight: 600; letter-spacing: 0.3px; width: 35%; text-align: right; padding-right: 10px; padding: 4px 10px 4px 0; vertical-align: middle;">Class:</td>
+                        <td class="info-value" style="font-size: 9pt; color: #0f172a; font-weight: 700; width: 15%; text-align: left; padding: 4px 10px 4px 0; vertical-align: middle;">{{ student.class_name }}</td>
+                    </tr>
+                {% endif %}
+                {% if 'position' in components and position %}
+                    <tr>
+                        <td class="info-label" style="font-size: 7.5pt; color: #64748b; font-weight: 600; letter-spacing: 0.3px; width: 35%; text-align: right; padding-right: 10px; padding: 4px 10px 4px 0; vertical-align: middle;">Position:</td>
+                        <td class="info-value" style="font-size: 9pt; color: #0f172a; font-weight: 700; width: 15%; text-align: left; padding: 4px 10px 4px 0; vertical-align: middle;">{{ position }}/{{ total_students }}</td>
+                    </tr>
+                {% endif %}
+                {% if 'grade' in components %}
+                    <tr>
+                        <td class="info-label" style="font-size: 7.5pt; color: #64748b; font-weight: 600; letter-spacing: 0.3px; width: 35%; text-align: right; padding-right: 10px; padding: 4px 10px 4px 0; vertical-align: middle;">Overall Grade:</td>
+                        <td class="info-value" style="font-size: 9pt; color: #0f172a; font-weight: 700; width: 15%; text-align: left; padding: 4px 10px 4px 0; vertical-align: middle;">
+                            <span class="grade-pill" style="display: inline-block; padding: 2px 8px; border-radius: 10px; font-weight: 700; font-size: 7pt; color: white;">
+                                {% if grade_scale %}
+                                    {% set overall_grade = None %}
+                                    {% for range_item in grade_scale.grade_ranges %}
+                                        {% if range_item.min_score <= overall_percentage <= range_item.max_score %}
+                                            {% set overall_grade = range_item.grade %}
+                                        {% endif %}
+                                    {% endfor %}
+                                    {{ overall_grade|default('N/A') }}
+                                {% else %}
+                                    {% if overall_percentage >= 70 %}A{% elif overall_percentage >= 60 %}B{% elif overall_percentage >= 50 %}C{% elif overall_percentage >= 45 %}D{% elif overall_percentage >= 40 %}E{% else %}F{% endif %}
+                                {% endif %}
+                            </span>
+                        </td>
+                    </tr>
+                {% endif %}
+            </table>
+        </div>
+    {% endif %}
+</div>

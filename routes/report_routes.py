@@ -1,21 +1,22 @@
 """Routes for report generation and management"""
-from flask import Blueprint, render_template, request, jsonify, session, send_file
+
+import importlib
+import io
+import os
+from datetime import date, datetime
+from functools import wraps
+
+from flask import Blueprint, jsonify, render_template, request, send_file, session
+
 from models import db
-from models.report_config import ReportConfig
 from models.assessment_type import AssessmentType
 from models.class_room import ClassRoom
+from models.report_config import ReportConfig
 from models.school_term import SchoolTerm
 from models.user import User
 from services.report_generator import ReportGenerator
-from functools import wraps
-import io
-import contextlib
-import importlib
-from datetime import datetime, date
-# Add GTK3 to PATH for Windows if present
 
-import os
-if os.name == 'nt':
+if os.name == "nt":
     gtk_paths = [
         r"C:\Program Files\GTK3-Runtime Win64\bin",
         r"C:\Program Files (x86)\GTK3-Runtime Win64\bin",
@@ -23,18 +24,42 @@ if os.name == 'nt':
     ]
     for path in gtk_paths:
         if os.path.exists(path):
-            os.environ['PATH'] += os.pathsep + path
+            os.environ["PATH"] += os.pathsep + path
 
+# Suppress WeasyPrint import warnings completely
 try:
-    with contextlib.redirect_stderr(io.StringIO()):
-        _weasyprint = importlib.import_module('weasyprint')
-    from weasyprint import HTML
-    WEASYPRINT_AVAILABLE = True
+    import sys
+    import warnings
+
+    # Capture both stdout and stderr during import to suppress warnings
+    _original_stdout = sys.stdout
+    _original_stderr = sys.stderr
+    _devnull = open(os.devnull, "w")
+    sys.stdout = _devnull
+    sys.stderr = _devnull
+    # Also suppress Python warnings
+    warnings.filterwarnings("ignore", category=ImportWarning)
+    warnings.filterwarnings("ignore", category=UserWarning)
+    try:
+        _weasyprint = importlib.import_module("weasyprint")
+        from weasyprint import HTML
+
+        WEASYPRINT_AVAILABLE = True
+    finally:
+        # Restore stdout/stderr
+        sys.stdout = _original_stdout
+        sys.stderr = _original_stderr
+        _devnull.close()
+        # Keep warnings suppressed for WeasyPrint specifically
+        warnings.filterwarnings(
+            "ignore", message=".*WeasyPrint.*", category=UserWarning
+        )
 except (ImportError, OSError):
     WEASYPRINT_AVAILABLE = False
 
 try:
     from xhtml2pdf import pisa
+
     XHTML2PDF_AVAILABLE = True
 except ImportError:
     # print("xhtml2pdf not available")
@@ -49,6 +74,7 @@ def login_required(f):
         if "user_id" not in session:
             return jsonify({"error": "Unauthorized"}), 401
         return f(*args, **kwargs)
+
     return decorated_function
 
 
@@ -63,6 +89,7 @@ def admin_or_staff_required(f):
             return jsonify({"error": "Forbidden"}), 403
 
         return f(*args, **kwargs)
+
     return decorated_function
 
 
@@ -72,6 +99,14 @@ def report_config_page():
     """Report configuration page"""
     user = User.query.get(session["user_id"])
     return render_template("admin/report_config.html", user=user, current_user=user)
+
+
+@report_bp.route("/layout")
+@admin_or_staff_required
+def report_layout_page():
+    """Report Layout Designer page (standalone WYSIWYG editor)"""
+    user = User.query.get(session["user_id"])
+    return render_template("admin/report_layout.html", user=user, current_user=user)
 
 
 @report_bp.route("/api/configs", methods=["GET"])
@@ -89,11 +124,10 @@ def get_configs():
     configs_list = []
     for config in configs:
         configs_list.append(config.to_dict())
-    
-    return jsonify({
-        "success": True,
-        "configs": [config.to_dict() for config in configs]
-    })
+
+    return jsonify(
+        {"success": True, "configs": [config.to_dict() for config in configs]}
+    )
 
 
 @report_bp.route("/api/configs", methods=["POST"])
@@ -113,17 +147,17 @@ def create_config():
         resumption_date = data.get("resumption_date")
         if resumption_date and isinstance(resumption_date, str):
             try:
-                resumption_date = datetime.strptime(resumption_date, '%Y-%m-%d').date()
+                resumption_date = datetime.strptime(resumption_date, "%Y-%m-%d").date()
             except ValueError:
                 resumption_date = None
-        
+
         config = ReportConfig(
             school_id=school.school_id,
             term_id=data.get("term_id"),
             class_room_id=data.get("class_room_id"),
             config_name=data.get("config_name"),
             resumption_date=resumption_date,
-            is_default=data.get("is_default", False)
+            is_default=data.get("is_default", False),
         )
 
         # Set merge configuration
@@ -138,22 +172,30 @@ def create_config():
         if "active_assessments" in data:
             config.set_active_assessments(data["active_assessments"])
 
+        # Set layout configuration
+        if "layout_config" in data:
+            config.set_layout_config(data["layout_config"])
+
+        # Set custom data fields
+        if "custom_data_fields" in data:
+            config.set_custom_data_fields(data["custom_data_fields"])
+
         # If this is set as default, unset other defaults
         if config.is_default:
             ReportConfig.query.filter_by(
-                school_id=school.school_id,
-                term_id=config.term_id,
-                is_default=True
+                school_id=school.school_id, term_id=config.term_id, is_default=True
             ).update({"is_default": False})
 
         db.session.add(config)
         db.session.commit()
 
-        return jsonify({
-            "success": True,
-            "message": "Report configuration created successfully",
-            "config": config.to_dict()
-        })
+        return jsonify(
+            {
+                "success": True,
+                "message": "Report configuration created successfully",
+                "config": config.to_dict(),
+            }
+        )
 
     except Exception as e:
         db.session.rollback()
@@ -186,7 +228,9 @@ def update_config(config_id):
             resumption_date = data["resumption_date"]
             if resumption_date and isinstance(resumption_date, str):
                 try:
-                    resumption_date = datetime.strptime(resumption_date, '%Y-%m-%d').date()
+                    resumption_date = datetime.strptime(
+                        resumption_date, "%Y-%m-%d"
+                    ).date()
                 except ValueError:
                     resumption_date = None
             config.resumption_date = resumption_date
@@ -203,25 +247,36 @@ def update_config(config_id):
         if "active_assessments" in data:
             config.set_active_assessments(data["active_assessments"])
 
+        # Update layout configuration
+        if "layout_config" in data:
+            config.set_layout_config(data["layout_config"])
+
+        # Update custom data fields
+        if "custom_data_fields" in data:
+            config.set_custom_data_fields(data["custom_data_fields"])
+
         # If this is set as default, unset other defaults
         if config.is_default:
             from models.school import School
+
             school = School.query.first()
             if school:
                 ReportConfig.query.filter(
                     ReportConfig.school_id == school.school_id,
                     ReportConfig.term_id == config.term_id,
                     ReportConfig.config_id != config_id,
-                    ReportConfig.is_default == True
+                    ReportConfig.is_default == True,
                 ).update({"is_default": False})
 
         db.session.commit()
 
-        return jsonify({
-            "success": True,
-            "message": "Report configuration updated successfully",
-            "config": config.to_dict()
-        })
+        return jsonify(
+            {
+                "success": True,
+                "message": "Report configuration updated successfully",
+                "config": config.to_dict(),
+            }
+        )
 
     except Exception as e:
         db.session.rollback()
@@ -241,10 +296,9 @@ def delete_config(config_id):
         db.session.delete(config)
         db.session.commit()
 
-        return jsonify({
-            "success": True,
-            "message": "Report configuration deleted successfully"
-        })
+        return jsonify(
+            {"success": True, "message": "Report configuration deleted successfully"}
+        )
 
     except Exception as e:
         db.session.rollback()
@@ -261,15 +315,13 @@ def get_assessment_types():
     if not school:
         return jsonify({"success": False, "error": "School not found"}), 404
 
-    assessments = AssessmentType.query.filter_by(
-        school_id=school.school_id,
-        is_active=True
-    ).order_by(AssessmentType.order).all()
+    assessments = (
+        AssessmentType.query.filter_by(school_id=school.school_id, is_active=True)
+        .order_by(AssessmentType.order)
+        .all()
+    )
 
-    return jsonify({
-        "success": True,
-        "assessments": [a.to_dict() for a in assessments]
-    })
+    return jsonify({"success": True, "assessments": [a.to_dict() for a in assessments]})
 
 
 @report_bp.route("/api/terms", methods=["GET"])
@@ -282,39 +334,57 @@ def get_terms():
     if not school:
         return jsonify({"success": False, "error": "School not found"}), 404
 
-    terms = SchoolTerm.query.filter_by(
-        school_id=school.school_id
-    ).order_by(SchoolTerm.start_date.desc()).all()
+    terms = (
+        SchoolTerm.query.filter_by(school_id=school.school_id)
+        .order_by(SchoolTerm.start_date.desc())
+        .all()
+    )
 
-    return jsonify({
-        "success": True,
-        "terms": [{
-            "term_id": term.term_id,
-            "term_name": term.term_name,
-            "academic_session": term.academic_session,
-            "start_date": term.start_date.isoformat() if term.start_date else None,
-            "end_date": term.end_date.isoformat() if term.end_date else None,
-            "is_current": term.is_current if hasattr(term, 'is_current') else False
-        } for term in terms]
-    })
+    return jsonify(
+        {
+            "success": True,
+            "terms": [
+                {
+                    "term_id": term.term_id,
+                    "term_name": term.term_name,
+                    "academic_session": term.academic_session,
+                    "start_date": term.start_date.isoformat()
+                    if term.start_date
+                    else None,
+                    "end_date": term.end_date.isoformat() if term.end_date else None,
+                    "is_current": term.is_current
+                    if hasattr(term, "is_current")
+                    else False,
+                }
+                for term in terms
+            ],
+        }
+    )
 
 
 @report_bp.route("/api/classes", methods=["GET"])
 @admin_or_staff_required
 def get_classes():
     """Get all classes for the school"""
-    classes = ClassRoom.query.filter_by(
-        is_active=True
-    ).order_by(ClassRoom.class_room_name).all()
+    classes = (
+        ClassRoom.query.filter_by(is_active=True)
+        .order_by(ClassRoom.class_room_name)
+        .all()
+    )
 
-    return jsonify({
-        "success": True,
-        "classes": [{
-            "class_room_id": cls.class_room_id,
-            "class_name": cls.class_room_name,
-            "class_level": cls.level if hasattr(cls, 'level') else None
-        } for cls in classes]
-    })
+    return jsonify(
+        {
+            "success": True,
+            "classes": [
+                {
+                    "class_room_id": cls.class_room_id,
+                    "class_name": cls.class_room_name,
+                    "class_level": cls.level if hasattr(cls, "level") else None,
+                }
+                for cls in classes
+            ],
+        }
+    )
 
 
 @report_bp.route("/api/students", methods=["GET"])
@@ -328,28 +398,27 @@ def get_students():
 
     from models.student import Student
 
-    students = User.query.filter_by(
-        class_room_id=class_id,
-        role="student",
-        is_active=True
-    ).order_by(User.first_name, User.last_name).all()
+    students = (
+        User.query.filter_by(class_room_id=class_id, role="student", is_active=True)
+        .order_by(User.first_name, User.last_name)
+        .all()
+    )
 
     student_data = []
     for user in students:
         student = Student.query.filter_by(user_id=user.id).first()
-        student_data.append({
-            "id": user.id,
-            "first_name": user.first_name,
-            "last_name": user.last_name,
-            "email": user.email,
-            "profile_picture": user.image,  # Fixed: use 'image' field
-            "admission_number": student.admission_number if student else None
-        })
+        student_data.append(
+            {
+                "id": user.id,
+                "first_name": user.first_name,
+                "last_name": user.last_name,
+                "email": user.email,
+                "profile_picture": user.image,  # Fixed: use 'image' field
+                "admission_number": student.admission_number if student else None,
+            }
+        )
 
-    return jsonify({
-        "success": True,
-        "students": student_data
-    })
+    return jsonify({"success": True, "students": student_data})
 
 
 @report_bp.route("/generate")
@@ -383,25 +452,20 @@ def preview_report():
             #     # print(f"[DEBUG] Config display_settings: {config.get_display_settings()}")
 
         if not all([student_id, term_id, class_room_id]):
-            return jsonify({
-                "success": False,
-                "error": "Missing required parameters"
-            }), 400
+            return jsonify(
+                {"success": False, "error": "Missing required parameters"}
+            ), 400
 
         report_data = ReportGenerator.get_student_scores(
             student_id, term_id, class_room_id, config_id
         )
 
         if not report_data:
-            return jsonify({
-                "success": False,
-                "error": "Could not generate report data"
-            }), 404
+            return jsonify(
+                {"success": False, "error": "Could not generate report data"}
+            ), 404
 
-        return jsonify({
-            "success": True,
-            "report": report_data
-        })
+        return jsonify({"success": True, "report": report_data})
 
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
@@ -418,19 +482,15 @@ def preview_class_reports():
         config_id = data.get("config_id")
 
         if not all([class_room_id, term_id]):
-            return jsonify({
-                "success": False,
-                "error": "Missing required parameters"
-            }), 400
+            return jsonify(
+                {"success": False, "error": "Missing required parameters"}
+            ), 400
 
         reports = ReportGenerator.get_class_report_data(
             class_room_id, term_id, config_id
         )
 
-        return jsonify({
-            "success": True,
-            "reports": reports
-        })
+        return jsonify({"success": True, "reports": reports})
 
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
@@ -446,7 +506,12 @@ def preview_student_report(student_id):
     if user.role == "student" and user.id != student_id:
         return "Unauthorized", 403
 
-    return render_template("reports/improved_preview.html", user=user, current_user=user, student_id=student_id)
+    return render_template(
+        "reports/improved_preview.html",
+        user=user,
+        current_user=user,
+        student_id=student_id,
+    )
 
 
 @report_bp.route("/improved-preview/<student_id>")
@@ -459,7 +524,12 @@ def improved_preview_student_report(student_id):
     if user.role == "student" and user.id != student_id:
         return "Unauthorized", 403
 
-    return render_template("reports/improved_preview.html", user=user, current_user=user, student_id=student_id)
+    return render_template(
+        "reports/improved_preview.html",
+        user=user,
+        current_user=user,
+        student_id=student_id,
+    )
 
 
 @report_bp.route("/api/student-report/<student_id>")
@@ -468,31 +538,32 @@ def get_student_report(student_id):
     """API endpoint to get student report data"""
     try:
         # Get query parameters
-        term_id = request.args.get('term_id')
-        class_room_id = request.args.get('class_room_id')
-        config_id = request.args.get('config_id')
-        
+        term_id = request.args.get("term_id")
+        class_room_id = request.args.get("class_room_id")
+        config_id = request.args.get("config_id")
+
         # Handle empty string config_id as None
         if config_id == "":
             config_id = None
 
         # Debug logging
         # print(f"DEBUG: API received - student_id: {student_id}, term_id: {term_id}, class_room_id: {class_room_id}, config_id: {config_id}")
-        
+
         # Validate required parameters
         if not all([student_id, term_id, class_room_id]):
-            return jsonify({
-                "success": False,
-                "message": "Missing required parameters: student_id, term_id, and class_room_id are required"
-            }), 400
+            return jsonify(
+                {
+                    "success": False,
+                    "message": "Missing required parameters: student_id, term_id, and class_room_id are required",
+                }
+            ), 400
 
         # Check permissions
         user = User.query.get(session["user_id"])
         if user.role == "student" and user.id != student_id:
-            return jsonify({
-                "success": False,
-                "message": "Unauthorized access to student report"
-            }), 403
+            return jsonify(
+                {"success": False, "message": "Unauthorized access to student report"}
+            ), 403
 
         # Get report data
         report_data = ReportGenerator.get_student_scores(
@@ -500,23 +571,20 @@ def get_student_report(student_id):
         )
 
         if not report_data:
-            return jsonify({
-                "success": False,
-                "message": "Could not generate report data"
-            }), 404
+            return jsonify(
+                {"success": False, "message": "Could not generate report data"}
+            ), 404
 
-        return jsonify({
-            "success": True,
-            "report": report_data
-        })
+        return jsonify({"success": True, "report": report_data})
 
     except Exception as e:
         import traceback
+
         traceback.print_exc()
-        return jsonify({
-            "success": False,
-            "message": f"Error generating report: {str(e)}"
-        }), 500
+        return jsonify(
+            {"success": False, "message": f"Error generating report: {str(e)}"}
+        ), 500
+
 
 @report_bp.route("/api/download-pdf", methods=["POST"])
 @admin_or_staff_required
@@ -529,24 +597,28 @@ def download_single_pdf():
         term_id = data.get("term_id")
         class_room_id = data.get("class_room_id")
         config_id = data.get("config_id")
-        
+
         # print(f"DEBUG: Received data - student_id: {student_id}, term_id: {term_id}, class_room_id: {class_room_id}, config_id: {config_id}")
 
         if not all([student_id, term_id, class_room_id]):
             # print("DEBUG: Missing required parameters")
-            return jsonify({
-                "success": False,
-                "error": "Missing required parameters"
-            }), 400
+            return jsonify(
+                {"success": False, "error": "Missing required parameters"}
+            ), 400
 
         # Create filename
         # Get student name and term name for filename (simplified approach)
-        from models.user import User
         from models.school_term import SchoolTerm
+        from models.user import User
+
         student = User.query.get(student_id)
         term = SchoolTerm.query.get(term_id)
-        student_name = f"{student.first_name}_{student.last_name}".replace(' ', '_') if student else 'Unknown'
-        term_name = term.term_name.replace(' ', '_') if term else 'Unknown'
+        student_name = (
+            f"{student.first_name}_{student.last_name}".replace(" ", "_")
+            if student
+            else "Unknown"
+        )
+        term_name = term.term_name.replace(" ", "_") if term else "Unknown"
         filename = f"Report_{student_name}_{term_name}.pdf"
         # print(f"DEBUG: Generated filename: {filename}")
 
@@ -558,45 +630,54 @@ def download_single_pdf():
         # print(f"DEBUG: Received data from client: {data}")
         if not report_data:
             # print("DEBUG: Could not generate report data")
-            return jsonify({
-                "success": False,
-                "error": "Could not generate report data"
-            }), 404
+            return jsonify(
+                {"success": False, "error": "Could not generate report data"}
+            ), 404
 
         if WEASYPRINT_AVAILABLE:
             # print(f"Generating report using WeasyPrint for {report_data['student']['name']}...")
             # Generate HTML with caching to avoid recomputation
             import time
+
             start_time = time.time()
             # print(f"Generating report for {report_data['student']['name']}...")
-            
+
             html_content = ReportGenerator.generate_report_html(report_data)
             html_time = time.time() - start_time
             # print(f"  HTML generated in {html_time:.2f}s")
-            
+
             # Clear image cache periodically to prevent memory buildup
-            if hasattr(ReportGenerator, '_image_cache') and len(ReportGenerator._image_cache) > 100:
+            if (
+                hasattr(ReportGenerator, "_image_cache")
+                and len(ReportGenerator._image_cache) > 100
+            ):
                 ReportGenerator._image_cache.clear()
-                
+
             # Clear HTML cache periodically to prevent memory buildup
-            if hasattr(ReportGenerator, '_html_cache') and len(ReportGenerator._html_cache) > 50:
+            if (
+                hasattr(ReportGenerator, "_html_cache")
+                and len(ReportGenerator._html_cache) > 50
+            ):
                 ReportGenerator._html_cache.clear()
 
             # Convert to PDF with optimized settings
             pdf_start = time.time()
             # Use optimized WeasyPrint settings for faster rendering
-            from weasyprint import HTML, CSS
+            import queue
+
             # Add timeout to prevent infinite waits (cross-platform approach)
             import threading
-            import queue
-            
+
+            from weasyprint import CSS, HTML
+
             def generate_pdf(q, html_string):
                 try:
                     import time
+
                     pdf_start_time = time.time()
                     # print(f"  Starting WeasyPrint PDF generation...")
                     pdf_bytes = HTML(string=html_string).write_pdf(
-                        optimize_size=('fonts', 'images'),  # Compress fonts & images
+                        optimize_size=("fonts", "images"),  # Compress fonts & images
                         presentational_hints=True,  # Use CSS efficiently
                         uncompressed_pdf=False,  # Compress PDF output
                         # Disable JavaScript for faster rendering (not needed for static reports)
@@ -616,114 +697,129 @@ def download_single_pdf():
                         # Disable PDF forms for faster processing
                         forms=False,
                         # Disable PDF outlines for faster processing
-                        outline=False
+                        outline=False,
                     )
                     pdf_end_time = time.time()
                     # print(f"  WeasyPrint PDF generation completed in {pdf_end_time - pdf_start_time:.2f}s")
-                    q.put(('success', pdf_bytes))
+                    q.put(("success", pdf_bytes))
                 except Exception as e:
-                    q.put(('error', e))
-            
+                    q.put(("error", e))
+
             # Create a queue and thread for PDF generation
             q = queue.Queue()
             t = threading.Thread(target=generate_pdf, args=(q, html_content))
             t.daemon = True
             t.start()
-            
+
             try:
                 # Wait for the result with a timeout of 45 seconds (increased for complex PDFs)
                 result_type, pdf_bytes_or_error = q.get(timeout=45)
-                if result_type == 'error':
+                if result_type == "error":
                     raise pdf_bytes_or_error
                 pdf_bytes = pdf_bytes_or_error
             except queue.Empty:
                 # print("ERROR: PDF generation timed out after 45 seconds")
-                return jsonify({
-                    "success": False,
-                    "error": "PDF generation timed out. Please try again."
-                }), 500
+                return jsonify(
+                    {
+                        "success": False,
+                        "error": "PDF generation timed out. Please try again.",
+                    }
+                ), 500
             pdf_time = time.time() - pdf_start
             total_time = time.time() - start_time
             # print(f"  PDF generated in {pdf_time:.2f}s")
             # print(f"  Total time: {total_time:.2f}s")
-            
+
             # Log performance metrics for monitoring
-            if pdf_time > 10:  # If PDF generation takes more than 10 seconds, log details
+            if (
+                pdf_time > 10
+            ):  # If PDF generation takes more than 10 seconds, log details
                 # print(f"  WARNING: Slow PDF generation detected for {report_data['student']['name']}")
                 # print(f"    HTML size: {len(html_content)} characters")
                 # Count images in HTML
                 import re
-                img_count = len(re.findall(r'<img[^>]+>', html_content))
+
+                img_count = len(re.findall(r"<img[^>]+>", html_content))
                 # print(f"    Images embedded: {img_count}")
 
             return send_file(
                 io.BytesIO(pdf_bytes),
-                mimetype='application/pdf',
+                mimetype="application/pdf",
                 as_attachment=True,
-                download_name=filename
+                download_name=filename,
             )
         elif XHTML2PDF_AVAILABLE:
             # Use simplified HTML for xhtml2pdf with performance optimizations
-            html_content = ReportGenerator.generate_simple_report_html(
-                report_data)
+            html_content = ReportGenerator.generate_simple_report_html(report_data)
 
             # Convert to PDF using xhtml2pdf with optimized settings
             pdf_buffer = io.BytesIO()
             # Optimize xhtml2pdf generation
-            from xhtml2pdf import pisa
+            import queue
+
             # Add timeout to prevent infinite waits (cross-platform approach)
             import threading
-            import queue
-            
+
+            from xhtml2pdf import pisa
+
             def generate_pdf(q, html_string, buffer):
                 try:
                     pisa_status = pisa.CreatePDF(
-                        html_string, 
+                        html_string,
                         dest=buffer,
-                        show_error_as_pdf=True  # Show errors in PDF for debugging
+                        show_error_as_pdf=True,  # Show errors in PDF for debugging
                     )
-                    q.put(('success', pisa_status))
+                    q.put(("success", pisa_status))
                 except Exception as e:
-                    q.put(('error', e))
-            
+                    q.put(("error", e))
+
             # Create a queue and thread for PDF generation
             q = queue.Queue()
-            t = threading.Thread(target=generate_pdf, args=(q, html_content, pdf_buffer))
+            t = threading.Thread(
+                target=generate_pdf, args=(q, html_content, pdf_buffer)
+            )
             t.daemon = True
             t.start()
-            
+
             try:
                 # Wait for the result with a timeout of 30 seconds
                 result_type, pisa_status_or_error = q.get(timeout=30)
-                if result_type == 'error':
+                if result_type == "error":
                     raise pisa_status_or_error
                 pisa_status = pisa_status_or_error
             except queue.Empty:
                 # print("ERROR: PDF generation timed out after 30 seconds")
-                return jsonify({
-                    "success": False,
-                    "error": "PDF generation timed out. Please try again."
-                }), 500
+                return jsonify(
+                    {
+                        "success": False,
+                        "error": "PDF generation timed out. Please try again.",
+                    }
+                ), 500
 
             if pisa_status.err:
-                return jsonify({"success": False, "error": "PDF generation failed"}), 500
+                return jsonify(
+                    {"success": False, "error": "PDF generation failed"}
+                ), 500
 
             pdf_buffer.seek(0)
             return send_file(
                 pdf_buffer,
-                mimetype='application/pdf',
+                mimetype="application/pdf",
                 as_attachment=True,
-                download_name=filename
+                download_name=filename,
             )
         else:
-            return jsonify({
-                "success": False,
-                "error": "PDF generation not available. Install WeasyPrint or xhtml2pdf."
-            }), 500
+            return jsonify(
+                {
+                    "success": False,
+                    "error": "PDF generation not available. Install WeasyPrint or xhtml2pdf.",
+                }
+            ), 500
 
     except Exception as e:
         # print(f"Error generating PDF: {str(e)}")
         import traceback
+
         traceback.print_exc()
         return jsonify({"success": False, "error": str(e)}), 500
 
@@ -739,67 +835,77 @@ def download_class_pdf():
         config_id = data.get("config_id")
 
         if not all([class_room_id, term_id]):
-            return jsonify({
-                "success": False,
-                "error": "Missing required parameters"
-            }), 400
+            return jsonify(
+                {"success": False, "error": "Missing required parameters"}
+            ), 400
 
         # Batch process reports with optimizations
         if WEASYPRINT_AVAILABLE:
             # For WeasyPrint, generate all HTML first, then combine for better performance
             import time
+
             start_time = time.time()
-            
+
             # Get all reports for the class with batch optimization
             reports = ReportGenerator.get_class_report_data(
                 class_room_id, term_id, config_id
             )
 
             if not reports:
-                return jsonify({
-                    "success": False,
-                    "error": "No reports found for this class"
-                }), 404
+                return jsonify(
+                    {"success": False, "error": "No reports found for this class"}
+                ), 404
 
             # Create filename
             class_room = ClassRoom.query.get(class_room_id)
             term = SchoolTerm.query.get(term_id)
-            class_name = class_room.class_room_name.replace(
-                ' ', '_') if class_room else 'Class'
-            term_name = term.term_name.replace(' ', '_') if term else 'Term'
+            class_name = (
+                class_room.class_room_name.replace(" ", "_") if class_room else "Class"
+            )
+            term_name = term.term_name.replace(" ", "_") if term else "Term"
             filename = f"Reports_{class_name}_{term_name}.pdf"
 
             # Generate all HTML content first (batch processing)
             html_parts = []
             for i, report_data in enumerate(reports):
-                student_name = report_data['student']['name']
+                student_name = report_data["student"]["name"]
                 html_content = ReportGenerator.generate_report_html(report_data)
                 html_parts.append(html_content)
-                
+
                 # Clear image cache periodically during bulk operations
-                if hasattr(ReportGenerator, '_image_cache') and len(ReportGenerator._image_cache) > 100:
+                if (
+                    hasattr(ReportGenerator, "_image_cache")
+                    and len(ReportGenerator._image_cache) > 100
+                ):
                     ReportGenerator._image_cache.clear()
-                                
+
                 # Clear HTML cache periodically during bulk operations
-                if hasattr(ReportGenerator, '_html_cache') and len(ReportGenerator._html_cache) > 50:
+                if (
+                    hasattr(ReportGenerator, "_html_cache")
+                    and len(ReportGenerator._html_cache) > 50
+                ):
                     ReportGenerator._html_cache.clear()
 
             # print(f"All HTML generated in {time.time() - start_time:.2f}s")
 
             # Combine with page breaks for single PDF generation
-            combined_html = '<div style="page-break-after: always;"></div>'.join(html_parts)
+            combined_html = '<div style="page-break-after: always;"></div>'.join(
+                html_parts
+            )
 
             # Convert to PDF with optimized settings
             pdf_start = time.time()
-            from weasyprint import HTML
+            import queue
+
             # Add timeout to prevent infinite waits (cross-platform approach)
             import threading
-            import queue
-            
+
+            from weasyprint import HTML
+
             def generate_pdf(q, html_string):
                 try:
                     pdf_bytes = HTML(string=html_string).write_pdf(
-                        optimize_size=('fonts', 'images'),  # Compress fonts & images
+                        optimize_size=("fonts", "images"),  # Compress fonts & images
                         presentational_hints=True,  # Use CSS efficiently
                         uncompressed_pdf=False,  # Compress PDF output
                         # Disable JavaScript for faster rendering (not needed for static reports)
@@ -819,50 +925,55 @@ def download_class_pdf():
                         # Disable PDF forms for faster processing
                         forms=False,
                         # Disable PDF outlines for faster processing
-                        outline=False
+                        outline=False,
                     )
-                    q.put(('success', pdf_bytes))
+                    q.put(("success", pdf_bytes))
                 except Exception as e:
-                    q.put(('error', e))
-            
+                    q.put(("error", e))
+
             # Create a queue and thread for PDF generation
             q = queue.Queue()
             t = threading.Thread(target=generate_pdf, args=(q, combined_html))
             t.daemon = True
             t.start()
-            
+
             try:
                 # Wait for the result with a timeout of 90 seconds (increased for bulk PDFs)
                 result_type, pdf_bytes_or_error = q.get(timeout=90)
-                if result_type == 'error':
+                if result_type == "error":
                     raise pdf_bytes_or_error
                 pdf_bytes = pdf_bytes_or_error
             except queue.Empty:
                 # print("ERROR: Bulk PDF generation timed out after 90 seconds")
-                return jsonify({
-                    "success": False,
-                    "error": "Bulk PDF generation timed out. Please try generating fewer reports at once."
-                }), 500
+                return jsonify(
+                    {
+                        "success": False,
+                        "error": "Bulk PDF generation timed out. Please try generating fewer reports at once.",
+                    }
+                ), 500
             pdf_time = time.time() - pdf_start
             total_time = time.time() - start_time
             # print(f"PDF conversion took {pdf_time:.2f}s")
             # print(f"Total processing time: {total_time:.2f}s")
-            
+
             # Log performance metrics for monitoring
-            if pdf_time > 30:  # If PDF generation takes more than 30 seconds, log details
+            if (
+                pdf_time > 30
+            ):  # If PDF generation takes more than 30 seconds, log details
                 # print(f"  WARNING: Slow PDF generation detected for class report")
                 # print(f"    HTML size: {len(combined_html)} characters")
                 # Count images in HTML
                 import re
-                img_count = len(re.findall(r'<img[^>]+>', combined_html))
+
+                img_count = len(re.findall(r"<img[^>]+>", combined_html))
                 # print(f"    Images embedded: {img_count}")
                 # print(f"    Number of students: {len(reports)}")
 
             return send_file(
                 io.BytesIO(pdf_bytes),
-                mimetype='application/pdf',
+                mimetype="application/pdf",
                 as_attachment=True,
-                download_name=filename
+                download_name=filename,
             )
         elif XHTML2PDF_AVAILABLE:
             # Get all reports for the class
@@ -871,87 +982,98 @@ def download_class_pdf():
             )
 
             if not reports:
-                return jsonify({
-                    "success": False,
-                    "error": "No reports found for this class"
-                }), 404
+                return jsonify(
+                    {"success": False, "error": "No reports found for this class"}
+                ), 404
 
             # Create filename
             class_room = ClassRoom.query.get(class_room_id)
             term = SchoolTerm.query.get(term_id)
-            class_name = class_room.class_room_name.replace(
-                ' ', '_') if class_room else 'Class'
-            term_name = term.term_name.replace(' ', '_') if term else 'Term'
+            class_name = (
+                class_room.class_room_name.replace(" ", "_") if class_room else "Class"
+            )
+            term_name = term.term_name.replace(" ", "_") if term else "Term"
             filename = f"Reports_{class_name}_{term_name}.pdf"
 
             # Generate combined HTML using simplified template with optimizations
             html_parts = []
             for i, report_data in enumerate(reports):
-                student_name = report_data['student']['name']
+                student_name = report_data["student"]["name"]
                 # print(f"DEBUG: Generating simple HTML for student {i+1}/{len(reports)}: {student_name}")
                 html_content = ReportGenerator.generate_simple_report_html(report_data)
                 html_parts.append(html_content)
-                
+
             # Combine with page breaks (xhtml2pdf uses <pdf:nextpage /> or CSS page-break)
             # xhtml2pdf supports standard CSS page-break-after: always
-            combined_html = '<div style="page-break-after: always;"></div>'.join(html_parts)
+            combined_html = '<div style="page-break-after: always;"></div>'.join(
+                html_parts
+            )
 
             # Convert to PDF using xhtml2pdf with optimized settings
             pdf_buffer = io.BytesIO()
-            from xhtml2pdf import pisa
+            import queue
+
             # Add timeout to prevent infinite waits (cross-platform approach)
             import threading
-            import queue
-            
+
+            from xhtml2pdf import pisa
+
             def generate_pdf(q, html_string, buffer):
                 try:
                     pisa_status = pisa.CreatePDF(
-                        html_string, 
-                        dest=buffer,
-                        show_error_as_pdf=True
+                        html_string, dest=buffer, show_error_as_pdf=True
                     )
-                    q.put(('success', pisa_status))
+                    q.put(("success", pisa_status))
                 except Exception as e:
-                    q.put(('error', e))
-            
+                    q.put(("error", e))
+
             # Create a queue and thread for PDF generation
             q = queue.Queue()
-            t = threading.Thread(target=generate_pdf, args=(q, combined_html, pdf_buffer))
+            t = threading.Thread(
+                target=generate_pdf, args=(q, combined_html, pdf_buffer)
+            )
             t.daemon = True
             t.start()
-            
+
             try:
                 # Wait for the result with a timeout of 60 seconds
                 result_type, pisa_status_or_error = q.get(timeout=60)
-                if result_type == 'error':
+                if result_type == "error":
                     raise pisa_status_or_error
                 pisa_status = pisa_status_or_error
             except queue.Empty:
                 # print("ERROR: Bulk PDF generation timed out after 60 seconds")
-                return jsonify({
-                    "success": False,
-                    "error": "Bulk PDF generation timed out. Please try generating fewer reports at once."
-                }), 500
+                return jsonify(
+                    {
+                        "success": False,
+                        "error": "Bulk PDF generation timed out. Please try generating fewer reports at once.",
+                    }
+                ), 500
 
             if pisa_status.err:
-                return jsonify({"success": False, "error": "PDF generation failed"}), 500
+                return jsonify(
+                    {"success": False, "error": "PDF generation failed"}
+                ), 500
 
             pdf_buffer.seek(0)
             return send_file(
                 pdf_buffer,
-                mimetype='application/pdf',
+                mimetype="application/pdf",
                 as_attachment=True,
-                download_name=filename
+                download_name=filename,
             )
         else:
-            return jsonify({
-                "success": False,
-                "error": "PDF generation not available. Install WeasyPrint or xhtml2pdf."
-            }), 500
+            return jsonify(
+                {
+                    "success": False,
+                    "error": "PDF generation not available. Install WeasyPrint or xhtml2pdf.",
+                }
+            ), 500
 
     except Exception as e:
         # Log the full error for debugging
         import traceback
+
         error_msg = f"Error in download_class_pdf: {str(e)}"
         # print(error_msg)
         traceback.print_exc()
@@ -962,29 +1084,28 @@ def download_class_pdf():
 @admin_or_staff_required
 def get_grade_scales():
     """Get all grade scales for the school"""
-    from models.school import School
     from models.grade_scale import GradeScale
+    from models.school import School
 
     school = School.query.first()
     if not school:
         return jsonify({"success": False, "error": "School not found"}), 404
 
-    scales = GradeScale.query.filter_by(
-        school_id=school.school_id
-    ).order_by(GradeScale.name).all()
+    scales = (
+        GradeScale.query.filter_by(school_id=school.school_id)
+        .order_by(GradeScale.name)
+        .all()
+    )
 
-    return jsonify({
-        "success": True,
-        "scales": [scale.to_dict() for scale in scales]
-    })
+    return jsonify({"success": True, "scales": [scale.to_dict() for scale in scales]})
 
 
 @report_bp.route("/api/grade-scales/default", methods=["GET"])
 @admin_or_staff_required
 def get_default_grade_scale():
     """Get the default grade scale for the school"""
-    from models.school import School
     from models.grade_scale import GradeScale
+    from models.school import School
 
     school = School.query.first()
     if not school:
@@ -992,17 +1113,15 @@ def get_default_grade_scale():
 
     # Get the default grade scale
     default_scale = GradeScale.query.filter_by(
-        school_id=school.school_id,
-        is_default=True
+        school_id=school.school_id, is_default=True
     ).first()
 
     if not default_scale:
-        return jsonify({"success": False, "error": "Default grade scale not found"}), 404
+        return jsonify(
+            {"success": False, "error": "Default grade scale not found"}
+        ), 404
 
-    return jsonify({
-        "success": True,
-        "scale": default_scale.to_dict()
-    })
+    return jsonify({"success": True, "scale": default_scale.to_dict()})
 
 
 @report_bp.route("/api/grade-scales", methods=["POST"])
@@ -1010,8 +1129,8 @@ def get_default_grade_scale():
 def create_grade_scale():
     """Create a new grade scale"""
     try:
-        from models.school import School
         from models.grade_scale import GradeScale
+        from models.school import School
 
         data = request.get_json()
         school = School.query.first()
@@ -1024,7 +1143,7 @@ def create_grade_scale():
             name=data.get("name"),
             description=data.get("description"),
             is_active=data.get("is_active", True),
-            is_default=data.get("is_default", False)
+            is_default=data.get("is_default", False),
         )
 
         # Set grade ranges
@@ -1034,18 +1153,19 @@ def create_grade_scale():
         # If this is set as default, unset other defaults
         if scale.is_default:
             GradeScale.query.filter_by(
-                school_id=school.school_id,
-                is_default=True
+                school_id=school.school_id, is_default=True
             ).update({"is_default": False})
 
         db.session.add(scale)
         db.session.commit()
 
-        return jsonify({
-            "success": True,
-            "message": "Grade scale created successfully",
-            "scale": scale.to_dict()
-        })
+        return jsonify(
+            {
+                "success": True,
+                "message": "Grade scale created successfully",
+                "scale": scale.to_dict(),
+            }
+        )
 
     except Exception as e:
         db.session.rollback()
@@ -1082,21 +1202,24 @@ def update_grade_scale(scale_id):
         # If this is set as default, unset other defaults
         if scale.is_default:
             from models.school import School
+
             school = School.query.first()
             if school:
                 GradeScale.query.filter(
                     GradeScale.school_id == school.school_id,
                     GradeScale.scale_id != scale_id,
-                    GradeScale.is_default == True
+                    GradeScale.is_default == True,
                 ).update({"is_default": False})
 
         db.session.commit()
 
-        return jsonify({
-            "success": True,
-            "message": "Grade scale updated successfully",
-            "scale": scale.to_dict()
-        })
+        return jsonify(
+            {
+                "success": True,
+                "message": "Grade scale updated successfully",
+                "scale": scale.to_dict(),
+            }
+        )
 
     except Exception as e:
         db.session.rollback()
@@ -1117,19 +1240,19 @@ def delete_grade_scale(scale_id):
 
         # Prevent deletion of the default scale
         if scale.is_default:
-            return jsonify({"success": False, "error": "Cannot delete the default grade scale"}), 400
+            return jsonify(
+                {"success": False, "error": "Cannot delete the default grade scale"}
+            ), 400
 
         db.session.delete(scale)
         db.session.commit()
 
-        return jsonify({
-            "success": True,
-            "message": "Grade scale deleted successfully"
-        })
+        return jsonify({"success": True, "message": "Grade scale deleted successfully"})
 
     except Exception as e:
         db.session.rollback()
         return jsonify({"success": False, "error": str(e)}), 500
+
 
 @report_bp.route("/grade-scales")
 @admin_or_staff_required
@@ -1137,6 +1260,269 @@ def grade_scales_page():
     """Grade scales management page"""
     user = User.query.get(session["user_id"])
     return render_template("admin/grade_scales.html", user=user, current_user=user)
+
+
+@report_bp.route("/api/configs/preview-layout", methods=["POST"])
+@admin_or_staff_required
+def preview_layout():
+    """Preview a layout configuration with sample or real student data"""
+    try:
+        data = request.get_json()
+        layout_config = data.get("layout_config")
+        config_id = data.get("config_id")
+        student_id = data.get("student_id")
+        term_id = data.get("term_id")
+        class_room_id = data.get("class_room_id")
+
+        if not layout_config:
+            return jsonify(
+                {"success": False, "error": "layout_config is required"}
+            ), 400
+
+        # Use real student data if provided, otherwise use sample data
+        if student_id and term_id and class_room_id:
+            report_data = ReportGenerator.get_student_scores(
+                student_id, term_id, class_room_id, config_id
+            )
+        else:
+            # Generate sample data for preview
+            report_data = ReportGenerator._get_sample_report_data()
+
+        if not report_data:
+            return jsonify(
+                {"success": False, "error": "Could not generate report data"}
+            ), 404
+
+        # Inject the layout_config into the report_data config
+        if not report_data.get("config"):
+            report_data["config"] = {}
+        report_data["config"]["layout_config"] = layout_config
+
+        html_content = ReportGenerator.generate_report_html(report_data)
+
+        return jsonify({"success": True, "html": html_content})
+
+    except Exception as e:
+        import traceback
+
+        traceback.print_exc()
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@report_bp.route("/api/configs/<config_id>/upgrade-layout", methods=["POST"])
+@admin_or_staff_required
+def upgrade_config_layout(config_id):
+    """Upgrade a legacy config (without layout_config) to the new layout system"""
+    try:
+        config = ReportConfig.query.get(config_id)
+        if not config:
+            return jsonify({"success": False, "error": "Configuration not found"}), 404
+
+        if config.get_layout_config():
+            return jsonify(
+                {"success": False, "error": "Configuration already uses layout system"}
+            ), 400
+
+        # Generate default modern_portrait layout based on current display settings
+        display_settings = config.get_display_settings()
+        default_layout = {
+            "template": "modern_portrait",
+            "page_settings": {"orientation": "portrait", "margin": "8mm", "size": "A4"},
+            "sections": [
+                {
+                    "id": "header",
+                    "type": "header",
+                    "visible": True,
+                    "order": 1,
+                    "style": {
+                        "background": "linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)",
+                        "color": "white",
+                        "padding": "10px 15px",
+                        "border_radius": "6px 6px 0 0",
+                    },
+                    "components": [
+                        "school_logo"
+                        if display_settings.get("show_logo", True)
+                        else None,
+                        "school_name",
+                        "school_address",
+                        "report_title",
+                        "term",
+                    ],
+                },
+                {
+                    "id": "student_info",
+                    "type": "student_card",
+                    "visible": True,
+                    "order": 2,
+                    "layout": "horizontal",
+                    "style": {
+                        "background": "linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%)",
+                        "border": "1px solid #bae6fd",
+                        "padding": "10px",
+                    },
+                    "components": [
+                        "student_image"
+                        if display_settings.get("show_student_image", True)
+                        else None,
+                        "student_name",
+                        "admission_number",
+                        "class",
+                        "position"
+                        if display_settings.get("show_position", True)
+                        else None,
+                        "grade",
+                    ],
+                },
+                {
+                    "id": "grades_table",
+                    "type": "grades",
+                    "visible": True,
+                    "order": 3,
+                    "style": {"header_color": "#6366f1", "alternating_rows": True},
+                    "columns": [
+                        "subject",
+                        "assessments",
+                        "total",
+                        "percentage",
+                        "grade",
+                        "remark",
+                    ],
+                },
+                {
+                    "id": "comments",
+                    "type": "comments",
+                    "visible": True,
+                    "order": 4,
+                    "style": {"background": "#f9fafb", "border": "1px solid #e5e7eb"},
+                    "components": [
+                        "class_teacher_comment",
+                        "principal_comment",
+                        "next_term_date",
+                    ],
+                },
+                {
+                    "id": "footer",
+                    "type": "footer",
+                    "visible": True,
+                    "order": 5,
+                    "components": ["signature", "date", "school_stamp"],
+                },
+            ],
+            "custom_css": "",
+        }
+
+        # Filter out None components
+        for section in default_layout["sections"]:
+            if "components" in section:
+                section["components"] = [
+                    c for c in section["components"] if c is not None
+                ]
+
+        config.set_layout_config(default_layout)
+        db.session.commit()
+
+        return jsonify(
+            {
+                "success": True,
+                "message": "Configuration upgraded to new layout system",
+                "layout_config": default_layout,
+            }
+        )
+
+    except Exception as e:
+        db.session.rollback()
+        import traceback
+
+        traceback.print_exc()
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@report_bp.route("/api/configs/<config_id>/custom-fields", methods=["POST"])
+@admin_or_staff_required
+def add_custom_field(config_id):
+    """Add a custom data field to a report configuration"""
+    try:
+        config = ReportConfig.query.get(config_id)
+        if not config:
+            return jsonify({"success": False, "error": "Configuration not found"}), 404
+
+        data = request.get_json()
+        field_name = data.get("field_name")
+        data_type = data.get("data_type", "text")
+        label = data.get("label", field_name)
+        source = data.get("source", "")
+        default_value = data.get("default_value", "")
+
+        if not field_name:
+            return jsonify({"success": False, "error": "field_name is required"}), 400
+
+        custom_fields = config.get_custom_data_fields()
+
+        # Check for duplicate field names
+        if any(f["field_name"] == field_name for f in custom_fields):
+            return jsonify(
+                {"success": False, "error": "Field name already exists"}
+            ), 400
+
+        custom_fields.append(
+            {
+                "field_name": field_name,
+                "data_type": data_type,
+                "label": label,
+                "source": source,
+                "default_value": default_value,
+            }
+        )
+
+        config.set_custom_data_fields(custom_fields)
+        db.session.commit()
+
+        return jsonify(
+            {
+                "success": True,
+                "message": "Custom field added successfully",
+                "custom_data_fields": custom_fields,
+            }
+        )
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@report_bp.route(
+    "/api/configs/<config_id>/custom-fields/<field_name>", methods=["DELETE"]
+)
+@admin_or_staff_required
+def delete_custom_field(config_id, field_name):
+    """Remove a custom data field from a report configuration"""
+    try:
+        config = ReportConfig.query.get(config_id)
+        if not config:
+            return jsonify({"success": False, "error": "Configuration not found"}), 404
+
+        custom_fields = config.get_custom_data_fields()
+        original_count = len(custom_fields)
+        custom_fields = [f for f in custom_fields if f["field_name"] != field_name]
+
+        if len(custom_fields) == original_count:
+            return jsonify({"success": False, "error": "Field not found"}), 404
+
+        config.set_custom_data_fields(custom_fields)
+        db.session.commit()
+
+        return jsonify(
+            {
+                "success": True,
+                "message": "Custom field removed successfully",
+                "custom_data_fields": custom_fields,
+            }
+        )
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"success": False, "error": str(e)}), 500
 
 
 @report_bp.route("/api/broad-sheet", methods=["POST"])
@@ -1147,24 +1533,26 @@ def get_broad_sheet_data():
         data = request.get_json()
         class_room_id = data.get("class_room_id")
         term_id = data.get("term_id")
-        exam_type = data.get("exam_type", "all")  # all, ca, exam, or specific assessment type
+        exam_type = data.get(
+            "exam_type", "all"
+        )  # all, ca, exam, or specific assessment type
         if not all([class_room_id, term_id]):
-            return jsonify({
-                "success": False,
-                "error": "Missing required parameters"
-            }), 400
-        
+            return jsonify(
+                {"success": False, "error": "Missing required parameters"}
+            ), 400
+
         # Use the helper function to get the data
-        broad_sheet_data, metadata = get_broad_sheet_data_logic(class_room_id, term_id, exam_type)
+        broad_sheet_data, metadata = get_broad_sheet_data_logic(
+            class_room_id, term_id, exam_type
+        )
         # print("Broad Sheet Data:", broad_sheet_data)
-        return jsonify({
-            "success": True,
-            "data": broad_sheet_data,
-            "metadata": metadata
-        })
-        
+        return jsonify(
+            {"success": True, "data": broad_sheet_data, "metadata": metadata}
+        )
+
     except Exception as e:
         import traceback
+
         traceback.print_exc()
         return jsonify({"success": False, "error": str(e)}), 500
 
@@ -1174,17 +1562,16 @@ def get_grade_from_score(score, term_id):
     try:
         from models.grade_scale import GradeScale
         from models.school import School
-        
+
         # Get the school's default grade scale
         school = School.query.first()
         if not school:
             return "N/A"
-        
+
         grade_scale = GradeScale.query.filter_by(
-            school_id=school.school_id,
-            is_default=True
+            school_id=school.school_id, is_default=True
         ).first()
-        
+
         if not grade_scale:
             # If no default grade scale, use a basic scale
             if score >= 70:
@@ -1197,149 +1584,171 @@ def get_grade_from_score(score, term_id):
                 return "D"
             else:
                 return "F"
-        
+
         # Get grade based on the scale's ranges
         grade_ranges = grade_scale.get_grade_ranges()
         for grade_range in grade_ranges:
-            if grade_range['min_score'] <= score <= grade_range['max_score']:
-                return grade_range['grade']
-        
+            if grade_range["min_score"] <= score <= grade_range["max_score"]:
+                return grade_range["grade"]
+
         return "N/A"
-    
+
     except Exception as e:
         # print(f"Error getting grade from score: {str(e)}")
         return "N/A"
 
+
 def get_grade(percentage):
-    if percentage >= 70: return 'A'
-    if percentage >= 60: return 'B'
-    if percentage >= 50: return 'C'
-    if percentage >= 45: return 'D'
-    if percentage >= 40: return 'E'
-    return 'F'
+    if percentage >= 70:
+        return "A"
+    if percentage >= 60:
+        return "B"
+    if percentage >= 50:
+        return "C"
+    if percentage >= 45:
+        return "D"
+    if percentage >= 40:
+        return "E"
+    return "F"
+
+
 def get_broad_sheet_data_logic(class_room_id, term_id, exam_type="all", config_id=None):
     """Core logic for getting broad sheet data, extracted for reuse"""
-    from models.subject import Subject
     from models.assessment_type import AssessmentType
     from models.class_room import ClassRoom
-    from models.school_term import SchoolTerm
-    from models.user import User
     from models.grade import Grade  # Import Grade model
     from models.school import School  # Import School model
-    
+    from models.school_term import SchoolTerm
+    from models.subject import Subject
+    from models.user import User
+
     def format_assessment_name(code):
         """Format assessment code to display name with special handling for common types"""
         # Special handling for common assessment types
         special_cases = {
-            'cbt': 'Computer Based Test',
-            'ca': 'Continuous Assessment',
-            'exam': 'Terminal Examination',
-            'mid_term': 'Mid-Term Exam',
-            'final': 'Final Exam',
-            'quiz': 'Quiz',
-            'assignment': 'Assignment',
-            'project': 'Project',
-            'first_ca': 'First CA',
-            'second_ca': 'Second CA',
-            'third_ca': 'Third CA',
-            'fourth_ca': 'Fourth CA',
+            "cbt": "Computer Based Test",
+            "ca": "Continuous Assessment",
+            "exam": "Terminal Examination",
+            "mid_term": "Mid-Term Exam",
+            "final": "Final Exam",
+            "quiz": "Quiz",
+            "assignment": "Assignment",
+            "project": "Project",
+            "first_ca": "First CA",
+            "second_ca": "Second CA",
+            "third_ca": "Third CA",
+            "fourth_ca": "Fourth CA",
         }
-    
+
         if code.lower() in special_cases:
             return special_cases[code.lower()]
-    
-        return ' '.join(word.capitalize() for word in code.split('_'))
-    
+
+        return " ".join(word.capitalize() for word in code.split("_"))
+
     # Get all students in the class
-    students = User.query.filter_by(
-        class_room_id=class_room_id,
-        role="student",
-        is_active=True
-    ).order_by(User.first_name, User.last_name).all()
-    
+    students = (
+        User.query.filter_by(
+            class_room_id=class_room_id, role="student", is_active=True
+        )
+        .order_by(User.first_name, User.last_name)
+        .all()
+    )
+
     # Get all subjects offered by the class
-    subjects = db.session.query(Subject).join(
-        Subject.classes
-    ).filter(
-        ClassRoom.class_room_id == class_room_id
-    ).order_by(Subject.subject_name).all()
-    
+    subjects = (
+        db.session.query(Subject)
+        .join(Subject.classes)
+        .filter(ClassRoom.class_room_id == class_room_id)
+        .order_by(Subject.subject_name)
+        .all()
+    )
+
     # Get the school to filter assessment types
     school = School.query.first()
-    
+
     # Get all assessment types for this school (these are the possible assessment types)
-    all_assessment_types = AssessmentType.query.filter_by(
-        school_id=school.school_id if school else None,
-        is_active=True
-    ).order_by(AssessmentType.order).all()
+    all_assessment_types = (
+        AssessmentType.query.filter_by(
+            school_id=school.school_id if school else None, is_active=True
+        )
+        .order_by(AssessmentType.order)
+        .all()
+    )
     # # print("ALL ASSESMENTS: ", all_assessment_types)
     # Auto-sync CBT exam records to grades before retrieving
     from utils.grade_sync import sync_all_exam_records
-    sync_all_exam_records(None, class_room_id, term_id)  # Sync all subjects for this class/term
-    
+
+    sync_all_exam_records(
+        None, class_room_id, term_id
+    )  # Sync all subjects for this class/term
+
     # Get all grades for the class and term (instead of exams)
-    grades_query = Grade.query.filter_by(
-        class_room_id=class_room_id,
-        term_id=term_id
-    )
+    grades_query = Grade.query.filter_by(class_room_id=class_room_id, term_id=term_id)
 
     # Filter by assessment type if specified and not "all"
     if exam_type != "all":
         # Handle comma-separated assessment types
-        assessment_types = exam_type.split(',') if ',' in exam_type else [exam_type]
-        
+        assessment_types = exam_type.split(",") if "," in exam_type else [exam_type]
+
         # Build filter conditions for multiple assessment types
         from sqlalchemy import or_
+
         conditions = []
-        
+
         for single_type in assessment_types:
             single_type = single_type.strip().lower()
             if single_type == "ca":
                 conditions.append(Grade.assessment_type.ilike("%ca%"))
             elif single_type == "exam":
                 # Match 'exam', 'terminal examination', 'terminal', 'examination', etc.
-                conditions.append(db.or_(
-                    Grade.assessment_type.ilike("%exam%"),
-                    Grade.assessment_type.ilike("%examination%"),
-                    Grade.assessment_type.ilike("%terminal%")
-                ))
+                conditions.append(
+                    db.or_(
+                        Grade.assessment_type.ilike("%exam%"),
+                        Grade.assessment_type.ilike("%examination%"),
+                        Grade.assessment_type.ilike("%terminal%"),
+                    )
+                )
             else:
                 conditions.append(Grade.assessment_type.ilike(f"%{single_type}%"))
-        
+
         if conditions:
             grades_query = grades_query.filter(or_(*conditions))
         else:
             # If no conditions, return empty result or all results based on requirements
             pass
-        
+
     all_grades = grades_query.all()
     # print("DEBUG GRADES: ", all_grades)
     for grade in all_grades:
         # print(grade.to_dict())
         continue
-    
+
     # Debug: Print all unique assessment types found
     unique_assessment_types = set(grade.assessment_type for grade in all_grades)
     # # print("DEBUG UNIQUE ASSESSMENT TYPES: ", unique_assessment_types)
     # Get all subjects for this class
     from models.associations import class_subject
-    class_subjects = db.session.query(Subject).join(
-        class_subject, class_subject.c.subject_id == Subject.subject_id
-    ).filter(
-        class_subject.c.class_room_id == class_room_id
-    ).all()
-    
+
+    class_subjects = (
+        db.session.query(Subject)
+        .join(class_subject, class_subject.c.subject_id == Subject.subject_id)
+        .filter(class_subject.c.class_room_id == class_room_id)
+        .all()
+    )
+
     # Get active assessment types
-    all_assessment_types = AssessmentType.query.filter_by(
-        school_id=school.school_id,
-        is_active=True
-    ).order_by(AssessmentType.order).all()
-    
+    all_assessment_types = (
+        AssessmentType.query.filter_by(school_id=school.school_id, is_active=True)
+        .order_by(AssessmentType.order)
+        .all()
+    )
+
     # Process Config for Merging
     merge_config = None
     active_assessments = []
-    
+
     from models.report_config import ReportConfig
+
     if config_id:
         config = ReportConfig.query.get(config_id)
         if config:
@@ -1347,38 +1756,38 @@ def get_broad_sheet_data_logic(class_room_id, term_id, exam_type="all", config_i
             active_assessments = config.get_active_assessments()
 
     subjects = [s.subject_name for s in class_subjects]
-    
+
     broad_sheet_data = []
 
     for student in students:
         student_data = {
             "student_id": student.id,
             "student_name": f"{student.first_name} {student.last_name}",
-            "admission_number": student.student.admission_number if student.student else "N/A",
-            "subjects": {}
+            "admission_number": student.student.admission_number
+            if student.student
+            else "N/A",
+            "subjects": {},
         }
-        
+
         # Get all grades for this student
         student_grades = Grade.query.filter_by(
-            student_id=student.id,
-            term_id=term_id,
-            class_room_id=class_room_id
+            student_id=student.id, term_id=term_id, class_room_id=class_room_id
         ).all()
-        
+
         # Organize grades by subject
         subject_grade_map = {}
         for grade in student_grades:
             if grade.subject_id not in subject_grade_map:
                 subject_grade_map[grade.subject_id] = []
             subject_grade_map[grade.subject_id].append(grade)
-            
+
         for subject in class_subjects:
             subject_grades = subject_grade_map.get(subject.subject_id, [])
-            
+
             # Initialize subject scores structure for merging logic
             subject_assessments = {}
             for grade in subject_grades:
-                assess_type = 'cbt' if grade.is_from_cbt else grade.assessment_type
+                assess_type = "cbt" if grade.is_from_cbt else grade.assessment_type
                 subject_assessments[assess_type] = {
                     "score": grade.score,
                     "max_score": grade.max_score,
@@ -1386,117 +1795,141 @@ def get_broad_sheet_data_logic(class_room_id, term_id, exam_type="all", config_i
                     "is_cbt": grade.is_from_cbt,
                     "formatted_type": format_assessment_name(assess_type),
                     "grade_id": grade.grade_id,
-                    "assessment_name": grade.assessment_name
+                    "assessment_name": grade.assessment_name,
                 }
-                
+
             # Apply Merging Logic if Configured
             if merge_config:
                 merged_assessments_data = {}
-                
+
                 # Process merged exams
-                for merge_rule in merge_config.get('merged_exams', []):
-                    merge_name = merge_rule['name']
-                    components = merge_rule['components']
-                    display_as = merge_rule.get('display_as', merge_name)
-                    
+                for merge_rule in merge_config.get("merged_exams", []):
+                    merge_name = merge_rule["name"]
+                    components = merge_rule["components"]
+                    display_as = merge_rule.get("display_as", merge_name)
+
                     total_score = 0
                     total_max = 0
-                    
+
                     for component in components:
                         if component in subject_assessments:
-                            total_score += subject_assessments[component]['score']
-                            total_max += subject_assessments[component]['max_score']
-                            
+                            total_score += subject_assessments[component]["score"]
+                            total_max += subject_assessments[component]["max_score"]
+
                     if total_max > 0:
                         merged_assessments_data[display_as] = {
                             "score": total_score,
                             "max_score": total_max,
                             "assessment_type": display_as,
-                            "is_cbt": False, # Merged scores aren't purely CBT
+                            "is_cbt": False,  # Merged scores aren't purely CBT
                             "formatted_type": format_assessment_name(display_as),
-                            "is_merged": True
+                            "is_merged": True,
                         }
-                        
+
                         # Remove components
                         for component in components:
                             subject_assessments.pop(component, None)
-                            
+
                 # Add merged assessments back
                 subject_assessments.update(merged_assessments_data)
-                
+
                 # Filter by active assessments if configured
                 # Identify display names that should be forced active (merged ones)
-                merged_display_names = [rule.get('display_as', rule['name']) for rule in merge_config.get('merged_exams', [])]
+                merged_display_names = [
+                    rule.get("display_as", rule["name"])
+                    for rule in merge_config.get("merged_exams", [])
+                ]
                 effective_active = set(active_assessments) | set(merged_display_names)
-                
+
                 if active_assessments:
-                     subject_assessments = {
-                        k: v for k, v in subject_assessments.items()
+                    subject_assessments = {
+                        k: v
+                        for k, v in subject_assessments.items()
                         if k in effective_active
                     }
 
             # Convert back to list for broadsheet structure
             subject_scores = []
             for assess_type, data in subject_assessments.items():
-                subject_scores.append({
-                    "exam_id": data.get("grade_id"),
-                    "exam_name": data.get("assessment_name") or data.get("formatted_type", assess_type),
-                    "assessment_type": assess_type,
-                    "formatted_type": data.get("formatted_type", format_assessment_name(assess_type)),
-                    "score": data["score"],
-                    "max_score": data["max_score"],
-                    "percentage": round((data["score"] / data["max_score"]) * 100, 1) if data["max_score"] and data["max_score"] > 0 else 0,
-                    "is_cbt": data.get("is_cbt", False)
-                })
+                subject_scores.append(
+                    {
+                        "exam_id": data.get("grade_id"),
+                        "exam_name": data.get("assessment_name")
+                        or data.get("formatted_type", assess_type),
+                        "assessment_type": assess_type,
+                        "formatted_type": data.get(
+                            "formatted_type", format_assessment_name(assess_type)
+                        ),
+                        "score": data["score"],
+                        "max_score": data["max_score"],
+                        "percentage": round(
+                            (data["score"] / data["max_score"]) * 100, 1
+                        )
+                        if data["max_score"] and data["max_score"] > 0
+                        else 0,
+                        "is_cbt": data.get("is_cbt", False),
+                    }
+                )
 
-            
             # Calculate total and average for the subject
             total_score = sum(item["score"] for item in subject_scores)
             max_possible = sum(item["max_score"] for item in subject_scores)
             subject_total = {
                 "total_score": total_score,
                 "max_possible": max_possible,
-                "percentage": round((total_score / max_possible) * 100, 1) if max_possible and max_possible > 0 else 0,
-                "grade": get_grade((total_score / max_possible) * 100) if max_possible and max_possible > 0 else "N/A",
-                "scores": subject_scores
+                "percentage": round((total_score / max_possible) * 100, 1)
+                if max_possible and max_possible > 0
+                else 0,
+                "grade": get_grade((total_score / max_possible) * 100)
+                if max_possible and max_possible > 0
+                else "N/A",
+                "scores": subject_scores,
             }
-            
+
             student_data["subjects"][subject.subject_name] = subject_total
-        
+
         broad_sheet_data.append(student_data)
     print(broad_sheet_data)
     # Get class room object to access form teacher
     class_room = ClassRoom.query.get(class_room_id)
-    
+
     # Get school information
     from models.school import School
+
     school = School.query.first()
-    
+
     # Get assessment types that exist in the grades for this class/term based on the filter (for metadata)
     # Use the already filtered all_grades from the main logic above
     unique_assessment_types = set()
     for grade in all_grades:
         if grade.is_from_cbt:
-            unique_assessment_types.add('cbt')
+            unique_assessment_types.add("cbt")
         else:
             unique_assessment_types.add(grade.assessment_type)
-    
-    assessment_types_list = list(unique_assessment_types) if unique_assessment_types else []
-    
+
+    assessment_types_list = (
+        list(unique_assessment_types) if unique_assessment_types else []
+    )
+
     # Get assessment type orders from the AssessmentType model
     from models.assessment_type import AssessmentType
+
     # Get school_id through the section relationship
     school_id = class_room.section.school_id if class_room.section else None
     school_assessment_types = AssessmentType.query.filter_by(school_id=school_id).all()
     assessment_type_orders = {at.code: at.order for at in school_assessment_types}
-    
+
     # Get sections for this school
     from models.section import Section
-    all_sections = Section.query.filter_by(
-        school_id=school.school_id if school else None,
-        is_active=True
-    ).order_by(Section.level).all()
-    
+
+    all_sections = (
+        Section.query.filter_by(
+            school_id=school.school_id if school else None, is_active=True
+        )
+        .order_by(Section.level)
+        .all()
+    )
+
     # Group similar sections (matching ReportGenerator)
     grouped_sections = []
     secondary_added = False
@@ -1507,15 +1940,16 @@ def get_broad_sheet_data_logic(class_room_id, term_id, exam_type="all", config_i
                 class SimpleSection:
                     def __init__(self, name):
                         self.name = name
+
                 grouped_sections.append(SimpleSection("Secondary"))
                 secondary_added = True
             continue
         grouped_sections.append(section)
-    
+
     # Format sections with commas and 'and' for display (matching ReportGenerator)
     def format_sections_for_display(sections_list):
         if not sections_list:
-            return ''
+            return ""
         if len(sections_list) == 1:
             return sections_list[0].name
         elif len(sections_list) == 2:
@@ -1525,7 +1959,7 @@ def get_broad_sheet_data_logic(class_room_id, term_id, exam_type="all", config_i
             last = names.pop()
             # Use Oxford comma: include a comma before the 'and' for clarity
             return f"{', '.join(names)}, and {last}"
-    
+
     # Clean school logo path (handle Windows slashes and strip static/)
     logo_path = school.logo if school and school.logo else None
     if logo_path:
@@ -1546,10 +1980,14 @@ def get_broad_sheet_data_logic(class_room_id, term_id, exam_type="all", config_i
         "school_motto": school.motto if school else "N/A",
         "school_phone": school.phone if school else "N/A",
         "formatted_sections": format_sections_for_display(grouped_sections),
-        "form_master": f"{class_room.form_teacher.first_name} {class_room.form_teacher.last_name}" if class_room.form_teacher else "N/A",
-        "academic_session": SchoolTerm.query.get(term_id).academic_session if term_id else "N/A"
+        "form_master": f"{class_room.form_teacher.first_name} {class_room.form_teacher.last_name}"
+        if class_room.form_teacher
+        else "N/A",
+        "academic_session": SchoolTerm.query.get(term_id).academic_session
+        if term_id
+        else "N/A",
     }
-    
+
     return broad_sheet_data, metadata
 
 
@@ -1558,129 +1996,189 @@ def get_broad_sheet_data_logic(class_room_id, term_id, exam_type="all", config_i
 def export_broad_sheet(format):
     """Export broad sheet data in specified format"""
     try:
-        if format.lower() not in ['pdf', 'excel']:
-            return jsonify({"success": False, "error": "Invalid format. Use 'pdf' or 'excel'"}), 400
-        
+        if format.lower() not in ["pdf", "excel"]:
+            return jsonify(
+                {"success": False, "error": "Invalid format. Use 'pdf' or 'excel'"}
+            ), 400
+
         from models.school import School
+
         school = School.query.first()
-        
+
         data = request.json
-        class_room_id = data.get('class_room_id')
-        term_id = data.get('term_id')
-        exam_type = data.get('exam_type', 'all')
+        class_room_id = data.get("class_room_id")
+        term_id = data.get("term_id")
+        exam_type = data.get("exam_type", "all")
         fmt = format.lower()
-        config_id = data.get('config_id')
-        subjects_per_page = data.get('subjects_per_page', 5)  # Default 5 subjects per page
-        students_per_page = data.get('students_per_page', 25) # Default 25 students per page
-        font_size = data.get('font_size', 9) # Default font size 9px
-        
+        config_id = data.get("config_id")
+        subjects_per_page = data.get(
+            "subjects_per_page", 5
+        )  # Default 5 subjects per page
+        students_per_page = data.get(
+            "students_per_page", 25
+        )  # Default 25 students per page
+        font_size = data.get("font_size", 9)  # Default font size 9px
+
         if not class_room_id or not term_id:
             return jsonify({"success": False, "error": "Missing required fields"}), 400
-            
-        print(f"EXPORTING BROAD SHEET: class={class_room_id}, term={term_id}, type={exam_type}, format={fmt}")
-        broad_sheet_data, metadata = get_broad_sheet_data_logic(class_room_id, term_id, exam_type, config_id)
-        
-        if format.lower() == 'pdf':
-            return export_broad_sheet_pdf(broad_sheet_data, metadata, school, subjects_per_page, students_per_page, font_size)
-        elif format.lower() == 'excel':
-            return export_broad_sheet_excel(broad_sheet_data, metadata, school, subjects_per_page, students_per_page)
-            
+
+        print(
+            f"EXPORTING BROAD SHEET: class={class_room_id}, term={term_id}, type={exam_type}, format={fmt}"
+        )
+        broad_sheet_data, metadata = get_broad_sheet_data_logic(
+            class_room_id, term_id, exam_type, config_id
+        )
+
+        if format.lower() == "pdf":
+            return export_broad_sheet_pdf(
+                broad_sheet_data,
+                metadata,
+                school,
+                subjects_per_page,
+                students_per_page,
+                font_size,
+            )
+        elif format.lower() == "excel":
+            return export_broad_sheet_excel(
+                broad_sheet_data, metadata, school, subjects_per_page, students_per_page
+            )
+
     except Exception as e:
         import traceback
+
         traceback.print_exc()
         return jsonify({"success": False, "error": str(e)}), 500
 
 
-def export_broad_sheet_pdf(broad_sheet_data, metadata, school, subjects_per_page=5, students_per_page=25, font_size=9):
+def export_broad_sheet_pdf(
+    broad_sheet_data,
+    metadata,
+    school,
+    subjects_per_page=5,
+    students_per_page=25,
+    font_size=9,
+):
     """Export broad sheet as PDF"""
     try:
-        from weasyprint import HTML
-        import tempfile
         import os
-        
+        import tempfile
+
+        from weasyprint import HTML
+
         # Generate HTML for the broad sheet with pagination
-        html_content = generate_broad_sheet_html(broad_sheet_data, metadata, school, subjects_per_page, students_per_page, font_size)
-        
+        html_content = generate_broad_sheet_html(
+            broad_sheet_data,
+            metadata,
+            school,
+            subjects_per_page,
+            students_per_page,
+            font_size,
+        )
+
         # Convert to PDF
         pdf_bytes = HTML(string=html_content).write_pdf()
-        
+
         # Create filename
         class_name = metadata["class_name"].replace(" ", "_")
         term_name = metadata["term_name"].replace(" ", "_")
         filename = f"Broad_Sheet_{class_name}_{term_name}.pdf"
-        
+
         return send_file(
             io.BytesIO(pdf_bytes),
-            mimetype='application/pdf',
+            mimetype="application/pdf",
             as_attachment=True,
-            download_name=filename
+            download_name=filename,
         )
-    
+
     except Exception as e:
         import traceback
+
         traceback.print_exc()
         return jsonify({"success": False, "error": str(e)}), 500
 
 
-def export_broad_sheet_excel(broad_sheet_data, metadata, school, subjects_per_page=5, students_per_page=25):
+def export_broad_sheet_excel(
+    broad_sheet_data, metadata, school, subjects_per_page=5, students_per_page=25
+):
     """Export broad sheet as Excel (Note: Excel export shows all subjects in one sheet)"""
     try:
         import xlsxwriter
-        
+
         # Create in-memory workbook
         output = io.BytesIO()
-        workbook = xlsxwriter.Workbook(output, {'in_memory': True})
-        worksheet = workbook.add_worksheet('Broad Sheet')
-        
+        workbook = xlsxwriter.Workbook(output, {"in_memory": True})
+        worksheet = workbook.add_worksheet("Broad Sheet")
+
         # Define formats
-        header_format = workbook.add_format({
-            'bold': True,
-            'bg_color': '#D3D3D3',
-            'border': 1,
-            'align': 'center',
-            'valign': 'vcenter'
-        })
-        
-        cell_format = workbook.add_format({
-            'border': 1,
-            'align': 'center',
-            'valign': 'vcenter'
-        })
-        
+        header_format = workbook.add_format(
+            {
+                "bold": True,
+                "bg_color": "#D3D3D3",
+                "border": 1,
+                "align": "center",
+                "valign": "vcenter",
+            }
+        )
+
+        cell_format = workbook.add_format(
+            {"border": 1, "align": "center", "valign": "vcenter"}
+        )
+
         # Write comprehensive header information
-        worksheet.write('A1', 'BROAD SHEET', 
-                       workbook.add_format({'bold': True, 'font_size': 16, 'align': 'center'}))
-        worksheet.write('A2', f'School: {metadata.get("school_name", "N/A")}', 
-                       workbook.add_format({'bold': True, 'align': 'center'}))
-        worksheet.write('A3', f'Address: {metadata.get("school_address", "N/A")}', 
-                       workbook.add_format({'bold': True, 'align': 'center'}))
-        worksheet.write('A4', f'Class: {metadata["class_name"]}', 
-                       workbook.add_format({'bold': True, 'align': 'center'}))
-        worksheet.write('A5', f'Form Master: {metadata.get("form_master", "N/A")}', 
-                       workbook.add_format({'bold': True, 'align': 'center'}))
-        worksheet.write('A6', f'Term: {metadata["term_name"]}', 
-                       workbook.add_format({'bold': True, 'align': 'center'}))
-        worksheet.write('A7', f'Session: {metadata.get("academic_session", "N/A")}', 
-                       workbook.add_format({'bold': True, 'align': 'center'}))
-        
+        worksheet.write(
+            "A1",
+            "BROAD SHEET",
+            workbook.add_format({"bold": True, "font_size": 16, "align": "center"}),
+        )
+        worksheet.write(
+            "A2",
+            f"School: {metadata.get('school_name', 'N/A')}",
+            workbook.add_format({"bold": True, "align": "center"}),
+        )
+        worksheet.write(
+            "A3",
+            f"Address: {metadata.get('school_address', 'N/A')}",
+            workbook.add_format({"bold": True, "align": "center"}),
+        )
+        worksheet.write(
+            "A4",
+            f"Class: {metadata['class_name']}",
+            workbook.add_format({"bold": True, "align": "center"}),
+        )
+        worksheet.write(
+            "A5",
+            f"Form Master: {metadata.get('form_master', 'N/A')}",
+            workbook.add_format({"bold": True, "align": "center"}),
+        )
+        worksheet.write(
+            "A6",
+            f"Term: {metadata['term_name']}",
+            workbook.add_format({"bold": True, "align": "center"}),
+        )
+        worksheet.write(
+            "A7",
+            f"Session: {metadata.get('academic_session', 'N/A')}",
+            workbook.add_format({"bold": True, "align": "center"}),
+        )
+
         # Add some spacing before the table
         row = 8
-        
+
         # Write headers
         col = 0
-        
-        worksheet.write(row, col, 'S/N', header_format)
-        worksheet.write(row, col + 1, 'Admission No.', header_format)
-        worksheet.write(row, col + 2, 'Student Name', header_format)
-        
+
+        worksheet.write(row, col, "S/N", header_format)
+        worksheet.write(row, col + 1, "Admission No.", header_format)
+        worksheet.write(row, col + 2, "Student Name", header_format)
+
         col_offset = 3
-        
+
         # Get all unique subjects
         subjects = set()
         for student in broad_sheet_data:
             subjects.update(student["subjects"].keys())
         subjects = sorted(list(subjects))
-        
+
         # Write subject headers
         current_col = col_offset
         subject_cols = {}
@@ -1688,119 +2186,141 @@ def export_broad_sheet_excel(broad_sheet_data, metadata, school, subjects_per_pa
             subject_cols[subject] = current_col
             worksheet.write(row, current_col, subject, header_format)
             current_col += 1
-        
+
         # Write student data
         row = 4
         for idx, student in enumerate(broad_sheet_data, 1):
             worksheet.write(row, 0, idx, cell_format)
             worksheet.write(row, 1, student["admission_number"], cell_format)
             worksheet.write(row, 2, student["student_name"], cell_format)
-            
+
             # Write subject scores
             for subject, data in student["subjects"].items():
                 if subject in subject_cols:
                     col_pos = subject_cols[subject]
                     # Show total score
-                    score_text = f'{data["total_score"]}/{data["max_possible"]} ({data["percentage"]}%)'
+                    score_text = f"{data['total_score']}/{data['max_possible']} ({data['percentage']}%)"
                     worksheet.write(row, col_pos, score_text, cell_format)
-            
+
             row += 1
-        
+
         workbook.close()
-        
+
         # Create filename
         class_name = metadata["class_name"].replace(" ", "_")
         term_name = metadata["term_name"].replace(" ", "_")
         filename = f"Broad_Sheet_{class_name}_{term_name}.xlsx"
-        
+
         output.seek(0)
         return send_file(
             output,
-            mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             as_attachment=True,
-            download_name=filename
+            download_name=filename,
         )
-    
+
     except Exception as e:
         import traceback
+
         traceback.print_exc()
         return jsonify({"success": False, "error": str(e)}), 500
 
 
-def generate_broad_sheet_html(broad_sheet_data, metadata, school, subjects_per_page=5, students_per_page=25, font_size=9):
+def generate_broad_sheet_html(
+    broad_sheet_data,
+    metadata,
+    school,
+    subjects_per_page=5,
+    students_per_page=25,
+    font_size=9,
+):
     """Generate HTML for broad sheet with subject and student pagination and dynamic font size"""
-    from datetime import datetime
     import math
-    
+    from datetime import datetime
+
     # ... (helper for assessment name formatting) ...
     def format_assess(code):
-        if not code: return ""
+        if not code:
+            return ""
         special_cases = {
-            'cbt': 'CBT',
-            'ca': 'CA',
-            'exam': 'EXAM',
-            'mid_term': 'MID-TERM',
-            'final': 'FINAL',
-            'quiz': 'QUIZ',
-            'assignment': 'ASSIGNMENT',
-            'project': 'PROJECT',
-            'first_ca': '1ST CA',
-            'second_ca': '2ND CA',
-            'third_ca': '3RD CA',
-            'fourth_ca': '4TH CA',
+            "cbt": "CBT",
+            "ca": "CA",
+            "exam": "EXAM",
+            "mid_term": "MID-TERM",
+            "final": "FINAL",
+            "quiz": "QUIZ",
+            "assignment": "ASSIGNMENT",
+            "project": "PROJECT",
+            "first_ca": "1ST CA",
+            "second_ca": "2ND CA",
+            "third_ca": "3RD CA",
+            "fourth_ca": "4TH CA",
         }
         c = code.lower()
         if c in special_cases:
             return special_cases[c]
-        if 'exam' in c: return 'EXAM'
-        if 'ca' in c: return code.upper().replace('_', ' ')
-        return ' '.join(word.capitalize() for word in code.split('_'))
+        if "exam" in c:
+            return "EXAM"
+        if "ca" in c:
+            return code.upper().replace("_", " ")
+        return " ".join(word.capitalize() for word in code.split("_"))
 
     # ... (pagination logic) ...
     subjects_set = set()
     for student in broad_sheet_data:
         subjects_set.update(student["subjects"].keys())
-    
+
     subjects = sorted(list(subjects_set))
-    
-    metadata_class_name = metadata['class_name']
-    school_name = metadata.get('school_name', school.school_name if school else 'N/A')
-    school_address = metadata.get('school_address', 'N/A')
-    form_master = metadata.get('form_master', 'N/A')
-    term_name = metadata['term_name']
-    academic_session = metadata.get('academic_session', 'N/A')
-    datetime_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+
+    metadata_class_name = metadata["class_name"]
+    school_name = metadata.get("school_name", school.school_name if school else "N/A")
+    school_address = metadata.get("school_address", "N/A")
+    form_master = metadata.get("form_master", "N/A")
+    term_name = metadata["term_name"]
+    academic_session = metadata.get("academic_session", "N/A")
+    datetime_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
     # Resolve school logo path to a data URI or safe URL using ReportGenerator helpers
     try:
         from services.report_generator import ReportGenerator
-        logo_src = ''
-        if metadata.get('school_logo'):
+
+        logo_src = ""
+        if metadata.get("school_logo"):
             # Prefer embedding the image as data URI so PDF renderer always finds it
-            logo_src = ReportGenerator._embed_image(metadata.get('school_logo'))
+            logo_src = ReportGenerator._embed_image(metadata.get("school_logo"))
             # If embedding didn't produce a data URI, fall back to URL path
-            if not logo_src.startswith('data:') and not logo_src.startswith('http'):
-                logo_src = '/' + str(metadata.get('school_logo')).lstrip('/')
+            if not logo_src.startswith("data:") and not logo_src.startswith("http"):
+                logo_src = "/" + str(metadata.get("school_logo")).lstrip("/")
         else:
-            logo_src = ''
+            logo_src = ""
     except Exception:
         # Best-effort fallback to previously used path
-        logo_src = '/' + str(metadata.get('school_logo', '')).lstrip('/') if metadata.get('school_logo') else ''
-    
+        logo_src = (
+            "/" + str(metadata.get("school_logo", "")).lstrip("/")
+            if metadata.get("school_logo")
+            else ""
+        )
+
     total_subjects = len(subjects)
     if subjects_per_page == 0 or subjects_per_page >= total_subjects:
         subject_chunks = [subjects]
     else:
-        subject_chunks = [subjects[i:i + subjects_per_page] for i in range(0, total_subjects, subjects_per_page)]
-        
+        subject_chunks = [
+            subjects[i : i + subjects_per_page]
+            for i in range(0, total_subjects, subjects_per_page)
+        ]
+
     total_students = len(broad_sheet_data)
     if students_per_page == 0 or students_per_page >= total_students:
         student_chunks = [broad_sheet_data]
     else:
-        student_chunks = [broad_sheet_data[i:i + students_per_page] for i in range(0, total_students, students_per_page)]
-        
+        student_chunks = [
+            broad_sheet_data[i : i + students_per_page]
+            for i in range(0, total_students, students_per_page)
+        ]
+
     total_pages = len(subject_chunks) * len(student_chunks)
-    
+
     html = f"""
     <!DOCTYPE html>
     <html>
@@ -1869,11 +2389,11 @@ def generate_broad_sheet_html(broad_sheet_data, metadata, school, subjects_per_p
                 letter-spacing: 4px;
                 color: #374151;
             }}
-            .school-motto {{ 
-                font-size: {font_size}px; 
-                margin: 1mm 0 0 0; 
+            .school-motto {{
+                font-size: {font_size}px;
+                margin: 1mm 0 0 0;
                 opacity: 0.95;
-                font-style: italic; 
+                font-style: italic;
                 color: white;
             }}
             .section-badge {{
@@ -1950,7 +2470,7 @@ def generate_broad_sheet_html(broad_sheet_data, metadata, school, subjects_per_p
             .text-left {{ text-align: left; }}
             .score-val {{ font-size: {font_size}px; color: #374151; }}
             .total-val {{ font-weight: 800; font-size: {font_size + 1}px; }}
-            
+
             .footer-strip {{
                 margin-top: 10px;
                 padding-top: 5px;
@@ -1979,13 +2499,13 @@ def generate_broad_sheet_html(broad_sheet_data, metadata, school, subjects_per_p
             <div class="header">
                 <div class="header-banner">
                     <div class="logo-placeholder">
-                        { f'<img src="{logo_src}" class="logo-img">' if logo_src else '<span style="color:#4f46e5; font-weight:bold; font-size:24pt;">🏫</span>' }
+                        {f'<img src="{logo_src}" class="logo-img">' if logo_src else '<span style="color:#4f46e5; font-weight:bold; font-size:24pt;">🏫</span>'}
                     </div>
                     <div class="school-text">
                         <h1 class="school-name">{school_name}</h1>
                         <div class="school-motto">Motto: {metadata.get("school_motto", "N/A")}</div>
                         <div style="margin-top: 1mm; font-size: {font_size + 0}px; color: #eef2ff;">
-                            { metadata.get("formatted_sections") if metadata.get("formatted_sections") else "" }
+                            {metadata.get("formatted_sections") if metadata.get("formatted_sections") else ""}
                         </div>
                     </div>
                 </div>
@@ -1997,7 +2517,7 @@ def generate_broad_sheet_html(broad_sheet_data, metadata, school, subjects_per_p
                     <div><strong>PAGE {current_page} OF {total_pages}</strong></div>
                 </div>
             </div>
-                
+
             <table>
                 <thead>
                     <tr>
@@ -2009,14 +2529,19 @@ def generate_broad_sheet_html(broad_sheet_data, metadata, school, subjects_per_p
             subject_assessment_map = {}
             for subject in chunk_subjects:
                 atype_set = set()
-                for student in broad_sheet_data: # Check ALL students to ensure header consistency
-                    if subject in student["subjects"] and 'scores' in student["subjects"][subject]:
-                        for s in student["subjects"][subject]['scores']:
-                            atype_set.add(s['assessment_type'])
-                
+                for student in (
+                    broad_sheet_data
+                ):  # Check ALL students to ensure header consistency
+                    if (
+                        subject in student["subjects"]
+                        and "scores" in student["subjects"][subject]
+                    ):
+                        for s in student["subjects"][subject]["scores"]:
+                            atype_set.add(s["assessment_type"])
+
                 sorted_types = sorted(list(atype_set))
                 subject_assessment_map[subject] = sorted_types
-                colspan = len(sorted_types) + 1 # +1 for Total
+                colspan = len(sorted_types) + 1  # +1 for Total
                 html += f'<th class="subject-header" colspan="{colspan}">{subject.upper()}</th>'
 
             html += """
@@ -2033,40 +2558,46 @@ def generate_broad_sheet_html(broad_sheet_data, metadata, school, subjects_per_p
                 </thead>
                 <tbody>"""
 
-            for idx, student in enumerate(chunk_students, 1 + st_idx * students_per_page):
+            for idx, student in enumerate(
+                chunk_students, 1 + st_idx * students_per_page
+            ):
                 html += f"""
                     <tr>
                         <td class="sn-col">{idx}</td>
-                        <td class="adm-col">{student['admission_number'] or ''}</td>
-                        <td class="student-name text-left">{student['student_name'].upper()}</td>"""
+                        <td class="adm-col">{student["admission_number"] or ""}</td>
+                        <td class="student-name text-left">{student["student_name"].upper()}</td>"""
 
                 for subject in chunk_subjects:
                     if subject in student["subjects"]:
                         s_data = student["subjects"][subject]
-                        score_lookup = {s['assessment_type']: s for s in s_data.get('scores', [])}
-                        
+                        score_lookup = {
+                            s["assessment_type"]: s for s in s_data.get("scores", [])
+                        }
+
                         for atype in subject_assessment_map[subject]:
                             if atype in score_lookup:
-                                score_val = score_lookup[atype]['score']
+                                score_val = score_lookup[atype]["score"]
                                 # Format as integer if possible
                                 try:
                                     if float(score_val) == int(float(score_val)):
                                         score_val = int(float(score_val))
-                                except: pass
+                                except:
+                                    pass
                                 html += f'<td class="score-val">{score_val}</td>'
                             else:
                                 html += "<td>-</td>"
-                        
-                        total_score = s_data['total_score']
+
+                        total_score = s_data["total_score"]
                         try:
                             if float(total_score) == int(float(total_score)):
                                 total_score = int(float(total_score))
-                        except: pass
+                        except:
+                            pass
                         html += f'<td class="total-val total-col">{total_score}</td>'
                     else:
                         for _ in range(len(subject_assessment_map[subject]) + 1):
                             html += "<td>-</td>"
-                
+
                 html += "</tr>"
 
             html += """
@@ -2082,4 +2613,3 @@ def generate_broad_sheet_html(broad_sheet_data, metadata, school, subjects_per_p
     </body>
     </html>"""
     return html
-

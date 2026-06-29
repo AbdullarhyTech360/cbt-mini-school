@@ -1,0 +1,35 @@
+{% set components = section.components|default(['class_teacher_comment', 'principal_comment', 'next_term_date']) %}
+{% set config = report_data.config %}
+
+<div class="section-title" style="font-size: 9pt; font-weight: 700; color: #6366f1; padding: 6px 0 4px 0; border-bottom: 1px solid #e0e7ff;">
+    Comments & Remarks
+</div>
+
+<div class="comments-container" style="display: table; width: 100%; margin: 0 0 6px 0;">
+    {% if 'class_teacher_comment' in components %}
+        <div class="comment-box" style="display: table-row;">
+            <div class="comment-label" style="display: table-cell; width: 30%; padding: 4px; font-size: 7.5pt; font-weight: 600; color: #64748b; vertical-align: top;">Class Teacher Comment:</div>
+            <div class="comment-value" style="display: table-cell; padding: 4px; font-size: 8pt; color: #0f172a; border-bottom: 1px solid #e5e7eb;">
+                <!-- Class teacher comment would come from student record or assessment -->
+                Good performance. Keep it up!
+            </div>
+        </div>
+    {% endif %}
+    {% if 'principal_comment' in components %}
+        <div class="comment-box" style="display: table-row;">
+            <div class="comment-label" style="display: table-cell; width: 30%; padding: 4px; font-size: 7.5pt; font-weight: 600; color: #64748b; vertical-align: top;">Principal's Comment:</div>
+            <div class="comment-value" style="display: table-cell; padding: 4px; font-size: 8pt; color: #0f172a; border-bottom: 1px solid #e5e7eb;">
+                <!-- Principal comment would come from school settings or assessment -->
+                Satisfactory academic progress.
+            </div>
+        </div>
+    {% endif %}
+    {% if 'next_term_date' in components and config and config.resumption_date %}
+        <div class="comment-box" style="display: table-row;">
+            <div class="comment-label" style="display: table-cell; width: 30%; padding: 4px; font-size: 7.5pt; font-weight: 600; color: #64748b; vertical-align: top;">Next Term Resumes:</div>
+            <div class="comment-value" style="display: table-cell; padding: 4px; font-size: 8pt; color: #0f172a; border-bottom: 1px solid #e5e7eb;">
+                {{ config.resumption_date.strftime('%B %d, %Y') if config.resumption_date else 'To be announced' }}
+            </div>
+        </div>
+    {% endif %}
+</div>

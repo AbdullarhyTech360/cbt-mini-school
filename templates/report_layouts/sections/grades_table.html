@@ -1,0 +1,237 @@
+{% set columns = section.columns|default(['subject', 'assessments', 'total',
+'percentage', 'grade', 'remark']) %} {% set scores = report_data.scores %} {%
+set assessment_types = report_data.assessment_types %} {% set grade_scale =
+report_data.grade_scale %} {% set header_color =
+section.style.header_color|default('#6366f1') %} {% set alternating_rows =
+section.style.alternating_rows|default(true) %}
+
+<div
+    class="section-title"
+    style="
+        font-size: 9pt;
+        font-weight: 700;
+        color: #6366f1;
+        padding: 6px 0 4px 0;
+        border-bottom: 1px solid #e0e7ff;
+    "
+>
+    Academic Performance
+</div>
+
+<table
+    class="performance-table"
+    style="
+        width: 100%;
+        margin: 0 0 8px 0;
+        border-collapse: collapse;
+        font-size: 7pt;
+    "
+>
+    <thead style="background: {{ header_color }}; color: white;">
+        <tr>
+            {% if 'subject' in columns %}
+            <th
+                style="padding: 5px 3px; text-align: center; font-weight: 600; font-size: 6pt; text-transform: uppercase; letter-spacing: 0.3px; border: 1px solid {{ header_color }};border-radius: 4px 0 0 0;"
+            >
+                Subject
+            </th>
+            {% endif %} {% for at in assessment_types %} {% if 'assessments' in
+            columns %}
+            <th
+                style="padding: 5px 3px; text-align: center; font-weight: 600; font-size: 6pt; text-transform: uppercase; letter-spacing: 0.3px; border: 1px solid {{ header_color }};"
+            >
+                {{ at.name }}
+            </th>
+            {% endif %} {% endfor %} {% if 'total' in columns %}
+            <th
+                style="padding: 5px 3px; text-align: center; font-weight: 600; font-size: 6pt; text-transform: uppercase; letter-spacing: 0.3px; border: 1px solid {{ header_color }};"
+            >
+                Total
+            </th>
+            {% endif %} {% if 'percentage' in columns %}
+            <th
+                style="padding: 5px 3px; text-align: center; font-weight: 600; font-size: 6pt; text-transform: uppercase; letter-spacing: 0.3px; border: 1px solid {{ header_color }};"
+            >
+                %
+            </th>
+            {% endif %} {% if 'grade' in columns %}
+            <th
+                style="padding: 5px 3px; text-align: center; font-weight: 600; font-size: 6pt; text-transform: uppercase; letter-spacing: 0.3px; border: 1px solid {{ header_color }};"
+            >
+                Grade
+            </th>
+            {% endif %} {% if 'remark' in columns %}
+            <th
+                style="padding: 5px 3px; text-align: center; font-weight: 600; font-size: 6pt; text-transform: uppercase; letter-spacing: 0.3px; border: 1px solid {{ header_color }}; border-radius: 0 4px 0 0;"
+            >
+                Remark
+            </th>
+            {% endif %}
+        </tr>
+    </thead>
+    <tbody>
+        {% for subject_id, subject_data in scores.items() %}
+        <tr
+            style="{% if alternating_rows and loop.index is even %}background: #fafafa;{% endif %}"
+        >
+            {% if 'subject' in columns %}
+            <td
+                style="
+                    padding: 4px 3px;
+                    text-align: left;
+                    font-weight: 600;
+                    color: #1e293b;
+                    padding-left: 6px;
+                    border: 1px solid #e5e7eb;
+                "
+            >
+                {{ subject_data.subject_name }}
+            </td>
+            {% endif %} {% for at in assessment_types %} {% if 'assessments' in
+            columns %} {% set assessment_code = at.code %} {% set
+            assessment_data = subject_data.assessments.get(assessment_code) %}
+            <td
+                style="
+                    padding: 4px 3px;
+                    text-align: center;
+                    border: 1px solid #e5e7eb;
+                "
+            >
+                {% if assessment_data %} {{ assessment_data.score }}/{{
+                assessment_data.max_score }} {% if assessment_data.is_cbt %}
+                <span class="cbt-badge">CBT</span>
+                {% endif %} {% else %} - {% endif %}
+            </td>
+            {% endif %} {% endfor %} {% if 'total' in columns %}
+            <td
+                style="
+                    padding: 4px 3px;
+                    text-align: center;
+                    border: 1px solid #e5e7eb;
+                    font-weight: 600;
+                "
+            >
+                {{ subject_data.total }}
+            </td>
+            {% endif %} {% if 'percentage' in columns %} {% set percentage =
+            (subject_data.total / subject_data.max_total * 100) if
+            subject_data.max_total > 0 else 0 %}
+            <td
+                style="
+                    padding: 4px 3px;
+                    text-align: center;
+                    border: 1px solid #e5e7eb;
+                "
+            >
+                {{ "%.1f"|format(percentage) }}%
+            </td>
+            {% endif %} {% if 'grade' in columns %} {% set percentage =
+            (subject_data.total / subject_data.max_total * 100) if
+            subject_data.max_total > 0 else 0 %}
+            <td
+                style="
+                    padding: 4px 3px;
+                    text-align: center;
+                    border: 1px solid #e5e7eb;
+                "
+            >
+                {% if grade_scale %} {% set grade = 'F' %} {% for range_item in
+                grade_scale.grade_ranges %} {% if range_item.min_score <=
+                percentage <= range_item.max_score %} {% set grade =
+                range_item.grade %} {% endif %} {% endfor %} {% if grade == 'A'
+                %}<span class="grade-pill grade-A">{{ grade }}</span> {% elif
+                grade == 'B' %}<span class="grade-pill grade-B"
+                    >{{ grade }}</span
+                >
+                {% elif grade == 'C' %}<span class="grade-pill grade-C"
+                    >{{ grade }}</span
+                >
+                {% elif grade == 'D' %}<span class="grade-pill grade-D"
+                    >{{ grade }}</span
+                >
+                {% elif grade == 'E' %}<span class="grade-pill grade-E"
+                    >{{ grade }}</span
+                >
+                {% else %}<span class="grade-pill grade-F">{{ grade }}</span>{%
+                endif %} {% else %} {% if percentage >= 70 %}<span
+                    class="grade-pill grade-A"
+                    >A</span
+                >
+                {% elif percentage >= 60 %}<span class="grade-pill grade-B"
+                    >B</span
+                >
+                {% elif percentage >= 50 %}<span class="grade-pill grade-C"
+                    >C</span
+                >
+                {% elif percentage >= 45 %}<span class="grade-pill grade-D"
+                    >D</span
+                >
+                {% elif percentage >= 40 %}<span class="grade-pill grade-E"
+                    >E</span
+                >
+                {% else %}<span class="grade-pill grade-F">F</span>{% endif %}
+                {% endif %}
+            </td>
+            {% endif %} {% if 'remark' in columns %} {% set percentage =
+            (subject_data.total / subject_data.max_total * 100) if
+            subject_data.max_total > 0 else 0 %}
+            <td
+                style="
+                    padding: 4px 3px;
+                    text-align: center;
+                    border: 1px solid #e5e7eb;
+                "
+            >
+                {% if grade_scale %} {% set remark = '' %} {% for range_item in
+                grade_scale.grade_ranges %} {% if range_item.min_score <=
+                percentage <= range_item.max_score %} {% set remark =
+                range_item.remark %} {% endif %} {% endfor %} {% if percentage
+                >= 70 %}<span
+                    style="color: #059669; font-weight: 600; font-style: italic"
+                    >{{ remark }}</span
+                >
+                {% elif percentage >= 60 %}<span
+                    style="color: #2563eb; font-weight: 600; font-style: italic"
+                    >{{ remark }}</span
+                >
+                {% elif percentage >= 50 %}<span
+                    style="color: #d97706; font-weight: 600; font-style: italic"
+                    >{{ remark }}</span
+                >
+                {% elif percentage >= 45 %}<span
+                    style="color: #dc2626; font-weight: 600; font-style: italic"
+                    >{{ remark }}</span
+                >
+                {% else %}<span
+                    style="color: #4b5563; font-weight: 600; font-style: italic"
+                    >{{ remark }}</span
+                >{% endif %} {% else %} {% if percentage >= 70 %}<span
+                    style="color: #059669; font-weight: 600; font-style: italic"
+                    >Excellent</span
+                >
+                {% elif percentage >= 60 %}<span
+                    style="color: #2563eb; font-weight: 600; font-style: italic"
+                    >Very Good</span
+                >
+                {% elif percentage >= 50 %}<span
+                    style="color: #d97706; font-weight: 600; font-style: italic"
+                    >Good</span
+                >
+                {% elif percentage >= 45 %}<span
+                    style="color: #dc2626; font-weight: 600; font-style: italic"
+                    >Fair</span
+                >
+                {% elif percentage >= 40 %}<span
+                    style="color: #4b5563; font-weight: 600; font-style: italic"
+                    >Pass</span
+                >
+                {% else %}<span
+                    style="color: #4b5563; font-weight: 600; font-style: italic"
+                    >Needs Improvement</span
+                >{% endif %} {% endif %}
+            </td>
+            {% endif %}
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>

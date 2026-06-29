@@ -46,6 +46,14 @@ class ReportConfig(db.Model):
     # Date
     resumption_date = db.Column(db.Date, nullable=True, default=datetime.utcnow)
     
+    # Layout configuration (stored as JSON)
+    # Example: {"template": "modern_portrait", "page_settings": {...}, "sections": [...]}
+    layout_config = db.Column(db.Text, nullable=True)
+    
+    # Custom data fields (stored as JSON)
+    # Example: [{"field_name": "attendance", "data_type": "number", "label": "Days Present"}]
+    custom_data_fields = db.Column(db.Text, nullable=True)
+    
     # Relationships
     school = db.relationship("School", backref="report_configs")
     term = db.relationship("SchoolTerm", backref="report_configs")
@@ -89,6 +97,26 @@ class ReportConfig(db.Model):
         """Set active assessments from list"""
         self.active_assessments = json.dumps(assessments_list)
 
+    def get_layout_config(self):
+        """Parse and return layout configuration"""
+        if self.layout_config:
+            return json.loads(self.layout_config)
+        return None
+
+    def set_layout_config(self, config_dict):
+        """Set layout configuration from dictionary"""
+        self.layout_config = json.dumps(config_dict)
+
+    def get_custom_data_fields(self):
+        """Parse and return custom data fields"""
+        if self.custom_data_fields:
+            return json.loads(self.custom_data_fields)
+        return []
+
+    def set_custom_data_fields(self, fields_list):
+        """Set custom data fields from list"""
+        self.custom_data_fields = json.dumps(fields_list)
+
     def __repr__(self):
         return f"<ReportConfig {self.config_name}>"
 
@@ -105,6 +133,8 @@ class ReportConfig(db.Model):
             "display_settings": self.get_display_settings(),
             "active_assessments": self.get_active_assessments(),
             "grade_scale_id": self.grade_scale_id,
+            "layout_config": self.get_layout_config(),
+            "custom_data_fields": self.get_custom_data_fields(),
             "is_active": self.is_active,
             "is_default": self.is_default,
             "created_at": self.created_at.isoformat() if self.created_at else None,

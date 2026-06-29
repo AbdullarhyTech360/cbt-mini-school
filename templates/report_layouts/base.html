@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <style>
+        @page {
+            size: {{ page_settings.size|default('A4') }} {{ page_settings.orientation|default('portrait') }};
+            margin: {{ page_settings.margin|default('8mm') }};
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: Arial, sans-serif;
+            background: white;
+            font-size: 7.5pt;
+            line-height: 1.2;
+        }
+        .report-container {
+            background: white;
+            padding: 0;
+            max-width: 100%;
+            height: 100%;
+        }
+        .content-wrapper {
+            padding: 0 15px;
+        }
+
+        /* Reusable components */
+        .grade-pill {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-weight: 700;
+            font-size: 7pt;
+            color: white;
+        }
+        .grade-A { background: #10b981; }
+        .grade-B { background: #3b82f6; }
+        .grade-C { background: #f59e0b; }
+        .grade-D { background: #f97316; }
+        .grade-E { background: #ef4444; }
+        .grade-F { background: #6b7280; }
+
+        .section-title {
+            font-size: 9pt;
+            font-weight: 700;
+            color: #6366f1;
+            padding: 6px 0 4px 0;
+            border-bottom: 1px solid #e0e7ff;
+        }
+
+        .cbt-badge {
+            background: #f59e0b;
+            color: white;
+            padding: 1px 4px;
+            border-radius: 6px;
+            font-size: 5pt;
+            font-weight: 700;
+            margin-left: 2px;
+            vertical-align: super;
+        }
+
+        /* Grading scale */
+        .grading-scale {
+            text-align: center;
+            padding: 4px 0;
+            font-size: 6pt;
+            border-top: 1px solid #e5e7eb;
+        }
+        .grading-scale strong { margin-right: 6px; }
+        .grade-item {
+            display: inline-block;
+            margin: 0 4px;
+            padding: 2px 6px;
+            border-radius: 8px;
+            font-weight: 600;
+            color: white;
+        }
+
+        /* Footer notice */
+        .footer-notice {
+            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+            border: 1px solid #fbbf24;
+            border-radius: 4px;
+            padding: 4px 10px;
+            margin: 0;
+            text-align: center;
+            font-size: 5.5pt;
+            color: #92400e;
+        }
+        .footer-notice strong { font-weight: 700; }
+
+        /* Custom CSS injection */
+        {{ custom_css|default('', true) }}
+    </style>
+</head>
+<body>
+    <div class="report-container">
+        {% block report_content %}{% endblock %}
+    </div>
+</body>
+</html>

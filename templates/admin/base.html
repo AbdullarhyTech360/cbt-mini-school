@@ -213,6 +213,16 @@
                             </a>
                         </li>
                         <li>
+                            <a class="flex h-11 items-center gap-3 rounded-lg px-4 {% if 'report.report_layout_page' in request.endpoint %}bg-gradient-to-r from-primary to-blue-600 text-white shadow-md{% else %}text-gray-600 dark:text-gray-400 hover:bg-gradient-to-r hover:from-primary/10 hover:to-primary/5 hover:text-primary dark:hover:text-primary{% endif %} transition-all group"
+                                href="/reports/layout">
+                                <span
+                                    class="material-symbols-outlined text-xl group-hover:scale-110 transition-transform flex-shrink-0">dashboard_customize</span>
+                                <p class="text-sm font-semibold leading-tight truncate sidebar-text">
+                                    Report Layout
+                                </p>
+                            </a>
+                        </li>
+                        <li>
                             <a class="flex h-11 items-center gap-3 rounded-lg px-4 {% if 'grade_scales' in request.endpoint %}bg-gradient-to-r from-primary to-blue-600 text-white shadow-md{% else %}text-gray-600 dark:text-gray-400 hover:bg-gradient-to-r hover:from-primary/10 hover:to-primary/5 hover:text-primary dark:hover:text-primary{% endif %} transition-all group"
                                 href="/reports/grade-scales">
                                 <span

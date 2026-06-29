@@ -1,0 +1,27 @@
+{% set components = section.components|default(['school_logo', 'school_name', 'school_address', 'report_title']) %}
+{% set school = report_data.school %}
+{% set term = report_data.term %}
+
+<div class="header-banner" style="display: table; width: 100%; padding: 10px 15px; border-radius: 6px 6px 0 0;">
+    <div class="header-left" style="display: table-cell; vertical-align: middle; width: 60px;">
+        {% if 'school_logo' in components and school.logo %}
+            <img src="{{ school.logo }}" class="school-logo" style="width: 50px; height: 50px; border-radius: 50%; border: 2px solid white; background: white; object-fit: contain; padding: 2px;" alt="School Logo">
+        {% endif %}
+    </div>
+    <div class="header-center" style="display: table-cell; vertical-align: middle; padding-left: 12px;">
+        {% if 'school_name' in components %}
+            <div class="school-name" style="font-size: 14pt; font-weight: 700; letter-spacing: 0.3px; margin-bottom: 2px;">{{ school.name }}</div>
+        {% endif %}
+        {% if 'school_address' in components and school.address %}
+            <div class="school-address" style="font-size: 6pt; opacity: 0.95;">{{ school.address }}</div>
+        {% endif %}
+    </div>
+    <div class="header-right" style="display: table-cell; vertical-align: middle; text-align: right; width: 220px;">
+        {% if 'report_title' in components %}
+            <div class="report-title" style="font-size: 11pt; font-weight: 700; letter-spacing: 0.5px;">STUDENT REPORT CARD</div>
+        {% endif %}
+        {% if 'term' in components %}
+            <div class="report-term" style="font-size: 7pt; opacity: 0.9; margin-top: 1px;">{{ term.name }} - {{ term.session }}</div>
+        {% endif %}
+    </div>
+</div>
