@@ -877,6 +877,9 @@
     </div>
 </div>
 
+<script>
+  window.CSRF_TOKEN = {{ csrf_token | tojson }};
+</script>
 <script src="{{ url_for('static', filename='js/admin/report_layout_builder.js') }}"></script>
 <script src="{{ url_for('static', filename='js/admin/report_config.js') }}"></script>
 {% endblock %}

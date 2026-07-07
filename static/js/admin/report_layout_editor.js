@@ -1,10 +1,10 @@
 /*
- * Report Layout Editor v2 — Fully interactive WYSIWYG editor for report card layouts.
+ * Report Layout Editor v2 ΓÇö Fully interactive WYSIWYG editor for report card layouts.
  * Real-time bidirectional sync, inline editing, validation, auto-save, publish workflow.
  */
 
 const ReportLayoutEditor = (function () {
-  // ── State ──────────────────────────────────────────────
+  // ΓöÇΓöÇ State ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
   let currentConfigId = null;
   let layoutConfig = null;
   let selectedIndex = null;
@@ -133,7 +133,7 @@ const ReportLayoutEditor = (function () {
     divider: "horizontal_rule",
   };
 
-  // ── Validation Rules ────────────────────────────────────
+  // ΓöÇΓöÇ Validation Rules ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
   const VALIDATORS = {
     propPadding: (v) => /^(\d+(\.\d+)?)(px|mm|em|rem|%|)$/.test(v) || v === "",
     propBorderRadius: (v) =>
@@ -157,7 +157,7 @@ const ReportLayoutEditor = (function () {
     return valid;
   }
 
-  // ── Helpers ────────────────────────────────────────────
+  // ΓöÇΓöÇ Helpers ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
   function extractHex(val, fallback) {
     if (!val) return fallback;
     const m = val.match(/#[0-9a-fA-F]{6}/);
@@ -179,7 +179,7 @@ const ReportLayoutEditor = (function () {
     };
   }
 
-  // ── Config Loading ─────────────────────────────────────
+  // ΓöÇΓöÇ Config Loading ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
   async function loadConfigs() {
     try {
       const res = await fetch("/reports/api/configs");
@@ -268,7 +268,7 @@ const ReportLayoutEditor = (function () {
     };
   }
 
-  // ── Section List ───────────────────────────────────────
+  // ΓöÇΓöÇ Section List ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
   function renderSectionList() {
     const list = document.getElementById("sectionList");
     list.innerHTML = "";
@@ -300,7 +300,7 @@ const ReportLayoutEditor = (function () {
     });
   }
 
-  // ── Drag & Drop ────────────────────────────────────────
+  // ΓöÇΓöÇ Drag & Drop ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
   let dragSrcIdx = null;
   function onDragStart(e) {
     dragSrcIdx = Number(e.currentTarget.dataset.idx);
@@ -339,7 +339,7 @@ const ReportLayoutEditor = (function () {
     dragSrcIdx = null;
   }
 
-  // ── Properties Panel ───────────────────────────────────
+  // ΓöÇΓöÇ Properties Panel ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
   function hideProperties() {
     document.getElementById("propertiesContent").classList.remove("show");
     document.getElementById("propertiesContent").style.display = "none";
@@ -470,7 +470,7 @@ const ReportLayoutEditor = (function () {
     isUpdatingFromCode = false;
   }
 
-  // ── Live Property Update (fires on every keystroke / change) ──
+  // ΓöÇΓöÇ Live Property Update (fires on every keystroke / change) ΓöÇΓöÇ
   function onPropertyChanged() {
     if (isUpdatingFromCode || selectedIndex === null || !layoutConfig) return;
     const sec = layoutConfig.sections[selectedIndex];
@@ -563,7 +563,7 @@ const ReportLayoutEditor = (function () {
     }
   }
 
-  // ── Add / Delete ────────────────────────────────────────
+  // ΓöÇΓöÇ Add / Delete ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
   function addElement(type) {
     if (!layoutConfig) return;
     pushUndo();
@@ -647,7 +647,7 @@ const ReportLayoutEditor = (function () {
     autoSave();
   }
 
-  // ── Page Settings ──────────────────────────────────────
+  // ΓöÇΓöÇ Page Settings ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
   function syncPageSettingsUI() {
     if (!layoutConfig) return;
     document.getElementById("pageOrientation").value =
@@ -689,7 +689,7 @@ const ReportLayoutEditor = (function () {
     autoSave();
   }
 
-  // ── Real-Time Preview ──────────────────────────────────
+  // ΓöÇΓöÇ Real-Time Preview ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
   const schedulePreviewRefresh = debounce(refreshPreview, 300);
 
   async function refreshPreview() {
@@ -715,7 +715,7 @@ const ReportLayoutEditor = (function () {
     }
   }
 
-  // ── Zoom ───────────────────────────────────────────────
+  // ΓöÇΓöÇ Zoom ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
   function zoomIn() {
     zoom = Math.min(zoom + 0.1, 2);
     applyZoom();
@@ -730,7 +730,7 @@ const ReportLayoutEditor = (function () {
       Math.round(zoom * 100) + "%";
   }
 
-  // ── Auto-Save / Publish ────────────────────────────────
+  // ΓöÇΓöÇ Auto-Save / Publish ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
   function autoSave() {
     if (!currentConfigId || !layoutConfig) return;
     localStorage.setItem(
@@ -764,7 +764,7 @@ const ReportLayoutEditor = (function () {
     }
   }
 
-  // ── Undo / Redo ────────────────────────────────────────
+  // ΓöÇΓöÇ Undo / Redo ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
   function undo() {
     if (undoStack.length === 0) return;
     redoStack.push(deepClone(layoutConfig));
@@ -788,7 +788,7 @@ const ReportLayoutEditor = (function () {
     autoSave();
   }
 
-  // ── Notification ────────────────────────────────────────
+  // ΓöÇΓöÇ Notification ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
   function showNotification(message, type) {
     const n = document.createElement("div");
     const bg = {
@@ -805,7 +805,7 @@ const ReportLayoutEditor = (function () {
     }, 3000);
   }
 
-  // ── Bind All Events (single source of truth) ──────────
+  // ΓöÇΓöÇ Bind All Events (single source of truth) ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
   function bindPropertyEvents() {
     // Config selector
     document
@@ -872,7 +872,7 @@ const ReportLayoutEditor = (function () {
       .addEventListener("input", debounce(onCssChange, 500));
   }
 
-  // ── Init ────────────────────────────────────────────────
+  // ΓöÇΓöÇ Init ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
   document.addEventListener("DOMContentLoaded", () => {
     console.log("[ReportLayoutEditor] Initializing...");
     bindPropertyEvents();
@@ -881,7 +881,7 @@ const ReportLayoutEditor = (function () {
     );
   });
 
-  // ── Public API ──────────────────────────────────────────
+  // ΓöÇΓöÇ Public API ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
   return {
     loadConfig,
     selectSection,

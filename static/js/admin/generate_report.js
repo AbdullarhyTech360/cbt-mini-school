@@ -6,6 +6,7 @@ document.addEventListener("DOMContentLoaded", () => {
   loadTerms();
   loadClasses();
   loadConfigs();
+  loadLayoutStyles();
 
   // Add keyboard event listener for closing preview with ESC key
   document.addEventListener("keydown", (event) => {
@@ -379,10 +380,12 @@ async function loadClasses() {
 
     if (data.success && data.classes.length > 0) {
       select.innerHTML = '<option value="">Select Class</option>';
+      // window._classesData removed - no longer needed
       data.classes.forEach((cls) => {
         const option = document.createElement("option");
         option.value = cls.class_room_id;
         option.textContent = cls.class_name;
+
         select.appendChild(option);
       });
     } else {
@@ -425,6 +428,33 @@ async function loadConfigs() {
     }
   } catch (error) {
     console.error("Error loading configs:", error);
+    select.innerHTML = '<option value="">Default</option>';
+  } finally {
+    select.disabled = false;
+  }
+}
+
+async function loadLayoutStyles() {
+  const select = document.getElementById("layoutStyleFilter");
+  if (!select) return;
+  select.innerHTML = '<option value="">Loading...</option>';
+  select.disabled = true;
+  try {
+    const response = await fetch("/reports/api/configs");
+    const data = await response.json();
+    if (data.success) {
+      select.innerHTML = '<option value="">Default</option>';
+      data.configs.forEach((config) => {
+        const option = document.createElement("option");
+        option.value = config.config_id;
+        option.textContent = config.config_name;
+        select.appendChild(option);
+      });
+    } else {
+      select.innerHTML = '<option value="">Default</option>';
+    }
+  } catch (error) {
+    console.error("Error loading layout styles:", error);
     select.innerHTML = '<option value="">Default</option>';
   } finally {
     select.disabled = false;
@@ -491,10 +521,14 @@ function hideGlobalLoading() {
   document.body.classList.remove("overflow-hidden");
 }
 
+
+// Auto-config selection removed - all configs are now available regardless of section
+
 async function loadStudents() {
   const termId = document.getElementById("termFilter").value;
   const classId = document.getElementById("classFilter").value;
   const configId = document.getElementById("configFilter").value;
+  const layoutConfigId = document.getElementById("layoutStyleFilter")?.value || "";
 
   if (!termId || !classId) {
     showAlert({
@@ -512,6 +546,7 @@ async function loadStudents() {
     term_id: termId,
     class_room_id: classId,
     config_id: configId || null,
+    layout_config_id: layoutConfigId || null,
   };
 
   try {
@@ -646,6 +681,7 @@ async function previewReport(studentId) {
   const termId = document.getElementById("termFilter").value;
   const classId = document.getElementById("classFilter").value;
   const configId = document.getElementById("configFilter").value;
+  const layoutConfigId = document.getElementById("layoutStyleFilter")?.value || "";
 
   if (!termId || !classId) {
     showAlert({
@@ -663,6 +699,8 @@ async function previewReport(studentId) {
       term_id: termId,
       class_room_id: classId,
       config_id: configId || "",
+      layout_config_id: document.getElementById("layoutStyleFilter")?.value || "",
+      include_html: "true",
     });
 
     const response = await fetch(
@@ -703,8 +741,15 @@ async function showCanvasBasedPreview(reportData) {
       modal = createCanvasPreviewModal();
     }
 
-    // Generate HTML content
-    const html = generateReportHTML(reportData);
+    // Use server-rendered HTML if available (respects canvas blocks config)
+    let html;
+    if (reportData._html) {
+      html = reportData._html;
+      console.log("Using server-rendered HTML (canvas blocks)");
+    } else {
+      html = generateReportHTML(reportData);
+      console.log("Using client-generated HTML (legacy)");
+    }
 
     // Create temporary element for rendering
     const tempDiv = document.createElement("div");
@@ -1047,11 +1092,13 @@ async function downloadReport(studentId) {
       await generateClientSidePDF(currentReportData);
     } else {
       // Fetch report data from new API endpoint and then generate PDF
-      // Build query parameters
+      // Build query parameters (include HTML for canvas blocks rendering)
       const params = new URLSearchParams({
         term_id: currentFilters.term_id,
-        class_room_id: currentFilters.class_room_id, // Use class_room_id to match backend expectation
+        class_room_id: currentFilters.class_room_id,
         config_id: currentFilters.config_id || "",
+        layout_config_id: currentFilters.layout_config_id || "",
+        include_html: "true",
       });
 
       const response = await fetch(
@@ -1238,7 +1285,7 @@ async function downloadAllReports() {
             const reportResponse = await fetch(
               `/reports/api/student-report/${student.id
               }?term_id=${termId}&class_room_id=${classId}&config_id=${currentFilters.config_id || ""
-              }`
+              }&layout_config_id=${currentFilters.layout_config_id || ""}&include_html=true`
             );
 
             if (!reportResponse.ok) {
@@ -1460,9 +1507,6 @@ function generateReportHTML(reportData) {
 
   let subjectRows = Object.values(scores || {})
     .map((sub, idx) => {
-      // Use actual max_total
-      // sub.max_total = 100.0;
-
       const isPercentageMode = displaySettings.treat_total_as_percentage;
       const perc = isPercentageMode
         ? sub.total || 0
@@ -2457,11 +2501,16 @@ async function generateClientSidePDF(reportData, previewMode = false) {
 
     console.log("html2pdf library is ready for use");
 
-    // Generate HTML content for the report
-    console.log("Generating HTML content");
+    // Use server-rendered HTML if available (respects canvas blocks config)
     let html;
-    try {
+    if (reportData._html) {
+      html = reportData._html;
+      console.log("Using server-rendered HTML (canvas blocks)");
+    } else {
       html = generateReportHTML(reportData);
+      console.log("Using client-generated HTML (legacy)");
+    }
+    try {
       console.log("Generated HTML length:", html.length);
 
       // Debug: Show the first 500 characters of the HTML

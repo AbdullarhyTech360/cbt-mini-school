@@ -8,12 +8,13 @@ from functools import wraps
 
 from flask import Blueprint, jsonify, render_template, request, send_file, session
 
-from models import db
+from models import db, TraitDefinition
 from models.assessment_type import AssessmentType
 from models.class_room import ClassRoom
 from models.report_config import ReportConfig
 from models.school_term import SchoolTerm
 from models.user import User
+from models.school import School
 from services.report_generator import ReportGenerator
 
 if os.name == "nt":
@@ -106,7 +107,24 @@ def report_config_page():
 def report_layout_page():
     """Report Layout Designer page (standalone WYSIWYG editor)"""
     user = User.query.get(session["user_id"])
-    return render_template("admin/report_layout.html", user=user, current_user=user)
+    school = School.query.first()
+    configs = ReportConfig.query.filter_by(school_id=school.school_id).all() if school else []
+    config_id = request.args.get("config_id")
+    trait_defs = TraitDefinition.query.filter_by(school_id=school.school_id, is_active=True).order_by(TraitDefinition.sort_order).all() if school else []
+    school_data = {
+        "trait_definitions": [t.to_dict() for t in trait_defs],
+        "school_id": school.school_id if school else None,
+    }
+    from flask import json as flask_json
+    return render_template(
+        "admin/report_layout.html",
+        user=user,
+        current_user=user,
+        configs_json=flask_json.dumps([c.to_dict() for c in configs]),
+        current_config_id=config_id,
+        school_data_json=flask_json.dumps(school_data),
+        csrf_token=session.get("csrf_token", ""),
+    )
 
 
 @report_bp.route("/api/configs", methods=["GET"])
@@ -1260,6 +1278,51 @@ def grade_scales_page():
     """Grade scales management page"""
     user = User.query.get(session["user_id"])
     return render_template("admin/grade_scales.html", user=user, current_user=user)
+
+
+@report_bp.route("/api/layouts/save", methods=["POST"])
+@admin_or_staff_required
+def save_layout():
+    try:
+        data = request.get_json()
+        config_id = data.get("config_id")
+        sections = data.get("sections")
+        blocks = data.get("blocks", [])
+        id_counter = data.get("idCounter", 0)
+        custom_vars = data.get("custom_variables", {})
+        config = ReportConfig.query.get(config_id)
+        if not config:
+            return jsonify({"success": False, "error": "Config not found"}), 404
+        layout = config.get_layout_config() or {}
+        if sections is not None:
+            layout["sections"] = sections
+            layout.pop("canvas_blocks", None)
+        else:
+            layout["canvas_blocks"] = blocks
+        layout["idCounter"] = id_counter
+        if custom_vars:
+            layout["custom_variables"] = custom_vars
+        elif "custom_variables" in layout:
+            del layout["custom_variables"]
+        config.set_layout_config(layout)
+        db.session.commit()
+        return jsonify({"success": True})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@report_bp.route("/api/layouts/load/<config_id>")
+@admin_or_staff_required
+def load_layout(config_id):
+    try:
+        config = ReportConfig.query.get(config_id)
+        if not config:
+            return jsonify({"success": False, "error": "Config not found"}), 404
+        layout = config.get_layout_config() or {}
+        return jsonify({"success": True, "layout_config": layout})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
 
 
 @report_bp.route("/api/configs/preview-layout", methods=["POST"])

@@ -15,6 +15,8 @@ from models.report_config import ReportConfig
 from models.student import Student
 from models.grade_scale import GradeScale
 from models.section import Section
+from models.student_trait import StudentTrait
+from models.trait_definition import TraitDefinition
 from sqlalchemy import func
 
 
@@ -569,7 +571,12 @@ class ReportGenerator:
             'overall_max': sum(s['max_total'] for s in subject_scores.values()),
             # Include configuration metadata for client-side rendering
             'config': config.to_dict() if config else None,
-            'grade_scale': grade_scale.to_dict() if grade_scale else None
+            'grade_scale': grade_scale.to_dict() if grade_scale else None,
+            'custom_variables': config.get_layout_config().get('custom_variables', {}) if config and config.get_layout_config() else {},
+            'trait_scores': {
+                st.trait_id: st.score
+                for st in StudentTrait.query.filter_by(student_id=student.id, term_id=term_id).all()
+            },
         }
 
     @staticmethod
