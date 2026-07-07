@@ -2,7 +2,8 @@ from flask import Response, jsonify, render_template, request, session, redirect
 from datetime import datetime
 
 from sqlalchemy.sql.functions import current_user
-from models import db
+from models import db, TraitDefinition, StudentTrait
+from models.student import Student
 from models.teacher import Teacher
 from models.user import User
 from models.subject import Subject
@@ -2411,6 +2412,70 @@ Include context field for tables, diagrams, formulas referenced in questions."""
             return redirect(url_for("login"))
 
         return render_template("staff/classes.html", current_user=current_user)
+
+    # ── Staff Trait Input ───────────────────────────────────────
+    @app.route("/staff/traits/<user_id>")
+    @staff_required
+    def staff_traits_page(user_id):
+        if session.get("user_id") != user_id:
+            flash("Access denied.", "error")
+            return redirect(url_for("login"))
+        current_user = User.query.get(user_id)
+        if not current_user:
+            flash("User not found.", "error")
+            return redirect(url_for("login"))
+        teacher = Teacher.query.filter_by(user_id=user_id).first()
+        from models.school import School
+        school = School.query.first()
+        terms = SchoolTerm.query.filter_by(school_id=school.school_id).all() if school else []
+        return render_template("staff/traits.html", current_user=current_user, teacher=teacher, terms=terms)
+
+    @app.route("/staff/api/traits/class/<class_id>", methods=["GET"])
+    @staff_required
+    def staff_class_traits(class_id):
+        term_id = request.args.get("term_id")
+        school = School.query.first()
+        trait_defs = TraitDefinition.query.filter_by(school_id=school.school_id, is_active=True).order_by(TraitDefinition.sort_order).all()
+        users = User.query.filter_by(class_room_id=class_id, role="student", is_active=True).order_by(User.first_name, User.last_name).all()
+        result = []
+        for u in users:
+            student = u.student
+            if not student:
+                continue
+            existing = []
+            if term_id:
+                existing = StudentTrait.query.filter_by(student_id=student.id, term_id=term_id).all()
+            score_map = {st.trait_id: st.score for st in existing}
+            result.append({
+                "student_id": student.id,
+                "name": f"{u.first_name} {u.last_name}".strip(),
+                "scores": {t.id: score_map.get(t.id, None) for t in trait_defs},
+            })
+        return jsonify({
+            "success": True,
+            "students": result,
+            "traits": [t.to_dict() for t in trait_defs],
+        })
+
+    @app.route("/staff/api/traits/save", methods=["POST"])
+    @staff_required
+    def staff_save_traits():
+        data = request.get_json()
+        student_id = data.get("student_id")
+        term_id = data.get("term_id")
+        scores = data.get("scores", {})
+        existing = StudentTrait.query.filter_by(student_id=student_id, term_id=term_id).all()
+        existing_map = {st.trait_id: st for st in existing}
+        for trait_id, score in scores.items():
+            if score is None:
+                continue
+            if trait_id in existing_map:
+                existing_map[trait_id].score = score
+            else:
+                st = StudentTrait(student_id=student_id, term_id=term_id, trait_id=trait_id, score=score)
+                db.session.add(st)
+        db.session.commit()
+        return jsonify({"success": True})
 
     # List all registered routes
     # print("=" * 80)

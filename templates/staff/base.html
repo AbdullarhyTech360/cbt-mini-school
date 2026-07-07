@@ -111,6 +111,10 @@
                             <span class="material-symbols-outlined text-xl group-hover:scale-110 transition-transform flex-shrink-0">groups</span>
                             <p class="text-sm font-semibold leading-tight truncate sidebar-text">My Classes</p>
                         </a></li>
+                        <li><a class="flex h-11 items-center gap-3 rounded-lg px-4 {% if request.endpoint == 'staff_traits_page' %}bg-gradient-to-r from-primary to-blue-600 text-white shadow-md{% else %}text-gray-600 dark:text-gray-400 hover:bg-gradient-to-r hover:from-primary/10 hover:to-primary/5 hover:text-primary dark:hover:text-primary{% endif %} transition-all group" href="/staff/traits/{{ current_user.id }}">
+                            <span class="material-symbols-outlined text-xl group-hover:scale-110 transition-transform flex-shrink-0">psychology</span>
+                            <p class="text-sm font-semibold leading-tight truncate sidebar-text">Behavioral Traits</p>
+                        </a></li>
                         {% endblock %}
                     </ul>
                 </nav>

@@ -13,8 +13,9 @@ class ReportConfig(db.Model):
     
     # School and term association
     school_id = db.Column(db.String(36), db.ForeignKey("school.school_id"), nullable=False)
-    term_id = db.Column(db.String(36), db.ForeignKey("school_term.term_id"), nullable=False)
+    term_id = db.Column(db.String(36), db.ForeignKey("school_term.term_id"), nullable=True)
     class_room_id = db.Column(db.String(36), db.ForeignKey("class_room.class_room_id"), nullable=True)
+    section_id = db.Column(db.String(36), db.ForeignKey("section.section_id"), nullable=True)
     
     # Configuration name
     config_name = db.Column(db.String(200), nullable=False)  # e.g., "End of Term Report"
@@ -58,6 +59,7 @@ class ReportConfig(db.Model):
     school = db.relationship("School", backref="report_configs")
     term = db.relationship("SchoolTerm", backref="report_configs")
     class_room = db.relationship("ClassRoom", backref="report_configs")
+    section = db.relationship("Section", backref="report_configs")
     # Add relationship to GradeScale
     grade_scale = db.relationship("GradeScale", backref="report_configs")
 
@@ -127,6 +129,7 @@ class ReportConfig(db.Model):
             "school_id": self.school_id,
             "term_id": self.term_id,
             "class_room_id": self.class_room_id,
+            "section_id": self.section_id,
             "config_name": self.config_name,
             "resumption_date": self.resumption_date.isoformat() if self.resumption_date else None,
             "merge_config": self.get_merge_config(),

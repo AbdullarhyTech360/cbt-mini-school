@@ -1,5 +1,5 @@
 from flask import render_template, session, request, jsonify, current_app, Response, stream_with_context
-from models import db, User, Section, School, Permission
+from models import db, User, Section, School, Permission, TraitDefinition, StudentTrait
 from models.school_term import SchoolTerm
 from models.subject import Subject
 from models.exam import Exam
@@ -4624,3 +4624,77 @@ Include context field for tables, diagrams, formulas referenced in questions."""
             db.session.rollback()
             # print(f"Error deleting all questions: {str(e)}")
             return jsonify({"success": False, "message": str(e)}), 500
+
+    # ── Trait Definitions CRUD ──────────────────────────────────
+    @app.route("/admin/traits")
+    @admin_required
+    def admin_traits_page():
+        school = School.query.first()
+        traits = TraitDefinition.query.filter_by(school_id=school.school_id).order_by(TraitDefinition.sort_order).all()
+        return render_template("admin/traits.html", school=school, traits=traits)
+
+    @app.route("/admin/api/traits", methods=["GET"])
+    @admin_required
+    def get_traits():
+        school = School.query.first()
+        traits = TraitDefinition.query.filter_by(school_id=school.school_id).order_by(TraitDefinition.sort_order).all()
+        return jsonify({"success": True, "traits": [t.to_dict() for t in traits]})
+
+    @app.route("/admin/api/traits", methods=["POST"])
+    @admin_required
+    def create_trait():
+        data = request.get_json()
+        school = School.query.first()
+        trait = TraitDefinition(
+            school_id=school.school_id,
+            name=data["name"],
+            max_score=data.get("max_score", 5.0),
+            sort_order=data.get("sort_order", 0),
+        )
+        db.session.add(trait)
+        db.session.commit()
+        return jsonify({"success": True, "trait": trait.to_dict()})
+
+    @app.route("/admin/api/traits/<trait_id>", methods=["PUT"])
+    @admin_required
+    def update_trait(trait_id):
+        trait = TraitDefinition.query.get_or_404(trait_id)
+        data = request.get_json()
+        trait.name = data.get("name", trait.name)
+        trait.max_score = data.get("max_score", trait.max_score)
+        trait.sort_order = data.get("sort_order", trait.sort_order)
+        trait.is_active = data.get("is_active", trait.is_active)
+        db.session.commit()
+        return jsonify({"success": True, "trait": trait.to_dict()})
+
+    @app.route("/admin/api/traits/<trait_id>", methods=["DELETE"])
+    @admin_required
+    def delete_trait(trait_id):
+        trait = TraitDefinition.query.get_or_404(trait_id)
+        StudentTrait.query.filter_by(trait_id=trait_id).delete()
+        db.session.delete(trait)
+        db.session.commit()
+        return jsonify({"success": True})
+
+    # ── Student Traits (admin input) ────────────────────────────
+    @app.route("/admin/api/students/<student_id>/traits", methods=["GET", "POST"])
+    @admin_required
+    def admin_student_traits(student_id):
+        term_id = request.args.get("term_id")
+        if request.method == "GET":
+            traits = StudentTrait.query.filter_by(student_id=student_id, term_id=term_id).all()
+            return jsonify({"success": True, "traits": [t.to_dict() for t in traits]})
+        else:
+            data = request.get_json()
+            scores = data.get("scores", {})
+            existing = StudentTrait.query.filter_by(student_id=student_id, term_id=term_id).all()
+            existing_map = {st.trait_id: st for st in existing}
+            for trait_id, score in scores.items():
+                if trait_id in existing_map:
+                    existing_map[trait_id].score = score
+                else:
+                    st = StudentTrait(student_id=student_id, term_id=term_id, trait_id=trait_id, score=score)
+                    db.session.add(st)
+            db.session.commit()
+            updated = StudentTrait.query.filter_by(student_id=student_id, term_id=term_id).all()
+            return jsonify({"success": True, "traits": [t.to_dict() for t in updated]})

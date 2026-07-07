@@ -1,16 +1,21 @@
 document.addEventListener("DOMContentLoaded", function () {
   const form = document.getElementById("form");
-  let username = document.getElementById("username");
+  const username = document.getElementById("username");
   const password = document.getElementById("password");
+  const loginBtn = document.getElementById("login-btn");
+  const btnText = document.getElementById("btn-text");
+  const btnSpinner = document.getElementById("btn-spinner");
+  const strengthBarContainer = document.getElementById("strength-bar-container");
+  const strengthBar = document.getElementById("strength-bar");
   let isFormSubmitting = false;
 
-  // Password visibility toggle for login
-  const togglePassword = document.querySelector('#form button');
+  // Password visibility toggle
+  const togglePassword = document.querySelector('#form button[type="button"]');
   if (togglePassword) {
-    togglePassword.addEventListener('click', function () {
-      const type = password.getAttribute('type') === 'password' ? 'text' : 'password';
-      password.setAttribute('type', type);
-      this.querySelector('span').textContent = type === 'password' ? 'visibility' : 'visibility_off';
+    togglePassword.addEventListener("click", function () {
+      const type = password.getAttribute("type") === "password" ? "text" : "password";
+      password.setAttribute("type", type);
+      this.querySelector("span").textContent = type === "password" ? "visibility" : "visibility_off";
     });
   }
 
@@ -19,331 +24,256 @@ document.addEventListener("DOMContentLoaded", function () {
     return;
   }
 
-  // small helper to show inline status and error styles
-  const usernameStatus = document.getElementById('username_status');
-  const passwordStatus = document.getElementById('password_status');
+  const usernameStatus = document.getElementById("username_status");
+  const passwordStatus = document.getElementById("password_status");
 
-  const setError = (field, statusEl, message) => {
-    field.classList.add('error-class');
-    statusEl.textContent = message;
-    statusEl.classList.remove('text-green-500');
-    statusEl.classList.add('text-red-500');
+  function setStatus(el, message, isError) {
+    if (isError) {
+      el.innerHTML = `<span class="material-symbols-outlined text-sm text-red-500">error</span><span class="text-red-500">${message}</span>`;
+      el.classList.remove("text-green-500");
+    } else if (message) {
+      el.innerHTML = `<span class="material-symbols-outlined text-sm text-green-500 animate-checkmark">check_circle</span><span class="text-green-500">${message}</span>`;
+      el.classList.remove("text-red-500");
+    } else {
+      el.innerHTML = "";
+    }
   }
 
-  const setSuccess = (field, statusEl, message = '✅ Good') => {
-    field.classList.remove('error-class');
-    statusEl.textContent = message;
-    statusEl.classList.remove('text-red-500');
-    statusEl.classList.add('text-green-500');
+  const isStudent = () => username.value.toUpperCase().includes("ST");
+  const isStaff = () => username.value.toUpperCase().includes("TE");
+  const isAdmin = () => username.value.toUpperCase().includes("AD");
+
+  // Password strength
+  function evaluateStrength(pw) {
+    let score = 0;
+    if (pw.length >= 4) score += 20;
+    if (pw.length >= 8) score += 20;
+    if (/[a-z]/.test(pw) && /[A-Z]/.test(pw)) score += 20;
+    if (/\d/.test(pw)) score += 20;
+    if (/[^a-zA-Z0-9]/.test(pw)) score += 20;
+    return score;
   }
 
-  const isStudent = () => username.value.toUpperCase().includes('ST')
-  const isStaff = () => username.value.toUpperCase().includes('TE')
-  const isAdmin = () => username.value.toUpperCase().includes('AD')
+  function updateStrengthBar(pw) {
+    if (!pw) {
+      strengthBarContainer.classList.add("hidden");
+      return;
+    }
+    strengthBarContainer.classList.remove("hidden");
+    const score = evaluateStrength(pw);
+    strengthBar.style.width = score + "%";
+    if (score < 30) {
+      strengthBar.style.background = "#ef4444";
+    } else if (score < 60) {
+      strengthBar.style.background = "#f59e0b";
+    } else if (score < 80) {
+      strengthBar.style.background = "#10b981";
+    } else {
+      strengthBar.style.background = "#059669";
+    }
+  }
+
+  password.addEventListener("input", function () {
+    updateStrengthBar(this.value);
+    checkPassword();
+  });
 
   const checkUsername = () => {
-    console.log("Checking username");
     if (!username.value.trim()) {
-      setError(username, usernameStatus, 'Username is required');
+      setStatus(usernameStatus, "Username is required", true);
+      username.classList.add("error-class");
       return Promise.resolve(false);
     }
     if (username.value.trim().length < 5) {
-      setError(username, usernameStatus, 'Username must be at least 5 characters');
+      setStatus(usernameStatus, "Username must be at least 5 characters", true);
+      username.classList.add("error-class");
       return Promise.resolve(false);
     }
-    
-    // Determine user role based on username prefix
-    let userRole = 'student';
-    if (isAdmin()) {
-      userRole = 'admin';
-    } else if (isStaff()) {
-      userRole = 'staff';
-    }
-    
-    // Send POST request to check user and get upcoming exams
-    return fetch('/check_user', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        message: username.value.trim(),
-        role: userRole
-      })
+
+    let userRole = "student";
+    if (isAdmin()) userRole = "admin";
+    else if (isStaff()) userRole = "staff";
+
+    return fetch("/check_user", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ message: username.value.trim(), role: userRole }),
     })
-      .then((response) => response.json())
+      .then((r) => r.json())
       .then((data) => {
         if (data.exists) {
-          // Always refresh the upcoming exams when a new user enters their username
-          // But only if we're not in form submission
-          if (data.role === 'student' && !isFormSubmitting) {
-            // Store the currently selected exam ID before repopulating
-            const examSelect = document.getElementById('exam-select');
-            const currentSelectedValue = examSelect.value;
-            
-            // Display all the upcoming exams options
+          if (data.role === "student" && !isFormSubmitting) {
+            const examSelect = document.getElementById("exam-select");
+            const currentVal = examSelect.value;
             const exams = data.upcoming_exams || [];
-            console.log(exams);
-            examSelect.innerHTML = '';
-
-            const defaultOption = document.createElement('option');
-            defaultOption.value = '';
-            defaultOption.text = 'Continue to Dashboard';
-            examSelect.appendChild(defaultOption);
-            
-            if (exams.length > 0) {
-              for (const exam of exams) {
-                const option = document.createElement('option');
-                option.value = exam.id;
-                // Parse the date string properly (YYYY-MM-DD format)
-                const examDate = new Date(exam.date + 'T00:00:00');
-                const formattedDate = examDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-                option.text = `${exam.name} - ${formattedDate}`;
-                examSelect.appendChild(option);
-              }
+            examSelect.innerHTML = "";
+            const def = document.createElement("option");
+            def.value = "";
+            def.text = "Continue to Dashboard";
+            examSelect.appendChild(def);
+            exams.forEach((exam) => {
+              const opt = document.createElement("option");
+              opt.value = exam.id;
+              opt.text = `${exam.name} - ${new Date(exam.date + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`;
+              examSelect.appendChild(opt);
+            });
+            if (currentVal && Array.from(examSelect.options).some((o) => o.value === currentVal)) {
+              examSelect.value = currentVal;
             }
-            
-            // Restore the previously selected value if it still exists
-            if (currentSelectedValue) {
-              const optionExists = Array.from(examSelect.options).some(option => option.value === currentSelectedValue);
-              if (optionExists) {
-                examSelect.value = currentSelectedValue;
-              }
-            }
-            
-            document.getElementById('exam-select-card').classList.remove('hidden');
+            document.getElementById("exam-select-card").classList.remove("hidden");
           } else if (!isFormSubmitting) {
-            document.getElementById('exam-select-card').classList.add('hidden');
+            document.getElementById("exam-select-card").classList.add("hidden");
           }
-
-          setSuccess(username, usernameStatus);
+          username.classList.remove("error-class");
+          setStatus(usernameStatus, "");
           return { role: data.role };
         } else {
-          setError(username, usernameStatus, 'Username not found');
-          if (!isFormSubmitting) {
-            document.getElementById('exam-select-card').classList.add('hidden');
-          }
+          setStatus(usernameStatus, "Username not found", true);
+          username.classList.add("error-class");
+          if (!isFormSubmitting) document.getElementById("exam-select-card").classList.add("hidden");
           return false;
         }
       })
-      .catch((err) => {
-        console.error('Error:', err);
-        setError(username, usernameStatus, 'An error occurred while checking username');
+      .catch(() => {
+        setStatus(usernameStatus, "Error checking username", true);
+        username.classList.add("error-class");
         return false;
       });
-  }
+  };
 
   const checkPassword = () => {
     if (!password.value) {
-      setError(password, passwordStatus, 'Password is required');
+      setStatus(passwordStatus, "Password is required", true);
+      password.classList.add("error-class");
       return false;
     }
     if (password.value.length < 4) {
-      setError(password, passwordStatus, 'Password must be at least 4 characters');
+      setStatus(passwordStatus, "Password must be at least 4 characters", true);
+      password.classList.add("error-class");
       return false;
     }
-    setSuccess(password, passwordStatus);
+    password.classList.remove("error-class");
+    setStatus(passwordStatus, "");
     return true;
-  }
+  };
 
-  username.addEventListener('input', () => {
+  username.addEventListener("input", () => {
     if (!isFormSubmitting) checkUsername();
   });
-  password.addEventListener('input', checkPassword);
 
   form.addEventListener("submit", async function (e) {
     e.preventDefault();
-    
-    // Set flag to prevent exam dropdown repopulation during form submission
     isFormSubmitting = true;
-    
-    // Clear styles
-    username.classList.remove('error-class');
-    password.classList.remove('error-class');
-    usernameStatus.textContent = '';
-    passwordStatus.textContent = '';
+    username.classList.remove("error-class");
+    password.classList.remove("error-class");
+    usernameStatus.innerHTML = "";
+    passwordStatus.innerHTML = "";
+
+    loginBtn.disabled = true;
+    btnText.classList.add("hidden");
+    btnSpinner.classList.remove("hidden");
 
     const uok = await checkUsername();
     const pok = checkPassword();
-    
-    // Store user role from checkUsername
     let userRole = null;
-    if (uok && uok.role) {
-      userRole = uok.role;
-    }
+    if (uok && uok.role) userRole = uok.role;
 
     if (!uok || !pok) {
-      // focus first invalid field
       if (!uok) username.focus();
       else password.focus();
-      // Reset flag when validation fails
       isFormSubmitting = false;
+      loginBtn.disabled = false;
+      btnText.classList.remove("hidden");
+      btnSpinner.classList.add("hidden");
       return;
     }
 
-    // Store the selected exam ID before making the login request
-    const selectedExamId = document.getElementById('exam-select').value;
+    const selectedExamId = document.getElementById("exam-select").value;
 
-    // Check if student has selected an exam and if they've already taken it
-    if (userRole === 'student' && selectedExamId) {
-      // Add exam completion check to the user check request
-      const userData = {
-        message: username.value.trim(),
-        role: userRole,
-        check_exam_completion: selectedExamId  // Add exam ID to check completion
-      };
-
-      console.log(userData);
-      
+    if (userRole === "student" && selectedExamId) {
       try {
-        const userCheckResponse = await fetch('/check_user', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(userData)
+        const resp = await fetch("/check_user", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ message: username.value.trim(), role: userRole, check_exam_completion: selectedExamId }),
         });
-        const userCheckData = await userCheckResponse.json();
-        
-        // Check if the response includes exam completion status
-        if (userCheckData.exam_completed === true) {
-          // Show error message and prevent form submission
-          showNotification(userCheckData.message || 'You have already completed this exam', 'error');
-          // Reset flag when exam completion check fails
+        const d = await resp.json();
+        if (d.exam_completed === true) {
+          showToast(d.message || "You have already completed this exam", "error");
           isFormSubmitting = false;
+          loginBtn.disabled = false;
+          btnText.classList.remove("hidden");
+          btnSpinner.classList.add("hidden");
           return;
         }
       } catch (err) {
-        console.error('Error checking exam completion:', err);
-        showNotification('Error checking exam status', 'error');
-        // Reset flag when exam completion check fails
+        showToast("Error checking exam status", "error");
         isFormSubmitting = false;
+        loginBtn.disabled = false;
+        btnText.classList.remove("hidden");
+        btnSpinner.classList.add("hidden");
         return;
       }
     }
 
-    // proceed with fetch
     fetch("/login", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        username: username.value.trim(),
-        password: password.value,
-      }),
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username: username.value.trim(), password: password.value }),
     })
-      .then((response) => response.json())
+      .then((r) => r.json())
       .then((data) => {
         if (data.success) {
-          // Store available exams in sessionStorage for access on dashboard
           if (data.available_exams && data.role === "student") {
-            sessionStorage.setItem('availableExams', JSON.stringify(data.available_exams));
+            sessionStorage.setItem("availableExams", JSON.stringify(data.available_exams));
           }
-          
-          // redirect based on role and exam selection
-          if (data.role === "admin") {
-            window.location.href = "/admin/dashboard";
-          } else if (data.role === "staff") {
-            window.location.href = "/staff/dashboard";
-          } else if (data.role === "student" && selectedExamId) {
-            // Redirect to exam details page if an exam is selected
-            window.location.href = `/student/exam/${selectedExamId}`;
-          } else if (data.role === "student" && !selectedExamId) {
-            // Redirect to dashboard if no exam is selected
-            window.location.href = "/student/dashboard";
-          } else {
-            showNotification('Login successful', 'success');
-          }
+          if (data.role === "admin") window.location.href = "/admin/dashboard";
+          else if (data.role === "staff") window.location.href = "/staff/dashboard";
+          else if (data.role === "student" && selectedExamId) window.location.href = `/student/exam/${selectedExamId}`;
+          else if (data.role === "student" && !selectedExamId) window.location.href = "/student/dashboard";
+          else showToast("Login successful", "success");
         } else {
-          showNotification('Login failed: ' + (data.error || 'Invalid credentials'), 'error');
+          showToast(data.error || "Invalid credentials", "error");
+          loginBtn.disabled = false;
+          btnText.classList.remove("hidden");
+          btnSpinner.classList.add("hidden");
         }
       })
-      .catch((err) => {
-        console.error('Login error', err);
-        showNotification('Login failed: network or server error', 'error');
+      .catch(() => {
+        showToast("Network error, please try again", "error");
+        loginBtn.disabled = false;
+        btnText.classList.remove("hidden");
+        btnSpinner.classList.add("hidden");
       })
       .finally(() => {
-        // Reset flag after login request is complete (success or failure)
         isFormSubmitting = false;
       });
   });
 
-  // Small notification utility (same style as admin settings)
-  function showNotification(message, type = "info") {
-    const notification = document.createElement("div");
-    notification.className = `fixed top-4 right-4 z-50 px-6 py-3 rounded-lg shadow-lg transform transition-all duration-300 ${type === "success"
-        ? "bg-green-500 text-white"
-        : type === "error"
-          ? "bg-red-500 text-white"
-          : "bg-blue-500 text-white"
-      }`;
-    notification.innerHTML = `
-            <div class="flex items-center gap-2">
-                <span class="material-symbols-outlined text-sm">${type === "success"
-        ? "check_circle"
-        : type === "error"
-          ? "error"
-          : "info"
-      }</span>
-                <span>${message}</span>
-            </div>
-        `;
-    document.body.appendChild(notification);
-
-    // Animate in
-    setTimeout(() => {
-      notification.style.transform = "translateX(0)";
-    }, 10);
-
-    // Remove after 3 seconds
-    setTimeout(() => {
-      notification.style.transform = "translateX(400px)";
-      setTimeout(() => {
-        if (notification.parentNode) {
-          notification.parentNode.removeChild(notification);
-        }
-      }, 300);
-    }, 3000);
+  function showToast(message, type) {
+    const t = document.getElementById("toast");
+    if (!t) return;
+    t.textContent = message;
+    t.style.background = type === "error" ? "#ef4444" : type === "success" ? "#10b981" : "#1173d4";
+    t.style.opacity = "1";
+    clearTimeout(t._t);
+    t._t = setTimeout(() => { t.style.opacity = "0"; }, 3000);
   }
 
-  // Intercept register link click. When the register route returns JSON (permission denied),
-  // show a notification. If it returns HTML, allow navigation.
+  // Intercept register link
   const registerLink = document.querySelector('a[href$="/register"]');
   if (registerLink) {
     registerLink.addEventListener("click", function (e) {
       e.preventDefault();
-      // Try to fetch the register route and inspect response content-type.
-      fetch(registerLink.href, { method: "GET" })
-        .then((response) => {
-          const ct = (response.headers.get("content-type") || "").toLowerCase();
+      fetch(this.href, { method: "GET" })
+        .then((r) => {
+          const ct = (r.headers.get("content-type") || "").toLowerCase();
           if (ct.includes("application/json")) {
-            return response.json().then((json) => {
-              // Show error message from JSON (expected when permission denied)
-              if (json.error) {
-                showNotification(json.error, "error");
-              } else if (json.message) {
-                showNotification(json.message, "error");
-              } else {
-                showNotification("Unable to open registration page", "error");
-              }
-              // Throw to stop further then-chaining
-              throw json;
-            });
-          } else {
-            // Likely HTML: proceed to the registration page
-            window.location.href = registerLink.href;
+            return r.json().then((j) => { showToast(j.error || "Cannot open registration", "error"); throw j; });
           }
+          window.location.href = registerLink.href;
         })
-        .catch((err) => {
-          // If we reach here because of network or unexpected issues, show a notice
-          if (err && (err.error || err.message)) {
-            showNotification(err.error || err.message, "error");
-          } else {
-            // If fetch was aborted or already handled, do nothing further
-            console.warn("Register check error or handled:", err);
-          }
-        });
+        .catch((err) => { if (err && err.error) showToast(err.error, "error"); });
     });
   }
 });

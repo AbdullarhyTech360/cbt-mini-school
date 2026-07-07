@@ -26,6 +26,8 @@ from .score_moderation import ScoreModeration
 from .report_config import ReportConfig
 from .grade_scale import GradeScale
 from .assessment_type import AssessmentType
+from .trait_definition import TraitDefinition
+from .student_trait import StudentTrait
 
 # Helper function to check if a permission is active
 def is_permission_active(permission_name):

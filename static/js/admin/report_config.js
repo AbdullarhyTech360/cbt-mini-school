@@ -635,7 +635,7 @@ document.getElementById("configForm").addEventListener("submit", async (e) => {
 
     const response = await fetch(url, {
       method: method,
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", "X-CSRFToken": window.CSRF_TOKEN || "" },
       body: JSON.stringify(data),
     });
 
@@ -669,6 +669,7 @@ async function deleteConfig(configId, configName) {
       try {
         const response = await fetch(`/reports/api/configs/${configId}`, {
           method: "DELETE",
+          headers: { "X-CSRFToken": window.CSRF_TOKEN || "" },
         });
 
         const data = await response.json();

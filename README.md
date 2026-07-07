@@ -1,242 +1,155 @@
 # CBT Mini School
 
-A comprehensive Computer-Based Testing platform for educational institutions with advanced features for exam management, student tracking, and automated report generation.
+A comprehensive Computer-Based Testing (CBT) platform for educational institutions. Provides exam management, role-based access control, student tracking, automated grading, and report generation.
 
-## Table of Contents
-- [Features](#features)
-- [Technology Stack](#technology-stack)
-- [Prerequisites](#prerequisites)
-- [Installation](#installation)
-- [Configuration](#configuration)
-- [Usage](#usage)
-- [Project Structure](#project-structure)
-- [Development](#development)
-- [Contributing](#contributing)
-- [License](#license)
+## Tech Stack
+
+### Backend
+- **Python 3.10+** with **Flask** web framework
+- **SQLAlchemy** ORM with **SQLite** database (swappable to PostgreSQL/MySQL)
+- **Flask-Bcrypt** for password hashing
+- **Flask-SQLAlchemy** for database integration
+
+### Frontend
+- **HTML5 / CSS3 / JavaScript ES6+**
+- **Tailwind CSS v4** for responsive styling
+- **Material Symbols** for UI icons
+- **MathJax** for LaTeX math equation rendering
+- **html2canvas** and **jsPDF** for client-side PDF generation
+
+### Tools
+- **PDM** (Python dependency manager)
+- **npm** / **Node.js** for frontend asset management
+- **Tailwind CSS CLI** for stylesheet compilation
 
 ## Features
 
-- **Computer-Based Testing (CBT)**: Interactive exam interface for students
-- **Role-based Access Control**: Admin, staff, and student permissions
-- **Exam Management**: Create, configure, and manage exams with various settings
-- **Question Management**: Support for multiple question types including math equations
-- **Real-time Session Monitoring**: Track active exam sessions
-- **Automated Report Generation**: PDF report cards with grades and performance analysis
-- **Student Performance Tracking**: Detailed analytics and progress monitoring
-- **Math Support**: LaTeX-style math rendering using MathJax
-- **Responsive Design**: Mobile-friendly interface using Tailwind CSS
-- **Grade Scale Management**: Configurable grading systems
-- **Exam Status Tracking**: Monitor exam progress and completion
-- **File Upload Support**: School logo and document uploads
+- **Computer-Based Testing** — Interactive timed exams with randomized question/option ordering
+- **Role-Based Access** — Admin, staff (teacher), and student portals with permission controls
+- **Exam Management** — Create, schedule, and configure exams (MCQ, True/False, Short Answer)
+- **Question Bank** — Support for text, images, and MathJax-rendered equations
+- **Session Monitoring** — Real-time tracking of active exam sessions
+- **Auto-Grading** — Instant scoring with configurable grade scales
+- **Report Generation** — Automated PDF report cards with performance analytics
+- **Demo Practice Mode** — Allow students to practice with demo questions
+- **School Profile** — Customizable school name, logo, session/term settings
 
-## Technology Stack
+## Quick Start
 
-### Backend
+### Prerequisites
 - Python 3.10+
-- Flask web framework
-- SQLAlchemy ORM
-- SQLite database (with option to switch to other databases)
-
-### Frontend
-- HTML5, CSS3, JavaScript ES6+
-- Tailwind CSS for responsive styling
-- Material Symbols for UI icons
-- MathJax for mathematical equation rendering
-- html2canvas and jsPDF for client-side PDF generation
-
-### Development Tools
-- PDM (Python package manager)
-- Node.js and npm
-- Tailwind CSS CLI
-- Concurrently for running multiple processes
-
-## Prerequisites
-
-- Python 3.10 or higher
 - Node.js 18+ and npm
 - Git
 
-## Installation
+### Installation
 
-1. **Clone the repository**
-   ```bash
-   git clone <repository-url>
-   cd cbt-mini-school
-   ```
-
-2. **Install Python dependencies using PDM**
-   ```bash
-   # Install PDM if you don't have it
-   pip install pdm
-   
-   # Install project dependencies
-   pdm install
-   ```
-
-3. **Install Node.js dependencies**
-   ```bash
-   npm install
-   ```
-
-4. **Setup environment**
-   Configure any required environment variables before running the app.
-
-5. **Initialize the database**
-   ```bash
-   # This will create the SQLite database with all tables
-   python -c "from app import app; from utils.initialize_defaults import initialize_default_data; app.app_context().push(); initialize_default_data()"
-   ```
-
-## Configuration
-
-The application uses a `config.py` file for configuration. Key settings include:
-
-- Database URI (default: SQLite)
-- Secret key for sessions
-- Session timeout settings
-- File upload configurations
-- Upload size limits
-
-For production deployment, make sure to:
-- Change the `SECRET_KEY` to a strong, random value
-- Configure a production database (PostgreSQL, MySQL, etc.)
-- Set `SESSION_COOKIE_SECURE = True` when using HTTPS
-- Configure production-specific environment settings
-
-## Usage
-
-### Running the Development Server
-
-**Option 1: Using PDM (recommended)**
 ```bash
+# 1. Clone the repository
+git clone <repo-url>
+cd cbt-mini-school
+
+# 2. Install Python dependencies
+pip install pdm
+pdm install
+
+# 3. Install Node.js dependencies
+npm install
+
+# 4. Build frontend assets
+npm run build
+```
+
+### Running the Application
+
+```bash
+# Start all services (Flask + Tailwind watcher + Font sync)
 pdm run dev
 ```
 
-This command runs:
-- Flask server on port 5000
-- Tailwind CSS watcher
-- Font synchronization watcher
+The application runs at **http://localhost:8000**.
 
-**Option 2: Using npm**
+### First-Time Setup
+
+On first startup, the app automatically:
+1. Creates the SQLite database (`instance/users.db`)
+2. Initializes default school information, terms, assessment types, subjects, classrooms, and permissions
+3. Creates default user accounts (printed in the console)
+
+**Default login credentials:**
+
+| Role    | Username   | Password    |
+|---------|------------|-------------|
+| Admin   | admin      | aaaa        |
+| Teacher | teacher1   | teacher123  |
+| Teacher | teacher2   | teacher123  |
+| Student | student1   | student123  |
+| Student | student2   | student123  |
+| Student | student3   | student123  |
+
+## Usage
+
+### Portals
+
+| Portal  | URL                          |
+|---------|------------------------------|
+| Login   | http://localhost:8000/login   |
+| Admin   | http://localhost:8000/admin/dashboard |
+| Staff   | http://localhost:8000/staff/dashboard  |
+| Student | http://localhost:8000/student/dashboard|
+
+### Development Commands
+
 ```bash
-npm run dev
+# Run all dev processes concurrently (Flask, Tailwind, Fonts)
+pdm run dev
+
+# Build CSS only
+npm run build:css
+
+# Build all assets (CSS + fonts + MathJax)
+npm run build
 ```
 
-**Option 3: Manual start**
-```bash
-# Terminal 1: Start Flask server
-pdm run flask
+## Configuration
 
-# Terminal 2: Watch CSS changes
-pdm run css
+Key settings in `config.py`:
 
-# Terminal 3: Watch font changes
-pdm run css-with-fonts
-```
+| Setting                    | Default                 | Description                         |
+|----------------------------|-------------------------|-------------------------------------|
+| `SECRET_KEY`               | `dev-secret-key-change-in-production` | Session encryption key  |
+| `SQLALCHEMY_DATABASE_URI`  | `sqlite:///instance/users.db` | Database connection string  |
+| `AUTO_INITIALIZE_DATA`     | `true`                  | Auto-create default data on startup |
+| `UPLOAD_FOLDER`            | `static/uploads/`       | File upload directory               |
+| `MAX_CONTENT_LENGTH`       | `2MB`                   | Maximum upload file size            |
 
-### Accessing the Application
-
-- Frontend: http://localhost:5000
-- Admin panel: http://localhost:5000/admin
-- Staff dashboard: http://localhost:5000/staff
-- Student portal: http://localhost:5000/student
-
-### Creating Initial Data
-
-After the first setup, you may need to initialize default data:
-
-```bash
-# Initialize all default data (including demo questions)
-python scripts/setup/initialize_all_data.py
-
-# Or initialize only the basic default data
-python -c "from app import app; from utils.initialize_defaults import initialize_default_data; app.app_context().push(); initialize_default_data()"
-
-# Populate demo questions separately
-python scripts/data/populate_demo_questions.py
-```
-
-This will create:
-- Default school information
-- Assessment types (Test, Exam)
-- School terms
-- Default permissions
-- Demo questions for practice
+For production:
+- Set a strong `SECRET_KEY`
+- Change `SESSION_COOKIE_SECURE = True` when using HTTPS
+- Switch to a production-grade database (PostgreSQL, MySQL)
+- Use a production WSGI server (Gunicorn, Waitress)
 
 ## Project Structure
 
 ```
 cbt-mini-school/
-├── app/
-│   └── static/
-│       ├── css/
-│       └── dist/
-├── docs/                 # Documentation files
-├── migrations/          # Database migration scripts
-├── models/              # Database models
-├── routes/              # Flask route definitions
-├── scripts/             # Utility scripts
-│   ├── data/            # Data population scripts
-│   └── setup/           # Setup and configuration scripts
-├── services/            # Business logic services
-├── static/              # Static assets
-│   ├── css/           # Stylesheets
-│   ├── js/            # JavaScript files
-│   ├── images/        # Images and icons
-│   ├── fonts/         # Font files
-│   └── uploads/       # User-uploaded content
-│       ├── profile_images/
-│       └── school_logos/
-├── templates/           # HTML templates
-├── test/                # Test files
-├── utils/               # Utility functions
-├── app.py              # Main Flask application
-├── config.py           # Configuration settings
-├── package.json        # Node.js dependencies
-├── pyproject.toml      # Python dependencies
-└── README.md
+├── app.py                # Flask application entry point
+├── config.py             # Application configuration
+├── models/               # SQLAlchemy database models
+├── routes/               # Flask route blueprints
+├── services/             # Business logic (reports, UUIDs, etc.)
+├── templates/            # Jinja2 HTML templates
+│   ├── admin/            # Admin portal views
+│   ├── staff/            # Staff/teacher views
+│   ├── student/          # Student exam interface
+│   ├── auth/             # Login, registration, password reset
+│   └── reports/          # Report card templates
+├── static/               # Static assets (CSS, JS, images, fonts)
+├── scripts/              # Utility scripts (data population, font sync)
+├── initialize_all_data.py  # Default data initialization
+├── pyproject.toml        # Python dependencies (PDM)
+└── package.json          # Node.js dependencies
 ```
-
-## Development
-
-### Adding New Features
-
-1. Create new models in the `models/` directory
-2. Add routes in the `routes/` directory
-3. Create templates in the `templates/` directory
-4. Add static assets in the `static/` directory
-5. Update the database schema with migrations
-
-### Running Tests
-
-```bash
-# Python tests
-python -m pytest test/
-
-# JavaScript tests (if any)
-npm test
-```
-
-### Building Assets
-
-```bash
-# Build CSS and copy fonts
-npm run build
-
-# Watch CSS changes
-npm run dev
-```
-
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Make your changes
-4. Add tests if applicable
-5. Commit your changes (`git commit -m 'Add amazing feature'`)
-6. Push to the branch (`git push origin feature/amazing-feature`)
-7. Open a Pull Request
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+MIT License — see the `LICENSE` file for details.
