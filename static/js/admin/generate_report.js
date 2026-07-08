@@ -443,7 +443,7 @@ async function loadLayoutStyles() {
     const response = await fetch("/reports/api/configs");
     const data = await response.json();
     if (data.success) {
-      select.innerHTML = '<option value="">Default</option>';
+      select.innerHTML = '<option value="">Default</option><option value="default2">Classic Nigerian (Default 2)</option>';
       data.configs.forEach((config) => {
         const option = document.createElement("option");
         option.value = config.config_id;

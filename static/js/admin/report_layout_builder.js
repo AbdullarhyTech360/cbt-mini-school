@@ -484,7 +484,12 @@ const LayoutBuilder = (function () {
   // Public API
   return {
     onTemplateChange: function (val) {
-      /* currently not needed */
+      const orientationEl = document.getElementById('layoutOrientation');
+      const marginEl = document.getElementById('layoutMargin');
+      if (val === 'default2') {
+        if (orientationEl) orientationEl.value = 'portrait';
+        if (marginEl) marginEl.value = '8mm';
+      }
     },
     onPageSettingChange: function () {
       /* no live effect needed */

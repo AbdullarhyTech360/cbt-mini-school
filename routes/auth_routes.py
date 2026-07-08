@@ -1,3 +1,8 @@
+from functools import wraps
+from time import time
+from collections import defaultdict
+import threading
+
 from flask import render_template, request, jsonify, session, redirect, url_for
 from models.student import Student
 from models.teacher import Teacher
@@ -8,6 +13,29 @@ from datetime import datetime
 from models import Permission
 
 
+_rate_limit_store = defaultdict(list)
+_rate_limit_lock = threading.Lock()
+
+
+def rate_limit(max_requests=5, window=60, methods=None):
+    def decorator(f):
+        @wraps(f)
+        def wrapper(*args, **kwargs):
+            if methods is None or request.method in methods:
+                ip = request.remote_addr or "127.0.0.1"
+                now = time()
+                with _rate_limit_lock:
+                    timestamps = _rate_limit_store[ip]
+                    timestamps = [t for t in timestamps if now - t < window]
+                    _rate_limit_store[ip] = timestamps
+                    if len(timestamps) >= max_requests:
+                        return jsonify({"error": "Too many requests. Please try again later."}), 429
+                    timestamps.append(now)
+            return f(*args, **kwargs)
+        return wrapper
+    return decorator
+
+
 def auth_routes(app):
     @app.route("/favicon.ico")
     def favicon():
@@ -16,6 +44,7 @@ def auth_routes(app):
         return Response(status=204)
 
     @app.route("/register", methods=["GET", "POST"])
+    @rate_limit(max_requests=5, window=60, methods=["POST"])
     def register():
         if request.method == "POST":
             # Check content type to determine how to get data
@@ -38,6 +67,7 @@ def auth_routes(app):
             class_room_name = data.get("class_room")
             role = data.get("role")
             password = data.get("password")
+            confirm_password = data.get("confirm_password")
 
             # ✅ Validate required fields based on role
             required_fields = [first_name, last_name, dob_str, role, password]
@@ -50,6 +80,14 @@ def auth_routes(app):
 
             if not all(required_fields):
                 return jsonify({"error": "All required fields must be filled"}), 400
+
+            # ✅ Validate password strength
+            if len(password) < 4:
+                return jsonify({"error": "Password must be at least 4 characters long"}), 400
+
+            # ✅ Validate password match
+            if password != confirm_password:
+                return jsonify({"error": "Passwords do not match"}), 400
 
             # ✅ Parse DOB
             try:
@@ -187,6 +225,13 @@ def auth_routes(app):
                 # Generate username before creating the user
                 username = User.generate_username(role=role)
 
+                # Ensure username is unique by adding a suffix if needed
+                base_username = username
+                counter = 1
+                while User.query.filter_by(username=username).first():
+                    username = f"{base_username}{counter}"
+                    counter += 1
+
                 user = User(
                     id=generate_uuid(),
                     username=username,  # Set username directly in constructor
@@ -231,6 +276,7 @@ def auth_routes(app):
         return jsonify({"error": "Permission is not active"}), 403
 
     @app.route("/login", methods=["GET", "POST"])
+    @rate_limit(max_requests=10, window=60, methods=["POST"])
     def login():
         if request.method == "POST":
             # print("Login POST request received")
@@ -380,13 +426,12 @@ def auth_routes(app):
 
     @app.route("/logout", methods=["POST"])
     def logout():
-        session.pop("user_id", None)
-        session.pop("username", None)
-        session.pop("role", None)
+        session.clear()
         return redirect(url_for("login"))
 
     # Route check if user exist by reg number or email for staff or admin
     @app.route("/check_user", methods=["POST"])
+    @rate_limit(max_requests=15, window=60)
     def check_user():
         data = request.get_json(silent=True)
         # print(f"Data: {data}")
@@ -513,11 +558,11 @@ def auth_routes(app):
                 return jsonify(response_data), 200
 
             return jsonify({"exists": False}), 200
-        except Exception as e:
-            # print("Error checking user:", e)
-            return jsonify({"error": str(e)}), 500
+        except Exception:
+            return jsonify({"error": "An unexpected error occurred"}), 500
 
     @app.route("/forgot_password", methods=["GET", "POST"])
+    @rate_limit(max_requests=5, window=60, methods=["POST"])
     def forgot_password():
         if request.method == "GET":
             # Get school info for the forgot password page

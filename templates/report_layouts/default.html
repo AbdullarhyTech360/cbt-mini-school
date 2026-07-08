@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <style>
+        @page { size: A4 landscape; margin: 8mm; }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: Arial, sans-serif;
+            background: white;
+            font-size: 7.5pt;
+            line-height: 1.2;
+        }
+        .report-container {
+            background: white;
+            padding: 0;
+            max-width: 100%;
+            height: 100%;
+        }
+        .content-wrapper {
+            padding: 0 15px;
+        }
+
+        /* Purple Gradient Header */
+        .header-banner {
+            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #a855f7 100%);
+            color: white;
+            padding: 10px 15px;
+            display: table;
+            width: 100%;
+            border-radius: 6px 6px 0 0;
+        }
+        .header-left {
+            display: table-cell;
+            vertical-align: middle;
+            width: 60px;
+        }
+        .header-center {
+            display: table-cell;
+            vertical-align: middle;
+            padding-left: 12px;
+        }
+        .header-right {
+            display: table-cell;
+            vertical-align: middle;
+            text-align: right;
+            width: 220px;
+        }
+        .school-logo {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            border: 2px solid white;
+            background: white;
+            object-fit: contain;
+            padding: 2px;
+        }
+        .school-name {
+            font-size: 14pt;
+            font-weight: 700;
+            letter-spacing: 0.3px;
+            margin-bottom: 2px;
+        }
+        .school-address {
+            font-size: 6pt;
+            opacity: 0.95;
+        }
+        .report-title {
+            font-size: 11pt;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+        }
+        .report-term {
+            font-size: 7pt;
+            opacity: 0.9;
+            margin-top: 1px;
+        }
+
+        /* Student Info Card */
+        .student-card {
+            background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+            border: 1px solid #bae6fd;
+            border-radius: 6px;
+            padding: 10px;
+            margin: 8px 0;
+            display: table;
+            width: 100%;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+        .student-icon-cell {
+            display: table-cell;
+            width: 80px;
+            vertical-align: middle;
+            text-align: center;
+        }
+        .student-icon {
+            width: 70px;
+            height: 70px;
+            border-radius: 10px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border: 3px solid white;
+            box-shadow: 0 2px 5px rgba(99, 102, 241, 0.3);
+        }
+        .student-icon img {
+            width: 64px;
+            height: 64px;
+            border-radius: 7px;
+            object-fit: cover;
+        }
+        .student-default {
+            width: 64px;
+            height: 64px;
+            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+            border-radius: 7px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 24px;
+        }
+        .student-details {
+            display: table-cell;
+            vertical-align: middle;
+            padding-left: 15px;
+        }
+        .student-info-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 5px;
+        }
+        .student-info-table td {
+            padding: 4px 10px 4px 0;
+            vertical-align: middle;
+        }
+        .info-label {
+            font-size: 7.5pt;
+            color: #64748b;
+            font-weight: 600;
+            letter-spacing: 0.3px;
+            width: 35%;
+            text-align: right;
+            padding-right: 10px;
+        }
+        .info-value {
+            font-size: 9pt;
+            color: #0f172a;
+            font-weight: 700;
+            width: 15%;
+            text-align: left;
+        }
+        .grade-pill {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-weight: 700;
+            font-size: 7pt;
+            color: white;
+        }
+        .grade-A { background: #10b981; }
+        .grade-B { background: #3b82f6; }
+        .grade-C { background: #f59e0b; }
+        .grade-D { background: #f97316; }
+        .grade-E { background: #ef4444; }
+        .grade-F { background: #6b7280; }
+
+        /* Academic Performance Section */
+        .section-title {
+            font-size: 9pt;
+            font-weight: 700;
+            color: #6366f1;
+            padding: 6px 0 4px 0;
+            border-bottom: 1px solid #e0e7ff;
+        }
+
+        /* Beautiful Table */
+        .performance-table {
+            width: 100%;
+            margin: 0 0 8px 0;
+            border-collapse: collapse;
+            font-size: 7pt;
+        }
+        .performance-table thead {
+            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+            color: white;
+        }
+        .performance-table th {
+            padding: 5px 3px;
+            text-align: center;
+            font-weight: 600;
+            font-size: 6pt;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            border: 1px solid #8b5cf6;
+        }
+        .performance-table th:first-child {
+            border-radius: 4px 0 0 0;
+        }
+        .performance-table th:last-child {
+            border-radius: 0 4px 0 0;
+        }
+        .performance-table td {
+            padding: 4px 3px;
+            text-align: center;
+            border: 1px solid #e5e7eb;
+        }
+        .performance-table tbody tr:nth-child(even) {
+            background: #fafafa;
+        }
+        .performance-table td:first-child {
+            background: #f8fafc;
+            font-weight: 600;
+            color: #64748b;
+        }
+        .performance-table td:nth-child(2) {
+            text-align: left;
+            font-weight: 600;
+            color: #1e293b;
+            padding-left: 6px;
+        }
+        .cbt-badge {
+            background: #f59e0b;
+            color: white;
+            padding: 1px 4px;
+            border-radius: 6px;
+            font-size: 5pt;
+            font-weight: 700;
+            margin-left: 2px;
+            vertical-align: super;
+        }
+        .total-row {
+            background: linear-gradient(135deg, #ddd6fe 0%, #c4b5fd 100%) !important;
+            font-weight: 700 !important;
+            font-size: 7.5pt !important;
+        }
+        .total-row td {
+            border-top: 2px solid #8b5cf6 !important;
+            padding: 5px 3px !important;
+        }
+        .remark-excellent { color: #059669; font-weight: 600; font-style: italic; }
+        .remark-good { color: #2563eb; font-weight: 600; font-style: italic; }
+        .remark-average { color: #d97706; font-weight: 600; font-style: italic; }
+        .remark-poor { color: #dc2626; font-weight: 600; font-style: italic; }
+        .remark-fail { color: #4b5563; font-weight: 600; font-style: italic; }
+
+        /* Comments Section */
+        .comments-container {
+            display: table;
+            width: 100%;
+            margin: 0 0 6px 0;
+        }
+        .comment-box {
+            display: table-cell;
+            width: 50%;
+            padding: 6px;
+            background: #faf5ff;
+            border: 1px dashed #d8b4fe;
+            border-radius: 4px;
+            vertical-align: top;
+        }
+        .comment-box:first-child {
+            margin-right: 6px;
+        }
+        .comment-header {
+            font-weight: 700;
+            color: #7c3aed;
+            font-size: 7pt;
+            margin-bottom: 3px;
+        }
+        .comment-area {
+            min-height: 50px;
+            border-bottom: 1px solid #d8b4fe;
+            margin-bottom: 4px;
+        }
+        .signature-line {
+            font-size: 5.5pt;
+            color: #94a3b8;
+            text-align: center;
+            padding-top: 2px;
+            border-top: 1px solid #cbd5e1;
+            margin-top: 3px;
+        }
+
+        /* Grading Scale */
+        .grading-scale {
+            text-align: center;
+            padding: 4px 0;
+            font-size: 6pt;
+            border-top: 1px solid #e5e7eb;
+        }
+        .grading-scale strong {
+            margin-right: 6px;
+        }
+        .grade-item {
+            display: inline-block;
+            margin: 0 4px;
+            padding: 2px 6px;
+            border-radius: 8px;
+            font-weight: 600;
+            color: white;
+        }
+
+        /* Footer */
+        .footer-notice {
+            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+            border: 1px solid #fbbf24;
+            border-radius: 4px;
+            padding: 4px 10px;
+            margin: 0;
+            text-align: center;
+            font-size: 5.5pt;
+            color: #92400e;
+        }
+        .footer-notice strong {
+            font-weight: 700;
+        }
+
+        /* Enhanced Student Info Table */
+        .enhanced-student-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 10px 0;
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            overflow: hidden;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+        .enhanced-student-table th {
+            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+            color: white;
+            padding: 8px;
+            text-align: center;
+            font-weight: 600;
+            font-size: 8pt;
+        }
+        .enhanced-student-table td {
+            padding: 6px 8px;
+            border: 1px solid #e2e8f0;
+            text-align: left;
+        }
+        .enhanced-student-table tr:nth-child(even) {
+            background-color: #f8fafc;
+        }
+        .enhanced-student-table .label-cell {
+            font-weight: 600;
+            color: #64748b;
+            width: 30%;
+        }
+        .enhanced-student-table .value-cell {
+            font-weight: 700;
+            color: #1e293b;
+        }
+    </style>
+</head>
+<body>
+    <div class="report-container">
+        <!-- Purple Gradient Header -->
+        <div class="header-banner">
+            <div class="header-left">
+                {% if school_logo_url %}
+                <img src="{{ school_logo_url }}" class="school-logo"
+                     onerror="console.error('Logo failed to load:', this.src);"
+                     onload="console.log('Logo loaded successfully:', this.src);">
+                {% else %}
+                <div class="school-logo"></div>
+                {% endif %}
+            </div>
+            <div class="header-center">
+                <div class="school-name">{{ school_name_upper }}</div>
+                <div class="school-address">{{ school_address }} &bull; Tel: {{ school_phone }}</div>
+            </div>
+            <div class="header-right">
+                <div class="report-term">First Term &bull; {{ term_session }}</div>
+            </div>
+        </div>
+        <div class="report-title" style="text-align: center; margin: 10px 0;">STUDENT PERFORMANCE REPORT</div>
+
+        <div class="content-wrapper">
+        <!-- Enhanced Student Information Table -->
+        <table class="enhanced-student-table">
+            <thead>
+                <tr>
+                    <th colspan="4">STUDENT INFORMATION</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td class="label-cell">Student Image:</td>
+                    <td class="value-cell" style="text-align: center;">
+                        {% if student_image_url %}
+                        <img src="{{ student_image_url }}" width="60" height="60"
+                             style="border-radius: 50%; border: 2px solid #6366f1;"
+                             onerror="console.error('Student image failed to load:', this.src);"
+                             onload="console.log('Student image loaded successfully:', this.src);">
+                        {% else %}
+                        <div style="width: 60px; height: 60px; border-radius: 50%; border: 2px solid #6366f1; background: linear-gradient(135deg, #6366f1, #8b5cf6); display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 14px;">{{ student_name_first_char }}</div>
+                        {% endif %}
+                    </td>
+                    <td class="label-cell">Student Name:</td>
+                    <td class="value-cell">{{ student_name_upper }}</td>
+                </tr>
+                <tr>
+                    <td class="label-cell">Class:</td>
+                    <td class="value-cell">{{ student_class_name }}</td>
+                    <td class="label-cell">Admission Number:</td>
+                    <td class="value-cell">{{ student_admission_number }}</td>
+                </tr>
+                <tr>
+                    <td class="label-cell">Position:</td>
+                    <td class="value-cell" style="color: #6366f1; font-weight: 700;">{{ position_formatted }} of {{ total_students }}</td>
+                    <td class="label-cell">Total Score:</td>
+                    <td class="value-cell" style="font-weight: 700;">{{ overall_total }} / {{ "%.0f"|format(overall_max) }}</td>
+                </tr>
+                <tr>
+                    <td class="label-cell">Overall Grade:</td>
+                    <td class="value-cell">
+                        <span class="grade-pill grade-{{ overall_grade }}" style="padding: 3px 10px; font-size: 8pt;">{{ overall_grade }}</span>
+                        <span style="font-size: 9pt; color: #64748b; margin-left: 6px; font-weight: 600;">({{ overall_percentage }}%)</span>
+                    </td>
+                    <td class="label-cell">Percentage:</td>
+                    <td class="value-cell">{{ overall_percentage }}%</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <!-- Academic Performance Section -->
+        <div class="section-title">Academic Performance</div>
+
+        <table class="performance-table">
+            <thead>
+                <tr>
+                    <th style="width: 20px;">SN</th>
+                    <th style="width: 110px;">SUBJECT</th>
+                    {% for at in assessment_types %}
+                    <th style="width: 45px;">{{ at.name }}</th>
+                    {% endfor %}
+                    <th style="width: 40px;">TOTAL</th>
+                    <th style="width: 38px;">GRADE</th>
+                    <th style="width: 85px;">REMARK</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in grades %}
+                <tr>
+                    <td>{{ loop.index }}</td>
+                    <td>{{ row.subject_name }}</td>
+                    {% for at in assessment_types %}
+                    {% set cell = row.assessments.get(at.code) %}
+                    <td style="font-weight: 600;">
+                        {% if cell %}
+                        {{ cell.score }}{% if cell.is_cbt %}<span class="cbt-badge">CBT</span>{% endif %}
+                        {% else %}
+                        <span style="color: #d1d5db;">-</span>
+                        {% endif %}
+                    </td>
+                    {% endfor %}
+                    <td style="font-weight: 700;">{{ row.total }}</td>
+                    <td><span class="grade-pill grade-{{ row.grade }}">{{ row.grade }}</span></td>
+                    <td class="remark-{{ row.remark_class }}">{{ row.remark }}</td>
+                </tr>
+                {% endfor %}
+                <tr class="total-row">
+                    <td colspan="2" style="text-align: left; padding-left: 10px;">OVERALL TOTAL</td>
+                    {% for at in assessment_types %}
+                    <td>-</td>
+                    {% endfor %}
+                    <td style="font-size: 11pt;">{{ overall_total }}</td>
+                    <td><span class="grade-pill grade-{{ overall_grade }}">{{ overall_grade }}</span></td>
+                    <td style="font-style: italic; color: #7c3aed;">Overall Performance</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <!-- Comments Section -->
+        <table class="comments-container">
+            <tr>
+                <td class="comment-box" style="padding-right: 5px;">
+                    <div class="comment-header">Teacher's Comment:</div>
+                    <div class="comment-area"></div>
+                    <div class="signature-line">Signature</div>
+                </td>
+                <td class="comment-box" style="padding-left: 5px;">
+                    <div class="comment-header">Principal's Comment:</div>
+                    <div class="comment-area"></div>
+                    <div class="signature-line">Signature</div>
+                </td>
+            </tr>
+        </table>
+
+        <!-- Grading Scale -->
+        <div class="grading-scale">
+            <strong>Grading Legend:</strong>
+            {% for r in grade_scale_ranges %}
+            <span class="grade-item grade-{{ r.grade }}">{{ r.grade }} ({{ r.min_score }}-{{ r.max_score }}%) {{ r.remark }}</span>
+            {% endfor %}
+        </div>
+
+        <!-- Footer Notice -->
+        <div class="footer-notice">
+            <strong>&#9888; OFFICIAL DOCUMENT:</strong> This is an official report card issued by {{ school_name }}. Any alteration or modification will render this document invalid.
+        </div>
+        </div>
+    </div>
+</body>
+</html>

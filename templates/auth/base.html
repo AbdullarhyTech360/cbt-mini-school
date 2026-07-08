@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
+  <script>if(localStorage.theme==="dark"||(!localStorage.theme&&window.matchMedia("(prefers-color-scheme:dark)").matches))document.documentElement.classList.add("dark")</script>
   <meta charset="utf-8" />
   <meta content="width=device-width, initial-scale=1.0" name="viewport" />
   <title>{% block title %}CBT Minischool{% endblock %}</title>
@@ -156,6 +156,9 @@
 
 <body class="bg-white dark:bg-[#0f1419] font-sans antialiased">
   <div class="relative flex min-h-screen w-full flex-col bg-white dark:bg-[#0f1419] overflow-x-hidden bg-subtle-pattern">
+    <button id="themeToggle" type="button" class="fixed top-4 right-4 z-50 flex items-center justify-center h-10 w-10 rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:shadow-lg hover:scale-105 active:scale-95 transition-all duration-200 text-gray-600 dark:text-gray-300 shadow-sm" aria-label="Toggle theme">
+      <span class="material-symbols-outlined text-xl">dark_mode</span>
+    </button>
     {% block content %}
     {% endblock %}
   </div>
@@ -163,6 +166,25 @@
   {% block scripts %}
   {% endblock %}
 
+  <script>
+    (function() {
+      var html = document.documentElement;
+      var btn = document.getElementById("themeToggle");
+      var icon = btn && btn.querySelector("span");
+      function update() {
+        var isDark = html.classList.contains("dark");
+        if (icon) icon.textContent = isDark ? "light_mode" : "dark_mode";
+      }
+      if (btn) {
+        btn.addEventListener("click", function() {
+          html.classList.toggle("dark");
+          localStorage.theme = html.classList.contains("dark") ? "dark" : "light";
+          update();
+        });
+      }
+      update();
+    })();
+  </script>
 </body>
 
 </html>

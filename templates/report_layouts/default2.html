@@ -1,0 +1,552 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Student Report Card</title>
+    <style>
+        @page {
+            size: A4 portrait;
+            margin: 8mm;
+        }
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            background: #e0e0e0;
+            display: flex;
+            justify-content: center;
+            padding: 20px;
+            margin: 0;
+            font-family: "Times New Roman", Times, serif;
+        }
+        .report-card {
+            width: 210mm;
+            background: #ffffff;
+            padding: 14px 16px;
+            border: 1px solid #000;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+            position: relative;
+        }
+
+        .header-container {
+            display: flex;
+            align-items: flex-start;
+            border-bottom: 2px solid #000;
+            padding-bottom: 5px;
+            margin-bottom: 10px;
+            position: relative;
+        }
+        .logo-placeholder {
+            width: 70px;
+            height: 85px;
+            border: 1px solid #000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            color: #555;
+            margin-right: 12px;
+            flex-shrink: 0;
+        }
+        .logo-placeholder img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+        .header-text {
+            text-align: center;
+            flex-grow: 1;
+        }
+        .header-text h2 {
+            margin: 0;
+            font-size: 17px;
+            font-weight: bold;
+            line-height: 1.15;
+        }
+        .header-text h3 {
+            margin: 3px 0;
+            font-size: 14px;
+            font-weight: normal;
+        }
+        .header-text p {
+            margin: 2px 0;
+            font-size: 13px;
+        }
+        .report-title {
+            font-weight: bold;
+            font-size: 15px;
+            margin-top: 4px;
+        }
+        .session {
+            font-weight: bold;
+            font-size: 14px;
+            margin-top: 2px;
+        }
+
+        .stamp {
+            position: absolute;
+            right: 8px;
+            top: 8px;
+            width: 65px;
+            height: 85px;
+            border: 2px solid #000;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-weight: bold;
+            font-size: 12px;
+            background: #fff;
+            transform: rotate(-12deg);
+            letter-spacing: 0.5px;
+        }
+
+        .student-info-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 3px 30px;
+            margin-bottom: 8px;
+        }
+        .info-row {
+            display: flex;
+            align-items: flex-end;
+        }
+        .info-label {
+            font-weight: bold;
+            white-space: nowrap;
+            margin-right: 5px;
+            font-size: 12px;
+        }
+        .info-line {
+            border-bottom: 1px dotted #000;
+            flex-grow: 1;
+            height: 1.2em;
+        }
+        .info-value {
+            border-bottom: 1px dotted #000;
+            flex-grow: 1;
+            height: 1.2em;
+            font-size: 12px;
+            padding-left: 3px;
+        }
+
+        .score-totals {
+            display: flex;
+            gap: 25px;
+            margin-bottom: 8px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        .score-row {
+            display: flex;
+            align-items: flex-end;
+        }
+        .score-label {
+            margin-right: 5px;
+            font-size: 12px;
+        }
+        .score-value {
+            border-bottom: 1px dotted #000;
+            width: 65px;
+            height: 1.2em;
+            text-align: center;
+            font-size: 12px;
+        }
+
+        .tables-wrapper {
+            display: flex;
+            border: none;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 11px;
+            font-family: inherit;
+        }
+        th, td {
+            border: 0.5px solid #000;
+            padding: 3px 3px;
+            text-align: center;
+            vertical-align: middle;
+        }
+        .section-header th {
+            font-weight: bold;
+            background: #fff;
+        }
+        .cognitive-wrapper {
+            flex: 1;
+            min-width: 0;
+            border: 1px solid #000;
+            border-right: none;
+        }
+        .cognitive-wrapper table td:first-child {
+            text-align: left;
+        }
+        .psychomotor-wrapper {
+            width: 38%;
+            flex-shrink: 0;
+            border: 1px solid #000;
+            margin-left: 20px;
+        }
+        .psychomotor-wrapper table td:first-child {
+            text-align: left;
+        }
+
+        .bottom-wrapper {
+            display: flex;
+            border: 1px solid #000;
+            border-top: none;
+            margin-top: -1px;
+        }
+        .bottom-left-col {
+            flex: 67%;
+            display: flex;
+            flex-direction: column;
+            border-right: 1px solid #000;
+        }
+        .grading-key-box {
+            border: 1px solid #000;
+            padding: 4px 8px;
+            font-size: 11px;
+        }
+        .observance-table-wrapper table {
+            border: none;
+            margin: 0;
+        }
+        .observance-table-wrapper table th {
+            border-top: none;
+            border-left: none;
+            border-right: none;
+        }
+        .observance-table-wrapper table td {
+            border-left: none;
+            border-right: none;
+            border-bottom: 1px solid #000;
+        }
+        .observance-table-wrapper table tr:last-child td {
+            border-bottom: none;
+        }
+        .bottom-right-col {
+            flex: 33%;
+            display: flex;
+            align-items: stretch;
+        }
+        .ratings-box {
+            width: 100%;
+            border: none;
+            padding: 4px 8px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+        .ratings-box h4 {
+            margin: 0 0 3px 0;
+            text-align: center;
+            border-bottom: 1px solid #000;
+            padding-bottom: 2px;
+            font-size: 11px;
+        }
+        .ratings-box p {
+            margin: 2px 0;
+            font-size: 10px;
+        }
+        .ratings-box .val {
+            display: inline-block;
+            width: 14px;
+            text-align: center;
+        }
+
+        .comments-section {
+            margin-top: 10px;
+            font-size: 12px;
+            font-family: inherit;
+        }
+        .comment-row {
+            display: flex;
+            margin-bottom: 5px;
+            align-items: flex-end;
+        }
+        .comment-label {
+            font-weight: bold;
+            white-space: nowrap;
+            margin-right: 5px;
+            font-size: 12px;
+        }
+        .comment-line {
+            border-bottom: 1px dotted #000;
+            flex-grow: 1;
+            height: 1.2em;
+        }
+
+        @media print {
+            body {
+                background: #fff;
+                padding: 0;
+            }
+            .report-card {
+                box-shadow: none;
+                padding: 8mm;
+                width: 100%;
+            }
+            .logo-placeholder {
+                border: none;
+            }
+        }
+
+        {{ custom_css|default('', true) }}
+    </style>
+</head>
+<body>
+    <div class="report-card">
+        {% set school = report_data.school %}
+        {% set student = report_data.student %}
+        {% set term = report_data.term %}
+        {% set scores = report_data.scores %}
+        {% set assessment_types = report_data.assessment_types %}
+        {% set grade_scale = report_data.grade_scale %}
+        {% set trait_scores = report_data.trait_scores|default({}) %}
+        {% set position = report_data.position %}
+        {% set total_students = report_data.total_students %}
+        {% set config = report_data.config %}
+
+        {% set overall_total = report_data.overall_total|default(0) %}
+        {% set overall_max = report_data.overall_max|default(100) %}
+        {% set overall_percentage = (overall_total / overall_max * 100)|round(1) if overall_max > 0 else 0 %}
+        {% set num_subjects = scores|length %}
+        {% set average = (overall_total / num_subjects)|round(1) if num_subjects > 0 else 0 %}
+
+        <div class="header-container">
+            <div class="logo-placeholder">
+                {% if school.logo %}
+                    <img src="{{ school.logo }}" alt="School Logo">
+                {% else %}
+                    Logo Here
+                {% endif %}
+            </div>
+            <div class="stamp">ORIGINAL</div>
+            <div class="header-text">
+                <h2>{{ school.name|upper }}</h2>
+                <h3>{{ school.address }}</h3>
+                {% if school.motto %}
+                    <p>MOTTO: {{ school.motto|upper }}</p>
+                {% endif %}
+                <div class="report-title">SENIOR SECONDARY SCHOOL REPORT</div>
+                <div class="session">{{ term.name|upper }} {{ term.session }} ACADEMIC SESSION</div>
+            </div>
+        </div>
+
+        <div class="student-info-grid">
+            <div class="info-row">
+                <span class="info-label">NAME:</span>
+                <span class="info-value">{{ student.name }}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Class:</span>
+                <span class="info-value">{{ student.class_name }}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Reg.No:</span>
+                <span class="info-value">{{ student.admission_number }}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Position:</span>
+                <span class="info-value">{{ position }}/{{ total_students }}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Sex:</span>
+                <span class="info-value">{{ student.gender|default('') }}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">House:</span>
+                <span class="info-value"></span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">No. in Class:</span>
+                <span class="info-value">{{ total_students }}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Date of Resumption:</span>
+                <span class="info-value">{% if config and config.resumption_date %}{{ config.resumption_date.strftime('%d/%m/%Y') }}{% endif %}</span>
+            </div>
+        </div>
+
+        <div class="score-totals">
+            <div class="score-row">
+                <span class="score-label">Total Score:</span>
+                <span class="score-value">{{ overall_total|round(0)|int }}</span>
+            </div>
+            <div class="score-row">
+                <span class="score-label">Average:</span>
+                <span class="score-value">{{ average }}</span>
+            </div>
+            <div class="score-row">
+                <span class="score-label">Class Average:</span>
+                <span class="score-value"></span>
+            </div>
+        </div>
+
+        <div class="tables-wrapper">
+            <div class="cognitive-wrapper">
+                <table>
+                    <thead>
+                        <tr class="section-header">
+                            <th colspan="{{ 4 + assessment_types|length }}">PART A: COGNITIVE DOMAIN</th>
+                        </tr>
+                        <tr>
+                            <th>Subject</th>
+                            {% for at in assessment_types %}
+                                <th>{{ at.name }}</th>
+                            {% endfor %}
+                            <th>Total<br/>Score</th>
+                            <th>Grade</th>
+                            <th>Subject<br/>Position</th>
+                            <th>Teacher's<br/>Signature</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for subject_id, subject_data in scores.items() %}
+                        <tr>
+                            <td>{{ subject_data.subject_name|upper }}</td>
+                            {% for at in assessment_types %}
+                                {% set assessment = subject_data.assessments.get(at.code) %}
+                                <td>
+                                    {% if assessment %}
+                                        {{ assessment.score }}
+                                    {% endif %}
+                                </td>
+                            {% endfor %}
+                            <td>{{ subject_data.total|round(1) }}</td>
+                            {% set subj_pct = (subject_data.total / subject_data.max_total * 100) if subject_data.max_total > 0 else 0 %}
+                            <td>
+                                {% if grade_scale and grade_scale.grade_ranges %}
+                                    {% set subj_grade = 'F' %}
+                                    {% for r in grade_scale.grade_ranges %}
+                                        {% if r.min_score <= subj_pct <= r.max_score %}
+                                            {% set subj_grade = r.grade %}
+                                        {% endif %}
+                                    {% endfor %}
+                                    {{ subj_grade }}
+                                {% else %}
+                                    {% if subj_pct >= 70 %}A{% elif subj_pct >= 60 %}B{% elif subj_pct >= 50 %}C{% elif subj_pct >= 45 %}D{% elif subj_pct >= 40 %}E{% else %}F{% endif %}
+                                {% endif %}
+                            </td>
+                            <td></td>
+                            <td></td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="psychomotor-wrapper">
+                <table>
+                    <thead>
+                        <tr class="section-header">
+                            <th colspan="2">PART B: PSYCHOMOTOR DOMAIN</th>
+                        </tr>
+                        <tr>
+                            <th>BEHAVIOUR</th>
+                            <th>Ratings</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% set psychomotor_behaviours = [
+                            'Punctuality',
+                            'Class Attendance',
+                            'Carrying out Assignment',
+                            'Neatness',
+                            'Politeness',
+                            'Relationship with Staff',
+                            'Relationship with Students',
+                            'Attentiveness',
+                            'Initiative',
+                            'Emotional Stability',
+                            'Attitude to Study',
+                            'Attitude to school',
+                            'Attitude to Property',
+                            'Club and Society',
+                            'Games and sports'
+                        ] %}
+                        {% set trait_values = trait_scores.values()|list %}
+                        {% for behaviour in psychomotor_behaviours %}
+                        <tr>
+                            <td>{{ behaviour }}</td>
+                            <td>
+                                {% if trait_values[loop.index0] is defined %}
+                                    {{ trait_values[loop.index0] }}
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="bottom-wrapper">
+            <div class="bottom-left-col">
+                <div class="grading-key-box">
+                    <strong>Key to grades:</strong>
+                    {% if grade_scale and grade_scale.grade_ranges %}
+                        {% for r in grade_scale.grade_ranges %}
+                            {{ r.grade }} = {{ r.min_score }} - {{ r.max_score }}
+                            {%- if not loop.last %} &nbsp;&nbsp;&nbsp; {% endif %}
+                        {% endfor %}
+                    {% else %}
+                        A = 70-100 &nbsp;&nbsp;&nbsp; B = 60 - 69 &nbsp;&nbsp;&nbsp; C = 50 - 59 &nbsp;&nbsp;&nbsp; D = 40 - 49 &nbsp;&nbsp;&nbsp; F = 0 - 39
+                    {% endif %}
+                </div>
+                <div class="observance-table-wrapper">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>OBSERVANCE</th>
+                                <th>FREQUENCIES</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr><td>No. of times school open</td><td></td></tr>
+                            <tr><td>No. of holidays observed</td><td></td></tr>
+                            <tr><td>No. of times present in school</td><td></td></tr>
+                            <tr><td>No. of times absent from school</td><td></td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="bottom-right-col">
+                <div class="ratings-box">
+                    <h4>KEY TO RATINGS</h4>
+                    <p><span class="val">5</span> = VERY GOOD</p>
+                    <p><span class="val">4</span> = GOOD</p>
+                    <p><span class="val">3</span> = FAIR</p>
+                    <p><span class="val">2</span> = WEAK</p>
+                    <p><span class="val">1</span> = POOR</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="comments-section">
+            <div class="comment-row">
+                <span class="comment-label">Form Master's Comment:</span>
+                <span class="comment-line"></span>
+            </div>
+            <div class="comment-row">
+                <span class="comment-label">House Master's Comment:</span>
+                <span class="comment-line"></span>
+            </div>
+            <div class="comment-row">
+                <span class="comment-label">School Fees for Next Term:</span>
+                <span class="comment-line"></span>
+            </div>
+            <div class="comment-row">
+                <span class="comment-label">PRINCIPAL'S COMMENT:</span>
+                <span class="comment-line"></span>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
