@@ -559,10 +559,14 @@ def get_student_report(student_id):
         term_id = request.args.get("term_id")
         class_room_id = request.args.get("class_room_id")
         config_id = request.args.get("config_id")
+        layout_config_id = request.args.get("layout_config_id")
+        include_html = request.args.get("include_html")
 
         # Handle empty string config_id as None
         if config_id == "":
             config_id = None
+        if layout_config_id == "":
+            layout_config_id = None
 
         # Debug logging
         # print(f"DEBUG: API received - student_id: {student_id}, term_id: {term_id}, class_room_id: {class_room_id}, config_id: {config_id}")
@@ -592,6 +596,26 @@ def get_student_report(student_id):
             return jsonify(
                 {"success": False, "message": "Could not generate report data"}
             ), 404
+
+        # If a specific layout is requested, generate server-rendered HTML
+        if layout_config_id and include_html:
+            if layout_config_id == "default2":
+                if not report_data.get("config"):
+                    report_data["config"] = {}
+                report_data["config"]["layout_config"] = {"template": "default2"}
+            elif layout_config_id:
+                layout_config = ReportConfig.query.get(layout_config_id)
+                if layout_config:
+                    lc = layout_config.get_layout_config()
+                    if lc:
+                        if not report_data.get("config"):
+                            report_data["config"] = {}
+                        report_data["config"]["layout_config"] = lc
+
+            # Generate HTML if layout_config was set
+            if report_data.get("config", {}).get("layout_config"):
+                html_content = ReportGenerator.generate_report_html(report_data)
+                report_data["_html"] = html_content
 
         return jsonify({"success": True, "report": report_data})
 

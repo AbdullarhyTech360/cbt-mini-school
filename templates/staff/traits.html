@@ -1,0 +1,160 @@
+{% extends "staff/base.html" %}
+{% block title %}Behavioral Traits{% endblock %}
+{% block content %}
+<div class="max-w-5xl mx-auto">
+    <div class="mb-6">
+        <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Behavioral Traits</h1>
+        <p class="text-gray-500 dark:text-gray-400 text-sm mt-1">Score each student on behavioral traits for the selected term</p>
+    </div>
+
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow border border-gray-200 dark:border-gray-700 p-4 mb-6">
+        <div class="flex flex-wrap items-end gap-4">
+            <div>
+                <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Class</label>
+                <select id="classSelect" class="px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-white text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none min-w-[200px]">
+                    <option value="">Select a class</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Term</label>
+                <select id="termSelect" class="px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-white text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none min-w-[180px]">
+                    <option value="">Select term</option>
+                    {% for term in terms %}
+                    <option value="{{ term.term_id }}">{{ term.name }} - {{ term.academic_session }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <button onclick="loadStudents()" class="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition text-sm font-semibold">Load Students</button>
+        </div>
+    </div>
+
+    <div id="traitsContainer" class="hidden">
+        <div id="traitHeaders" class="flex items-center gap-2 px-4 py-2 bg-gray-50 dark:bg-gray-700 rounded-t-lg border border-gray-200 dark:border-gray-700 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase sticky top-0"></div>
+        <div id="studentsList" class="border-x border-b border-gray-200 dark:border-gray-700 rounded-b-lg divide-y divide-gray-100 dark:divide-gray-700"></div>
+    </div>
+
+    <div id="emptyState" class="hidden text-center py-16 text-gray-400 dark:text-gray-500">
+        <span class="material-symbols-outlined text-5xl mb-3">psychology</span>
+        <p>Select a class and term, then click "Load Students"</p>
+    </div>
+</div>
+
+<script>
+let currentTraits = [];
+
+async function loadClasses() {
+    const teacherId = {{ current_user.id|tojson }};
+    try {
+        const res = await fetch(`/staff/subjects/${teacherId}`);
+        const data = await res.json();
+        if (data.success && data.subjects) {
+            const seen = new Set();
+            const select = document.getElementById('classSelect');
+            data.subjects.forEach(s => {
+                if (!seen.has(s.class_room_id)) {
+                    seen.add(s.class_room_id);
+                    const opt = document.createElement('option');
+                    opt.value = s.class_room_id;
+                    opt.textContent = s.class_name;
+                    select.appendChild(opt);
+                }
+            });
+        }
+    } catch (e) {
+        console.error('Failed to load classes', e);
+    }
+}
+
+async function loadStudents() {
+    const classId = document.getElementById('classSelect').value;
+    const termId = document.getElementById('termSelect').value;
+    if (!classId || !termId) { alert('Please select both class and term'); return; }
+
+    const container = document.getElementById('traitsContainer');
+    const empty = document.getElementById('emptyState');
+    const headers = document.getElementById('traitHeaders');
+    const list = document.getElementById('studentsList');
+
+    try {
+        const res = await fetch(`/staff/api/traits/class/${classId}?term_id=${termId}`);
+        const data = await res.json();
+        if (!data.success) { alert('Failed to load'); return; }
+
+        currentTraits = data.traits;
+        if (!data.traits.length) {
+            alert('No traits defined. Ask an admin to create traits first.');
+            return;
+        }
+
+        // Render headers
+        headers.innerHTML = `<div class="w-48 flex-shrink-0 font-medium">Student</div>` +
+            data.traits.map(t => `<div class="w-20 text-center flex-shrink-0">${t.name}<br><span class="text-[10px] font-normal text-gray-400">max ${t.max_score}</span></div>`).join('') +
+            `<div class="w-16 flex-shrink-0"></div>`;
+
+        // Render students
+        list.innerHTML = data.students.map(s => {
+            const cells = data.traits.map(t => {
+                const val = s.scores[t.id] !== null && s.scores[t.id] !== undefined ? s.scores[t.id] : '';
+                return `<div class="w-20 flex-shrink-0 flex justify-center">
+                    <input type="number" step="0.1" min="0" max="${t.max_score}" value="${val}"
+                        data-student="${s.student_id}" data-trait="${t.id}" data-max="${t.max_score}"
+                        class="w-16 px-2 py-1 text-center text-sm rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-white focus:ring-1 focus:ring-primary outline-none trait-input" />
+                </div>`;
+            }).join('');
+            return `<div class="flex items-center gap-2 px-4 py-2 hover:bg-gray-50 dark:hover:bg-gray-750 transition" data-student-id="${s.student_id}">
+                <div class="w-48 flex-shrink-0 text-sm text-gray-800 dark:text-white font-medium truncate">${s.name}</div>
+                ${cells}
+                <div class="w-16 flex-shrink-0 flex justify-center">
+                    <button onclick="saveStudentTraits('${s.student_id}', '${termId}')" class="px-3 py-1 text-xs bg-primary text-white rounded hover:bg-primary/90 transition save-btn">Save</button>
+                </div>
+            </div>`;
+        }).join('');
+
+        container.classList.remove('hidden');
+        empty.classList.add('hidden');
+    } catch (e) {
+        console.error('Failed to load students', e);
+        alert('Failed to load students');
+    }
+}
+
+async function saveStudentTraits(studentId, termId) {
+    const row = document.querySelector(`[data-student-id="${studentId}"]`);
+    const inputs = row.querySelectorAll('.trait-input');
+    const scores = {};
+    inputs.forEach(inp => {
+        const traitId = inp.dataset.trait;
+        const val = inp.value;
+        if (val !== '') {
+            const max = parseFloat(inp.dataset.max);
+            scores[traitId] = Math.min(parseFloat(val), max);
+        }
+    });
+
+    const btn = row.querySelector('.save-btn');
+    btn.textContent = 'Saving...';
+    btn.disabled = true;
+
+    try {
+        const res = await fetch('/staff/api/traits/save', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ student_id: studentId, term_id: termId, scores }),
+        });
+        const data = await res.json();
+        if (data.success) {
+            btn.textContent = 'Saved!';
+            setTimeout(() => { btn.textContent = 'Save'; btn.disabled = false; }, 1500);
+        } else {
+            btn.textContent = 'Error';
+            setTimeout(() => { btn.textContent = 'Save'; btn.disabled = false; }, 2000);
+        }
+    } catch (e) {
+        btn.textContent = 'Error';
+        setTimeout(() => { btn.textContent = 'Save'; btn.disabled = false; }, 2000);
+    }
+}
+
+document.addEventListener('DOMContentLoaded', loadClasses);
+</script>
+{% endblock %}

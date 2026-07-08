@@ -1,0 +1,136 @@
+{% extends "admin/base.html" %}
+{% block title %}Behavioral Traits{% endblock %}
+{% block content %}
+<div class="max-w-4xl mx-auto">
+    <div class="flex items-center justify-between mb-6">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Behavioral Traits</h1>
+            <p class="text-gray-500 dark:text-gray-400 text-sm mt-1">Define custom traits that staff can score per student per term</p>
+        </div>
+        <button onclick="openAddModal()" class="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition text-sm font-semibold">
+            <span class="material-symbols-outlined text-lg">add</span>
+            Add Trait
+        </button>
+    </div>
+
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow border border-gray-200 dark:border-gray-700 overflow-hidden">
+        <table class="w-full">
+            <thead>
+                <tr class="bg-gray-50 dark:bg-gray-700 text-left">
+                    <th class="px-6 py-3 text-xs font-semibold text-gray-500 dark:text-gray-300 uppercase">Name</th>
+                    <th class="px-6 py-3 text-xs font-semibold text-gray-500 dark:text-gray-300 uppercase">Max Score</th>
+                    <th class="px-6 py-3 text-xs font-semibold text-gray-500 dark:text-gray-300 uppercase">Order</th>
+                    <th class="px-6 py-3 text-xs font-semibold text-gray-500 dark:text-gray-300 uppercase">Status</th>
+                    <th class="px-6 py-3 text-xs font-semibold text-gray-500 dark:text-gray-300 uppercase">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for trait in traits %}
+                <tr class="border-t border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-750 transition">
+                    <td class="px-6 py-4 text-sm text-gray-800 dark:text-white font-medium">{{ trait.name }}</td>
+                    <td class="px-6 py-4 text-sm text-gray-600 dark:text-gray-400">{{ trait.max_score }}</td>
+                    <td class="px-6 py-4 text-sm text-gray-600 dark:text-gray-400">{{ trait.sort_order }}</td>
+                    <td class="px-6 py-4">
+                        <span class="px-2 py-0.5 text-xs rounded-full {{ 'bg-green-100 text-green-700' if trait.is_active else 'bg-gray-100 text-gray-500' }}">
+                            {{ 'Active' if trait.is_active else 'Inactive' }}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4">
+                        <div class="flex items-center gap-2">
+                            <button onclick="openEditModal('{{ trait.id }}', '{{ trait.name }}', '{{ trait.max_score }}', '{{ trait.sort_order }}', {{ 'true' if trait.is_active else 'false' }})" class="text-primary hover:text-primary/80 text-sm font-medium">Edit</button>
+                            <button onclick="deleteTrait('{{ trait.id }}')" class="text-red-500 hover:text-red-600 text-sm font-medium">Delete</button>
+                        </div>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="5" class="px-6 py-12 text-center text-gray-400 dark:text-gray-500 text-sm">No traits defined yet. Click "Add Trait" to create one.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Modal -->
+<div id="traitModal" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-black/50">
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 w-full max-w-md mx-4">
+        <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+            <h3 id="modalTitle" class="text-lg font-bold text-gray-900 dark:text-white">Add Trait</h3>
+            <button onclick="closeModal()" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                <span class="material-symbols-outlined">close</span>
+            </button>
+        </div>
+        <form id="traitForm" class="p-6 space-y-4" onsubmit="saveTrait(event)">
+            <input type="hidden" id="traitId" value="">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Trait Name</label>
+                <input id="traitName" type="text" required class="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-white text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none" placeholder="e.g. Punctuality">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Max Score</label>
+                <input id="traitMaxScore" type="number" step="0.1" required class="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-white text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none" placeholder="5">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Sort Order</label>
+                <input id="traitOrder" type="number" class="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-white text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none" placeholder="0">
+            </div>
+            <div class="flex items-center gap-2">
+                <input id="traitActive" type="checkbox" checked class="rounded border-gray-300 text-primary focus:ring-primary">
+                <label for="traitActive" class="text-sm text-gray-700 dark:text-gray-300">Active</label>
+            </div>
+            <div class="flex justify-end gap-3 pt-2">
+                <button type="button" onclick="closeModal()" class="px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition">Cancel</button>
+                <button type="submit" class="px-4 py-2 text-sm bg-primary text-white rounded-lg hover:bg-primary/90 transition font-semibold">Save</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function openAddModal() {
+    document.getElementById('modalTitle').textContent = 'Add Trait';
+    document.getElementById('traitId').value = '';
+    document.getElementById('traitForm').reset();
+    document.getElementById('traitActive').checked = true;
+    document.getElementById('traitModal').classList.remove('hidden');
+}
+
+function openEditModal(id, name, maxScore, order, active) {
+    document.getElementById('modalTitle').textContent = 'Edit Trait';
+    document.getElementById('traitId').value = id;
+    document.getElementById('traitName').value = name;
+    document.getElementById('traitMaxScore').value = maxScore;
+    document.getElementById('traitOrder').value = order;
+    document.getElementById('traitActive').checked = active;
+    document.getElementById('traitModal').classList.remove('hidden');
+}
+
+function closeModal() {
+    document.getElementById('traitModal').classList.add('hidden');
+}
+
+async function saveTrait(e) {
+    e.preventDefault();
+    const id = document.getElementById('traitId').value;
+    const data = {
+        name: document.getElementById('traitName').value,
+        max_score: parseFloat(document.getElementById('traitMaxScore').value) || 5,
+        sort_order: parseInt(document.getElementById('traitOrder').value) || 0,
+        is_active: document.getElementById('traitActive').checked,
+    };
+    const url = id ? `/admin/api/traits/${id}` : '/admin/api/traits';
+    const method = id ? 'PUT' : 'POST';
+    const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
+    if (res.ok) location.reload();
+    else alert('Failed to save trait');
+}
+
+async function deleteTrait(id) {
+    if (!confirm('Delete this trait? Student scores for this trait will also be removed.')) return;
+    const res = await fetch(`/admin/api/traits/${id}`, { method: 'DELETE' });
+    if (res.ok) location.reload();
+    else alert('Failed to delete trait');
+}
+</script>
+{% endblock %}

@@ -474,7 +474,7 @@ class ReportGenerator:
 
         # Update header maxes for consistency with the 100% total
         # We'll set the assessment type maxes to match their contribution to 100
-        total_at_max = sum(at.max_score for at in all_assessment_types)
+        total_at_max = sum(at['max_score'] for at in returned_assessment_types)
         if total_at_max > 0:
             header_scale = 100.0 / total_at_max
             for at in returned_assessment_types:
@@ -575,7 +575,7 @@ class ReportGenerator:
             'custom_variables': config.get_layout_config().get('custom_variables', {}) if config and config.get_layout_config() else {},
             'trait_scores': {
                 st.trait_id: st.score
-                for st in StudentTrait.query.filter_by(student_id=student.id, term_id=term_id).all()
+                for st in StudentTrait.query.filter_by(student_id=user.id, term_id=term_id).all()
             },
         }
 

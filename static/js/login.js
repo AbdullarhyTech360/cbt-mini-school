@@ -5,8 +5,6 @@ document.addEventListener("DOMContentLoaded", function () {
   const loginBtn = document.getElementById("login-btn");
   const btnText = document.getElementById("btn-text");
   const btnSpinner = document.getElementById("btn-spinner");
-  const strengthBarContainer = document.getElementById("strength-bar-container");
-  const strengthBar = document.getElementById("strength-bar");
   let isFormSubmitting = false;
 
   // Password visibility toggle
@@ -39,42 +37,11 @@ document.addEventListener("DOMContentLoaded", function () {
     }
   }
 
-  const isStudent = () => username.value.toUpperCase().includes("ST");
-  const isStaff = () => username.value.toUpperCase().includes("TE");
-  const isAdmin = () => username.value.toUpperCase().includes("AD");
-
-  // Password strength
-  function evaluateStrength(pw) {
-    let score = 0;
-    if (pw.length >= 4) score += 20;
-    if (pw.length >= 8) score += 20;
-    if (/[a-z]/.test(pw) && /[A-Z]/.test(pw)) score += 20;
-    if (/\d/.test(pw)) score += 20;
-    if (/[^a-zA-Z0-9]/.test(pw)) score += 20;
-    return score;
-  }
-
-  function updateStrengthBar(pw) {
-    if (!pw) {
-      strengthBarContainer.classList.add("hidden");
-      return;
-    }
-    strengthBarContainer.classList.remove("hidden");
-    const score = evaluateStrength(pw);
-    strengthBar.style.width = score + "%";
-    if (score < 30) {
-      strengthBar.style.background = "#ef4444";
-    } else if (score < 60) {
-      strengthBar.style.background = "#f59e0b";
-    } else if (score < 80) {
-      strengthBar.style.background = "#10b981";
-    } else {
-      strengthBar.style.background = "#059669";
-    }
-  }
+  const isStudent = () => username.value.toUpperCase().startsWith("ST");
+  const isStaff = () => username.value.toUpperCase().startsWith("TE");
+  const isAdmin = () => username.value.toUpperCase().startsWith("AD");
 
   password.addEventListener("input", function () {
-    updateStrengthBar(this.value);
     checkPassword();
   });
 
