@@ -17,6 +17,7 @@ from models.associations import teacher_classroom
 from models.grade import Grade
 
 from typing import List
+import uuid
 
 
 def admin_action_route(app):
@@ -2121,7 +2122,7 @@ Include context field for tables, diagrams, formulas referenced in questions."""
         class_rooms = db.session.query(ClassRoom).all()
         teachers = db.session.query(User).filter_by(role="staff").all()
         students = db.session.query(Student).all()
-        average_class_size = len(students) / len(class_rooms)
+        average_class_size = len(students) / len(class_rooms) if class_rooms else 0
         return render_template(
             "admin/classes.html",
             current_user=current_user,
@@ -2667,16 +2668,23 @@ Include context field for tables, diagrams, formulas referenced in questions."""
             if 'image' in request.files:
                 file = request.files['image']
                 if file and file.filename != '':
-                    filename = secure_filename(file.filename)
+                    original = secure_filename(file.filename)
+                    if not original:
+                        return jsonify({"success": False, "message": "Invalid filename"}), 400
+
+                    if not allowed_file(original):
+                        return jsonify({"success": False, "message": "Invalid file type. Only PNG, JPG, JPEG, GIF, and WEBP are allowed"}), 400
+
+                    ext = original.rsplit('.', 1)[1].lower()
+                    unique_name = f"{uuid.uuid4().hex}.{ext}"
+
                     upload_dir = os.path.join(
-                        current_app.root_path, 'static', 'uploads', 'students')
+                        current_app.root_path, 'static', 'uploads', 'profile_images')
                     os.makedirs(upload_dir, exist_ok=True)
 
-                    timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
-                    unique_filename = f"{timestamp}_{filename}"
-                    file_path = os.path.join(upload_dir, unique_filename)
+                    file_path = os.path.join(upload_dir, unique_name)
                     file.save(file_path)
-                    image_path = f"/static/uploads/students/{unique_filename}"
+                    image_path = f"/uploads/profile_images/{unique_name}"
 
             # Create User record
             new_user = User(
@@ -2744,16 +2752,30 @@ Include context field for tables, diagrams, formulas referenced in questions."""
             if 'image' in request.files:
                 file = request.files['image']
                 if file and file.filename != '':
-                    filename = secure_filename(file.filename)
+                    original = secure_filename(file.filename)
+                    if not original:
+                        return jsonify({"success": False, "message": "Invalid filename"}), 400
+
+                    if not allowed_file(original):
+                        return jsonify({"success": False, "message": "Invalid file type. Only PNG, JPG, JPEG, GIF, and WEBP are allowed"}), 400
+
+                    ext = original.rsplit('.', 1)[1].lower()
+                    unique_name = f"{uuid.uuid4().hex}.{ext}"
+
                     upload_dir = os.path.join(
-                        current_app.root_path, 'static', 'uploads', 'students')
+                        current_app.root_path, 'static', 'uploads', 'profile_images')
                     os.makedirs(upload_dir, exist_ok=True)
 
-                    timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
-                    unique_filename = f"{timestamp}_{filename}"
-                    file_path = os.path.join(upload_dir, unique_filename)
+                    # Delete old image file if it exists
+                    if user.image and user.image.startswith('/uploads/'):
+                        old_path = os.path.join(
+                            current_app.root_path, 'static', user.image.lstrip('/'))
+                        if os.path.exists(old_path):
+                            os.remove(old_path)
+
+                    file_path = os.path.join(upload_dir, unique_name)
                     file.save(file_path)
-                    user.image = f"/static/uploads/students/{unique_filename}"
+                    user.image = f"/uploads/profile_images/{unique_name}"
 
             # Update User fields
             user.first_name = data.get("first_name", user.first_name)

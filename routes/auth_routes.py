@@ -2,6 +2,7 @@ from functools import wraps
 from time import time
 from collections import defaultdict
 import threading
+import uuid
 
 from flask import render_template, request, jsonify, session, redirect, url_for
 from models.student import Student
@@ -11,6 +12,13 @@ from models.class_room import ClassRoom
 from models import db
 from datetime import datetime
 from models import Permission
+
+
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
+
+
+def allowed_image(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 
 _rate_limit_store = defaultdict(list)
@@ -101,29 +109,27 @@ def auth_routes(app):
             if 'image' in request.files:
                 file = request.files['image']
                 if file and file.filename:
-                    try:
-                        from werkzeug.utils import secure_filename
-                        import os
+                    from werkzeug.utils import secure_filename
+                    import os
 
-                        filename = secure_filename(file.filename)
-                        # Add timestamp to make filename unique
-                        timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
-                        filename = f"{timestamp}_{filename}"
+                    original = secure_filename(file.filename)
+                    if not original:
+                        return jsonify({"error": "Invalid filename"}), 400
 
-                        # Ensure directory exists
-                        upload_folder = os.path.join(
-                            app.static_folder, 'uploads', 'profile_images')
-                        os.makedirs(upload_folder, exist_ok=True)
+                    if not allowed_image(original):
+                        return jsonify({"error": "Invalid file type. Only PNG, JPG, JPEG, GIF, and WEBP are allowed"}), 400
 
-                        file_path = os.path.join(upload_folder, filename)
-                        file.save(file_path)
+                    ext = original.rsplit('.', 1)[1].lower()
+                    unique_name = f"{uuid.uuid4().hex}.{ext}"
 
-                        # Store relative path in database
-                        image_path = f"uploads/profile_images/{filename}"
-                    except Exception as e:
-                        # print(f"Error saving image: {e}")
-                        # Continue without image if upload fails
-                        pass
+                    upload_folder = os.path.join(
+                        app.static_folder, 'uploads', 'profile_images')
+                    os.makedirs(upload_folder, exist_ok=True)
+
+                    file_path = os.path.join(upload_folder, unique_name)
+                    file.save(file_path)
+
+                    image_path = f"/uploads/profile_images/{unique_name}"
 
             # Student-specific: resolve class_room and enforce scoped register_number uniqueness
             if role == "student":

@@ -238,17 +238,10 @@ def create_classrooms(sections):
             classrooms[classroom.class_room_name] = classroom
         return classrooms
 
-def create_admin_user(classrooms):
+def create_admin_user():
     """Create default admin user if one doesn't exist"""
     admin = User.query.filter_by(role="admin").first()
     if not admin:
-        # print("Creating admin user...")
-        # Get a default class for the admin user
-        default_class = classrooms.get("Primary 1")
-        if not default_class:
-            default_class = ClassRoom.query.first()
-        
-        # Create admin user
         admin = User(
             id=generate_uuid(),
             username="admin",
@@ -257,17 +250,15 @@ def create_admin_user(classrooms):
             email="admin@demoschool.com",
             gender="Male",
             dob=date(1990, 1, 1),
-            class_room_id=default_class.class_room_id if default_class else None,
+            class_room_id=None,
             role="admin",
             is_active=True
         )
-        admin.set_password("aaaa")  # Default password
+        admin.set_password("aaaa")
         db.session.add(admin)
         db.session.commit()
-        # print("✓ Default admin created: username=admin, password=aaaa")
         return admin
     else:
-        # print("✓ Admin user already exists")
         return admin
 
 def create_teachers(classrooms):
@@ -772,44 +763,12 @@ def populate_demo_questions():
 
 def main():
     """Main initialization function"""
-    # print("CBT Minischool Platform - Complete Data Initialization")
-    # print("=" * 60)
-    
     with app.app_context():
-        # Ensure database tables exist
         db.create_all()
-        
-        # Initialize all data
+
         school = create_school()
-        create_school_terms(school)
-        create_assessment_types(school)
-        sections = create_sections(school)
-        classrooms = create_classrooms(sections)
-        create_admin_user(classrooms)
-        create_teachers(classrooms)
-        create_students(classrooms)
-        subjects = create_subjects()
-        link_subjects_to_classes(subjects, classrooms)
-        create_permissions()
-        update_classroom_student_counts(classrooms)
-        populate_demo_questions()
+        create_admin_user()
         create_initialization_flag()
-        
-        # print("\n" + "=" * 60)
-        # print("✅ ALL DEFAULT DATA INITIALIZATION COMPLETE!")
-        # print("=" * 60)
-        # print("\nDefault Login Credentials:")
-        # print("\nAdmin Account:")
-        # print("  Username: admin")
-        # print("  Password: aaaa")
-        # print("\nTeacher Accounts:")
-        # print("  Username: teacher1, Password: teacher123")
-        # print("  Username: teacher2, Password: teacher123")
-        # print("\nStudent Accounts:")
-        # print("  Username: student1, Password: student123")
-        # print("  Username: student2, Password: student123")
-        # print("  Username: student3, Password: student123")
-        # print("\n" + "=" * 60)
 
 if __name__ == "__main__":
     main()
