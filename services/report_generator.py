@@ -92,7 +92,6 @@ class ReportGenerator:
         if lower.startswith('data:') or lower.startswith('http://') or lower.startswith('https://'):
             return path_or_url
 
-        # Clean the path by removing common prefixes
         clean_path = path_or_url
         prefixes_to_remove = ['static/uploads/', 'static/']
         for prefix in prefixes_to_remove:
@@ -100,15 +99,9 @@ class ReportGenerator:
                 clean_path = clean_path[len(prefix):]
                 break
 
-        # Normalize path separators to forward slashes (Flask expects forward slashes)
         clean_path = clean_path.replace('\\', '/')
-
-        # The Flask route expects the path to be relative to static/uploads/
-        # So if the cleaned path is correct, just prepend / to make it a URL
+        clean_path = clean_path.lstrip('/')
         result = f'/{clean_path}'
-        
-
-        
         return result
 
     @staticmethod

@@ -32,8 +32,8 @@ app.config.from_object(Config)
 app.config["PERMANENT_SESSION_LIFETIME"] = timedelta(days=1)
 app.config["SESSION_REFRESH_EACH_REQUEST"] = True
 
-# Increase max content length for file uploads (100MB)
-app.config["MAX_CONTENT_LENGTH"] = 100 * 1024 * 1024
+# Increase max content length for file uploads (5MB)
+app.config["MAX_CONTENT_LENGTH"] = 5 * 1024 * 1024
 
 db.init_app(app)
 bcrypt.init_app(app)
@@ -164,13 +164,6 @@ with app.app_context():
                 print("\nAdmin Account:")
                 print("  Username: admin")
                 print("  Password: aaaa")
-                print("\nTeacher Accounts:")
-                print("  Username: teacher1, Password: teacher123")
-                print("  Username: teacher2, Password: teacher123")
-                print("\nStudent Accounts:")
-                print("  Username: student1, Password: student123")
-                print("  Username: student2, Password: student123")
-                print("  Username: student3, Password: student123")
                 print("=" * 80)
             except Exception as e:
                 print(f"⚠️  Error during data initialization: {e}")
