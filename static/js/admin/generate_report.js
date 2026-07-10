@@ -18,6 +18,9 @@ document.addEventListener("DOMContentLoaded", () => {
   // Initialize tab switching functionality
   initializeTabSwitching();
 
+  // Restore previously active tab
+  restoreActiveTab();
+
   // Initialize broad sheet controls
   initializeBroadSheetControls();
 });
@@ -41,9 +44,13 @@ function initializeTabSwitching() {
       if (this.id === 'individual-reports-tab') {
         document.getElementById('individual-reports-section').classList.remove('hidden');
         document.getElementById('broad-sheet-section').classList.add('hidden');
+        document.getElementById('class-list-section').classList.add('hidden');
+        document.getElementById('recording-sheet-section').classList.add('hidden');
       } else if (this.id === 'broad-sheet-tab') {
         document.getElementById('individual-reports-section').classList.add('hidden');
         document.getElementById('broad-sheet-section').classList.remove('hidden');
+        document.getElementById('class-list-section').classList.add('hidden');
+        document.getElementById('recording-sheet-section').classList.add('hidden');
 
         // Load terms for broad sheet if not already loaded
         if (document.querySelectorAll('#broadSheetTermFilter option').length <= 1) {
@@ -52,9 +59,42 @@ function initializeTabSwitching() {
         if (document.querySelectorAll('#broadSheetClassFilter option').length <= 1) {
           loadBroadSheetClasses();
         }
+      } else if (this.id === 'class-list-tab') {
+        document.getElementById('individual-reports-section').classList.add('hidden');
+        document.getElementById('broad-sheet-section').classList.add('hidden');
+        document.getElementById('class-list-section').classList.remove('hidden');
+        document.getElementById('recording-sheet-section').classList.add('hidden');
+
+        if (typeof loadClassesForClassList === 'function') {
+          loadClassesForClassList();
+        }
+      } else if (this.id === 'recording-sheet-tab') {
+        document.getElementById('individual-reports-section').classList.add('hidden');
+        document.getElementById('broad-sheet-section').classList.add('hidden');
+        document.getElementById('class-list-section').classList.add('hidden');
+        document.getElementById('recording-sheet-section').classList.remove('hidden');
+
+        if (typeof loadRecordingTerms === 'function') {
+          loadRecordingTerms();
+        }
+        if (typeof loadRecordingClasses === 'function') {
+          loadRecordingClasses();
+        }
       }
+
+      // Persist active tab
+      sessionStorage.setItem('activeReportTab', this.id);
     });
   });
+}
+
+// Restore active tab on page load
+function restoreActiveTab() {
+  const saved = sessionStorage.getItem('activeReportTab');
+  if (!saved || saved === 'individual-reports-tab') return;
+
+  const tab = document.getElementById(saved);
+  if (tab) tab.click();
 }
 
 // Initialize broad sheet controls
@@ -961,24 +1001,42 @@ function closeCanvasPreviewModal() {
 
 // Refresh preview
 async function refreshCanvasPreview() {
-  if (window.currentPreviewData) {
-    await showCanvasBasedPreview(window.currentPreviewData);
+  if (!window.currentPreviewData) return;
+  // Class list data has a `fields` array - use class list preview
+  if (window.currentPreviewData.fields && typeof previewClassListPDF === 'function') {
+    await previewClassListPDF();
+    return;
   }
+  // Recording sheet data has `assessment_types` array - use recording preview
+  if (window.currentPreviewData.assessment_types && typeof previewRecordingSheet === 'function') {
+    await previewRecordingSheet();
+    return;
+  }
+  await showCanvasBasedPreview(window.currentPreviewData);
 }
 
 // Download from preview
 async function downloadFromPreview() {
-  if (window.currentPreviewData) {
-    try {
-      await generateClientSidePDF(window.currentPreviewData);
-    } catch (error) {
-      console.error("Error downloading PDF from preview:", error);
-      showAlert({
-        title: "Error",
-        message: "Failed to download PDF: " + error.message,
-        type: "error",
-      });
+  if (!window.currentPreviewData) return;
+  try {
+    // Class list data has a `fields` array - use class list download
+    if (window.currentPreviewData.fields && typeof printClassList === 'function') {
+      await printClassList();
+      return;
     }
+    // Recording sheet data has `assessment_types` array - use recording download
+    if (window.currentPreviewData.assessment_types && typeof printRecordingSheet === 'function') {
+      await printRecordingSheet();
+      return;
+    }
+    await generateClientSidePDF(window.currentPreviewData);
+  } catch (error) {
+    console.error("Error downloading PDF from preview:", error);
+    showAlert({
+      title: "Error",
+      message: "Failed to download PDF: " + error.message,
+      type: "error",
+    });
   }
 }
 // renderReportPreview function removed - using full page preview instead

@@ -1221,6 +1221,8 @@
                 t.classList.toggle('active-tab',   t === activeTab);
                 t.classList.toggle('inactive-tab', t !== activeTab);
             });
+            // Persist active tab
+            if (activeTab) sessionStorage.setItem('activeUploadTab', activeTab.id);
         }
         function showSection(activeSection) {
             [singleUploadSection, bulkUploadSection, extractSection, aiChatSection].forEach(s => {
@@ -1234,6 +1236,20 @@
         if (bulkUploadTab)    bulkUploadTab.addEventListener('click',    () => { setActiveTab(bulkUploadTab);    showSection(bulkUploadSection); });
         if (extractUploadTab) extractUploadTab.addEventListener('click', () => { setActiveTab(extractUploadTab); showSection(extractSection); });
         if (aiChatTab)        aiChatTab.addEventListener('click',        () => { setActiveTab(aiChatTab);        showSection(aiChatSection); });
+
+        // Restore previously active tab
+        const savedUploadTab = sessionStorage.getItem('activeUploadTab');
+        if (savedUploadTab) {
+            const tabMap = { singleUploadTab, bulkUploadTab, extractUploadTab, aiChatTab };
+            const sectionMap = {
+                singleUploadTab: singleUploadSection,
+                bulkUploadTab: bulkUploadSection,
+                extractUploadTab: extractSection,
+                aiChatTab: aiChatSection,
+            };
+            const tab = tabMap[savedUploadTab];
+            if (tab) { setActiveTab(tab); showSection(sectionMap[savedUploadTab]); }
+        }
 
         // Workspace sidebar toggle
         const wsToggleBtn = document.getElementById('wsToggleBtn');

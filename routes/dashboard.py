@@ -8,6 +8,9 @@ from models import User, db
 from models.associations import student_exam, student_subject
 from models.exam import Exam
 from models.subject import Subject
+from models.school import School
+from models.section import Section
+from models.school_term import SchoolTerm
 
 
 def admin_required(f):
@@ -72,11 +75,16 @@ def dashboard_route(app):
         total_users = db.session.query(User).count()
         current_date = datetime.now().strftime("%B %d, %Y")
         current_user = User.query.get(session["user_id"])
+        school = School.query.first()
+        has_sections = Section.query.first() is not None
+        has_terms = SchoolTerm.query.first() is not None
+        needs_setup = school and not school.setup_skipped and not has_sections and not has_terms
         return render_template(
             "admin/dashboard.html",
             total_users=total_users,
             current_date=current_date,
             current_user=current_user,
+            needs_setup=needs_setup,
         )
 
     @app.route("/staff/dashboard")

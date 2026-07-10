@@ -26,6 +26,7 @@ class School(db.Model):
 
     # Status
     is_active = db.Column(db.Boolean, nullable=False, default=True)
+    setup_skipped = db.Column(db.Boolean, nullable=False, default=False)
 
     # Timestamps
     created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)

@@ -1612,6 +1612,80 @@ def delete_custom_field(config_id, field_name):
         return jsonify({"success": False, "error": str(e)}), 500
 
 
+@report_bp.route("/api/class-list", methods=["POST"])
+@admin_or_staff_required
+def get_class_list_data():
+    """Get student list data for a class with selected fields"""
+    try:
+        data = request.get_json()
+        class_room_id = data.get("class_room_id")
+        fields = data.get("fields", [])
+
+        if not class_room_id:
+            return jsonify({"success": False, "error": "class_room_id required"}), 400
+
+        from models.student import Student
+        from models.class_room import ClassRoom
+        from models.school import School
+
+        students = (
+            User.query.filter_by(class_room_id=class_room_id, role="student", is_active=True)
+            .order_by(User.first_name, User.last_name)
+            .all()
+        )
+
+        class_room = ClassRoom.query.get(class_room_id)
+        school = School.query.filter_by(is_active=True).first()
+
+        student_list = []
+        for idx, user in enumerate(students, 1):
+            student = Student.query.filter_by(user_id=user.id).first()
+            entry = {"sn": idx}
+            if "first_name" in fields:
+                entry["first_name"] = user.first_name
+            if "last_name" in fields:
+                entry["last_name"] = user.last_name
+            if "username" in fields:
+                entry["username"] = user.username
+            if "register_number" in fields:
+                entry["register_number"] = user.register_number or ""
+            if "email" in fields:
+                entry["email"] = user.email or ""
+            if "gender" in fields:
+                entry["gender"] = user.gender
+            if "dob" in fields:
+                entry["dob"] = user.dob.isoformat() if user.dob else ""
+            if "admission_number" in fields:
+                entry["admission_number"] = student.admission_number if student else ""
+            if "parent_name" in fields:
+                entry["parent_name"] = student.parent_name if student else ""
+            if "parent_phone" in fields:
+                entry["parent_phone"] = student.parent_phone if student else ""
+            if "parent_email" in fields:
+                entry["parent_email"] = student.parent_email if student else ""
+            if "blood_group" in fields:
+                entry["blood_group"] = student.blood_group if student else ""
+            if "address" in fields:
+                entry["address"] = student.address if student else ""
+            student_list.append(entry)
+
+        metadata = {
+            "class_name": class_room.class_room_name if class_room else "N/A",
+            "total_students": len(students),
+            "school_name": school.school_name if school else "",
+            "school_address": school.address if school else "",
+            "school_motto": school.motto if school else "",
+            "school_logo": school.logo if school else "",
+        }
+
+        return jsonify({"success": True, "students": student_list, "metadata": metadata})
+
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
 @report_bp.route("/api/broad-sheet", methods=["POST"])
 @admin_or_staff_required
 def get_broad_sheet_data():
@@ -2700,3 +2774,98 @@ def generate_broad_sheet_html(
     </body>
     </html>"""
     return html
+
+
+@report_bp.route("/api/result-recording-sheet", methods=["POST"])
+@admin_or_staff_required
+def get_result_recording_sheet():
+    """Get data for result recording sheet - students, subjects, assessment types"""
+    try:
+        data = request.get_json()
+        class_room_id = data.get("class_room_id")
+        term_id = data.get("term_id")
+
+        if not class_room_id or not term_id:
+            return jsonify({"success": False, "error": "class_room_id and term_id required"}), 400
+
+        from models.student import Student
+        from models.subject import Subject
+        from models.associations import class_subject
+        from models.school_term import SchoolTerm
+
+        students = (
+            User.query.filter_by(class_room_id=class_room_id, role="student", is_active=True)
+            .order_by(User.first_name, User.last_name)
+            .all()
+        )
+
+        class_room = ClassRoom.query.get(class_room_id)
+        school = School.query.filter_by(is_active=True).first()
+        term = SchoolTerm.query.get(term_id)
+
+        subjects = (
+            db.session.query(Subject)
+            .join(class_subject, class_subject.c.subject_id == Subject.subject_id)
+            .filter(class_subject.c.class_room_id == class_room_id)
+            .order_by(Subject.subject_name)
+            .all()
+        )
+
+        assessment_types = (
+            AssessmentType.query.filter_by(
+                school_id=school.school_id if school else None, is_active=True
+            )
+            .order_by(AssessmentType.order)
+            .all()
+        )
+
+        student_list = []
+        for idx, user in enumerate(students, 1):
+            student = Student.query.filter_by(user_id=user.id).first()
+            student_list.append({
+                "student_id": user.id,
+                "sn": idx,
+                "student_name": f"{user.first_name} {user.last_name}",
+                "username": user.username,
+                "admission_number": student.admission_number if student else "",
+            })
+
+        metadata = {
+            "class_name": class_room.class_room_name if class_room else "N/A",
+            "total_students": len(students),
+            "school_name": school.school_name if school else "",
+            "school_address": school.address if school else "",
+            "school_motto": school.motto if school else "",
+            "school_logo": school.logo if school else "",
+            "term_name": f"{term.term_name} - {term.academic_session}" if term else "N/A",
+        }
+
+        assessment_types_data = [
+            {
+                "code": at.code,
+                "name": at.name,
+                "max_score": at.max_score,
+            }
+            for at in assessment_types
+        ]
+
+        subjects_data = [
+            {
+                "subject_id": s.subject_id,
+                "subject_name": s.subject_name,
+            }
+            for s in subjects
+        ]
+
+        return jsonify({
+            "success": True,
+            "students": student_list,
+            "subjects": subjects_data,
+            "assessment_types": assessment_types_data,
+            "metadata": metadata,
+        })
+
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({"success": False, "error": str(e)}), 500
