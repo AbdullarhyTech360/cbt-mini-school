@@ -3575,6 +3575,31 @@ Include context field for tables, diagrams, formulas referenced in questions."""
             "admin/settings.html", current_user=current_user, school=school
         )
 
+    @app.route("/admin/settings/generate-demo-data", methods=["POST"])
+    @admin_required
+    def generate_demo_data():
+        try:
+            from initialize_all_data import generate_demo_data as run_demo_data
+
+            run_demo_data()
+            return jsonify({"success": True, "message": "Demo data generated successfully!"}), 200
+        except Exception as e:
+            db.session.rollback()
+            return jsonify({"success": False, "message": str(e)}), 500
+
+    @app.route("/admin/settings/skip-setup", methods=["POST"])
+    @admin_required
+    def skip_setup():
+        try:
+            school = School.query.first()
+            if school:
+                school.setup_skipped = True
+                db.session.commit()
+            return jsonify({"success": True}), 200
+        except Exception as e:
+            db.session.rollback()
+            return jsonify({"success": False, "message": str(e)}), 500
+
     # Handle school information - GET and POST
     @app.route("/admin/settings/school", methods=["GET", "POST"])
     @admin_required

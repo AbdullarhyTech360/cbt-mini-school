@@ -1,5 +1,31 @@
 {% extends 'admin/base.html' %} {% block title %}Admin Dashboard{% endblock %}
 {% block sidebar_nav %} {{ super() }} {% endblock %} {% block content %}
+{% if needs_setup %}
+<div class="mb-6 p-6 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border border-blue-200 dark:border-blue-800 rounded-2xl shadow-sm">
+    <div class="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+        <div class="flex-1">
+            <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-1">Welcome! Let's set up your school</h3>
+            <p class="text-sm text-gray-600 dark:text-gray-400">Your school needs sections, classes, terms, and more before students and teachers can get started.</p>
+        </div>
+        <div class="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+            <a href="{{ url_for('manage_school_info') }}"
+                class="px-5 py-2.5 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-xl font-semibold text-sm shadow-md hover:shadow-lg transition-all duration-200 text-center whitespace-nowrap">
+                <span class="material-symbols-outlined text-base align-text-bottom mr-1">settings</span>
+                Set Up Manually
+            </a>
+            <button id="quickGenerateDemoBtn"
+                class="px-5 py-2.5 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white rounded-xl font-semibold text-sm shadow-md hover:shadow-lg transition-all duration-200 text-center whitespace-nowrap">
+                <span class="material-symbols-outlined text-base align-text-bottom mr-1">auto_awesome</span>
+                Generate Demo Data
+            </button>
+            <button id="skipSetupBtn"
+                class="px-5 py-2.5 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-xl font-semibold text-sm border border-gray-200 dark:border-gray-600 hover:shadow transition-all duration-200 text-center whitespace-nowrap">
+                Skip
+            </button>
+        </div>
+    </div>
+</div>
+{% endif %}
 <!-- Welcome Section -->
 <div class="mb-6 md:mb-8">
     <div
@@ -419,5 +445,62 @@
     </div>
 </div>
 
+{% if needs_setup %}
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    const demoBtn = document.getElementById("quickGenerateDemoBtn");
+    if (demoBtn) {
+        demoBtn.addEventListener("click", function() {
+            const btn = this;
+            btn.disabled = true;
+            btn.innerHTML = '<span class="material-symbols-outlined text-base align-text-bottom animate-spin">progress_activity</span> Generating...';
+            fetch("/admin/settings/generate-demo-data", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" }
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    showAlert({ type: "success", message: data.message });
+                    setTimeout(() => location.reload(), 1500);
+                } else {
+                    showAlert({ type: "error", message: "Error: " + data.message });
+                    btn.disabled = false;
+                    btn.innerHTML = '<span class="material-symbols-outlined text-base align-text-bottom mr-1">auto_awesome</span> Generate Demo Data';
+                }
+            })
+            .catch(() => {
+                showAlert({ type: "error", message: "An error occurred." });
+                btn.disabled = false;
+                btn.innerHTML = '<span class="material-symbols-outlined text-base align-text-bottom mr-1">auto_awesome</span> Generate Demo Data';
+            });
+        });
+    }
+
+    const skipBtn = document.getElementById("skipSetupBtn");
+    if (skipBtn) {
+        skipBtn.addEventListener("click", function() {
+            const btn = this;
+            btn.disabled = true;
+            btn.textContent = "...";
+            fetch("/admin/settings/skip-setup", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" }
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    location.reload();
+                }
+            })
+            .catch(() => {
+                btn.disabled = false;
+                btn.textContent = "Skip";
+            });
+        });
+    }
+});
+</script>
+{% endif %}
 
 {% endblock %}

@@ -144,12 +144,20 @@ if report_bp:
 with app.app_context():
     db.create_all()
 
+    # Run pending migrations
+    try:
+        db.session.execute(
+            db.text("ALTER TABLE school ADD COLUMN setup_skipped BOOLEAN NOT NULL DEFAULT 0")
+        )
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+
     # Auto-initialize default data on first startup if enabled
     if app.config.get("AUTO_INITIALIZE_DATA", True):
-        instance_dir = os.path.join(os.path.dirname(__file__), "instance")
-        flag_file = os.path.join(instance_dir, ".initialized")
+        admin_exists = User.query.filter_by(role="admin").first() is not None
 
-        if not os.path.exists(flag_file):
+        if not admin_exists:
             try:
                 print("=" * 80)
                 print("FIRST TIME STARTUP - INITIALIZING DEFAULT DATA...")

@@ -63,3 +63,5 @@ class Calculator:
 
     def clear(self):
         self.entry.delete(0, tk.END)
+
+    # start the app

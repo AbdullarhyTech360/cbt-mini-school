@@ -768,7 +768,25 @@ def main():
 
         school = create_school()
         create_admin_user()
-        create_initialization_flag()
+
+def generate_demo_data():
+    """Generate demo data (called from admin settings)"""
+    with app.app_context():
+        school = School.query.first()
+        if not school:
+            school = create_school()
+        create_school_terms(school)
+        create_assessment_types(school)
+        sections = create_sections(school)
+        classrooms = create_classrooms(sections)
+        create_teachers(classrooms)
+        create_students(classrooms)
+        subjects = create_subjects()
+        link_subjects_to_classes(subjects, classrooms)
+        create_permissions()
+        update_classroom_student_counts(classrooms)
+        populate_demo_questions()
+        return True
 
 if __name__ == "__main__":
     main()
