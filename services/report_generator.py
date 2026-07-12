@@ -388,6 +388,11 @@ class ReportGenerator:
             student_id, term_id, class_room_id
         )
 
+        # Calculate class average
+        class_average = ReportGenerator.calculate_class_average(
+            term_id, class_room_id
+        )
+
         # Get total students in class
         total_students = db.session.query(func.count(User.id)).join(
             Student, Student.user_id == User.id
@@ -560,6 +565,7 @@ class ReportGenerator:
             'scores': subject_scores,
             'position': position,
             'total_students': total_students,
+            'class_average': class_average,
             'overall_total': sum(s['total'] for s in subject_scores.values()),
             'overall_max': sum(s['max_total'] for s in subject_scores.values()),
             # Include configuration metadata for client-side rendering
@@ -602,6 +608,29 @@ class ReportGenerator:
                 return position
 
         return None
+
+    @staticmethod
+    def calculate_class_average(term_id, class_room_id):
+        """Calculate the average total score across all students in a class"""
+        students = db.session.query(User.id).filter(
+            User.class_room_id == class_room_id,
+            User.role == 'student'
+        ).all()
+
+        totals = []
+        for (sid,) in students:
+            total = db.session.query(func.sum(Grade.score)).filter(
+                Grade.student_id == sid,
+                Grade.term_id == term_id,
+                Grade.class_room_id == class_room_id,
+                db.or_(Grade.is_published == True, Grade.is_from_cbt == True)
+            ).scalar() or 0
+            totals.append(total)
+
+        if not totals:
+            return 0
+
+        return round(sum(totals) / len(totals), 1)
 
     @staticmethod
     def get_class_report_data(class_room_id, term_id, config_id=None):
@@ -736,7 +765,7 @@ class ReportGenerator:
     @staticmethod
     def generate_report_with_layout(report_data, layout_config):
         """Generate HTML using dynamic layout configuration and template engine"""
-        from flask import render_template
+        from flask import render_template, request
         import copy
 
         template_name = layout_config.get('template', 'modern_portrait')
@@ -758,11 +787,17 @@ class ReportGenerator:
         student = dict(report_data.get('student', {}))
         school = dict(report_data.get('school', {}))
 
-        # Resolve image URLs so templates get proper /uploads/... paths
+        # Build base URL for absolute image URLs (WeasyPrint needs absolute URLs)
+        try:
+            base_url = request.host_url.rstrip('/')
+        except RuntimeError:
+            base_url = ''
+
+        # Embed images as base64 data URIs so WeasyPrint doesn't need HTTP fetches
         if student.get('image'):
-            student['image'] = ReportGenerator._get_image_url(student['image'])
+            student['image'] = ReportGenerator._embed_image(student['image'])
         if school.get('logo'):
-            school['logo'] = ReportGenerator._get_image_url(school['logo'])
+            school['logo'] = ReportGenerator._embed_image(school['logo'])
 
         template_data = dict(report_data)
         template_data['student'] = student

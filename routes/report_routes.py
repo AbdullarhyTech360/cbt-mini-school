@@ -444,7 +444,9 @@ def get_students():
 def generate_report_page():
     """Report generation page"""
     user = User.query.get(session["user_id"])
-    return render_template("admin/generate_report.html", user=user, current_user=user)
+    staff = User.query.filter_by(role="staff").order_by(User.first_name, User.last_name).all()
+    teachers_data = [{"id": u.id, "name": u.full_name()} for u in staff]
+    return render_template("admin/generate_report.html", user=user, current_user=user, teachers=teachers_data)
 
 
 @report_bp.route("/api/preview", methods=["POST"])
@@ -603,6 +605,10 @@ def get_student_report(student_id):
                 if not report_data.get("config"):
                     report_data["config"] = {}
                 report_data["config"]["layout_config"] = {"template": "default2"}
+            elif layout_config_id == "default3":
+                if not report_data.get("config"):
+                    report_data["config"] = {}
+                report_data["config"]["layout_config"] = {"template": "default3"}
             elif layout_config_id:
                 layout_config = ReportConfig.query.get(layout_config_id)
                 if layout_config:
@@ -639,6 +645,7 @@ def download_single_pdf():
         term_id = data.get("term_id")
         class_room_id = data.get("class_room_id")
         config_id = data.get("config_id")
+        layout_config_id = data.get("layout_config_id")
 
         # print(f"DEBUG: Received data - student_id: {student_id}, term_id: {term_id}, class_room_id: {class_room_id}, config_id: {config_id}")
 
@@ -647,6 +654,12 @@ def download_single_pdf():
             return jsonify(
                 {"success": False, "error": "Missing required parameters"}
             ), 400
+
+        # Parse typography level (1-7, default 4)
+        try:
+            typography = max(1, min(7, int(data.get("typography", 4))))
+        except (TypeError, ValueError):
+            typography = 4
 
         # Create filename
         # Get student name and term name for filename (simplified approach)
@@ -675,6 +688,28 @@ def download_single_pdf():
             return jsonify(
                 {"success": False, "error": "Could not generate report data"}
             ), 404
+
+        # Apply layout config if specified (e.g. default2, default3)
+        if layout_config_id:
+            if layout_config_id == "default2":
+                if not report_data.get("config"):
+                    report_data["config"] = {}
+                report_data["config"]["layout_config"] = {"template": "default2"}
+            elif layout_config_id == "default3":
+                if not report_data.get("config"):
+                    report_data["config"] = {}
+                report_data["config"]["layout_config"] = {"template": "default3"}
+            else:
+                layout_config = ReportConfig.query.get(layout_config_id)
+                if layout_config:
+                    lc = layout_config.get_layout_config()
+                    if lc:
+                        if not report_data.get("config"):
+                            report_data["config"] = {}
+                        report_data["config"]["layout_config"] = lc
+
+        # Inject typography level into report_data for template rendering
+        report_data['typography'] = typography
 
         if WEASYPRINT_AVAILABLE:
             # print(f"Generating report using WeasyPrint for {report_data['student']['name']}...")
@@ -718,7 +753,11 @@ def download_single_pdf():
 
                     pdf_start_time = time.time()
                     # print(f"  Starting WeasyPrint PDF generation...")
-                    pdf_bytes = HTML(string=html_string).write_pdf(
+                    try:
+                        _base = request.host_url
+                    except RuntimeError:
+                        _base = ''
+                    pdf_bytes = HTML(string=html_string, base_url=_base).write_pdf(
                         optimize_size=("fonts", "images"),  # Compress fonts & images
                         presentational_hints=True,  # Use CSS efficiently
                         uncompressed_pdf=False,  # Compress PDF output
@@ -754,8 +793,8 @@ def download_single_pdf():
             t.start()
 
             try:
-                # Wait for the result with a timeout of 45 seconds (increased for complex PDFs)
-                result_type, pdf_bytes_or_error = q.get(timeout=45)
+                # Wait for the result with a timeout of 120 seconds for complex PDFs
+                result_type, pdf_bytes_or_error = q.get(timeout=120)
                 if result_type == "error":
                     raise pdf_bytes_or_error
                 pdf_bytes = pdf_bytes_or_error
@@ -876,6 +915,12 @@ def download_class_pdf():
         term_id = data.get("term_id")
         config_id = data.get("config_id")
 
+        # Parse typography level (1-7, default 4)
+        try:
+            typography = max(1, min(7, int(data.get("typography", 4))))
+        except (TypeError, ValueError):
+            typography = 4
+
         if not all([class_room_id, term_id]):
             return jsonify(
                 {"success": False, "error": "Missing required parameters"}
@@ -911,6 +956,7 @@ def download_class_pdf():
             html_parts = []
             for i, report_data in enumerate(reports):
                 student_name = report_data["student"]["name"]
+                report_data['typography'] = typography
                 html_content = ReportGenerator.generate_report_html(report_data)
                 html_parts.append(html_content)
 
@@ -946,7 +992,11 @@ def download_class_pdf():
 
             def generate_pdf(q, html_string):
                 try:
-                    pdf_bytes = HTML(string=html_string).write_pdf(
+                    try:
+                        _base_cls = request.host_url
+                    except RuntimeError:
+                        _base_cls = ''
+                    pdf_bytes = HTML(string=html_string, base_url=_base_cls).write_pdf(
                         optimize_size=("fonts", "images"),  # Compress fonts & images
                         presentational_hints=True,  # Use CSS efficiently
                         uncompressed_pdf=False,  # Compress PDF output
@@ -2857,13 +2907,377 @@ def get_result_recording_sheet():
             for s in subjects
         ]
 
+        staff_users = User.query.filter_by(role="staff").order_by(User.first_name, User.last_name).all()
+        teachers_data = [
+            {
+                "id": u.id,
+                "name": u.full_name(),
+            }
+            for u in staff_users
+        ]
+
         return jsonify({
             "success": True,
             "students": student_list,
             "subjects": subjects_data,
             "assessment_types": assessment_types_data,
             "metadata": metadata,
+            "teachers": teachers_data,
         })
+
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+def _build_recording_sheet_html(students, subjects, assessment_types, metadata, info_fields, style, teacher_name, orientation='portrait'):
+    """Port of buildRecordingSheetHTML from generate_recording.js"""
+    style = style or 'default'
+    orientation = orientation or 'portrait'
+    teacher_name = teacher_name or ''
+    school_name = metadata.get('school_name', 'School Name')
+    school_address = metadata.get('school_address', '')
+    school_motto = metadata.get('school_motto', '')
+    raw_logo = metadata.get('school_logo', '')
+    initial = (school_name[0] if school_name else 'S').upper()
+
+    logo_src = ''
+    if raw_logo:
+        try:
+            from services.report_generator import ReportGenerator
+            logo_src = ReportGenerator._embed_image(raw_logo)
+            if not logo_src.startswith('data:') and not logo_src.startswith('http'):
+                logo_src = '/' + str(raw_logo).lstrip('/')
+        except Exception:
+            logo_src = '/' + str(raw_logo).lstrip('/') if raw_logo else ''
+
+    def logo_html(css_class):
+        if not logo_src:
+            return f'<div class="{css_class} logo-placeholder">{initial}</div>'
+        return f'<img class="{css_class}" src="{logo_src}" alt="">'
+
+    def info_field_label(f):
+        labels = {'sn': 'S/N', 'student_name': 'Student Name', 'username': 'Username', 'admission_number': 'Adm No.'}
+        return labels.get(f, f)
+
+    def info_field_value(student, f):
+        if f == 'sn':
+            return student.get('sn', '')
+        return student.get(f, '-')
+
+    if not info_fields:
+        info_fields = ['sn', 'student_name', 'admission_number']
+    is_single_subject = len(subjects) == 1
+
+    assessment_short_map = {
+        'first_ca': '1st CA', 'second_ca': '2nd CA', 'third_ca': '3rd CA', 'fourth_ca': '4th CA',
+        'exam': 'Exam', 'mid_term': 'Mid', 'final': 'Final', 'quiz': 'Quiz',
+        'assignment': 'Assign', 'project': 'Project', 'cbt': 'CBT', 'ca': 'CA',
+    }
+
+    def format_assessment_short(code):
+        return assessment_short_map.get(code, code.replace('_', ' ').title())
+
+    # ---- Header ----
+    header_html = ''
+    if style == 'compact':
+        header_html = f'''
+      <div class="header-banner">
+        <div class="header-row">
+          {logo_html('header-logo')}
+          <div class="header-text">
+            <h1 class="school-name">{school_name}</h1>
+            <p class="school-motto">{school_motto or 'Excellence in Education'}</p>
+            <p class="school-sub">Result Recording Sheet</p>
+          </div>
+        </div>
+      </div>'''
+    elif style == 'minimal':
+        header_html = f'''
+      <div class="header-banner">
+        <h1 class="school-name">{school_name}</h1>
+        <p class="school-sub">Result Recording Sheet</p>
+      </div>'''
+    else:
+        header_html = f'''
+      <div class="header-banner">
+        {logo_html('header-logo-center')}
+        <h1 class="school-name">{school_name}</h1>
+        {f'<p class="school-address">{school_address}</p>' if school_address else ''}
+        <p class="school-motto">{school_motto or 'Excellence in Education'}</p>
+        <div class="header-title-row">
+          <span class="title-badge">Result Recording Sheet</span>
+        </div>
+      </div>'''
+
+    # ---- Info bar (Class / Subject / Teacher) ----
+    subject_label = subjects[0].get('subject_name', '') if subjects else ''
+    info_bar_html = f'''<div class="info-bar"><span class="info-bar-left"><strong>Class:</strong> {metadata.get('class_name', '')}</span><span class="info-bar-center"><strong>Subject:</strong> {subject_label}</span><span class="info-bar-right"><strong>Teacher:</strong> {teacher_name or '________________'}</span></div>'''
+
+    # ---- Table header rows ----
+    thead_rows = '<tr>'
+    for f in info_fields:
+        w = ''
+        if f == 'sn':
+            w = ' style="width:24px"'
+        elif f == 'student_name':
+            w = ' style="width:120px"'
+        cls = 'sn-cell' if f == 'sn' else 'info-cell'
+        thead_rows += f'<th class="{cls}"{w}>{info_field_label(f)}</th>'
+
+    if is_single_subject:
+        for at in assessment_types:
+            thead_rows += f'<th>{format_assessment_short(at["code"])}</th>'
+    else:
+        for s in subjects:
+            thead_rows += f'<th class="subject-group" colspan="{len(assessment_types)}">{s["subject_name"]}</th>'
+    thead_rows += '</tr>'
+
+    if not is_single_subject:
+        thead_rows += '<tr>'
+        for _ in info_fields:
+            thead_rows += '<th></th>'
+        for s in subjects:
+            for at in assessment_types:
+                thead_rows += f'<th>{format_assessment_short(at["code"])}</th>'
+        thead_rows += '</tr>'
+
+    # ---- Table body rows ----
+    tbody_rows = ''
+    for student in students:
+        row = '<tr>'
+        for f in info_fields:
+            w = ''
+            if f == 'sn':
+                w = ' style="width:24px"'
+            elif f == 'student_name':
+                w = ' style="width:120px"'
+            cls = 'sn-cell' if f == 'sn' else 'info-cell'
+            row += f'<td class="{cls}"{w}>{info_field_value(student, f)}</td>'
+        if is_single_subject:
+            for _ in assessment_types:
+                row += '<td class="score-blank"></td>'
+        else:
+            for s in subjects:
+                for _ in assessment_types:
+                    row += '<td class="score-blank"></td>'
+        row += '</tr>'
+        tbody_rows += row
+
+    table_html = f'''
+    {info_bar_html}
+    <table>
+      <thead>{thead_rows}</thead>
+      <tbody>{tbody_rows}</tbody>
+    </table>
+    <div class="footer">Generated by CBT Mini School System</div>'''
+
+    # ---- CSS per style ----
+    if style == 'default':
+        css = '''
+      @page { size: A4 ''' + orientation + '''; margin: 0.15in; }
+      body { font-family: 'DejaVu Sans', sans-serif; margin: 0; padding: 0; color: #000; }
+      .header-banner { text-align: center; margin-bottom: 12px; padding-bottom: 10px; border-bottom: 1px solid #000; }
+      .header-logo-center { width: 72px; height: 72px; border-radius: 12px; object-fit: cover; margin: 0 auto 8px auto; display: block; }
+      .logo-placeholder { background: #000; color: white; line-height: 72px; font-size: 28px; font-weight: 700; text-align: center; border-radius: 12px; width: 72px; height: 72px; }
+      .school-name { font-size: 18px; font-weight: 700; margin: 0 0 1px 0; color: #000; letter-spacing: -0.3px; }
+      .school-address { font-size: 9px; color: #000; margin: 0 0 4px 0; }
+      .school-motto { font-size: 10px; color: #000; margin: 0 0 8px 0; font-style: italic; }
+      .header-title-row { text-align: center; margin: 8px 0 0 0; }
+      .title-badge { background: #e5e7eb; color: #000; padding: 3px 10px; border-radius: 4px; font-size: 9px; font-weight: 600; letter-spacing: 0.3px; display: inline-block; margin: 2px; }
+      thead { display: table-header-group; }
+      table { width: 100%; border-collapse: collapse; font-size: 10px; table-layout: fixed; orphans: 4; widows: 4; }
+      th { background: #e5e7eb; color: #000; padding: 7px 5px; text-align: center; font-weight: 600; font-size: 9px; text-transform: uppercase; letter-spacing: 0.3px; border: 0.5px solid #000; }
+      th.sn-cell { width: 24px; text-align: center; }
+      th.info-cell { text-align: left; }
+      th.subject-group { font-size: 9px; letter-spacing: 0.3px; color: #000; }
+      td { padding: 6px 5px; border: 0.5px solid #000; color: #000; font-size: 10px; vertical-align: middle; text-align: center; }
+      td.sn-cell { width: 24px; text-align: center; font-weight: 600; color: #000; }
+      td.info-cell { text-align: left; }
+      td.score-blank { min-width: 22px; height: 18px; }
+      tbody tr { page-break-inside: avoid; }
+      tbody tr:nth-child(even) { background: #f3f4f6; }
+      .info-bar { display: table; width: 100%; table-layout: fixed; padding: 6px 0; font-size: 9px; color: #000; border-bottom: 1px solid #000; margin-bottom: 6px; font-weight: 600; }
+      .info-bar-left { display: table-cell; text-align: left; }
+      .info-bar-center { display: table-cell; text-align: center; }
+      .info-bar-right { display: table-cell; text-align: right; }
+      .footer { margin-top: 12px; font-size: 8px; color: #000; text-align: center; padding-top: 6px; border-top: 1px solid #000; }
+    '''
+        return f'<style>{css}</style><div class="sheet">{header_html}{table_html}</div>'
+
+    if style == 'compact':
+        css = '''
+      @page { size: A4 ''' + orientation + '''; margin: 0.15in; }
+      body { font-family: 'DejaVu Sans', sans-serif; margin: 0; padding: 0; color: #000; }
+      .sheet { padding: 8px; }
+      .header-banner { margin-bottom: 6px; padding-bottom: 6px; border-bottom: 1px solid #000; }
+      .header-row { display: flex; align-items: center; gap: 12px; }
+      .header-logo { width: 72px; height: 72px; border-radius: 12px; object-fit: cover; flex-shrink: 0; }
+      .logo-placeholder { background: #000; color: white; line-height: 72px; font-size: 28px; font-weight: 700; text-align: center; border-radius: 12px; width: 72px; height: 72px; }
+      .header-text { flex: 1; }
+      .school-name { font-size: 16px; font-weight: 700; margin: 0; color: #000; letter-spacing: -0.3px; }
+      .school-motto { font-size: 9px; color: #000; margin: 2px 0 0 0; font-style: italic; }
+      .school-sub { font-size: 8px; color: #000; margin: 2px 0 0 0; }
+      thead { display: table-header-group; }
+      table { width: 100%; border-collapse: collapse; font-size: 9px; table-layout: fixed; orphans: 4; widows: 4; }
+      th { background: #000; color: #fff; padding: 4px 3px; text-align: center; font-weight: 700; font-size: 8px; text-transform: uppercase; letter-spacing: 0.5px; border: 0.5px solid #000; }
+      th.sn-cell { width: 24px; text-align: center; }
+      th.info-cell { text-align: left; }
+      th.subject-group { font-size: 8px; letter-spacing: 0.5px; color: #fff; background: #333; }
+      td { padding: 4px 3px; border: 0.5px solid #000; color: #000; font-size: 9px; vertical-align: middle; text-align: center; }
+      td.sn-cell { width: 24px; text-align: center; font-weight: 600; color: #000; }
+      td.info-cell { text-align: left; }
+      td.score-blank { min-width: 18px; height: 14px; }
+      tbody tr { page-break-inside: avoid; }
+      tbody tr:nth-child(even) { background: #f3f4f6; }
+      .info-bar { display: table; width: 100%; table-layout: fixed; padding: 4px 0; font-size: 8px; color: #000; border-bottom: 1px solid #000; margin-bottom: 4px; font-weight: 600; }
+      .info-bar-left { display: table-cell; text-align: left; }
+      .info-bar-center { display: table-cell; text-align: center; }
+      .info-bar-right { display: table-cell; text-align: right; }
+      .footer { margin-top: 8px; font-size: 8px; color: #000; text-align: center; padding-top: 4px; border-top: 1px solid #000; clear: both; }
+    '''
+        return f'<style>{css}</style><div class="sheet">{header_html}{table_html}</div>'
+
+    # Minimal style
+    css = '''
+      @page { size: A4 ''' + orientation + '''; margin: 0.15in; }
+      body { font-family: 'DejaVu Sans', sans-serif; margin: 0; padding: 0; color: #000; }
+      .sheet { padding: 10px; }
+      .header-banner { margin-bottom: 8px; padding-bottom: 8px; border-bottom: 2px solid #000; }
+      .school-name { font-size: 16px; font-weight: 800; margin: 0; color: #000; letter-spacing: -0.5px; text-transform: uppercase; }
+      .school-sub { font-size: 8px; color: #000; margin: 2px 0 0 0; }
+      thead { display: table-header-group; }
+      table { width: 100%; border-collapse: collapse; font-size: 10px; table-layout: fixed; orphans: 4; widows: 4; }
+      th { color: #000; background: transparent; padding: 7px 5px; text-align: center; font-weight: 600; font-size: 9px; text-transform: uppercase; letter-spacing: 0.3px; border: 0.5px solid #000; }
+      th.sn-cell { width: 24px; text-align: center; }
+      th.info-cell { text-align: left; }
+      th.subject-group { font-size: 9px; letter-spacing: 0.3px; color: #000; }
+      td { padding: 6px 5px; border: 0.5px solid #000; color: #000; font-size: 10px; vertical-align: middle; text-align: center; }
+      td.sn-cell { width: 24px; text-align: center; font-weight: 600; color: #000; }
+      td.info-cell { text-align: left; }
+      td.score-blank { min-width: 22px; height: 18px; }
+      tbody tr { page-break-inside: avoid; }
+      .info-bar { display: table; width: 100%; table-layout: fixed; padding: 6px 0; font-size: 9px; color: #000; margin-bottom: 6px; font-weight: 600; }
+      .info-bar-left { display: table-cell; text-align: left; }
+      .info-bar-center { display: table-cell; text-align: center; }
+      .info-bar-right { display: table-cell; text-align: right; }
+      .footer { margin-top: 10px; font-size: 8px; color: #000; text-align: center; padding-top: 6px; border-top: 1px solid #000; clear: both; }
+    '''
+    return f'<style>{css}</style><div class="sheet">{header_html}{table_html}</div>'
+
+
+@report_bp.route("/api/result-recording-sheet/pdf", methods=["POST"])
+@admin_or_staff_required
+def download_recording_sheet_pdf():
+    """Generate recording sheet PDF server-side with WeasyPrint"""
+    try:
+        data = request.get_json()
+        class_room_id = data.get("class_room_id")
+        term_id = data.get("term_id")
+        style = data.get("style", "default")
+        sel_subject_ids = data.get("subjects", [])
+        sel_assessment_codes = data.get("assessment_types", [])
+        info_fields = data.get("info_fields", ["sn", "student_name", "admission_number"])
+        teacher_name = data.get("teacher_name", "")
+        orientation = data.get("orientation", "portrait")
+
+        if not class_room_id or not term_id:
+            return jsonify({"success": False, "error": "class_room_id and term_id required"}), 400
+
+        from models.student import Student
+        from models.subject import Subject
+        from models.associations import class_subject
+        from models.school_term import SchoolTerm
+
+        students = (
+            User.query.filter_by(class_room_id=class_room_id, role="student", is_active=True)
+            .order_by(User.first_name, User.last_name)
+            .all()
+        )
+
+        class_room = ClassRoom.query.get(class_room_id)
+        school = School.query.filter_by(is_active=True).first()
+        term = SchoolTerm.query.get(term_id)
+
+        subjects = (
+            db.session.query(Subject)
+            .join(class_subject, class_subject.c.subject_id == Subject.subject_id)
+            .filter(class_subject.c.class_room_id == class_room_id)
+            .order_by(Subject.subject_name)
+            .all()
+        )
+
+        assessment_types = (
+            AssessmentType.query.filter_by(
+                school_id=school.school_id if school else None, is_active=True
+            )
+            .order_by(AssessmentType.order)
+            .all()
+        )
+
+        if sel_subject_ids:
+            subjects = [s for s in subjects if str(s.subject_id) in sel_subject_ids]
+
+        if sel_assessment_codes:
+            assessment_types = [at for at in assessment_types if at.code in sel_assessment_codes]
+
+        student_list = []
+        for idx, user in enumerate(students, 1):
+            student = Student.query.filter_by(user_id=user.id).first()
+            student_list.append({
+                "sn": idx,
+                "student_name": f"{user.first_name} {user.last_name}",
+                "username": user.username,
+                "admission_number": student.admission_number if student else "",
+            })
+
+        metadata = {
+            "class_name": class_room.class_room_name if class_room else "N/A",
+            "total_students": len(students),
+            "school_name": school.school_name if school else "",
+            "school_address": school.address if school else "",
+            "school_motto": school.motto if school else "",
+            "school_logo": school.logo if school else "",
+            "term_name": f"{term.term_name} - {term.academic_session}" if term else "N/A",
+        }
+
+        assessment_types_data = [
+            {"code": at.code, "name": at.name, "max_score": at.max_score}
+            for at in assessment_types
+        ]
+
+        subjects_data = [
+            {"subject_id": str(s.subject_id), "subject_name": s.subject_name}
+            for s in subjects
+        ]
+
+        html = _build_recording_sheet_html(
+            student_list, subjects_data, assessment_types_data,
+            metadata, info_fields, style, teacher_name, orientation
+        )
+
+        try:
+            from weasyprint import HTML
+        except (ImportError, OSError) as e:
+            return jsonify({"success": False, "error": f"WeasyPrint import failed: {e}"}), 500
+
+        pdf_bytes = HTML(string=html).write_pdf(
+            optimize_size=("fonts", "images"),
+            presentational_hints=True,
+            javascript=False,
+            uncompressed_pdf=False,
+            embed_fonts=False,
+        )
+
+        filename = f"Recording_Sheet_{metadata.get('class_name', 'Unknown').replace(' ', '_')}.pdf"
+
+        return send_file(
+            io.BytesIO(pdf_bytes),
+            mimetype="application/pdf",
+            as_attachment=True,
+            download_name=filename,
+        )
 
     except Exception as e:
         import traceback

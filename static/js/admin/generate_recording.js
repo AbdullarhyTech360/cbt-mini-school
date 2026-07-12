@@ -14,6 +14,7 @@ async function loadRecordingMeta() {
     if (d.success) {
       populateRecordingAssessments(d.assessment_types)
       populateRecordingSubjects(d.subjects)
+      populateRecordingTeachers(d.teachers)
     }
   } catch (e) {
     console.error('Error loading recording meta:', e)
@@ -149,6 +150,21 @@ function populateRecordingSubjects(subjects) {
   `).join('')
 }
 
+function populateRecordingTeachers(teachers) {
+  console.log('Teachers data from API:', teachers)
+  const sel = document.getElementById('recording-teacher-name')
+  if (!sel) return
+  sel.innerHTML = '<option value="">-- Select Teacher --</option>'
+  if (teachers && teachers.length > 0) {
+    teachers.forEach(t => {
+      const opt = document.createElement('option')
+      opt.value = t.name
+      opt.textContent = t.name
+      sel.appendChild(opt)
+    })
+  }
+}
+
 function formatAssessmentShort(code) {
   const m = {
     'first_ca': '1st CA', 'second_ca': '2nd CA', 'third_ca': '3rd CA', 'fourth_ca': '4th CA',
@@ -161,8 +177,9 @@ function formatAssessmentShort(code) {
 // ---- Print-optimised HTML generator ----
 // Default style: returns "<style>...</style>" + raw body (no wrapper div)
 // Compact/Minimal: returns "<style>...</style><div class="sheet">...</div>"
-function buildRecordingSheetHTML(students, subjects, assessmentTypes, metadata, infoFields, style, teacherName) {
+function buildRecordingSheetHTML(students, subjects, assessmentTypes, metadata, infoFields, style, teacherName, orientation) {
   style = style || 'default'
+  orientation = orientation || 'portrait'
   teacherName = teacherName || ''
   const schoolName = metadata.school_name || 'School Name'
   const schoolAddress = metadata.school_address || ''
@@ -200,7 +217,7 @@ function buildRecordingSheetHTML(students, subjects, assessmentTypes, metadata, 
           <div class="header-text">
             <h1 class="school-name">${schoolName}</h1>
             <p class="school-motto">${schoolMotto || 'Excellence in Education'}</p>
-            <p class="school-sub">Result Recording Sheet &mdash; ${metadata.class_name} &bull; ${metadata.term_name} &bull; ${metadata.total_students} Students</p>
+            <p class="school-sub">Result Recording Sheet</p>
           </div>
         </div>
       </div>`
@@ -208,7 +225,7 @@ function buildRecordingSheetHTML(students, subjects, assessmentTypes, metadata, 
     headerHtml = `
       <div class="header-banner">
         <h1 class="school-name">${schoolName}</h1>
-        <p class="school-sub">Result Recording Sheet &mdash; ${metadata.class_name} &bull; ${metadata.term_name} &bull; ${metadata.total_students} Students</p>
+        <p class="school-sub">Result Recording Sheet</p>
       </div>`
   } else {
     headerHtml = `
@@ -219,17 +236,13 @@ function buildRecordingSheetHTML(students, subjects, assessmentTypes, metadata, 
         <p class="school-motto">${schoolMotto || 'Excellence in Education'}</p>
         <div class="header-title-row">
           <span class="title-badge">Result Recording Sheet</span>
-          <span class="title-badge">${metadata.class_name}</span>
-          <span class="title-badge">${metadata.term_name}</span>
-          <span class="title-badge">${metadata.total_students} Students</span>
         </div>
       </div>`
   }
 
-  // ---- Info bar as a div (default uses this outside table) ----
-  const infoBarHtml = isSingleSubject
-    ? `<div class="info-bar"><span class="info-bar-left"><strong>Subject:</strong> ${subjects[0].subject_name}</span><span class="info-bar-center"><strong>Class:</strong> ${metadata.class_name}</span><span class="info-bar-right"><strong>Subject Teacher:</strong> ${teacherName || '________________'}</span></div>`
-    : ''
+  // ---- Info bar (Class / Subject / Teacher) ----
+  const subjectLabel = subjects[0]?.subject_name || ''
+  const infoBarHtml = `<div class="info-bar"><span class="info-bar-left"><strong>Class:</strong> ${metadata.class_name}</span><span class="info-bar-center"><strong>Subject:</strong> ${subjectLabel}</span><span class="info-bar-right"><strong>Teacher:</strong> ${teacherName || '________________'}</span></div>`
 
   // ---- Table header rows ----
   let theadRows = '<tr>'
@@ -261,13 +274,6 @@ function buildRecordingSheetHTML(students, subjects, assessmentTypes, metadata, 
     theadRows += '</tr>'
   }
 
-  // For compact/minimal: prepend info bar row inside thead
-  let fullThead = theadRows
-  if (style !== 'default' && isSingleSubject) {
-    const totalCols = infoFields.length + assessmentTypes.length
-    fullThead = `<tr class="info-bar-row"><td colspan="${totalCols}" class="info-bar-cell"><span class="info-bar-left"><strong>Subject:</strong> ${subjects[0].subject_name}</span><span class="info-bar-center"><strong>Class:</strong> ${metadata.class_name}</span><span class="info-bar-right"><strong>Subject Teacher:</strong> ${teacherName || '________________'}</span></td></tr>` + theadRows
-  }
-
   // ---- Table body rows ----
   const tbodyRows = students.map(student => {
     let row = '<tr>'
@@ -293,102 +299,107 @@ function buildRecordingSheetHTML(students, subjects, assessmentTypes, metadata, 
   }).join('')
 
   const tableHtml = `
+    ${infoBarHtml}
     <table>
-      <thead>${fullThead}</thead>
+      <thead>${theadRows}</thead>
       <tbody>${tbodyRows}</tbody>
     </table>
     <div class="footer">Generated by CBT Mini School System</div>`
 
-  // ---- Default style: no .sheet wrapper, matches Class List pattern ----
+  // ---- Default style ----
   if (style === 'default') {
     const css = `
-      @page { size: A4 portrait; margin: 0; }
-      body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; padding: 0; color: #1a1a1a; }
-      .header-banner { text-align: center; margin-bottom: 12px; padding-bottom: 10px; border-bottom: 1px solid #e5e7eb; }
-      .header-logo-center { width: 48px; height: 48px; border-radius: 10px; object-fit: cover; margin: 0 auto 8px auto; display: block; }
-      .logo-placeholder { background: #111; color: white; line-height: 48px; font-size: 20px; font-weight: 700; }
-      .school-name { font-size: 18px; font-weight: 700; margin: 0 0 1px 0; color: #111; letter-spacing: -0.3px; }
-      .school-address { font-size: 9px; color: #6b7280; margin: 0 0 4px 0; }
-      .school-motto { font-size: 10px; color: #6b7280; margin: 0 0 8px 0; font-style: italic; }
-      .header-title-row { display: flex; gap: 6px; justify-content: center; flex-wrap: wrap; }
-      .title-badge { background: #f3f4f6; color: #374151; padding: 3px 10px; border-radius: 4px; font-size: 9px; font-weight: 600; letter-spacing: 0.3px; }
+      @page { size: A4 ${orientation}; margin: 0.15in; }
+      body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; padding: 0; color: #000; }
+      .sheet { padding: 10px; }
+      .header-banner { text-align: center; margin-bottom: 12px; padding-bottom: 10px; border-bottom: 1px solid #000; }
+      .header-logo-center { width: 72px; height: 72px; border-radius: 12px; object-fit: cover; margin: 0 auto 8px auto; display: block; }
+      .logo-placeholder { background: #000; color: white; line-height: 72px; font-size: 28px; font-weight: 700; text-align: center; border-radius: 12px; width: 72px; height: 72px; margin: 0 auto 8px auto; }
+      .school-name { font-size: 18px; font-weight: 700; margin: 0 0 1px 0; color: #000; letter-spacing: -0.3px; }
+      .school-address { font-size: 9px; color: #000; margin: 0 0 4px 0; }
+      .school-motto { font-size: 10px; color: #000; margin: 0 0 8px 0; font-style: italic; }
+      .header-title-row { text-align: center; margin: 8px 0 0 0; }
+      .title-badge { background: #e5e7eb; color: #000; padding: 3px 10px; border-radius: 4px; font-size: 9px; font-weight: 600; letter-spacing: 0.3px; display: inline-block; margin: 2px; }
       thead { display: table-header-group; }
-      table { width: 100%; border-collapse: collapse; font-size: 9px; table-layout: fixed; }
-      th { background: #f9fafb; color: #374151; padding: 6px 4px; text-align: center; font-weight: 600; font-size: 8px; text-transform: uppercase; letter-spacing: 0.3px; white-space: nowrap; border: 1px solid #000; }
+      table { width: 100%; border-collapse: collapse; font-size: 10px; table-layout: fixed; orphans: 4; widows: 4; }
+      th { background: #e5e7eb; color: #000; padding: 7px 5px; text-align: center; font-weight: 600; font-size: 9px; text-transform: uppercase; letter-spacing: 0.3px; white-space: nowrap; border: 0.5px solid #000; }
       th.sn-cell { width: 24px; text-align: center; }
       th.info-cell { text-align: left; }
-      th.subject-group { font-size: 8px; letter-spacing: 0.3px; color: #6b7280; }
-      td { padding: 5px 4px; border: 1px solid #000; color: #374151; font-size: 9px; vertical-align: middle; text-align: center; overflow: hidden; text-overflow: ellipsis; }
-      td.sn-cell { width: 24px; text-align: center; font-weight: 600; color: #d1d5db; }
+      th.subject-group { font-size: 9px; letter-spacing: 0.3px; color: #000; }
+      td { padding: 6px 5px; border: 0.5px solid #000; color: #000; font-size: 10px; vertical-align: middle; text-align: center; overflow: hidden; text-overflow: ellipsis; }
+      td.sn-cell { width: 24px; text-align: center; font-weight: 600; color: #000; }
       td.info-cell { text-align: left; }
       td.score-blank { min-width: 22px; height: 18px; }
-      tbody tr:nth-child(even) { background: #fafafa; }
-      .footer { margin-top: 12px; font-size: 8px; color: #9ca3af; text-align: center; padding-top: 6px; border-top: 1px solid #f3f4f6; }
+      tbody tr { page-break-inside: avoid; }
+      tbody tr:nth-child(even) { background: #f3f4f6; }
+      .info-bar { display: table; width: 100%; table-layout: fixed; padding: 6px 0; font-size: 9px; color: #000; border-bottom: 1px solid #000; margin-bottom: 6px; font-weight: 600; }
+      .info-bar-left { display: table-cell; text-align: left; }
+      .info-bar-center { display: table-cell; text-align: center; }
+      .info-bar-right { display: table-cell; text-align: right; }
+      .footer { margin-top: 12px; font-size: 8px; color: #000; text-align: center; padding-top: 6px; border-top: 1px solid #000; }
     `
-    return `<style>${css}</style>${headerHtml}${tableHtml}`
+    return `<style>${css}</style><div class="sheet">${headerHtml}${tableHtml}</div>`
   }
 
   // ---- Compact style ----
   if (style === 'compact') {
     const css = `
-      @page { size: A4 portrait; margin: 0; }
+      @page { size: A4 ${orientation}; margin: 0.15in; }
       body { margin: 0; padding: 0; }
-      .sheet { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 10px; color: #1a1a1a; }
-      .header-banner { margin-bottom: 8px; padding-bottom: 8px; border-bottom: 1px solid #e5e7eb; }
+      .sheet { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 8px; color: #000; }
+      .header-banner { margin-bottom: 6px; padding-bottom: 6px; border-bottom: 1px solid #000; }
       .header-row { display: flex; align-items: center; gap: 12px; }
-      .header-logo { width: 36px; height: 36px; border-radius: 8px; object-fit: cover; flex-shrink: 0; }
-      .logo-placeholder { background: #111; color: white; line-height: 36px; font-size: 16px; font-weight: 700; text-align: center; border-radius: 8px; }
+      .header-logo { width: 72px; height: 72px; border-radius: 12px; object-fit: cover; flex-shrink: 0; }
+      .logo-placeholder { background: #000; color: white; line-height: 72px; font-size: 28px; font-weight: 700; text-align: center; border-radius: 12px; width: 72px; height: 72px; }
       .header-text { flex: 1; }
-      .school-name { font-size: 16px; font-weight: 700; margin: 0; color: #111; letter-spacing: -0.3px; }
-      .school-motto { font-size: 9px; color: #6b7280; margin: 2px 0 0 0; font-style: italic; }
-      .school-sub { font-size: 8px; color: #9ca3af; margin: 2px 0 0 0; }
+      .school-name { font-size: 16px; font-weight: 700; margin: 0; color: #000; letter-spacing: -0.3px; }
+      .school-motto { font-size: 9px; color: #000; margin: 2px 0 0 0; font-style: italic; }
+      .school-sub { font-size: 8px; color: #000; margin: 2px 0 0 0; }
       thead { display: table-header-group; }
-      table { width: 100%; border-collapse: collapse; font-size: 9px; table-layout: fixed; }
-      th { background: #f3f4f6; color: #6b7280; padding: 6px 4px; text-align: center; font-weight: 600; font-size: 8px; text-transform: uppercase; letter-spacing: 0.3px; white-space: nowrap; border: 1px solid #000; }
+      table { width: 100%; border-collapse: collapse; font-size: 9px; table-layout: fixed; orphans: 4; widows: 4; }
+      th { background: #000; color: #fff; padding: 4px 3px; text-align: center; font-weight: 700; font-size: 8px; text-transform: uppercase; letter-spacing: 0.5px; white-space: nowrap; border: 0.5px solid #000; }
       th.sn-cell { width: 24px; text-align: center; }
       th.info-cell { text-align: left; }
-      th.subject-group { font-size: 8px; letter-spacing: 0.3px; color: #6b7280; background: #e5e7eb; }
-      td { padding: 5px 4px; border: 1px solid #000; color: #374151; font-size: 9px; vertical-align: middle; text-align: center; overflow: hidden; text-overflow: ellipsis; }
-      td.sn-cell { width: 24px; text-align: center; font-weight: 600; color: #d1d5db; }
+      th.subject-group { font-size: 8px; letter-spacing: 0.5px; color: #fff; background: #333; }
+      td { padding: 4px 3px; border: 0.5px solid #000; color: #000; font-size: 9px; vertical-align: middle; text-align: center; overflow: hidden; text-overflow: ellipsis; }
+      td.sn-cell { width: 24px; text-align: center; font-weight: 600; color: #000; }
       td.info-cell { text-align: left; }
-      td.score-blank { min-width: 22px; height: 18px; }
-      tbody tr:nth-child(even) { background: #fafafa; }
-      .info-bar-row td { border: none !important; padding: 0; }
-      .info-bar-cell { padding: 6px 0 8px 0 !important; font-size: 10px; font-weight: 600; color: #111; letter-spacing: 0.3px; }
-      .info-bar-left { float: left; }
-      .info-bar-center { display: inline-block; text-align: center; }
-      .info-bar-right { float: right; }
-      .info-bar-cell::after { content: ''; display: table; clear: both; }
-      .footer { margin-top: 10px; font-size: 8px; color: #9ca3af; text-align: center; padding-top: 6px; border-top: 1px solid #f3f4f6; clear: both; }
+      td.score-blank { min-width: 18px; height: 14px; }
+      tbody tr { page-break-inside: avoid; }
+      tbody tr:nth-child(even) { background: #f3f4f6; }
+      .info-bar { display: table; width: 100%; table-layout: fixed; padding: 4px 0; font-size: 8px; color: #000; border-bottom: 1px solid #000; margin-bottom: 4px; font-weight: 600; }
+      .info-bar-left { display: table-cell; text-align: left; }
+      .info-bar-center { display: table-cell; text-align: center; }
+      .info-bar-right { display: table-cell; text-align: right; }
+      .footer { margin-top: 10px; font-size: 8px; color: #000; text-align: center; padding-top: 6px; border-top: 1px solid #000; clear: both; }
     `
     return `<style>${css}</style><div class="sheet">${headerHtml}${tableHtml}</div>`
   }
 
   // ---- Minimal style ----
   const css = `
-    @page { size: A4 portrait; margin: 0; }
+    @page { size: A4 ${orientation}; margin: 0.15in; }
     body { margin: 0; padding: 0; }
-    .sheet { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 10px; color: #1a1a1a; }
-    .header-banner { margin-bottom: 8px; padding-bottom: 8px; border-bottom: 2px solid #111; }
-    .school-name { font-size: 16px; font-weight: 800; margin: 0; color: #111; letter-spacing: -0.5px; text-transform: uppercase; }
-    .school-sub { font-size: 8px; color: #6b7280; margin: 2px 0 0 0; }
+    .sheet { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 10px; color: #000; }
+    .header-banner { margin-bottom: 8px; padding-bottom: 8px; border-bottom: 2px solid #000; }
+    .school-name { font-size: 16px; font-weight: 800; margin: 0; color: #000; letter-spacing: -0.5px; text-transform: uppercase; }
+    .school-sub { font-size: 8px; color: #000; margin: 2px 0 0 0; }
     thead { display: table-header-group; }
-    table { width: 100%; border-collapse: collapse; font-size: 9px; table-layout: fixed; }
-    th { color: #374151; background: transparent; padding: 6px 4px; text-align: center; font-weight: 600; font-size: 8px; text-transform: uppercase; letter-spacing: 0.3px; white-space: nowrap; border: 1px solid #000; }
+    table { width: 100%; border-collapse: collapse; font-size: 10px; table-layout: fixed; orphans: 4; widows: 4; }
+    th { color: #000; background: transparent; padding: 7px 5px; text-align: center; font-weight: 600; font-size: 9px; text-transform: uppercase; letter-spacing: 0.3px; white-space: nowrap; border: 0.5px solid #000; }
     th.sn-cell { width: 24px; text-align: center; }
     th.info-cell { text-align: left; }
-    th.subject-group { font-size: 8px; letter-spacing: 0.3px; color: #374151; }
-    td { padding: 5px 4px; border: 1px solid #000; color: #374151; font-size: 9px; vertical-align: middle; text-align: center; overflow: hidden; text-overflow: ellipsis; }
-    td.sn-cell { width: 24px; text-align: center; font-weight: 600; color: #d1d5db; }
+    th.subject-group { font-size: 9px; letter-spacing: 0.3px; color: #000; }
+    td { padding: 6px 5px; border: 0.5px solid #000; color: #000; font-size: 10px; vertical-align: middle; text-align: center; overflow: hidden; text-overflow: ellipsis; }
+    td.sn-cell { width: 24px; text-align: center; font-weight: 600; color: #000; }
     td.info-cell { text-align: left; }
     td.score-blank { min-width: 22px; height: 18px; }
-    .info-bar-row td { border: none !important; padding: 0; }
-    .info-bar-cell { padding: 6px 0 8px 0 !important; font-size: 10px; font-weight: 600; color: #111; letter-spacing: 0.3px; }
-    .info-bar-left { float: left; }
-    .info-bar-center { display: inline-block; text-align: center; }
-    .info-bar-right { float: right; }
-    .info-bar-cell::after { content: ''; display: table; clear: both; }
-    .footer { margin-top: 10px; font-size: 8px; color: #9ca3af; text-align: center; padding-top: 6px; border-top: 1px solid #f3f4f6; clear: both; }
+    tbody tr { page-break-inside: avoid; }
+    .info-bar { display: table; width: 100%; table-layout: fixed; padding: 6px 0; font-size: 9px; color: #000; margin-bottom: 6px; font-weight: 600; }
+    .info-bar-left { display: table-cell; text-align: left; }
+    .info-bar-center { display: table-cell; text-align: center; }
+    .info-bar-right { display: table-cell; text-align: right; }
+    .footer { margin-top: 10px; font-size: 8px; color: #000; text-align: center; padding-top: 6px; clear: both; }
   `
   return `<style>${css}</style><div class="sheet">${headerHtml}${tableHtml}</div>`
 }
@@ -406,7 +417,8 @@ function renderRecordingTable(data) {
   const resultsDiv = document.getElementById('recording-results')
   resultsDiv.classList.remove('hidden')
 
-  currentRecordingData.style = document.getElementById('recording-sheet-style')?.value || 'default'
+  const style = document.getElementById('recording-sheet-style')?.value || 'default'
+  currentRecordingData.style = style
 
   document.getElementById('recording-class-info').textContent = metadata.class_name
   document.getElementById('recording-term-info').textContent = metadata.term_name
@@ -426,38 +438,59 @@ function renderRecordingTable(data) {
 
   let html = ''
 
-  // Info line: Subject | Class | Subject Teacher
-  if (isSingleSubject) {
-    const subjectLabel = filteredSubjects[0].subject_name
-    const teacherDisplay = teacherName || '________________'
-    html += `<div class="mb-4 px-1 flex items-center text-xs text-gray-600 dark:text-gray-400" style="border-bottom:1px solid #e5e7eb;padding-bottom:10px;">
-      <span class="flex-1 text-left"><strong class="text-gray-800 dark:text-gray-300">Subject:</strong> ${subjectLabel}</span>
-      <span class="text-center px-4"><strong class="text-gray-800 dark:text-gray-300">Class:</strong> ${metadata.class_name}</span>
-      <span class="flex-1 text-right"><strong class="text-gray-800 dark:text-gray-300">Subject Teacher:</strong> ${teacherDisplay}</span>
-    </div>`
+  // Info line: Class | Subject | Teacher (style-aware)
+  const subjectLabel = filteredSubjects[0]?.subject_name || ''
+  const teacherDisplay = teacherName || '________________'
+  const infoBorder = style === 'minimal' ? '' : 'border-bottom:1px solid #000;'
+  html += `<div class="mb-4 px-1 flex items-center text-xs text-black" style="${infoBorder}padding-bottom:10px;font-weight:600;">
+    <span class="flex-1 text-left"><strong>Class:</strong> ${metadata.class_name}</span>
+    <span class="flex-1 text-center"><strong>Subject:</strong> ${subjectLabel}</span>
+    <span class="flex-1 text-right"><strong>Teacher:</strong> ${teacherDisplay}</span>
+  </div>`
+
+  // Style-specific CSS for on-screen preview
+  let styleCSS = ''
+  if (style === 'compact') {
+    styleCSS = `
+    #recording-table-body th { background: #d1d5db !important; color: #000 !important; padding: 4px 3px !important; font-size: 7px !important; }
+    #recording-table-body td { padding: 4px 3px !important; font-size: 8px !important; }
+    #recording-table-body td.score-blank, #recording-table-body td:empty { min-width: 18px; height: 14px; }
+    #recording-table-body tbody tr:nth-child(even) { background: #f3f4f6; }
+    #recording-table-body th.subject-group-header { background: #b0b5bd !important; }`
+  } else if (style === 'minimal') {
+    styleCSS = `
+    #recording-table-body th { background: transparent !important; color: #000 !important; font-weight: 600; }
+    #recording-table-body tbody tr:nth-child(even) { background: transparent; }`
+  } else {
+    styleCSS = `
+    #recording-table-body th { background: #e5e7eb !important; color: #000 !important; padding: 6px 4px; }
+    #recording-table-body tbody tr:nth-child(even) { background: #f3f4f6; }`
   }
 
-  // Side-specific borders (avoids html2canvas double-border bug)
   html += `<style>
     #recording-table-body table{border-collapse:separate;border-spacing:0}
-    #recording-table-body th,#recording-table-body td{border:none;border-bottom:1px solid #d1d5db;border-right:1px solid #d1d5db;padding:6px}
-    #recording-table-body th:first-child,#recording-table-body td:first-child{border-left:1px solid #d1d5db}
-    #recording-table-body thead tr:first-child th{border-top:1px solid #d1d5db}
+    #recording-table-body th,#recording-table-body td{border:none;border-bottom:0.5px solid #000;border-right:0.5px solid #000;padding:5px 4px}
+    #recording-table-body th:first-child,#recording-table-body td:first-child{border-left:0.5px solid #000}
+    #recording-table-body thead tr:first-child th{border-top:0.5px solid #000}
+    ${styleCSS}
   </style>`
   html += '<table class="min-w-full"><thead>'
 
   // Row 1: info fields + (subject groups OR assessment headers)
+  const thBg = style === 'compact' ? 'bg-gray-300' : style === 'minimal' ? '' : 'bg-gray-200'
+  const thWeight = style === 'minimal' ? 'font-medium' : 'font-semibold'
+  const thTracking = style === 'minimal' ? '' : 'tracking-wider'
   html += '<tr>'
   infoFields.forEach(f => {
-    html += `<th class="px-3 py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider bg-gray-50 dark:bg-gray-700/50 ${f === 'sn' ? 'text-center' : ''}">${infoFieldLabel(f)}</th>`
+    html += `<th class="px-3 py-2 text-left text-xs ${thWeight} text-black uppercase ${thTracking} ${thBg} ${f === 'sn' ? 'text-center' : ''}">${infoFieldLabel(f)}</th>`
   })
   if (isSingleSubject) {
     filteredAssessments.forEach(at => {
-      html += `<th class="px-3 py-2.5 text-center text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider bg-gray-50 dark:bg-gray-700/50">${formatAssessmentShort(at.code)}</th>`
+      html += `<th class="px-3 py-2 text-center text-xs ${thWeight} text-black uppercase ${thTracking} ${thBg}">${formatAssessmentShort(at.code)}</th>`
     })
   } else {
     filteredSubjects.forEach(s => {
-      html += `<th colspan="${filteredAssessments.length}" class="px-3 py-2.5 text-center text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider bg-gray-50 dark:bg-gray-700/50">${s.subject_name}</th>`
+      html += `<th colspan="${filteredAssessments.length}" class="px-3 py-2 text-center text-xs ${thWeight} text-black uppercase ${thTracking} ${thBg}">${s.subject_name}</th>`
     })
   }
   html += '</tr>'
@@ -465,10 +498,10 @@ function renderRecordingTable(data) {
   // Row 2: assessment sub-headers (multi-subject only)
   if (!isSingleSubject) {
     html += '<tr>'
-    infoFields.forEach(() => { html += '<th class="bg-gray-50 dark:bg-gray-700/50"></th>' })
+    infoFields.forEach(() => { html += `<th class="${thBg}"></th>` })
     filteredSubjects.forEach(() => {
       filteredAssessments.forEach(at => {
-        html += `<th class="px-2 py-1.5 text-center text-[10px] font-medium text-gray-400 dark:text-gray-500 bg-gray-50 dark:bg-gray-700/50">${formatAssessmentShort(at.code)}</th>`
+        html += `<th class="px-2 py-1 text-center text-[10px] font-medium text-black ${thBg}">${formatAssessmentShort(at.code)}</th>`
       })
     })
     html += '</tr>'
@@ -476,19 +509,21 @@ function renderRecordingTable(data) {
 
   html += '</thead><tbody>'
 
+  const tdPad = style === 'compact' ? 'px-2 py-1.5' : 'px-3 py-2'
+  const tdSize = style === 'compact' ? 'text-xs' : 'text-sm'
   students.forEach(student => {
     html += '<tr>'
     infoFields.forEach(f => {
-      html += `<td class="px-3 py-2.5 whitespace-nowrap text-sm text-gray-800 dark:text-gray-200 ${f === 'sn' ? 'text-center font-medium' : ''}">${infoFieldValue(student, f)}</td>`
+      html += `<td class="${tdPad} whitespace-nowrap ${tdSize} text-black ${f === 'sn' ? 'text-center font-medium' : ''}">${infoFieldValue(student, f)}</td>`
     })
     if (isSingleSubject) {
       filteredAssessments.forEach(() => {
-        html += '<td class="px-3 py-2.5 text-center text-sm text-gray-300 dark:text-gray-600">&nbsp;</td>'
+        html += `<td class="${tdPad} text-center ${tdSize} text-black">&nbsp;</td>`
       })
     } else {
       filteredSubjects.forEach(() => {
         filteredAssessments.forEach(() => {
-          html += '<td class="px-3 py-2.5 text-center text-sm text-gray-300 dark:text-gray-600">&nbsp;</td>'
+          html += `<td class="${tdPad} text-center ${tdSize} text-black">&nbsp;</td>`
         })
       })
     }
@@ -549,17 +584,19 @@ window.generateRecordingSheet = async function () {
   }
 }
 
-// ---- PDF download ----
+// ---- PDF download (server-side via WeasyPrint) ----
 window.printRecordingSheet = async function () {
   if (!currentRecordingData) { showNotification('Please generate a recording sheet first', 'error'); return }
 
-  const { students, subjects, assessment_types: assessmentTypes, metadata, style } = currentRecordingData
+  const { metadata } = currentRecordingData
   const infoFields = getSelectedRecordingInfoFields()
   const selAssessments = getSelectedRecordingAssessments()
   const selSubjects = getSelectedRecordingSubjects()
-  const filteredSubjects = subjects.filter(s => selSubjects.includes(s.subject_id))
-  const filteredAssessments = assessmentTypes.filter(at => selAssessments.includes(at.code))
   const teacherName = (document.getElementById('recording-teacher-name')?.value || '').trim()
+  const classId = document.getElementById('recording-class').value
+  const termId = document.getElementById('recording-term').value
+  const style = document.getElementById('recording-sheet-style')?.value || 'default'
+  const orientation = document.getElementById('recording-orientation')?.value || 'portrait'
 
   const btn = document.querySelector('button[onclick="printRecordingSheet()"]')
   const orig = btn.innerHTML
@@ -567,40 +604,36 @@ window.printRecordingSheet = async function () {
   btn.disabled = true
 
   try {
-    if (typeof html2pdf === 'undefined') {
-      await new Promise((resolve, reject) => {
-        const s = document.createElement('script')
-        s.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js'
-        s.onload = resolve; s.onerror = reject
-        document.head.appendChild(s)
+    const resp = await fetch('/reports/api/result-recording-sheet/pdf', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        class_room_id: classId,
+        term_id: termId,
+        style: style,
+        subjects: selSubjects,
+        assessment_types: selAssessments,
+        info_fields: infoFields,
+        teacher_name: teacherName,
+        orientation: orientation,
       })
+    })
+
+    if (!resp.ok) {
+      const err = await resp.json().catch(() => ({ error: resp.statusText }))
+      throw new Error(err.error || 'Failed to generate PDF')
     }
 
-    const html = buildRecordingSheetHTML(students, filteredSubjects, filteredAssessments, metadata, infoFields, style, teacherName)
+    const blob = await resp.blob()
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `Recording_Sheet_${metadata.class_name.replace(/\s+/g, '_')}.pdf`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
 
-    const element = document.createElement('div')
-    element.style.position = 'relative'
-    element.style.left = '0'
-    element.style.top = '0'
-    element.style.backgroundColor = 'white'
-    element.style.width = '210mm'
-    element.style.zIndex = '9999'
-    element.style.overflow = 'hidden'
-    document.body.appendChild(element)
-    element.innerHTML = html
-
-    const name = `Recording_Sheet_${metadata.class_name.replace(/\s+/g, '_')}.pdf`
-
-    await html2pdf().set({
-      margin: [0, 0, 0, 0],
-      filename: name,
-      image: { type: 'jpeg', quality: 0.98 },
-      html2canvas: { scale: 2, useCORS: true, allowTaint: true, backgroundColor: '#ffffff', logging: false },
-      pagebreak: { mode: ['legacy', 'css'] },
-      jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait', compress: true }
-    }).from(element).save()
-
-    document.body.removeChild(element)
     showNotification('PDF downloaded successfully', 'success')
   } catch (e) {
     console.error('Error generating PDF:', e)
@@ -622,6 +655,10 @@ window.previewRecordingSheet = async function () {
   const filteredSubjects = subjects.filter(s => selSubjects.includes(s.subject_id))
   const filteredAssessments = assessmentTypes.filter(at => selAssessments.includes(at.code))
   const teacherName = (document.getElementById('recording-teacher-name')?.value || '').trim()
+  const orientation = document.getElementById('recording-orientation')?.value || 'portrait'
+  const isLandscape = orientation === 'landscape'
+  const pageWidthMm = isLandscape ? 297 : 210
+  const pageHeightMm = isLandscape ? 210 : 297
 
   try {
     if (typeof html2canvas === 'undefined') await loadHtml2Canvas()
@@ -629,7 +666,7 @@ window.previewRecordingSheet = async function () {
     let modal = document.getElementById('canvasPdfPreviewModal')
     if (!modal) modal = createCanvasPreviewModal()
 
-    const html = buildRecordingSheetHTML(students, filteredSubjects, filteredAssessments, metadata, infoFields, style, teacherName)
+    const html = buildRecordingSheetHTML(students, filteredSubjects, filteredAssessments, metadata, infoFields, style, teacherName, orientation)
 
     const previewContainer = document.getElementById('canvasPreviewContent')
     previewContainer.innerHTML = `
@@ -644,7 +681,7 @@ window.previewRecordingSheet = async function () {
     tempDiv.style.position = 'absolute'
     tempDiv.style.left = '-9999px'
     tempDiv.style.top = '0'
-    tempDiv.style.width = '210mm'
+    tempDiv.style.width = pageWidthMm + 'mm'
     tempDiv.style.backgroundColor = 'white'
     tempDiv.style.overflow = 'hidden'
     tempDiv.innerHTML = html
@@ -665,8 +702,8 @@ window.previewRecordingSheet = async function () {
 
     document.body.removeChild(tempDiv)
 
-    // Paginate into A4 portrait pages
-    const a4HeightPx = 297 * 3.7795275591 * 2  // A4 height in px at 2x scale
+    // Paginate into A4 pages
+    const a4HeightPx = pageHeightMm * 3.7795275591 * 2  // page height in px at 2x scale
     const totalPages = Math.ceil(canvas.height / a4HeightPx)
 
     previewContainer.innerHTML = ''
@@ -678,7 +715,7 @@ window.previewRecordingSheet = async function () {
       const pageCanvas = document.createElement('canvas')
       pageCanvas.width = canvas.width
       pageCanvas.height = sliceH
-      pageCanvas.style.width = '210mm'
+      pageCanvas.style.width = pageWidthMm + 'mm'
       pageCanvas.style.height = 'auto'
       pageCanvas.style.display = 'block'
       pageCanvas.style.margin = '20px auto'
