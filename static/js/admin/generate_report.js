@@ -27,65 +27,85 @@ document.addEventListener("DOMContentLoaded", () => {
 
 // Initialize tab switching functionality
 function initializeTabSwitching() {
-  // Tab switching
-  document.querySelectorAll('.report-tab').forEach(tab => {
-    tab.addEventListener('click', function () {
-      // Remove active class from all tabs
-      document.querySelectorAll('.report-tab').forEach(t => {
-        t.classList.remove('bg-white', 'dark:bg-gray-700', 'text-primary', 'shadow-sm');
-        t.classList.add('text-gray-600', 'dark:text-gray-300', 'hover:text-gray-800', 'dark:hover:text-gray-200', 'hover:bg-gray-200', 'dark:hover:bg-gray-700/50');
-      });
+  const indicator = document.getElementById('tab-indicator');
+  const tabs = document.querySelectorAll('.report-tab');
+  const sections = {
+    'individual-reports-tab': 'individual-reports-section',
+    'broad-sheet-tab': 'broad-sheet-section',
+    'class-list-tab': 'class-list-section',
+    'recording-sheet-tab': 'recording-sheet-section'
+  };
 
-      // Add active class to clicked tab
-      this.classList.remove('text-gray-600', 'dark:text-gray-300', 'hover:text-gray-800', 'dark:hover:text-gray-200', 'hover:bg-gray-200', 'dark:hover:bg-gray-700/50');
-      this.classList.add('bg-white', 'dark:bg-gray-700', 'text-primary', 'shadow-sm');
+  function moveIndicator(tab) {
+    if (!indicator || !tab) return;
+    const container = document.getElementById('tabPillContainer');
+    const containerRect = container.getBoundingClientRect();
+    const tabRect = tab.getBoundingClientRect();
+    indicator.style.left = (tabRect.left - containerRect.left + container.scrollLeft) + 'px';
+    indicator.style.width = tabRect.width + 'px';
+  }
 
-      // Show/hide sections
-      if (this.id === 'individual-reports-tab') {
-        document.getElementById('individual-reports-section').classList.remove('hidden');
-        document.getElementById('broad-sheet-section').classList.add('hidden');
-        document.getElementById('class-list-section').classList.add('hidden');
-        document.getElementById('recording-sheet-section').classList.add('hidden');
-      } else if (this.id === 'broad-sheet-tab') {
-        document.getElementById('individual-reports-section').classList.add('hidden');
-        document.getElementById('broad-sheet-section').classList.remove('hidden');
-        document.getElementById('class-list-section').classList.add('hidden');
-        document.getElementById('recording-sheet-section').classList.add('hidden');
+  function setActiveTab(tab) {
+    tabs.forEach(t => {
+      t.classList.remove('active', 'text-primary');
+      t.classList.add('text-gray-500', 'dark:text-gray-400');
+    });
+    tab.classList.add('active', 'text-primary');
+    tab.classList.remove('text-gray-500', 'dark:text-gray-400');
+    moveIndicator(tab);
 
-        // Load terms for broad sheet if not already loaded
-        if (document.querySelectorAll('#broadSheetTermFilter option').length <= 1) {
-          loadBroadSheetTerms();
-        }
-        if (document.querySelectorAll('#broadSheetClassFilter option').length <= 1) {
-          loadBroadSheetClasses();
-        }
-      } else if (this.id === 'class-list-tab') {
-        document.getElementById('individual-reports-section').classList.add('hidden');
-        document.getElementById('broad-sheet-section').classList.add('hidden');
-        document.getElementById('class-list-section').classList.remove('hidden');
-        document.getElementById('recording-sheet-section').classList.add('hidden');
-
-        if (typeof loadClassesForClassList === 'function') {
-          loadClassesForClassList();
-        }
-      } else if (this.id === 'recording-sheet-tab') {
-        document.getElementById('individual-reports-section').classList.add('hidden');
-        document.getElementById('broad-sheet-section').classList.add('hidden');
-        document.getElementById('class-list-section').classList.add('hidden');
-        document.getElementById('recording-sheet-section').classList.remove('hidden');
-
-        if (typeof loadRecordingTerms === 'function') {
-          loadRecordingTerms();
-        }
-        if (typeof loadRecordingClasses === 'function') {
-          loadRecordingClasses();
-        }
+    // Show/hide sections
+    Object.entries(sections).forEach(([tabId, sectionId]) => {
+      const el = document.getElementById(sectionId);
+      if (!el) return;
+      if (tabId === tab.id) {
+        el.classList.remove('hidden');
+      } else {
+        el.classList.add('hidden');
       }
+    });
 
-      // Persist active tab
-      sessionStorage.setItem('activeReportTab', this.id);
+    // Load data for specific tabs
+    if (tab.id === 'broad-sheet-tab') {
+      if (document.querySelectorAll('#broadSheetTermFilter option').length <= 1) {
+        loadBroadSheetTerms();
+      }
+      if (document.querySelectorAll('#broadSheetClassFilter option').length <= 1) {
+        loadBroadSheetClasses();
+      }
+    } else if (tab.id === 'class-list-tab') {
+      if (typeof loadClassesForClassList === 'function') {
+        loadClassesForClassList();
+      }
+    } else if (tab.id === 'recording-sheet-tab') {
+      if (typeof loadRecordingTerms === 'function') {
+        loadRecordingTerms();
+      }
+      if (typeof loadRecordingClasses === 'function') {
+        loadRecordingClasses();
+      }
+    }
+
+    sessionStorage.setItem('activeReportTab', tab.id);
+  }
+
+  tabs.forEach(tab => {
+    tab.addEventListener('click', function () {
+      setActiveTab(this);
     });
   });
+
+  // Position indicator on load for the active tab
+  const activeTab = document.querySelector('.report-tab.active');
+  if (activeTab) {
+    // Wait for layout to settle
+    requestAnimationFrame(() => moveIndicator(activeTab));
+    // Reposition on resize
+    window.addEventListener('resize', () => {
+      const current = document.querySelector('.report-tab.active');
+      if (current) moveIndicator(current);
+    });
+  }
 }
 
 // Restore active tab on page load
@@ -94,7 +114,9 @@ function restoreActiveTab() {
   if (!saved || saved === 'individual-reports-tab') return;
 
   const tab = document.getElementById(saved);
-  if (tab) tab.click();
+  if (tab && tab.classList.contains('report-tab')) {
+    tab.click();
+  }
 }
 
 // Initialize broad sheet controls
@@ -483,7 +505,7 @@ async function loadLayoutStyles() {
     const response = await fetch("/reports/api/configs");
     const data = await response.json();
     if (data.success) {
-      select.innerHTML = '<option value="">Default</option><option value="default2">Classic Nigerian (Default 2)</option>';
+      select.innerHTML = '<option value="">Default</option><option value="default2">Classic Nigerian (Default 2)</option><option value="default3">Standard Default 3</option>';
       data.configs.forEach((config) => {
         const option = document.createElement("option");
         option.value = config.config_id;
@@ -1029,7 +1051,11 @@ async function downloadFromPreview() {
       await printRecordingSheet();
       return;
     }
-    await generateClientSidePDF(window.currentPreviewData);
+    if (isServerSideLayout()) {
+      await generateServerSidePDF(window.currentPreviewData.student.id);
+    } else {
+      await generateClientSidePDF(window.currentPreviewData);
+    }
   } catch (error) {
     console.error("Error downloading PDF from preview:", error);
     showAlert({
@@ -1144,9 +1170,9 @@ async function downloadReport(studentId) {
   });
 
   try {
-    // Use client-side PDF generation with new API endpoint
-    if (currentReportData && currentReportData.student.id === studentId) {
-      // Generate PDF directly in the browser
+    if (isServerSideLayout()) {
+      await generateServerSidePDF(studentId);
+    } else if (currentReportData && currentReportData.student.id === studentId) {
       await generateClientSidePDF(currentReportData);
     } else {
       // Fetch report data from new API endpoint and then generate PDF
@@ -1356,8 +1382,11 @@ async function downloadAllReports() {
             console.log(reportData);
             // Check if the response has the expected structure
             if (reportData && reportData.success && reportData.report) {
-              // Generate PDF for this student using client-side generation
-              await generateClientSidePDF(reportData.report);
+              if (isServerSideLayout()) {
+                await generateServerSidePDF(student.id);
+              } else {
+                await generateClientSidePDF(reportData.report);
+              }
             } else if (reportData && !reportData.success) {
               throw new Error(
                 `Failed to fetch report data for ${student.name}: ${reportData.message || "Server error"
@@ -2466,6 +2495,54 @@ async function preloadImagesForPDF(element) {
   } else {
     console.log("No images found to preload");
   }
+}
+
+async function generateServerSidePDF(studentId) {
+  const typographyEl = document.getElementById("typographyLevel");
+  const typography = typographyEl ? parseInt(typographyEl.value, 10) : 4;
+
+  const response = await fetch("/reports/api/download-pdf", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      student_id: studentId,
+      term_id: currentFilters.term_id,
+      class_room_id: currentFilters.class_room_id,
+      config_id: currentFilters.config_id || "",
+      layout_config_id: currentFilters.layout_config_id || "",
+      typography: typography,
+    }),
+  });
+
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}));
+    throw new Error(err.error || err.message || `Server returned ${response.status}`);
+  }
+
+  const blob = await response.blob();
+
+  // Extract filename from Content-Disposition header
+  let filename = `Report_${studentId}.pdf`;
+  const disposition = response.headers.get("Content-Disposition");
+  if (disposition) {
+    const match = disposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
+    if (match && match[1]) {
+      filename = match[1].replace(/['"]/g, "");
+    }
+  }
+
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function isServerSideLayout() {
+  return currentFilters.layout_config_id === "default3" || currentFilters.layout_config_id === "default2";
 }
 
 async function generateClientSidePDF(reportData, previewMode = false) {

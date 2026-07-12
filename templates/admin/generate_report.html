@@ -12,294 +12,330 @@
         </div>
     </div>
 
-    <!-- Report Type Tabs -->
-    <div class="mt-6 border-b border-gray-200 dark:border-gray-700">
-        <nav class="-mb-px flex space-x-8">
-            <div class="report-tab active bg-white dark:bg-gray-700 text-primary shadow-sm cursor-pointer"
-                id="individual-reports-tab">
-                <div class="py-4 px-1 border-b-2 border-transparent text-sm font-medium text-center">
-                    <span class="material-symbols-outlined text-lg align-middle mr-2">person</span>
-                    <span class="align-middle">Report Card</span>
-                </div>
+    <!-- Report Type Tabs - Pill Style -->
+    <div class="mt-6">
+        <div class="relative inline-flex bg-gray-100 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl p-1.5 gap-0 overflow-x-auto max-w-full border border-gray-200/60 dark:border-gray-700/50" id="tabPillContainer">
+            <div id="tab-indicator" class="absolute top-1.5 bottom-1.5 bg-white dark:bg-gray-700 rounded-xl shadow-sm transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] z-0"></div>
+            <div class="report-tab active cursor-pointer relative z-10 flex items-center gap-2.5 px-5 py-3 rounded-xl text-sm font-semibold whitespace-nowrap transition-colors duration-300"
+                id="individual-reports-tab" data-tab-color="text-primary">
+                <span class="material-symbols-outlined text-base">person</span>
+                <span>Report Card</span>
             </div>
-            <div class="report-tab text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700/50 cursor-pointer"
-                id="broad-sheet-tab">
-                <div class="py-4 px-1 border-b-2 border-transparent text-sm font-medium text-center">
-                    <span class="material-symbols-outlined text-lg align-middle mr-2">table_chart</span>
-                    <span class="align-middle">Broad Sheet</span>
-                </div>
+            <div class="report-tab cursor-pointer relative z-10 flex items-center gap-2.5 px-5 py-3 rounded-xl text-sm font-semibold text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 whitespace-nowrap transition-colors duration-300"
+                id="broad-sheet-tab" data-tab-color="text-primary">
+                <span class="material-symbols-outlined text-base">table_chart</span>
+                <span>Broad Sheet</span>
             </div>
-            <div class="report-tab text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700/50 cursor-pointer"
-                id="class-list-tab">
-                <div class="py-4 px-1 border-b-2 border-transparent text-sm font-medium text-center">
-                    <span class="material-symbols-outlined text-lg align-middle mr-2">group</span>
-                    <span class="align-middle">Class List</span>
-                </div>
+            <div class="report-tab cursor-pointer relative z-10 flex items-center gap-2.5 px-5 py-3 rounded-xl text-sm font-semibold text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 whitespace-nowrap transition-colors duration-300"
+                id="class-list-tab" data-tab-color="text-primary">
+                <span class="material-symbols-outlined text-base">group</span>
+                <span>Class List</span>
             </div>
-            <div class="report-tab text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700/50 cursor-pointer"
-                id="recording-sheet-tab">
-                <div class="py-4 px-1 border-b-2 border-transparent text-sm font-medium text-center">
-                    <span class="material-symbols-outlined text-lg align-middle mr-2">fact_check</span>
-                    <span class="align-middle">Recording Sheet</span>
-                </div>
+            <div class="report-tab cursor-pointer relative z-10 flex items-center gap-2.5 px-5 py-3 rounded-xl text-sm font-semibold text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 whitespace-nowrap transition-colors duration-300"
+                id="recording-sheet-tab" data-tab-color="text-primary">
+                <span class="material-symbols-outlined text-base">fact_check</span>
+                <span>Recording Sheet</span>
             </div>
-        </nav>
+        </div>
     </div>
 </div>
 
 <!-- Individual Reports Section -->
-<div id="individual-reports-section">
-    <!-- Filters -->
-    <div class="mb-6 bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 border border-gray-100 dark:border-gray-700">
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div>
-                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Term <span class="text-red-500">*</span>
-                </label>
-                <select id="termFilter"
-                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
-                    <option value="">Select Term</option>
-                </select>
-                <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Choose the academic term</p>
+<div id="individual-reports-section" class="report-section">
+        <!-- Filters -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 mb-8">
+            <!-- Term & Class Card -->
+            <div class="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl shadow-sm dark:shadow-gray-900/30 p-6 border border-gray-100 dark:border-gray-700/50">
+                <div class="flex items-center gap-3 mb-5">
+                    <div class="w-9 h-9 rounded-xl bg-blue-50 dark:bg-blue-500/10 flex items-center justify-center">
+                        <span class="material-symbols-outlined text-lg text-blue-600 dark:text-blue-400">school</span>
+                    </div>
+                    <h3 class="font-bold uppercase tracking-widest text-xs text-gray-500 dark:text-gray-400">Term & Class</h3>
+                </div>
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Term <span class="text-red-500">*</span></label>
+                        <select id="termFilter"
+                            class="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600/50 rounded-xl text-sm font-medium text-gray-700 dark:text-gray-200 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all">
+                            <option value="">Select Term</option>
+                        </select>
+                    </div>
+                </div>
             </div>
 
             <div>
-                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Class <span class="text-red-500">*</span>
-                </label>
-                <select id="classFilter"
-                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
-                    <option value="">Select Class</option>
-                </select>
-                <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Choose the class</p>
-            </div>
+                <div class="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl shadow-sm dark:shadow-gray-900/30 p-6 border border-gray-100 dark:border-gray-700/50">
+                    <div class="flex items-center gap-3 mb-5">
+                        <div class="w-9 h-9 rounded-xl bg-emerald-50 dark:bg-emerald-500/10 flex items-center justify-center">
+                            <span class="material-symbols-outlined text-lg text-emerald-600 dark:text-emerald-400">filter_alt</span>
+                        </div>
+                        <h3 class="font-bold uppercase tracking-widest text-xs text-gray-500 dark:text-gray-400">Class & Config</h3>
+                    </div>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                                Class <span class="text-red-500">*</span>
+                            </label>
+                            <select id="classFilter"
+                                class="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600/50 rounded-xl text-sm font-medium text-gray-700 dark:text-gray-200 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all">
+                                <option value="">Select Class</option>
+                            </select>
+                            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1.5">Choose the class</p>
+                        </div>
 
-            <div>
-                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Report Config</label>
-                <select id="configFilter"
-                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
-                    <option value="">Default</option>
-                </select>
-                <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Assessment rules &amp; scoring config</p>
-            </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Report Config</label>
+                            <select id="configFilter"
+                                class="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600/50 rounded-xl text-sm font-medium text-gray-700 dark:text-gray-200 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all">
+                                <option value="">Default</option>
+                            </select>
+                            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1.5">Assessment rules &amp; scoring config</p>
+                        </div>
 
-            <div>
-                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Report Style</label>
-                <select id="layoutStyleFilter"
-                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
-                    <option value="">Default</option>
-                </select>
-                <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Optional: Override with a different layout style</p>
-            </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Report Style</label>
+                            <select id="layoutStyleFilter"
+                                class="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600/50 rounded-xl text-sm font-medium text-gray-700 dark:text-gray-200 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all">
+                                <option value="">Default</option>
+                            </select>
+                            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1.5">Optional: Override with a different layout style</p>
+                        </div>
 
-            <div class="flex items-end">
-                <button onclick="loadStudents()"
-                    class="w-full flex items-center justify-center gap-2 h-11 px-5 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-lg shadow-md hover:shadow-lg hover:scale-105 transition-all duration-200">
-                    <span class="material-symbols-outlined text-xl">search</span>
-                    <span class="text-sm font-bold">Load Students</span>
-                </button>
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Typography</label>
+                            <select id="typographyLevel"
+                                class="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600/50 rounded-xl text-sm font-medium text-gray-700 dark:text-gray-200 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all">
+                                <option value="1">1 &mdash; Extra Compact</option>
+                                <option value="2">2 &mdash; Compact</option>
+                                <option value="3">3 &mdash; Semi-Compact</option>
+                                <option value="4" selected>4 &mdash; Standard</option>
+                                <option value="5">5 &mdash; Semi-Comfortable</option>
+                                <option value="6">6 &mdash; Comfortable</option>
+                                <option value="7">7 &mdash; Extra Comfortable</option>
+                            </select>
+                            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1.5">Adjust text size &amp; spacing density</p>
+                        </div>
+
+                        <button onclick="loadStudents()"
+                            class="w-full flex items-center justify-center gap-2 py-3 bg-primary hover:bg-primary/90 text-white rounded-xl active:scale-[0.98] transition-all duration-200 text-sm font-semibold shadow-sm mt-2">
+                            <span class="material-symbols-outlined text-xl">search</span>
+                            <span>Load Students</span>
+                        </button>
+                    </div>
+                </div>
             </div>
         </div>
-    </div>
 
     <!-- Students List -->
-    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-md border border-gray-100 dark:border-gray-700">
-        <div class="p-6 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
-            <h2 class="text-xl font-bold text-gray-900 dark:text-white">Students</h2>
+    <div class="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl shadow-sm dark:shadow-gray-900/30 border border-gray-100 dark:border-gray-700/50">
+        <div class="p-6 border-b border-gray-100 dark:border-gray-700/50 flex justify-between items-center">
+            <h2 class="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                <span class="w-1.5 h-6 bg-primary rounded-full"></span>
+                Students
+            </h2>
             <div class="flex gap-3">
                 <button onclick="downloadAllReports()"
-                    class="flex items-center gap-2 h-10 px-4 bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white rounded-lg shadow-md hover:shadow-lg hover:scale-105 transition-all duration-200">
+                    class="flex items-center gap-2 h-10 px-4 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 rounded-xl active:scale-[0.98] transition-all duration-200 text-sm font-semibold">
                     <span class="material-symbols-outlined text-lg">download</span>
-                    <span class="text-sm font-bold">Download All</span>
+                    <span>Download All</span>
                 </button>
             </div>
         </div>
 
         <div id="studentsList" class="p-4">
-            <p class="text-gray-500 dark:text-gray-400 text-center py-8">Select term and class to load students</p>
+            <div class="flex flex-col items-center justify-center py-12 text-center">
+                <span class="material-symbols-outlined text-5xl text-gray-300 dark:text-gray-600 mb-3">group</span>
+                <p class="text-gray-500 dark:text-gray-400 text-sm">Select term and class to load students</p>
+            </div>
         </div>
     </div>
 </div>
 
 <!-- Broad Sheet Section -->
-<div id="broad-sheet-section" class="hidden">
-    <!-- Filters & Settings -->
+<div id="broad-sheet-section" class="hidden report-section">
     <div class="mb-8 space-y-6">
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <!-- Data Sources Card -->
-            <div
-                class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-8 border border-gray-100 dark:border-gray-700">
-                <div class="flex items-center gap-3 mb-6 text-blue-600 dark:text-blue-400">
-                    <span class="material-symbols-outlined text-xl">database</span>
-                    <h3 class="font-bold uppercase tracking-widest text-xs">Primary Configuration</h3>
+        <!-- Primary Filters & Action -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
+            <!-- Term Card -->
+            <div class="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl shadow-sm dark:shadow-gray-900/30 p-6 border border-gray-100 dark:border-gray-700/50">
+                <div class="flex items-center gap-3 mb-5">
+                    <div class="w-9 h-9 rounded-xl bg-blue-50 dark:bg-blue-500/10 flex items-center justify-center">
+                        <span class="material-symbols-outlined text-lg text-blue-600 dark:text-blue-400">database</span>
+                    </div>
+                    <h3 class="font-bold uppercase tracking-widest text-xs text-gray-500 dark:text-gray-400">Term</h3>
                 </div>
-                <div class="space-y-6">
+                <div class="space-y-4">
                     <div>
-                        <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2.5">
+                        <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
                             Academic Term <span class="text-red-500">*</span>
                         </label>
                         <select id="broad-sheet-term"
-                            class="w-full px-5 py-3 bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all dark:text-white outline-none">
+                            class="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600/50 rounded-xl text-sm font-medium text-gray-700 dark:text-gray-200 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all">
                             <option value="">Select Term</option>
                         </select>
                     </div>
-
-                    <div>
-                        <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2.5">
-                            Target Class <span class="text-red-500">*</span>
-                        </label>
-                        <select id="broad-sheet-class"
-                            class="w-full px-5 py-3 bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all dark:text-white outline-none">
-                            <option value="">Select Class</option>
-                        </select>
-                    </div>
-
-                    <div>
-                        <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2.5">Reporting
-                            Configuration</label>
-                        <select id="broad-sheet-config"
-                            class="w-full px-5 py-3 bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all dark:text-white outline-none">
-                            <option value="">Default (Standard)</option>
-                        </select>
-                        <p class="text-[11px] text-gray-400 mt-2 pl-1 italic">Optional: Rules for merging assessments
-                        </p>
-                    </div>
                 </div>
             </div>
 
-            <!-- Page & Layout Card -->
-            <div
-                class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-8 border border-gray-100 dark:border-gray-700">
-                <div class="flex items-center gap-3 mb-6 text-purple-600 dark:text-purple-400">
-                    <span class="material-symbols-outlined text-xl">straighten</span>
-                    <h3 class="font-bold uppercase tracking-widest text-xs">Page & Layout Settings</h3>
-                </div>
-                <div class="grid grid-cols-2 gap-6">
-                    <div class="col-span-2">
-                        <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2.5">Subjects Per
-                            Page</label>
-                        <select id="subjects-per-page"
-                            class="w-full px-5 py-3 bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-4 focus:ring-purple-500/10 focus:border-purple-500 transition-all dark:text-white outline-none">
-                            <option value="3">3 Subjects</option>
-                            <option value="4">4 Subjects</option>
-                            <option value="5" selected>5 Subjects (Best Fit)</option>
-                            <option value="6">6 Subjects</option>
-                            <option value="7">7 Subjects</option>
-                            <option value="0">Continuous (No Pagination)</option>
-                        </select>
-                    </div>
-
-                    <div>
-                        <label
-                            class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2.5">Students/Page</label>
-                        <select id="students-per-page"
-                            class="w-full px-5 py-3 bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-4 focus:ring-purple-500/10 focus:border-purple-500 transition-all dark:text-white outline-none">
-                            <option value="15">15 Raw</option>
-                            <option value="20">20 Raw</option>
-                            <option value="25" selected>25 Default</option>
-                            <option value="30">30 Dense</option>
-                            <option value="40">40 Ultra</option>
-                            <option value="0">All</option>
-                        </select>
-                    </div>
-
-                    <div>
-                        <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2.5">Base
-                            Font</label>
-                        <select id="broadsheet-font-size"
-                            class="w-full px-5 py-3 bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-4 focus:ring-purple-500/10 focus:border-purple-500 transition-all dark:text-white outline-none">
-                            <option value="7">7px</option>
-                            <option value="8">8px</option>
-                            <option value="9" selected>9px (Std)</option>
-                            <option value="10">10px</option>
-                            <option value="11">11px</option>
-                            <option value="12">12px</option>
-                        </select>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Analysis & Actions Card -->
-            <div
-                class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-8 border border-gray-100 dark:border-gray-700 flex flex-col">
-                <div class="flex items-center gap-3 mb-6 text-emerald-600 dark:text-emerald-400">
-                    <span class="material-symbols-outlined text-xl">tune</span>
-                    <h3 class="font-bold uppercase tracking-widest text-xs">Analysis & Export</h3>
-                </div>
-
-                <div class="space-y-4 mb-auto">
-                    <!-- Restored Exam Types -->
-                    <div
-                        class="p-4 bg-gray-50 dark:bg-gray-700/30 rounded-xl border border-gray-100 dark:border-gray-700">
-                        <label
-                            class="block text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-3">Include
-                            Assessments</label>
-                        <div class="flex flex-wrap gap-4">
-                            <label class="flex items-center gap-2 cursor-pointer group">
-                                <input type="checkbox" id="exam-type-all"
-                                    class="w-4 h-4 rounded text-blue-600 focus:ring-blue-500" checked>
-                                <span
-                                    class="text-xs font-medium text-gray-700 dark:text-gray-300 group-hover:text-blue-500 transition-colors">All</span>
-                            </label>
-                            <label class="flex items-center gap-2 cursor-pointer group">
-                                <input type="checkbox" id="exam-type-ca"
-                                    class="w-4 h-4 rounded text-blue-600 focus:ring-blue-500">
-                                <span
-                                    class="text-xs font-medium text-gray-700 dark:text-gray-300 group-hover:text-blue-500 transition-colors">CA</span>
-                            </label>
-                            <label class="flex items-center gap-2 cursor-pointer group">
-                                <input type="checkbox" id="exam-type-exam"
-                                    class="w-4 h-4 rounded text-blue-600 focus:ring-blue-500">
-                                <span
-                                    class="text-xs font-medium text-gray-700 dark:text-gray-300 group-hover:text-blue-500 transition-colors">Exam</span>
-                            </label>
+            <!-- Class & Config Card -->
+            <div>
+                <div class="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl shadow-sm dark:shadow-gray-900/30 p-6 border border-gray-100 dark:border-gray-700/50">
+                    <div class="flex items-center gap-3 mb-5">
+                        <div class="w-9 h-9 rounded-xl bg-emerald-50 dark:bg-emerald-500/10 flex items-center justify-center">
+                            <span class="material-symbols-outlined text-lg text-emerald-600 dark:text-emerald-400">filter_alt</span>
                         </div>
+                        <h3 class="font-bold uppercase tracking-widest text-xs text-gray-500 dark:text-gray-400">Class & Config</h3>
                     </div>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                                Target Class <span class="text-red-500">*</span>
+                            </label>
+                            <select id="broad-sheet-class"
+                                class="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600/50 rounded-xl text-sm font-medium text-gray-700 dark:text-gray-200 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all">
+                                <option value="">Select Class</option>
+                            </select>
+                        </div>
 
-                    <div class="grid grid-cols-1 gap-3">
-                        <label
-                            class="group flex items-center justify-between px-4 py-3 rounded-xl bg-gray-50 dark:bg-gray-700/50 border border-transparent hover:border-emerald-500/30 transition-all cursor-pointer">
-                            <span class="text-xs font-semibold text-gray-700 dark:text-gray-300">Breakdown View</span>
-                            <input type="checkbox" id="show-exams"
-                                class="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500" checked>
-                        </label>
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Reporting Configuration</label>
+                            <select id="broad-sheet-config"
+                                class="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600/50 rounded-xl text-sm font-medium text-gray-700 dark:text-gray-200 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all">
+                                <option value="">Default (Standard)</option>
+                            </select>
+                        </div>
 
-                        <label
-                            class="group flex items-center justify-between px-4 py-3 rounded-xl bg-gray-50 dark:bg-gray-700/50 border border-transparent hover:border-emerald-500/30 transition-all cursor-pointer">
-                            <span class="text-xs font-semibold text-gray-700 dark:text-gray-300">Show Totals</span>
-                            <input type="checkbox" id="show-totals"
-                                class="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500" checked>
-                        </label>
+                        <button id="preview-broad-sheet"
+                            class="w-full flex items-center justify-center gap-2 py-3 bg-primary hover:bg-primary/90 text-white rounded-xl active:scale-[0.98] transition-all duration-200 text-sm font-semibold shadow-sm mt-2">
+                            <span class="material-symbols-outlined text-xl">analytics</span>
+                            <span>Preview</span>
+                        </button>
                     </div>
-                </div>
-
-                <div class="grid grid-cols-2 gap-4 mt-8">
-                    <button id="preview-broad-sheet"
-                        class="flex items-center justify-center gap-2.5 py-3.5 bg-blue-600 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-xl active:scale-95 transition-all duration-300 text-sm font-bold shadow-md shadow-blue-500/20 cursor-pointer hover:-translate-y-0.5 transform">
-                        <span class="material-symbols-outlined text-lg">analytics</span>
-                        PREVIEW
-                    </button>
-                    <button id="export-broad-sheet-pdf"
-                        class="flex items-center justify-center gap-2.5 py-3.5 bg-rose-500 bg-gradient-to-r from-rose-500 to-rose-600 hover:from-rose-600 hover:to-rose-700 text-white rounded-xl active:scale-95 transition-all duration-300 text-sm font-bold shadow-md shadow-rose-500/20 cursor-pointer hover:-translate-y-0.5 transform">
-                        <span class="material-symbols-outlined text-lg">picture_as_pdf</span>
-                        PDF
-                    </button>
-                    <button id="export-broad-sheet-excel"
-                        class="flex items-center justify-center gap-2.5 py-3.5 bg-teal-500 bg-gradient-to-r from-teal-500 to-teal-600 hover:from-teal-600 hover:to-teal-700 text-white rounded-xl active:scale-95 transition-all duration-300 text-sm font-bold shadow-md shadow-teal-500/20 cursor-pointer hover:-translate-y-0.5 transform">
-                        <span class="material-symbols-outlined text-lg">table_view</span>
-                        EXCEL
-                    </button>
                 </div>
             </div>
         </div>
 
+        <!-- Advanced Options -->
+        <details class="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl shadow-sm dark:shadow-gray-900/50 border border-gray-100 dark:border-gray-700/50">
+            <summary class="cursor-pointer px-6 py-4 flex items-center gap-3 text-sm font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-50/50 dark:hover:bg-gray-700/20 rounded-2xl transition-colors">
+                <span class="material-symbols-outlined text-lg text-gray-400">tune</span>
+                Advanced Options
+            </summary>
+            <div class="px-6 pb-6">
+                <div class="border-t border-gray-100 dark:border-gray-700/50 pt-5">
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <!-- Exam & Display Settings -->
+                        <div>
+                            <div class="flex items-center gap-3 mb-4">
+                                <div class="w-9 h-9 rounded-xl bg-purple-50 dark:bg-purple-500/10 flex items-center justify-center">
+                                    <span class="material-symbols-outlined text-lg text-purple-600 dark:text-purple-400">assessment</span>
+                                </div>
+                                <h3 class="font-bold uppercase tracking-widest text-xs text-gray-500 dark:text-gray-400">Exam & Display</h3>
+                            </div>
+                            <div class="space-y-4">
+                                <div>
+                                    <label class="block text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-3">Include Assessments</label>
+                                    <div class="flex flex-wrap gap-4">
+                                        <label class="flex items-center gap-2 cursor-pointer group">
+                                            <input type="checkbox" id="exam-type-all" class="w-4 h-4 rounded text-primary focus:ring-primary/20" checked>
+                                            <span class="text-xs font-medium text-gray-700 dark:text-gray-300 group-hover:text-primary transition-colors">All</span>
+                                        </label>
+                                        <label class="flex items-center gap-2 cursor-pointer group">
+                                            <input type="checkbox" id="exam-type-ca" class="w-4 h-4 rounded text-primary focus:ring-primary/20">
+                                            <span class="text-xs font-medium text-gray-700 dark:text-gray-300 group-hover:text-primary transition-colors">CA</span>
+                                        </label>
+                                        <label class="flex items-center gap-2 cursor-pointer group">
+                                            <input type="checkbox" id="exam-type-exam" class="w-4 h-4 rounded text-primary focus:ring-primary/20">
+                                            <span class="text-xs font-medium text-gray-700 dark:text-gray-300 group-hover:text-primary transition-colors">Exam</span>
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="grid grid-cols-1 gap-2">
+                                    <label class="group flex items-center justify-between px-3.5 py-2.5 rounded-xl bg-gray-50 dark:bg-gray-700/50 border border-transparent hover:border-primary/20 transition-all cursor-pointer">
+                                        <span class="text-xs font-semibold text-gray-700 dark:text-gray-300">Breakdown View</span>
+                                        <input type="checkbox" id="show-exams" class="w-4 h-4 rounded text-primary focus:ring-primary/20" checked>
+                                    </label>
+                                    <label class="group flex items-center justify-between px-3.5 py-2.5 rounded-xl bg-gray-50 dark:bg-gray-700/50 border border-transparent hover:border-primary/20 transition-all cursor-pointer">
+                                        <span class="text-xs font-semibold text-gray-700 dark:text-gray-300">Show Totals</span>
+                                        <input type="checkbox" id="show-totals" class="w-4 h-4 rounded text-primary focus:ring-primary/20" checked>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Page & Layout Settings -->
+                        <div>
+                            <div class="flex items-center gap-3 mb-4">
+                                <div class="w-9 h-9 rounded-xl bg-orange-50 dark:bg-orange-500/10 flex items-center justify-center">
+                                    <span class="material-symbols-outlined text-lg text-orange-600 dark:text-orange-400">straighten</span>
+                                </div>
+                                <h3 class="font-bold uppercase tracking-widest text-xs text-gray-500 dark:text-gray-400">Page & Layout</h3>
+                            </div>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div class="col-span-2">
+                                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Subjects Per Page</label>
+                                    <select id="subjects-per-page"
+                                        class="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600/50 rounded-xl text-sm font-medium text-gray-700 dark:text-gray-200 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all">
+                                        <option value="3">3 Subjects</option>
+                                        <option value="4">4 Subjects</option>
+                                        <option value="5" selected>5 Subjects (Best Fit)</option>
+                                        <option value="6">6 Subjects</option>
+                                        <option value="7">7 Subjects</option>
+                                        <option value="0">Continuous (No Pagination)</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Students/Page</label>
+                                    <select id="students-per-page"
+                                        class="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600/50 rounded-xl text-sm font-medium text-gray-700 dark:text-gray-200 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all">
+                                        <option value="15">15 Raw</option>
+                                        <option value="20">20 Raw</option>
+                                        <option value="25" selected>25 Default</option>
+                                        <option value="30">30 Dense</option>
+                                        <option value="40">40 Ultra</option>
+                                        <option value="0">All</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Base Font</label>
+                                    <select id="broadsheet-font-size"
+                                        class="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600/50 rounded-xl text-sm font-medium text-gray-700 dark:text-gray-200 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all">
+                                        <option value="7">7px</option>
+                                        <option value="8">8px</option>
+                                        <option value="9" selected>9px (Std)</option>
+                                        <option value="10">10px</option>
+                                        <option value="11">11px</option>
+                                        <option value="12">12px</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Export Buttons -->
+                    <div class="mt-5 pt-4 border-t border-gray-100 dark:border-gray-700/50 flex gap-3">
+                        <button id="export-broad-sheet-pdf" class="flex-1 flex items-center justify-center gap-2 py-3 bg-red-50 hover:bg-red-100 dark:bg-red-500/10 dark:hover:bg-red-500/20 text-red-600 dark:text-red-400 rounded-xl active:scale-[0.98] transition-all duration-200 text-sm font-semibold cursor-pointer">
+                            <span class="material-symbols-outlined text-lg">picture_as_pdf</span>
+                            PDF
+                        </button>
+                        <button id="export-broad-sheet-excel" class="flex-1 flex items-center justify-center gap-2 py-3 bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-500/10 dark:hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 rounded-xl active:scale-[0.98] transition-all duration-200 text-sm font-semibold cursor-pointer">
+                            <span class="material-symbols-outlined text-lg">table_view</span>
+                            Excel
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </details>
+
         <!-- Results Section -->
         <div id="broad-sheet-results"
-            class="hidden bg-white dark:bg-gray-800 rounded-xl shadow-md border border-gray-100 dark:border-gray-700">
-            <div class="p-6 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
-                <h2 class="text-xl font-bold text-gray-900 dark:text-white">Broad Sheet - <span id="class-info"></span>
-                    -
-                    <span id="term-info"></span>
+            class="hidden bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl shadow-sm dark:shadow-gray-900/30 border border-gray-100 dark:border-gray-700/50">
+            <div class="p-6 border-b border-gray-100 dark:border-gray-700/50 flex justify-between items-center">
+                <h2 class="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                    <span class="w-1.5 h-6 bg-primary rounded-full"></span>
+                    Broad Sheet &mdash; <span id="class-info" class="text-primary"></span>
+                    <span class="text-gray-400 dark:text-gray-500 font-normal mx-1">&bull;</span>
+                    <span id="term-info" class="text-gray-500 dark:text-gray-400 font-normal"></span>
                 </h2>
             </div>
 
@@ -319,87 +355,92 @@
 
 
 <!-- Class List Section -->
-<div id="class-list-section" class="hidden">
+<div id="class-list-section" class="hidden report-section">
     <div class="mb-8 space-y-6">
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <!-- Class Selection Card -->
-            <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-8 border border-gray-100 dark:border-gray-700">
-                <div class="flex items-center gap-3 mb-6 text-blue-600 dark:text-blue-400">
-                    <span class="material-symbols-outlined text-xl">school</span>
-                    <h3 class="font-bold uppercase tracking-widest text-xs">Class Selection</h3>
+        <!-- Primary Filters & Action -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
+            <!-- Class & Style Card -->
+            <div class="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl shadow-sm dark:shadow-gray-900/30 p-6 border border-gray-100 dark:border-gray-700/50">
+                <div class="flex items-center gap-3 mb-5">
+                    <div class="w-9 h-9 rounded-xl bg-blue-50 dark:bg-blue-500/10 flex items-center justify-center">
+                        <span class="material-symbols-outlined text-lg text-blue-600 dark:text-blue-400">school</span>
+                    </div>
+                    <h3 class="font-bold uppercase tracking-widest text-xs text-gray-500 dark:text-gray-400">Class Selection</h3>
                 </div>
-                <div class="space-y-6">
+                <div class="space-y-4">
                     <div>
-                        <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2.5">
+                        <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
                             Select Class <span class="text-red-500">*</span>
                         </label>
                         <select id="class-list-class"
-                            class="w-full px-5 py-3 bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all dark:text-white outline-none">
+                            class="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600/50 rounded-xl text-sm font-medium text-gray-700 dark:text-gray-200 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all">
                             <option value="">Select Class</option>
                         </select>
                     </div>
-                </div>
-            </div>
 
-            <!-- Field Visibility Card (Reorderable) -->
-            <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-8 border border-gray-100 dark:border-gray-700">
-                <div class="flex items-center gap-3 mb-6 text-purple-600 dark:text-purple-400">
-                    <span class="material-symbols-outlined text-xl">visibility</span>
-                    <h3 class="font-bold uppercase tracking-widest text-xs">Include Details <span class="text-[10px] font-normal normal-case text-gray-400 ml-1">(drag to reorder)</span></h3>
-                </div>
-                <div id="class-list-fields-sortable" class="space-y-1">
-                    <!-- Fields are populated by JS from a predefined list -->
-                </div>
-                <div class="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
-                    <div class="flex gap-2">
-                        <button onclick="checkAllClassListFields()"
-                            class="text-xs px-3 py-1.5 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors font-medium">Check All</button>
-                        <button onclick="uncheckAllClassListFields()"
-                            class="text-xs px-3 py-1.5 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors font-medium">Uncheck All</button>
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Design Style</label>
+                        <select id="class-list-style"
+                            class="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600/50 rounded-xl text-sm font-medium text-gray-700 dark:text-gray-200 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all">
+                            <option value="default">Default Style</option>
+                            <option value="default2">Default Style 2</option>
+                        </select>
                     </div>
-                </div>
-            </div>
 
-            <!-- Actions Card -->
-            <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-8 border border-gray-100 dark:border-gray-700 flex flex-col">
-                <div class="flex items-center gap-3 mb-6 text-emerald-600 dark:text-emerald-400">
-                    <span class="material-symbols-outlined text-xl">play_arrow</span>
-                    <h3 class="font-bold uppercase tracking-widest text-xs">Actions</h3>
-                </div>
-                <div class="mb-4">
-                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Design Style</label>
-                    <select id="class-list-style"
-                        class="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all dark:text-white outline-none text-sm">
-                        <option value="default">Default Style</option>
-                        <option value="default2">Default Style 2</option>
-                    </select>
-                </div>
-                <div class="space-y-4 mb-auto">
                     <button onclick="generateClassList()"
-                        class="w-full flex items-center justify-center gap-2.5 py-3.5 bg-blue-600 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-xl active:scale-95 transition-all duration-300 text-sm font-bold shadow-md shadow-blue-500/20 cursor-pointer hover:-translate-y-0.5 transform">
-                        <span class="material-symbols-outlined text-lg">refresh</span>
-                        Generate Class List
-                    </button>
-                    <button onclick="printClassList()"
-                        class="w-full flex items-center justify-center gap-2.5 py-3.5 bg-purple-500 bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white rounded-xl active:scale-95 transition-all duration-300 text-sm font-bold shadow-md shadow-purple-500/20 cursor-pointer hover:-translate-y-0.5 transform">
-                        <span class="material-symbols-outlined text-lg">print</span>
-                        Print
-                    </button>
-                    <button onclick="previewClassListPDF()"
-                        class="w-full flex items-center justify-center gap-2.5 py-3.5 bg-rose-500 bg-gradient-to-r from-rose-500 to-rose-600 hover:from-rose-600 hover:to-rose-700 text-white rounded-xl active:scale-95 transition-all duration-300 text-sm font-bold shadow-md shadow-rose-500/20 cursor-pointer hover:-translate-y-0.5 transform">
-                        <span class="material-symbols-outlined text-lg">picture_as_pdf</span>
-                        Preview / Download PDF
+                        class="w-full flex items-center justify-center gap-2 py-3 bg-primary hover:bg-primary/90 text-white rounded-xl active:scale-[0.98] transition-all duration-200 text-sm font-semibold shadow-sm mt-2">
+                        <span class="material-symbols-outlined text-xl">refresh</span>
+                        <span>Generate</span>
                     </button>
                 </div>
             </div>
         </div>
 
+        <!-- Field Visibility (Collapsible) -->
+        <details class="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl shadow-sm dark:shadow-gray-900/50 border border-gray-100 dark:border-gray-700/50">
+            <summary class="cursor-pointer px-6 py-4 flex items-center gap-3 text-sm font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-50/50 dark:hover:bg-gray-700/20 rounded-2xl transition-colors">
+                <span class="material-symbols-outlined text-lg text-gray-400">visibility</span>
+                Field Visibility
+                <span class="text-[10px] font-normal normal-case text-gray-400 ml-1">(drag to reorder)</span>
+            </summary>
+            <div class="px-6 pb-6">
+                <div class="border-t border-gray-100 dark:border-gray-700/50 pt-5">
+                    <div id="class-list-fields-sortable" class="space-y-1">
+                        <!-- Fields are populated by JS from a predefined list -->
+                    </div>
+                    <div class="mt-4 pt-3 border-t border-gray-100 dark:border-gray-700/50">
+                        <div class="flex gap-2">
+                            <button onclick="checkAllClassListFields()"
+                                class="text-xs px-3 py-1.5 bg-gray-100 dark:bg-gray-700/50 hover:bg-gray-200 dark:hover:bg-gray-600/50 rounded-lg transition-colors font-medium text-gray-700 dark:text-gray-300">Check All</button>
+                            <button onclick="uncheckAllClassListFields()"
+                                class="text-xs px-3 py-1.5 bg-gray-100 dark:bg-gray-700/50 hover:bg-gray-200 dark:hover:bg-gray-600/50 rounded-lg transition-colors font-medium text-gray-700 dark:text-gray-300">Uncheck All</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </details>
+
+        <!-- Secondary Actions -->
+        <div class="flex gap-3">
+            <button onclick="printClassList()"
+                class="flex items-center justify-center gap-2 px-5 py-2.5 bg-gray-100 dark:bg-gray-700/50 hover:bg-gray-200 dark:hover:bg-gray-600/50 text-gray-700 dark:text-gray-200 rounded-xl active:scale-[0.98] transition-all duration-200 text-sm font-semibold">
+                <span class="material-symbols-outlined text-lg">print</span>
+                Print
+            </button>
+            <button onclick="previewClassListPDF()"
+                class="flex items-center justify-center gap-2 px-5 py-2.5 bg-red-50 hover:bg-red-100 dark:bg-red-500/10 dark:hover:bg-red-500/20 text-red-600 dark:text-red-400 rounded-xl active:scale-[0.98] transition-all duration-200 text-sm font-semibold">
+                <span class="material-symbols-outlined text-lg">picture_as_pdf</span>
+                PDF
+            </button>
+        </div>
+
         <!-- Results Table -->
-        <div id="class-list-results" class="hidden bg-white dark:bg-gray-800 rounded-xl shadow-md border border-gray-100 dark:border-gray-700">
-            <div class="p-6 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
-                <h2 class="text-xl font-bold text-gray-900 dark:text-white">
-                    Class List - <span id="class-list-class-info"></span>
-                    <span id="class-list-count" class="text-base font-normal text-gray-500 dark:text-gray-400 ml-2"></span>
+        <div id="class-list-results" class="hidden bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl shadow-sm dark:shadow-gray-900/30 border border-gray-100 dark:border-gray-700/50">
+            <div class="p-6 border-b border-gray-100 dark:border-gray-700/50 flex justify-between items-center">
+                <h2 class="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                    <span class="w-1.5 h-6 bg-primary rounded-full"></span>
+                    Class List &mdash; <span id="class-list-class-info" class="text-primary"></span>
+                    <span id="class-list-count" class="text-gray-500 dark:text-gray-400 font-normal"></span>
                 </h2>
             </div>
             <div class="overflow-x-auto p-4" id="class-list-table-container">
@@ -413,137 +454,190 @@
 </div>
 
 <!-- Recording Sheet Section -->
-<div id="recording-sheet-section" class="hidden">
+<div id="recording-sheet-section" class="hidden report-section">
     <div class="mb-8 space-y-6">
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <!-- Term & Class Selection -->
-            <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-6 border border-gray-100 dark:border-gray-700">
-                <div class="flex items-center gap-3 mb-5 text-gray-600 dark:text-gray-400">
-                    <span class="material-symbols-outlined text-xl">database</span>
-                    <h3 class="font-bold uppercase tracking-widest text-xs">Data Selection</h3>
+        <!-- Primary Filters & Action -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
+            <!-- Term Card -->
+            <div class="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl shadow-sm dark:shadow-gray-900/30 p-6 border border-gray-100 dark:border-gray-700/50">
+                <div class="flex items-center gap-3 mb-5">
+                    <div class="w-9 h-9 rounded-xl bg-blue-50 dark:bg-blue-500/10 flex items-center justify-center">
+                        <span class="material-symbols-outlined text-lg text-blue-600 dark:text-blue-400">database</span>
+                    </div>
+                    <h3 class="font-bold uppercase tracking-widest text-xs text-gray-500 dark:text-gray-400">Term</h3>
                 </div>
-                <div class="space-y-5">
+                <div class="space-y-4">
                     <div>
                         <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
                             Academic Term <span class="text-red-500">*</span>
                         </label>
                         <select id="recording-term"
-                            class="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all dark:text-white outline-none text-sm">
+                            class="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600/50 rounded-xl text-sm font-medium text-gray-700 dark:text-gray-200 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all">
                             <option value="">Select Term</option>
                         </select>
                     </div>
-                    <div>
-                        <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                            Select Class <span class="text-red-500">*</span>
-                        </label>
-                        <select id="recording-class"
-                            class="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all dark:text-white outline-none text-sm">
-                            <option value="">Select Class</option>
-                        </select>
-                    </div>
                 </div>
             </div>
 
-            <!-- Student Info + Subjects -->
-            <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-6 border border-gray-100 dark:border-gray-700">
-                <div class="flex items-center gap-3 mb-5 text-gray-600 dark:text-gray-400">
-                    <span class="material-symbols-outlined text-xl">badge</span>
-                    <h3 class="font-bold uppercase tracking-widest text-xs">Include Fields</h3>
-                </div>
-                <div class="space-y-4">
-                    <div>
-                        <p class="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2">Student Info</p>
-                        <div class="space-y-2">
-                            <label class="flex items-center gap-2.5 cursor-pointer group">
-                                <input type="checkbox" class="recording-info-field w-4 h-4 rounded text-gray-600 focus:ring-gray-500" data-field="student_name" checked>
-                                <span class="text-xs font-medium text-gray-700 dark:text-gray-300 group-hover:text-gray-500 transition-colors">Student Name</span>
-                            </label>
-                            <label class="flex items-center gap-2.5 cursor-pointer group">
-                                <input type="checkbox" class="recording-info-field w-4 h-4 rounded text-gray-600 focus:ring-gray-500" data-field="username" checked>
-                                <span class="text-xs font-medium text-gray-700 dark:text-gray-300 group-hover:text-gray-500 transition-colors">Username</span>
-                            </label>
-                            <label class="flex items-center gap-2.5 cursor-pointer group">
-                                <input type="checkbox" class="recording-info-field w-4 h-4 rounded text-gray-600 focus:ring-gray-500" data-field="admission_number" checked>
-                                <span class="text-xs font-medium text-gray-700 dark:text-gray-300 group-hover:text-gray-500 transition-colors">Admission No.</span>
-                            </label>
+            <!-- Class & Action Card -->
+            <div>
+                <div class="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl shadow-sm dark:shadow-gray-900/30 p-6 border border-gray-100 dark:border-gray-700/50">
+                    <div class="flex items-center gap-3 mb-5">
+                        <div class="w-9 h-9 rounded-xl bg-emerald-50 dark:bg-emerald-500/10 flex items-center justify-center">
+                            <span class="material-symbols-outlined text-lg text-emerald-600 dark:text-emerald-400">filter_alt</span>
                         </div>
+                        <h3 class="font-bold uppercase tracking-widest text-xs text-gray-500 dark:text-gray-400">Class</h3>
                     </div>
-                    <div class="pt-3 border-t border-gray-100 dark:border-gray-700">
-                        <label class="block text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2">Subject Teacher Name</label>
-                        <input type="text" id="recording-teacher-name" placeholder="e.g. Mr. Okon"
-                            class="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500 transition-all dark:text-white outline-none text-xs">
-                    </div>
-                    <div class="pt-3 border-t border-gray-100 dark:border-gray-700">
-                        <div class="flex items-center justify-between mb-2">
-                            <p class="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">Subjects</p>
-                            <div class="flex gap-1">
-                                <button onclick="checkAllRecordingSubjects()" class="text-[10px] px-2 py-1 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded transition-colors font-medium">All</button>
-                                <button onclick="uncheckAllRecordingSubjects()" class="text-[10px] px-2 py-1 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded transition-colors font-medium">None</button>
-                            </div>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                                Select Class <span class="text-red-500">*</span>
+                            </label>
+                            <select id="recording-class"
+                                class="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600/50 rounded-xl text-sm font-medium text-gray-700 dark:text-gray-200 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all">
+                                <option value="">Select Class</option>
+                            </select>
                         </div>
-                        <div id="recording-subjects" class="space-y-2">
-                            <p class="text-xs text-gray-400 italic">Select term and class to load subjects</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
 
-            <!-- Assessment Types + Actions -->
-            <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-6 border border-gray-100 dark:border-gray-700 flex flex-col">
-                <div class="flex items-center gap-3 mb-5 text-gray-600 dark:text-gray-400">
-                    <span class="material-symbols-outlined text-xl">tune</span>
-                    <h3 class="font-bold uppercase tracking-widest text-xs">Actions</h3>
-                </div>
-                <div class="space-y-4 mb-4">
-                    <div>
-                        <div class="flex items-center justify-between mb-2">
-                            <p class="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">Assessment Types</p>
-                            <div class="flex gap-1">
-                                <button onclick="checkAllRecordingAssessments()" class="text-[10px] px-2 py-1 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded transition-colors font-medium">All</button>
-                                <button onclick="uncheckAllRecordingAssessments()" class="text-[10px] px-2 py-1 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded transition-colors font-medium">None</button>
-                            </div>
-                        </div>
-                        <div id="recording-assessment-types" class="space-y-2">
-                            <p class="text-xs text-gray-400 italic">Select term and class to load assessment types</p>
-                        </div>
+                        <button onclick="generateRecordingSheet()"
+                            class="w-full flex items-center justify-center gap-2 py-3 bg-primary hover:bg-primary/90 text-white rounded-xl active:scale-[0.98] transition-all duration-200 text-sm font-semibold shadow-sm mt-2">
+                            <span class="material-symbols-outlined text-xl">refresh</span>
+                            <span>Generate</span>
+                        </button>
                     </div>
-                    <div class="pt-3 border-t border-gray-100 dark:border-gray-700">
-                        <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Design Style</label>
-                        <select id="recording-sheet-style"
-                            class="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all dark:text-white outline-none text-sm">
-                            <option value="default">Default Style</option>
-                            <option value="compact">Compact Style</option>
-                            <option value="minimal">Minimal Style</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="space-y-3 mt-auto">
-                    <button onclick="generateRecordingSheet()"
-                        class="w-full flex items-center justify-center gap-2.5 py-3 bg-blue-600 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-xl active:scale-95 transition-all duration-300 text-sm font-bold shadow-md shadow-blue-500/20 cursor-pointer hover:-translate-y-0.5 transform">
-                        <span class="material-symbols-outlined text-lg">refresh</span>
-                        Generate Recording Sheet
-                    </button>
-                    <button onclick="printRecordingSheet()"
-                        class="w-full flex items-center justify-center gap-2.5 py-3 bg-purple-500 bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white rounded-xl active:scale-95 transition-all duration-300 text-sm font-bold shadow-md shadow-purple-500/20 cursor-pointer hover:-translate-y-0.5 transform">
-                        <span class="material-symbols-outlined text-lg">print</span>
-                        Print
-                    </button>
-                    <button onclick="previewRecordingSheet()"
-                        class="w-full flex items-center justify-center gap-2.5 py-3 bg-rose-500 bg-gradient-to-r from-rose-500 to-rose-600 hover:from-rose-600 hover:to-rose-700 text-white rounded-xl active:scale-95 transition-all duration-300 text-sm font-bold shadow-md shadow-rose-500/20 cursor-pointer hover:-translate-y-0.5 transform">
-                        <span class="material-symbols-outlined text-lg">picture_as_pdf</span>
-                        Preview / Download PDF
-                    </button>
                 </div>
             </div>
         </div>
 
+        <!-- Advanced Options -->
+        <details class="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl shadow-sm dark:shadow-gray-900/50 border border-gray-100 dark:border-gray-700/50">
+            <summary class="cursor-pointer px-6 py-4 flex items-center gap-3 text-sm font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-50/50 dark:hover:bg-gray-700/20 rounded-2xl transition-colors">
+                <span class="material-symbols-outlined text-lg text-gray-400">tune</span>
+                Advanced Options
+            </summary>
+            <div class="px-6 pb-6">
+                <div class="border-t border-gray-100 dark:border-gray-700/50 pt-5">
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <!-- Assessment Types & Output Settings -->
+                        <div>
+                            <div class="flex items-center gap-3 mb-4">
+                                <div class="w-9 h-9 rounded-xl bg-purple-50 dark:bg-purple-500/10 flex items-center justify-center">
+                                    <span class="material-symbols-outlined text-lg text-purple-600 dark:text-purple-400">assessment</span>
+                                </div>
+                                <h3 class="font-bold uppercase tracking-widest text-xs text-gray-500 dark:text-gray-400">Assessment Types</h3>
+                            </div>
+                            <div class="space-y-4">
+                                <div>
+                                    <div class="flex items-center justify-between mb-2">
+                                        <p class="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">Include Assessments</p>
+                                        <div class="flex gap-1">
+                                            <button onclick="checkAllRecordingAssessments()" class="text-[10px] px-2 py-1 bg-gray-100 dark:bg-gray-700/50 hover:bg-gray-200 dark:hover:bg-gray-600/50 rounded-lg transition-colors font-medium text-gray-700 dark:text-gray-300">All</button>
+                                            <button onclick="uncheckAllRecordingAssessments()" class="text-[10px] px-2 py-1 bg-gray-100 dark:bg-gray-700/50 hover:bg-gray-200 dark:hover:bg-gray-600/50 rounded-lg transition-colors font-medium text-gray-700 dark:text-gray-300">None</button>
+                                        </div>
+                                    </div>
+                                    <div id="recording-assessment-types" class="space-y-2">
+                                        <p class="text-xs text-gray-400 italic">Select term and class to load assessment types</p>
+                                    </div>
+                                </div>
+                                <div class="grid grid-cols-2 gap-4 pt-3 border-t border-gray-100 dark:border-gray-700/50">
+                                    <div>
+                                        <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Design Style</label>
+                                        <select id="recording-sheet-style"
+                                            class="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600/50 rounded-xl text-sm font-medium text-gray-700 dark:text-gray-200 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all">
+                                            <option value="default">Default Style</option>
+                                            <option value="compact">Compact Style</option>
+                                            <option value="minimal">Minimal Style</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Orientation</label>
+                                        <select id="recording-orientation"
+                                            class="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600/50 rounded-xl text-sm font-medium text-gray-700 dark:text-gray-200 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all">
+                                            <option value="portrait">Portrait</option>
+                                            <option value="landscape">Landscape</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Include Fields -->
+                        <div>
+                            <div class="flex items-center gap-3 mb-4">
+                                <div class="w-9 h-9 rounded-xl bg-orange-50 dark:bg-orange-500/10 flex items-center justify-center">
+                                    <span class="material-symbols-outlined text-lg text-orange-600 dark:text-orange-400">badge</span>
+                                </div>
+                                <h3 class="font-bold uppercase tracking-widest text-xs text-gray-500 dark:text-gray-400">Include Fields</h3>
+                            </div>
+                            <div class="space-y-4">
+                                <div>
+                                    <p class="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2">Student Info</p>
+                                    <div class="space-y-2">
+                                        <label class="flex items-center gap-2.5 cursor-pointer group">
+                                            <input type="checkbox" class="recording-info-field w-4 h-4 rounded text-primary focus:ring-primary/20" data-field="student_name" checked>
+                                            <span class="text-xs font-medium text-gray-700 dark:text-gray-300 group-hover:text-primary transition-colors">Student Name</span>
+                                        </label>
+                                        <label class="flex items-center gap-2.5 cursor-pointer group">
+                                            <input type="checkbox" class="recording-info-field w-4 h-4 rounded text-primary focus:ring-primary/20" data-field="username" checked>
+                                            <span class="text-xs font-medium text-gray-700 dark:text-gray-300 group-hover:text-primary transition-colors">Username</span>
+                                        </label>
+                                        <label class="flex items-center gap-2.5 cursor-pointer group">
+                                            <input type="checkbox" class="recording-info-field w-4 h-4 rounded text-primary focus:ring-primary/20" data-field="admission_number" checked>
+                                            <span class="text-xs font-medium text-gray-700 dark:text-gray-300 group-hover:text-primary transition-colors">Admission No.</span>
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="pt-3 border-t border-gray-100 dark:border-gray-700/50">
+                                    <label class="block text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2">Subject Teacher</label>
+                                    <select id="recording-teacher-name"
+                                        class="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600/50 rounded-xl text-sm font-medium text-gray-700 dark:text-gray-200 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all">
+                                        <option value="">-- Select Teacher --</option>
+                                        {% for t in teachers %}
+                                        <option value="{{ t.name }}">{{ t.name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="pt-3 border-t border-gray-100 dark:border-gray-700/50">
+                                    <div class="flex items-center justify-between mb-2">
+                                        <p class="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">Subjects</p>
+                                        <div class="flex gap-1">
+                                            <button onclick="checkAllRecordingSubjects()" class="text-[10px] px-2 py-1 bg-gray-100 dark:bg-gray-700/50 hover:bg-gray-200 dark:hover:bg-gray-600/50 rounded-lg transition-colors font-medium text-gray-700 dark:text-gray-300">All</button>
+                                            <button onclick="uncheckAllRecordingSubjects()" class="text-[10px] px-2 py-1 bg-gray-100 dark:bg-gray-700/50 hover:bg-gray-200 dark:hover:bg-gray-600/50 rounded-lg transition-colors font-medium text-gray-700 dark:text-gray-300">None</button>
+                                        </div>
+                                    </div>
+                                    <div id="recording-subjects" class="space-y-2">
+                                        <p class="text-xs text-gray-400 italic">Select term and class to load subjects</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </details>
+
+        <!-- Secondary Actions -->
+        <div class="flex gap-3">
+            <button onclick="printRecordingSheet()"
+                class="flex items-center justify-center gap-2 px-5 py-2.5 bg-gray-100 dark:bg-gray-700/50 hover:bg-gray-200 dark:hover:bg-gray-600/50 text-gray-700 dark:text-gray-200 rounded-xl active:scale-[0.98] transition-all duration-200 text-sm font-semibold">
+                <span class="material-symbols-outlined text-lg">print</span>
+                Print
+            </button>
+            <button onclick="previewRecordingSheet()"
+                class="flex items-center justify-center gap-2 px-5 py-2.5 bg-red-50 hover:bg-red-100 dark:bg-red-500/10 dark:hover:bg-red-500/20 text-red-600 dark:text-red-400 rounded-xl active:scale-[0.98] transition-all duration-200 text-sm font-semibold">
+                <span class="material-symbols-outlined text-lg">picture_as_pdf</span>
+                PDF
+            </button>
+        </div>
+
         <!-- Results Table -->
-        <div id="recording-results" class="hidden bg-white dark:bg-gray-800 rounded-xl shadow-md border border-gray-100 dark:border-gray-700">
-            <div class="p-6 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
-                <h2 class="text-xl font-bold text-gray-900 dark:text-white">
-                    Recording Sheet - <span id="recording-class-info"></span>
-                    <span id="recording-term-info" class="text-base font-normal text-gray-500 dark:text-gray-400 ml-2"></span>
-                    <span id="recording-count" class="text-base font-normal text-gray-500 dark:text-gray-400 ml-1"></span>
+        <div id="recording-results" class="hidden bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl shadow-sm dark:shadow-gray-900/30 border border-gray-100 dark:border-gray-700/50">
+            <div class="p-6 border-b border-gray-100 dark:border-gray-700/50 flex justify-between items-center">
+                <h2 class="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                    <span class="w-1.5 h-6 bg-primary rounded-full"></span>
+                    Recording Sheet &mdash; <span id="recording-class-info" class="text-primary"></span>
+                    <span id="recording-term-info" class="text-gray-500 dark:text-gray-400 font-normal"></span>
+                    <span id="recording-count" class="text-gray-400 dark:text-gray-500 font-normal"></span>
                 </h2>
             </div>
             <div class="overflow-x-auto p-4" id="recording-table-body"></div>
@@ -558,20 +652,15 @@
             width: 40px;
             height: 40px;
             border: 4px solid #e5e7eb;
-            border-top: 4px solid #3b82f6;
+            border-top: 4px solid var(--color-primary, #1173d4);
             border-radius: 50%;
             animation: spin 1s linear infinite;
             margin: 0 auto;
         }
 
         @keyframes spin {
-            0% {
-                transform: rotate(0deg);
-            }
-
-            100% {
-                transform: rotate(360deg);
-            }
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
         }
 
         /* Quality Indicator */
@@ -588,10 +677,45 @@
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
         }
 
-        /* Report tabs */
+        /* Pill Tab Active State */
+        .report-tab.active {
+            color: var(--color-primary, #1173d4);
+        }
+
         .report-tab {
             cursor: pointer;
-            transition: all 0.2s ease;
+            transition: color 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* Section fade-in animation */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(6px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .report-section:not(.hidden) {
+            animation: fadeIn 0.25s ease-out;
+        }
+
+        /* Dark mode scrollbar */
+        .dark ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        .dark ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .dark ::-webkit-scrollbar-thumb {
+            background: rgba(156, 163, 175, 0.3);
+            border-radius: 9999px;
+        }
+        .dark ::-webkit-scrollbar-thumb:hover {
+            background: rgba(156, 163, 175, 0.5);
+        }
+
+        /* Details/Summary marker reset */
+        details summary::-webkit-details-marker {
+            display: none;
         }
 
         /* Responsive adjustments */
@@ -601,11 +725,9 @@
                 gap: 12px;
                 text-align: center;
             }
-
             .preview-toolbar .flex.items-center.gap-4 {
                 justify-content: center;
             }
-
             .preview-toolbar .flex.items-center.gap-2 {
                 justify-content: center;
             }
