@@ -1,12 +1,26 @@
 let currentStudents = [];
 let currentFilters = {};
 let currentReportData = null;
+let subjectOrderSortable = null;
 
 document.addEventListener("DOMContentLoaded", () => {
   loadTerms();
   loadClasses();
   loadConfigs();
   loadLayoutStyles();
+
+  // Load subject order when class changes
+  const classFilter = document.getElementById("classFilter");
+  if (classFilter) {
+    classFilter.addEventListener("change", () => {
+      const classId = classFilter.value;
+      if (classId) {
+        loadSubjectOrder(classId);
+      } else {
+        document.getElementById("subjectOrderPanel").classList.add("hidden");
+      }
+    });
+  }
 
   // Add keyboard event listener for closing preview with ESC key
   document.addEventListener("keydown", (event) => {
@@ -986,7 +1000,7 @@ function createCanvasPreviewModal() {
                     </button>
                     
                     <!-- Download Button -->
-                    <button onclick="downloadFromPreview()" 
+                    <button id="downloadPdfBtn" onclick="downloadFromPreview()" 
                         class="px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg transition-colors flex items-center gap-2"
                         title="Download PDF">
                         <span class="material-symbols-outlined text-sm">download</span>
@@ -1040,8 +1054,30 @@ async function refreshCanvasPreview() {
 // Download from preview
 async function downloadFromPreview() {
   if (!window.currentPreviewData) return;
+
+  const btn = document.getElementById("downloadPdfBtn");
+  const origHTML = btn ? btn.innerHTML : "";
+  const previewContent = document.getElementById("canvasPreviewContent");
+  let overlay = null;
+
   try {
-    // Class list data has a `fields` array - use class list download
+    // Show loading state on button
+    if (btn) {
+      btn.disabled = true;
+      btn.classList.add("opacity-50", "cursor-not-allowed");
+      btn.innerHTML = '<span class="material-symbols-outlined text-sm animate-spin">progress_activity</span><span>Downloading...</span>';
+    }
+
+    // Show overlay on preview area
+    if (previewContent) {
+      overlay = document.createElement("div");
+      overlay.className = "absolute inset-0 bg-black bg-opacity-60 flex items-center justify-center z-10 rounded-lg";
+      overlay.innerHTML = '<div class="flex flex-col items-center gap-3"><span class="material-symbols-outlined text-white text-4xl animate-spin">progress_activity</span><span class="text-white text-sm font-medium">Generating PDF...</span></div>';
+      previewContent.style.position = "relative";
+      previewContent.appendChild(overlay);
+    }
+
+    // Class list data has `fields` array - use class list download
     if (window.currentPreviewData.fields && typeof printClassList === 'function') {
       await printClassList();
       return;
@@ -1063,6 +1099,17 @@ async function downloadFromPreview() {
       message: "Failed to download PDF: " + error.message,
       type: "error",
     });
+  } finally {
+    // Restore button state
+    if (btn) {
+      btn.disabled = false;
+      btn.classList.remove("opacity-50", "cursor-not-allowed");
+      btn.innerHTML = origHTML;
+    }
+    // Remove overlay
+    if (overlay && overlay.parentNode) {
+      overlay.parentNode.removeChild(overlay);
+    }
   }
 }
 // renderReportPreview function removed - using full page preview instead
@@ -2994,3 +3041,91 @@ window.testPreviewFunctionality = async function () {
   console.log("All required functions are available");
   return true;
 };
+
+// ── Subject Display Order ───────────────────────────────────────────────────
+
+async function loadSubjectOrder(classId) {
+  const panel = document.getElementById("subjectOrderPanel");
+  const container = document.getElementById("subject-order-sortable");
+  if (!panel || !container) return;
+
+  panel.classList.remove("hidden");
+  container.innerHTML = '<p class="text-xs text-gray-400 italic">Loading subjects...</p>';
+
+  try {
+    const response = await fetch(`/reports/api/class-subjects/${classId}`);
+    const data = await response.json();
+
+    if (data.success && data.subjects && data.subjects.length > 0) {
+      container.innerHTML = data.subjects.map((s, i) => `
+        <div class="flex items-center gap-3 px-3 py-2.5 bg-gray-50 dark:bg-gray-700/50 rounded-lg cursor-grab active:cursor-grabbing hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors subject-order-item" data-subject-id="${s.subject_id}" data-order="${s.display_order}">
+          <span class="material-symbols-outlined text-base text-gray-400 dark:text-gray-500 drag-handle" style="cursor:grab;">drag_indicator</span>
+          <span class="flex-1 text-sm font-medium text-gray-700 dark:text-gray-200">${s.subject_name}</span>
+          <span class="text-xs text-gray-400 dark:text-gray-500 font-mono subject-order-num">#${i + 1}</span>
+        </div>
+      `).join('');
+
+      if (typeof Sortable !== 'undefined') {
+        subjectOrderSortable = new Sortable(container, {
+          handle: '.drag-handle',
+          animation: 150,
+          ghostClass: 'opacity-30',
+          dragClass: 'shadow-lg',
+          onEnd: function () {
+            updateSubjectOrderNumbers();
+          }
+        });
+      }
+    } else {
+      container.innerHTML = '<p class="text-xs text-gray-400 italic">No subjects assigned to this class</p>';
+    }
+  } catch (error) {
+    console.error("Error loading subject order:", error);
+    container.innerHTML = '<p class="text-xs text-red-400 italic">Failed to load subjects</p>';
+  }
+}
+
+function updateSubjectOrderNumbers() {
+  const items = document.querySelectorAll("#subject-order-sortable .subject-order-item");
+  items.forEach((item, i) => {
+    const numEl = item.querySelector(".subject-order-num");
+    if (numEl) numEl.textContent = "#" + (i + 1);
+  });
+}
+
+async function saveSubjectOrder() {
+  const items = document.querySelectorAll("#subject-order-sortable .subject-order-item");
+  if (items.length === 0) {
+    showNotification("No subjects to reorder", "warning");
+    return;
+  }
+
+  const classId = document.getElementById("classFilter").value;
+  if (!classId) {
+    showNotification("Please select a class first", "warning");
+    return;
+  }
+
+  const subjectOrders = Array.from(items).map((item, i) => ({
+    subject_id: item.dataset.subjectId,
+    display_order: i + 1
+  }));
+
+  try {
+    const response = await fetch("/reports/api/class-subjects/order", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ class_room_id: classId, subject_orders: subjectOrders })
+    });
+
+    const data = await response.json();
+    if (data.success) {
+      showNotification("Subject order saved successfully", "success");
+    } else {
+      showNotification(data.error || "Failed to save subject order", "error");
+    }
+  } catch (error) {
+    console.error("Error saving subject order:", error);
+    showNotification("Failed to save subject order", "error");
+  }
+}

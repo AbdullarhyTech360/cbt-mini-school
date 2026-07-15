@@ -236,12 +236,15 @@ class ReportGenerator:
         else:
             assessment_types = all_assessment_types
 
-        # Get all subjects for this class
+        # Get all subjects for this class, sorted by display_order then name
         from models import class_subject, Subject
         class_subjects = db.session.query(Subject).join(
             class_subject, class_subject.c.subject_id == Subject.subject_id
         ).filter(
             class_subject.c.class_room_id == class_room_id
+        ).order_by(
+            class_subject.c.display_order.asc(),
+            Subject.subject_name.asc()
         ).all()
 
         # Initialize subject scores structure
@@ -634,7 +637,7 @@ class ReportGenerator:
             'student': {
                 'id': student_id,
                 'name': f"{user.first_name} {user.last_name}".upper(),
-                'admission_number': student.admission_number,
+                'admission_number': f"NCAT/{class_room.class_room_name.strip().replace(' ', '')}/{student.admission_number}" if student.admission_number else '',
                 'image': user.image,
                 'gender': user.gender,
                 'class_name': class_room.class_room_name,
@@ -714,26 +717,38 @@ class ReportGenerator:
 
     @staticmethod
     def calculate_class_average(term_id, class_room_id):
-        """Calculate the average total score across all students in a class"""
+        """Calculate the average percentage across all students in a class.
+
+        For each student, compute (total_score / total_max_score * 100),
+        then return the average of those percentages.
+        """
         students = db.session.query(User.id).filter(
             User.class_room_id == class_room_id,
             User.role == 'student'
         ).all()
 
-        totals = []
+        percentages = []
         for (sid,) in students:
-            total = db.session.query(func.sum(Grade.score)).filter(
+            result = db.session.query(
+                func.sum(Grade.score),
+                func.sum(Grade.max_score)
+            ).filter(
                 Grade.student_id == sid,
                 Grade.term_id == term_id,
                 Grade.class_room_id == class_room_id,
                 db.or_(Grade.is_published == True, Grade.is_from_cbt == True)
-            ).scalar() or 0
-            totals.append(total)
+            ).first()
 
-        if not totals:
+            total_score = result[0] or 0
+            total_max = result[1] or 0
+
+            if total_max > 0:
+                percentages.append((total_score / total_max) * 100)
+
+        if not percentages:
             return 0
 
-        return round(sum(totals) / len(totals), 1)
+        return round(sum(percentages) / len(percentages), 1)
 
     @staticmethod
     def get_class_report_data(class_room_id, term_id, config_id=None):
