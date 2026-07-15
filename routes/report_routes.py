@@ -98,8 +98,13 @@ def admin_or_staff_required(f):
 @admin_or_staff_required
 def report_config_page():
     """Report configuration page"""
-    user = User.query.get(session["user_id"])
-    return render_template("admin/report_config.html", user=user, current_user=user)
+    user = db.session.get(User, session["user_id"])
+    return render_template(
+        "admin/report_config.html",
+        user=user,
+        current_user=user,
+        csrf_token=session.get("csrf_token", ""),
+    )
 
 
 @report_bp.route("/layout")
