@@ -58,3 +58,10 @@ student_exam = db.Table(
     db.Column("completed_at", db.DateTime, nullable=True),
     db.Column("time_taken", db.Integer, nullable=True),  # in seconds
 )
+
+# Many-to-Many: Grade Scales and Sections (a scale can apply to multiple sections)
+grade_scale_section = db.Table(
+    "grade_scale_section",
+    db.Column("scale_id", db.String(36), db.ForeignKey("grade_scale.scale_id"), primary_key=True),
+    db.Column("section_id", db.String(36), db.ForeignKey("section.section_id"), primary_key=True),
+)

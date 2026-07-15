@@ -1,13 +1,13 @@
 {% extends "staff/base.html" %}
-{% block title %}Behavioral Traits{% endblock %}
+{% block title %}BRAIN Psychomotor{% endblock %}
 {% block content %}
 <div class="max-w-7xl mx-auto">
     <!-- Header -->
     <div class="mb-6 md:mb-8">
         <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div>
-                <h1 class="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white mb-2">Behavioral Traits</h1>
-                <p class="text-gray-600 dark:text-gray-400 text-sm md:text-base">Score each student on behavioral traits for the selected term</p>
+                <h1 class="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white mb-2">BRAIN Psychomotor</h1>
+                <p class="text-gray-600 dark:text-gray-400 text-sm md:text-base">Rate students on psychomotor behaviours and view their academic summary</p>
             </div>
         </div>
     </div>
@@ -90,13 +90,13 @@
     </div>
 
     <!-- Student Cards Container -->
-    <div id="traitsContainer" class="hidden">
+    <div id="psychomotorContainer" class="hidden">
         <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
-            <h2 class="text-lg md:text-xl font-bold text-gray-800 dark:text-white">Student Scores</h2>
+            <h2 class="text-lg md:text-xl font-bold text-gray-800 dark:text-white">Student Ratings</h2>
             <span id="saveStatus" class="text-xs hidden"></span>
         </div>
         <div id="studentsCards" class="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6"></div>
-        <p class="text-xs text-gray-400 dark:text-gray-500 mt-4 px-1">Enter scores for each trait (max values shown). Click "Save All" or individual "Save" to save.</p>
+        <p class="text-xs text-gray-400 dark:text-gray-500 mt-4 px-1">Click a star to rate (1&nbsp;=&nbsp;Poor, 5&nbsp;=&nbsp;Very Good). Click "Save All" to save all changes.</p>
     </div>
 
     <!-- Empty State -->
@@ -118,24 +118,64 @@
     <span>Save All</span>
 </button>
 
+<!-- Toast Container -->
+<div id="toastContainer" class="fixed top-6 right-4 z-[9999] flex flex-col gap-2 pointer-events-none"></div>
+
 <script>
+function showToast(message, type = 'success') {
+    const container = document.getElementById('toastContainer');
+    const toast = document.createElement('div');
+    const config = {
+        success: { bg: 'bg-emerald-600', border: 'border-emerald-700', icon: 'check_circle' },
+        error:   { bg: 'bg-red-600',     border: 'border-red-700',     icon: 'error' },
+        warning: { bg: 'bg-amber-600',   border: 'border-amber-700',   icon: 'warning' },
+        info:    { bg: 'bg-blue-600',    border: 'border-blue-700',    icon: 'info' }
+    };
+    const c = config[type] || config.info;
+    toast.className = `flex items-center gap-3 px-5 py-3.5 rounded-xl border-2 ${c.border} ${c.bg} shadow-2xl text-white text-sm font-semibold transform transition-all duration-300 translate-x-full opacity-0`;
+    toast.innerHTML = `<span class="material-symbols-outlined text-lg">${c.icon}</span><span>${message}</span>`;
+    container.appendChild(toast);
+    requestAnimationFrame(() => { toast.classList.remove('translate-x-full', 'opacity-0'); });
+    setTimeout(() => {
+        toast.classList.add('translate-x-full', 'opacity-0');
+        setTimeout(() => toast.remove(), 300);
+    }, 3500);
+}
+
 let currentTraits = [];
 let currentTermId = '';
 let dirtyStudents = new Set();
 
+function getOrdinal(n) {
+    const s = ["th", "st", "nd", "rd"];
+    const v = n % 100;
+    return s[(v - 20) % 10] || s[v] || s[0];
+}
+
+function renderStars(traitId, currentVal, studentId) {
+    let html = '<div class="flex items-center gap-0.5">';
+    for (let i = 1; i <= 5; i++) {
+        const filled = i <= (currentVal || 0);
+        html += `<button type="button" data-student="${studentId}" data-trait="${traitId}" data-value="${i}"
+            class="star-btn text-xl leading-none transition-colors duration-150 ${filled ? 'text-amber-500' : 'text-gray-300 dark:text-gray-600 hover:text-amber-400'}"
+            onclick="setRating('${studentId}', '${traitId}', ${i})">${filled ? '&#9733;' : '&#9734;'}</button>`;
+    }
+    html += '</div>';
+    return html;
+}
+
 function renderStudents(students, traits) {
     const container = document.getElementById('studentsCards');
     container.innerHTML = students.map((s, idx) => {
+        const posDisplay = s.position ? s.position + getOrdinal(s.position) : '--';
+
         const traitGrid = traits.map(t => {
-            const val = s.scores[t.id] !== null && s.scores[t.id] !== undefined ? s.scores[t.id] : '';
+            const val = s.trait_scores[t.id];
             return `
-                <div class="flex items-center justify-between py-2 px-3 rounded-lg bg-gray-50 dark:bg-gray-700/50 gap-3">
-                    <span class="text-xs font-medium text-gray-600 dark:text-gray-400 whitespace-nowrap">${t.name}</span>
-                    <div class="flex items-center gap-1.5">
-                        <input type="number" step="0.1" min="0" max="${t.max_score}" value="${val}"
-                            data-student="${s.student_id}" data-trait="${t.id}" data-max="${t.max_score}"
-                            class="w-16 px-2 py-1 text-center text-sm rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition trait-input" />
-                        <span class="text-[10px] text-gray-400 dark:text-gray-500 font-mono">/${t.max_score}</span>
+                <div class="flex items-center justify-between py-2 px-3 rounded-lg bg-gray-50 dark:bg-gray-700/50">
+                    <span class="text-xs font-medium text-gray-600 dark:text-gray-400">${t.name}</span>
+                    <div class="flex items-center gap-0.5" id="stars-${s.student_id}-${t.id}">
+                        ${renderStars(t.id, val, s.student_id)}
                     </div>
                 </div>`;
         }).join('');
@@ -144,7 +184,7 @@ function renderStudents(students, traits) {
 
         return `
         <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border-2 ${borderColor} overflow-hidden transition-all duration-200 hover:shadow-xl" data-student-id="${s.student_id}">
-            <div class="bg-gradient-to-r from-amber-500 to-orange-600 px-4 py-3 flex items-center justify-between">
+            <div class="bg-gradient-to-r from-purple-500 to-purple-600 px-4 py-3 flex items-center justify-between">
                 <div class="flex items-center gap-3">
                     <div class="h-9 w-9 rounded-full bg-white/20 flex items-center justify-center">
                         <span class="text-white font-bold text-sm">${s.position || '-'}</span>
@@ -154,7 +194,10 @@ function renderStudents(students, traits) {
                         <p class="text-white/70 text-xs font-mono">${s.reg_no || 'N/A'}</p>
                     </div>
                 </div>
-                <button onclick="saveStudent(this)" class="px-3 py-1.5 text-xs bg-white/20 hover:bg-white/30 text-white rounded-lg transition font-semibold save-btn">Save</button>
+                <div class="text-right">
+                    <p class="text-2xl font-bold text-white">${s.total_score}</p>
+                    <p class="text-white/70 text-[10px] uppercase tracking-wide">total</p>
+                </div>
             </div>
             <div class="p-3">
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -163,31 +206,35 @@ function renderStudents(students, traits) {
             </div>
         </div>`;
     }).join('');
-
-    document.querySelectorAll('.trait-input').forEach(inp => {
-        inp.addEventListener('input', () => trackDirty(inp));
-    });
 }
 
-function trackDirty(input) {
-    const card = input.closest('[data-student-id]');
-    if (card) dirtyStudents.add(card.dataset.studentId);
+function setRating(studentId, traitId, value) {
+    const container = document.getElementById(`stars-${studentId}-${traitId}`);
+    const buttons = container.querySelectorAll('.star-btn');
+    buttons.forEach(btn => {
+        const v = parseInt(btn.dataset.value);
+        if (v <= value) {
+            btn.classList.remove('text-gray-300', 'dark:text-gray-600');
+            btn.classList.add('text-amber-500');
+            btn.innerHTML = '&#9733;';
+        } else {
+            btn.classList.remove('text-amber-500');
+            btn.classList.add('text-gray-300', 'dark:text-gray-600');
+            btn.innerHTML = '&#9734;';
+        }
+    });
+    dirtyStudents.add(studentId);
     updateSaveButton();
 }
 
 function updateSaveButton() {
     const btn = document.getElementById('floatingSaveBtn');
-    const status = document.getElementById('saveStatus');
     const count = document.getElementById('unsavedCount');
     if (dirtyStudents.size > 0) {
         btn.classList.remove('hidden');
-        status.classList.remove('hidden');
-        status.textContent = `${dirtyStudents.size} student(s) modified`;
-        status.className = 'text-xs text-amber-600 dark:text-amber-400';
         count.textContent = dirtyStudents.size;
     } else {
         btn.classList.add('hidden');
-        status.classList.add('hidden');
         count.textContent = '0';
     }
 }
@@ -201,7 +248,7 @@ async function loadStudents() {
     dirtyStudents.clear();
     updateSaveButton();
 
-    const container = document.getElementById('traitsContainer');
+    const container = document.getElementById('psychomotorContainer');
     const empty = document.getElementById('emptyState');
     const loading = document.getElementById('loadingState');
     const stats = document.getElementById('statsRow');
@@ -211,7 +258,7 @@ async function loadStudents() {
     loading.classList.remove('hidden');
 
     try {
-        const res = await fetch(`/staff/api/traits/class/${classId}?term_id=${termId}`);
+        const res = await fetch(`/staff/api/psychomotor/class/${classId}?term_id=${termId}`);
         const data = await res.json();
         loading.classList.add('hidden');
 
@@ -219,7 +266,7 @@ async function loadStudents() {
 
         currentTraits = data.traits;
         if (!data.traits.length) {
-            alert('No traits defined. Ask an admin to create traits first.');
+            alert('No psychomotor traits defined. Ask an admin to create traits first.');
             empty.classList.remove('hidden');
             return;
         }
@@ -238,52 +285,20 @@ async function loadStudents() {
     }
 }
 
-async function saveStudent(btn) {
-    const card = btn.closest('[data-student-id]');
-    const studentId = card.dataset.studentId;
-    const inputs = card.querySelectorAll('.trait-input');
+function collectStudentScores(studentId) {
+    const card = document.querySelector(`[data-student-id="${studentId}"]`);
+    if (!card) return null;
     const scores = {};
-    inputs.forEach(inp => {
-        const traitId = inp.dataset.trait;
-        const val = inp.value;
-        if (val !== '') {
-            const max = parseFloat(inp.dataset.max);
-            scores[traitId] = Math.min(parseFloat(val), max);
+    card.querySelectorAll('.star-btn').forEach(btn => {
+        const traitId = btn.dataset.trait;
+        const val = parseInt(btn.dataset.value);
+        if (!scores[traitId] || val > scores[traitId]) {
+            if (btn.classList.contains('text-amber-500')) {
+                scores[traitId] = val;
+            }
         }
     });
-
-    btn.textContent = 'Saving...';
-    btn.disabled = true;
-
-    try {
-        const res = await fetch('/staff/api/traits/save', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ student_id: studentId, term_id: currentTermId, scores }),
-        });
-        const data = await res.json();
-        if (data.success) {
-            btn.textContent = 'Saved!';
-            btn.classList.remove('bg-white/20');
-            btn.classList.add('bg-emerald-500');
-            dirtyStudents.delete(studentId);
-            updateSaveButton();
-            setTimeout(() => {
-                btn.textContent = 'Save';
-                btn.classList.remove('bg-emerald-500');
-                btn.classList.add('bg-white/20');
-                btn.disabled = false;
-            }, 1500);
-        } else {
-            btn.textContent = 'Error';
-            btn.disabled = false;
-            setTimeout(() => { btn.textContent = 'Save'; }, 2000);
-        }
-    } catch (e) {
-        btn.textContent = 'Error';
-        btn.disabled = false;
-        setTimeout(() => { btn.textContent = 'Save'; }, 2000);
-    }
+    return scores;
 }
 
 async function saveAll() {
@@ -293,26 +308,13 @@ async function saveAll() {
     const status = document.getElementById('saveStatus');
     btn.disabled = true;
     btn.innerHTML = '<div class="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></div> Saving...';
-    status.classList.remove('hidden');
-    status.textContent = `Saving ${dirtyStudents.size} student(s)...`;
-    status.className = 'text-xs text-amber-600 dark:text-amber-400';
 
     const toSave = [...dirtyStudents];
     let failed = 0;
 
     for (const studentId of toSave) {
-        const card = document.querySelector(`[data-student-id="${studentId}"]`);
-        if (!card) { failed++; continue; }
-        const inputs = card.querySelectorAll('.trait-input');
-        const scores = {};
-        inputs.forEach(inp => {
-            const traitId = inp.dataset.trait;
-            const val = inp.value;
-            if (val !== '') {
-                const max = parseFloat(inp.dataset.max);
-                scores[traitId] = Math.min(parseFloat(val), max);
-            }
-        });
+        const scores = collectStudentScores(studentId);
+        if (!scores) { failed++; continue; }
         try {
             const res = await fetch('/staff/api/traits/save', {
                 method: 'POST',
@@ -331,17 +333,14 @@ async function saveAll() {
     }
 
     if (failed === 0) {
-        status.textContent = `Saved ${toSave.length} student(s) successfully`;
-        status.className = 'text-xs text-emerald-600 dark:text-emerald-400';
+        showToast(`${toSave.length} student(s) saved successfully`, 'success');
     } else {
-        status.textContent = `Saved ${toSave.length - failed} of ${toSave.length} (retry failures)`;
-        status.className = 'text-xs text-red-600 dark:text-red-400';
+        showToast(`Saved ${toSave.length - failed} of ${toSave.length} — ${failed} failed`, 'error');
     }
 
     btn.innerHTML = '<span class="material-symbols-outlined text-xl">save</span> Save All';
     btn.disabled = false;
     updateSaveButton();
-    setTimeout(() => { status.classList.add('hidden'); }, 3000);
 }
 </script>
 {% endblock %}

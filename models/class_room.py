@@ -36,6 +36,8 @@ class ClassRoom(db.Model):
 
     # Status and tracking
     is_active = db.Column(db.Boolean, nullable=False, default=True)
+    is_archived = db.Column(db.Boolean, nullable=False, default=False)
+    archived_at = db.Column(db.DateTime, nullable=True)
     academic_year = db.Column(db.String(20), nullable=True)  # e.g., "2024-2025"
 
     # Timestamps

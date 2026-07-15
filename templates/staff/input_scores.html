@@ -603,7 +603,40 @@
     .score-input.dark\:border-red-600 {
         border-width: 2px;
     }
+
+    #floatingSaveBtn {
+        position: fixed;
+        bottom: 1.5rem;
+        right: 1.5rem;
+        z-index: 50;
+        box-shadow: 0 10px 25px -5px rgba(59, 130, 246, 0.4), 0 8px 10px -6px rgba(59, 130, 246, 0.2);
+        transition: all 0.3s ease;
+    }
+    #floatingSaveBtn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 14px 28px -5px rgba(59, 130, 246, 0.5), 0 10px 15px -6px rgba(59, 130, 246, 0.3);
+    }
+    #floatingSaveBtn:active {
+        transform: translateY(0);
+    }
+    @media (max-width: 768px) {
+        #floatingSaveBtn {
+            bottom: 1rem;
+            right: 1rem;
+        }
+    }
 </style>
+
+<!-- Floating Save Button -->
+<div id="floatingSaveBtnContainer" class="fixed bottom-6 right-6 z-50">
+    <button id="floatingSaveBtn" onclick="saveScores()" class="flex items-center gap-2 px-5 py-3.5 bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-300 font-semibold text-sm cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed">
+        <span class="material-symbols-outlined text-xl">save</span>
+        <span>Save All</span>
+    </button>
+</div>
+
+<!-- Toast Container -->
+<div id="toastContainer" class="fixed top-6 right-4 z-[9999] flex flex-col gap-2 pointer-events-none"></div>
 
 <script>
     // Configuration
@@ -616,6 +649,27 @@
 
     // Add this near the top of the script section with other global variables
     let defaultGradeScale = null;
+
+    function showToast(message, type = 'success') {
+        const container = document.getElementById('toastContainer');
+        if (!container) return;
+        const toast = document.createElement('div');
+        const config = {
+            success: { bg: 'bg-emerald-600', border: 'border-emerald-700', icon: 'check_circle' },
+            error:   { bg: 'bg-red-600',     border: 'border-red-700',     icon: 'error' },
+            warning: { bg: 'bg-amber-600',   border: 'border-amber-700',   icon: 'warning' },
+            info:    { bg: 'bg-blue-600',    border: 'border-blue-700',    icon: 'info' }
+        };
+        const c = config[type] || config.info;
+        toast.className = `flex items-center gap-3 px-5 py-3.5 rounded-xl border-2 ${c.border} ${c.bg} shadow-2xl text-white text-sm font-semibold transform transition-all duration-300 translate-x-full opacity-0`;
+        toast.innerHTML = `<span class="material-symbols-outlined text-lg">${c.icon}</span><span>${message}</span>`;
+        container.appendChild(toast);
+        requestAnimationFrame(() => { toast.classList.remove('translate-x-full', 'opacity-0'); });
+        setTimeout(() => {
+            toast.classList.add('translate-x-full', 'opacity-0');
+            setTimeout(() => toast.remove(), 300);
+        }, 3500);
+    }
 
     // Add this function to load the default grade scale
     async function loadDefaultGradeScale() {
@@ -887,7 +941,12 @@
             showValidationMessage('Please correct invalid scores before saving', 'error');
             return;
         }
-        
+
+        if (!CONFIG.term_id) {
+            showValidationMessage('No active term set. Please ask an admin to set a current term before saving scores.', 'error');
+            return;
+        }
+
         const scoresData = collectScoresData();
         
         if (scoresData.length === 0) {
@@ -897,8 +956,11 @@
         
         // Show progress
         const saveBtn = document.getElementById('saveScoresBtn');
+        const floatingBtn = document.getElementById('floatingSaveBtn');
         const progress = document.getElementById('saveProgress');
         saveBtn.disabled = true;
+        floatingBtn.disabled = true;
+        floatingBtn.classList.add('opacity-50', 'cursor-not-allowed');
         progress.classList.remove('hidden');
         
         try {
@@ -920,22 +982,27 @@
             
             if (result.success) {
                 showValidationMessage(result.message, 'success');
+                showToast(result.message || 'Scores saved successfully', 'success');
                 
                 // Show errors if any
                 if (result.errors && result.errors.length > 0) {
                     console.warn('Errors:', result.errors);
                     setTimeout(() => {
-                        showValidationMessage(`${result.errors.length} errors occurred. Check console for details.`, 'warning');
-                    }, 5000);
+                        showToast(`${result.errors.length} errors occurred. Check console for details.`, 'warning');
+                    }, 3500);
                 }
             } else {
                 showValidationMessage(result.message || 'Failed to save scores', 'error');
+                showToast(result.message || 'Failed to save scores', 'error');
             }
         } catch (error) {
             console.error('Error saving scores:', error);
             showValidationMessage('Network error. Please check your connection and try again.', 'error');
+            showToast('Network error. Please check your connection.', 'error');
         } finally {
             saveBtn.disabled = false;
+            floatingBtn.disabled = false;
+            floatingBtn.classList.remove('opacity-50', 'cursor-not-allowed');
             progress.classList.add('hidden');
         }
     }

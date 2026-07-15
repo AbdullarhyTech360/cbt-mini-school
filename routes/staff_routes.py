@@ -1,14 +1,16 @@
 from flask import Response, jsonify, render_template, request, session, redirect, stream_with_context, url_for, flash
 from datetime import datetime
+from sqlalchemy import func
 
 from sqlalchemy.sql.functions import current_user
-from models import db, TraitDefinition, StudentTrait
+from models import db, TraitDefinition, StudentTrait, Grade
 from models.student import Student
 from models.teacher import Teacher
 from models.user import User
 from models.subject import Subject
 from models.class_room import ClassRoom
 from models.school_term import SchoolTerm
+from models.school import School
 from routes.dashboard import staff_required
 
 
@@ -62,15 +64,27 @@ def staff_routes(app):
                     )
 
                 # Handle save scores action (existing functionality)
-                if not all(
-                    [subject_id, class_id, term_id, academic_session, scores_data]
-                ):
+                if not subject_id or not class_id or not scores_data:
                     return (
                         jsonify(
-                            {"success": False, "message": "Missing required fields"}
+                            {"success": False, "message": "Missing required fields: subject, class, or scores"}
                         ),
                         400,
                     )
+
+                # Auto-detect current term if not provided
+                if not term_id or not academic_session:
+                    from models.school_term import SchoolTerm
+                    current_term = SchoolTerm.query.filter_by(is_current=True).first()
+                    if not current_term:
+                        return (
+                            jsonify(
+                                {"success": False, "message": "No active term set. Please set a current term in the admin panel before saving scores."}
+                            ),
+                            400,
+                        )
+                    term_id = term_id or current_term.term_id
+                    academic_session = academic_session or current_term.academic_session
 
                 # Verify teacher is assigned to this subject-class combination
                 from models.associations import teacher_subject
@@ -194,6 +208,7 @@ def staff_routes(app):
                             existing_grade.score = score_value
                             existing_grade.max_score = assessment_type.max_score
                             existing_grade.teacher_id = user_id
+                            existing_grade.is_published = True
                             existing_grade.calculate_percentage()
                             existing_grade.assign_grade_letter()
                         else:
@@ -209,6 +224,7 @@ def staff_routes(app):
                             new_grade.max_score = assessment_type.max_score
                             new_grade.score = score_value
                             new_grade.academic_session = academic_session
+                            new_grade.is_published = True
                             new_grade.calculate_percentage()
                             new_grade.assign_grade_letter()
                             db.session.add(new_grade)
@@ -893,7 +909,7 @@ def staff_routes(app):
             flash("User not found.", "error")
             return redirect(url_for("login"))
 
-        # Get assigned classes for this teacher
+        # Get assigned classes for this teacher (from teacher_classroom association)
         from models.associations import teacher_classroom
 
         assigned_classes = (
@@ -905,6 +921,15 @@ def staff_routes(app):
             .filter(teacher_classroom.c.teacher_id == user_id)
             .all()
         )
+
+        # Also include classes where this teacher is form master
+        form_master_classes = ClassRoom.query.filter_by(
+            form_teacher_id=user_id, is_active=True
+        ).all()
+        form_master_ids = {c.class_room_id for c in form_master_classes}
+        for cls in assigned_classes:
+            form_master_ids.discard(cls.class_room_id)
+        assigned_classes.extend(form_master_classes)
 
         # Get current term
         current_term = SchoolTerm.query.filter_by(is_current=True).first()
@@ -936,8 +961,9 @@ def staff_routes(app):
                     400,
                 )
 
-            # Verify teacher is assigned to this class
+            # Verify teacher is assigned to this class (via teacher_classroom or form_teacher_id)
             from models.associations import teacher_classroom
+            from models.class_room import ClassRoom
 
             assignment = (
                 db.session.query(teacher_classroom)
@@ -946,15 +972,20 @@ def staff_routes(app):
             )
 
             if not assignment:
-                return (
-                    jsonify(
-                        {
-                            "success": False,
-                            "message": "You are not assigned to this class",
-                        }
-                    ),
-                    403,
-                )
+                # Fallback: check if teacher is form master of this class
+                form_master_class = ClassRoom.query.filter_by(
+                    form_teacher_id=user_id, class_room_id=class_id
+                ).first()
+                if not form_master_class:
+                    return (
+                        jsonify(
+                            {
+                                "success": False,
+                                "message": "You are not assigned to this class",
+                            }
+                        ),
+                        403,
+                    )
 
             # Get students in this class
             students = (
@@ -2414,21 +2445,30 @@ Include context field for tables, diagrams, formulas referenced in questions."""
         return render_template("staff/classes.html", current_user=current_user)
 
     # ── Staff Trait Input ───────────────────────────────────────
-    @app.route("/staff/traits/<user_id>")
-    @staff_required
-    def staff_traits_page(user_id):
-        if session.get("user_id") != user_id:
-            flash("Access denied.", "error")
-            return redirect(url_for("login"))
-        current_user = User.query.get(user_id)
-        if not current_user:
-            flash("User not found.", "error")
-            return redirect(url_for("login"))
-        teacher = Teacher.query.filter_by(user_id=user_id).first()
-        from models.school import School
-        school = School.query.first()
-        terms = SchoolTerm.query.filter_by(school_id=school.school_id).all() if school else []
-        return render_template("staff/traits.html", current_user=current_user, teacher=teacher, terms=terms)
+    def _seed_default_traits(school):
+        """Create default behavioral and psychomotor trait definitions if none exist."""
+        if not school:
+            return
+        existing = TraitDefinition.query.filter_by(school_id=school.school_id).first()
+        if existing:
+            return
+        default_behavioral = [
+            ("Punctuality", 1), ("Discipline", 2), ("Respect", 3),
+            ("Honesty", 4), ("Neatness", 5), ("Leadership", 6),
+            ("Teamwork", 7), ("Responsibility", 8),
+        ]
+        default_psychomotor = [
+            ("Handwriting", 1), ("Drawing/Illustration", 2), ("Verbal Fluency", 3),
+            ("Physical Development", 4), ("Retention", 5), ("Creative Ability", 6),
+            ("Practical Skills", 7), ("Handling of Tools/Equipment", 8),
+        ]
+        for name, order in default_behavioral + default_psychomotor:
+            trait = TraitDefinition(
+                school_id=school.school_id, name=name,
+                max_score=5.0, sort_order=order, is_active=True,
+            )
+            db.session.add(trait)
+        db.session.commit()
 
     @app.route("/staff/api/traits/class/<class_id>", methods=["GET"])
     @staff_required
@@ -2444,10 +2484,10 @@ Include context field for tables, diagrams, formulas referenced in questions."""
                 continue
             existing = []
             if term_id:
-                existing = StudentTrait.query.filter_by(student_id=student.id, term_id=term_id).all()
+                existing = StudentTrait.query.filter_by(student_id=u.id, term_id=term_id).all()
             score_map = {st.trait_id: st.score for st in existing}
             result.append({
-                "student_id": student.id,
+                "student_id": u.id,
                 "name": f"{u.first_name} {u.last_name}".strip(),
                 "scores": {t.id: score_map.get(t.id, None) for t in trait_defs},
             })
@@ -2476,6 +2516,89 @@ Include context field for tables, diagrams, formulas referenced in questions."""
                 db.session.add(st)
         db.session.commit()
         return jsonify({"success": True})
+
+    # ── Staff Psychomotor Domain ────────────────────────────────
+    @app.route("/staff/psychomotor/<user_id>")
+    @staff_required
+    def staff_psychomotor_page(user_id):
+        if session.get("user_id") != user_id:
+            flash("Access denied.", "error")
+            return redirect(url_for("login"))
+        current_user = User.query.get(user_id)
+        if not current_user:
+            flash("User not found.", "error")
+            return redirect(url_for("login"))
+        teacher = Teacher.query.filter_by(user_id=user_id).first()
+        school = School.query.first()
+        _seed_default_traits(school)
+        terms = SchoolTerm.query.filter_by(school_id=school.school_id).all() if school else []
+        form_master_classes = ClassRoom.query.filter_by(form_teacher_id=user_id, is_active=True).all()
+        return render_template("staff/psychomotor.html", current_user=current_user, teacher=teacher, terms=terms, form_master_classes=form_master_classes)
+
+    @app.route("/staff/api/psychomotor/class/<class_id>", methods=["GET"])
+    @staff_required
+    def staff_class_psychomotor(class_id):
+        term_id = request.args.get("term_id")
+        if not term_id:
+            return jsonify({"success": False, "message": "term_id is required"}), 400
+
+        school = School.query.first()
+        trait_defs = TraitDefinition.query.filter_by(
+            school_id=school.school_id, is_active=True
+        ).order_by(TraitDefinition.sort_order).all()
+
+        users = User.query.filter_by(
+            class_room_id=class_id, role="student", is_active=True
+        ).order_by(User.first_name, User.last_name).all()
+
+        student_ids = [u.id for u in users]
+
+        totals = db.session.query(
+            Grade.student_id,
+            func.sum(Grade.score).label("total")
+        ).filter(
+            Grade.class_room_id == class_id,
+            Grade.term_id == term_id,
+            Grade.student_id.in_(student_ids),
+            db.or_(Grade.is_published == True, Grade.is_from_cbt == True)
+        ).group_by(Grade.student_id).all()
+
+        total_map = {sid: t for sid, t in totals}
+        all_totals = sorted(total_map.values(), reverse=True)
+
+        def get_position(score):
+            try:
+                return all_totals.index(score) + 1
+            except ValueError:
+                return None
+
+        result = []
+        for u in users:
+            student = u.student
+            if not student:
+                continue
+            total_score = total_map.get(u.id, 0) or 0
+            position = get_position(total_score)
+
+            existing_traits = StudentTrait.query.filter_by(
+                student_id=u.id, term_id=term_id
+            ).all() if term_id else []
+            score_map = {st.trait_id: st.score for st in existing_traits}
+
+            result.append({
+                "student_id": u.id,
+                "name": f"{u.first_name} {u.last_name}".strip(),
+                "reg_no": student.admission_number or "",
+                "total_score": total_score,
+                "position": position,
+                "trait_scores": {t.id: score_map.get(t.id, None) for t in trait_defs},
+            })
+
+        return jsonify({
+            "success": True,
+            "students": result,
+            "traits": [t.to_dict() for t in trait_defs],
+        })
 
     # List all registered routes
     # print("=" * 80)

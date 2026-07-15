@@ -21,5 +21,10 @@ def add_setup_skipped_column():
             print("  setup_skipped column already exists")
 
 
+def upgrade():
+    """Run the setup_skipped column migration."""
+    add_setup_skipped_column()
+
+
 if __name__ == "__main__":
     add_setup_skipped_column()

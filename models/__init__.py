@@ -16,7 +16,7 @@ from .section import Section
 from .permissions import Permission
 from .attendance import Attendance
 from .grade import Grade
-from .associations import teacher_subject, student_subject, teacher_classroom, class_subject, student_exam
+from .associations import teacher_subject, student_subject, teacher_classroom, class_subject, student_exam, grade_scale_section
 from .question import Question, Option
 from .exam import Exam
 from .exam_record import ExamRecord
@@ -28,6 +28,10 @@ from .grade_scale import GradeScale
 from .assessment_type import AssessmentType
 from .trait_definition import TraitDefinition
 from .student_trait import StudentTrait
+from .student_class_history import StudentClassHistory
+from .promotion_rule import PromotionRule
+from .promotion_batch import PromotionBatch
+from .student_promotion import StudentPromotion
 
 # Helper function to check if a permission is active
 def is_permission_active(permission_name):

@@ -67,9 +67,14 @@ def run_migration():
             # print(f"✗ Migration failed: {str(e)}")
             return False
 
+def upgrade():
+    """Run the student_exam columns migration."""
+    return run_migration()
+
+
 if __name__ == "__main__":
     success = run_migration()
     if success:
-        # print("\n✓ Migration completed successfully!")
+        pass  # migration complete
     else:
-        # print("\n✗ Migration failed!")
+        pass  # migration failed

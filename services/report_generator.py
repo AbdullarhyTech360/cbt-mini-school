@@ -17,6 +17,7 @@ from models.grade_scale import GradeScale
 from models.section import Section
 from models.student_trait import StudentTrait
 from models.trait_definition import TraitDefinition
+from models.attendance import Attendance
 from sqlalchemy import func
 
 
@@ -128,11 +129,41 @@ class ReportGenerator:
         if not school:
             return None
 
-        # Get default grade scale for the school
-        grade_scale = GradeScale.query.filter_by(
-            school_id=school.school_id, is_default=True, is_active=True).first()
+        # --- Resolve grade scale with section-aware fallback chain ---
+        # Priority:
+        # 1. Report config explicit grade_scale_id
+        # 2. Section-specific grade scale (scale assigned to the student's section)
+        # 3. School default grade scale (is_default=True)
+        # 4. Any active grade scale for the school
+        # 5. Hardcoded fallback (handled by model methods)
+
+        # Get report configuration if provided
+        config = ReportConfig.query.get(config_id) if config_id else None
+
+        grade_scale = None
+
+        # Priority 1: Explicit grade_scale_id from report config
+        if config and config.grade_scale_id:
+            grade_scale = GradeScale.query.get(config.grade_scale_id)
+
+        # Priority 2: Section-specific grade scale
+        if not grade_scale and class_room.section_id:
+            section_scales = GradeScale.query.filter(
+                GradeScale.school_id == school.school_id,
+                GradeScale.is_active == True,
+                GradeScale.sections.any(section_id=class_room.section_id)
+            ).order_by(GradeScale.is_default.desc(), GradeScale.created_at.desc()).all()
+
+            if section_scales:
+                grade_scale = section_scales[0]
+
+        # Priority 3: School default grade scale
         if not grade_scale:
-            # Fallback to any active scale for the school
+            grade_scale = GradeScale.query.filter_by(
+                school_id=school.school_id, is_default=True, is_active=True).first()
+
+        # Priority 4: Any active grade scale for the school
+        if not grade_scale:
             grade_scale = GradeScale.query.filter_by(
                 school_id=school.school_id, is_active=True).first()
 
@@ -191,9 +222,6 @@ class ReportGenerator:
             school_id=school.school_id,
             is_active=True
         ).order_by(AssessmentType.order).all()
-
-        # Get report configuration if provided
-        config = ReportConfig.query.get(config_id) if config_id else None
 
         # Filter assessment types based on configuration
         if config:
@@ -535,7 +563,73 @@ class ReportGenerator:
                     "created_at": None,
                     "updated_at": None
                 })
-        
+
+        # --- Subject positions & teacher remarks ---
+        all_class_student_ids = [
+            sid for (sid,) in db.session.query(User.id).filter(
+                User.class_room_id == class_room_id,
+                User.role == 'student'
+            ).all()
+        ]
+
+        # Bulk-fetch all published/CBT grades for the entire class this term
+        all_class_grades = db.session.query(
+            Grade.subject_id,
+            Grade.student_id,
+            Grade.score
+        ).filter(
+            Grade.class_room_id == class_room_id,
+            Grade.term_id == term_id,
+            Grade.student_id.in_(all_class_student_ids),
+            db.or_(Grade.is_published == True, Grade.is_from_cbt == True)
+        ).all()
+
+        # Build per-subject totals per student: {subject_id: {student_id: total}}
+        subject_student_totals = {}
+        for subj_id, stu_id, score in all_class_grades:
+            subject_student_totals.setdefault(subj_id, {})
+            subject_student_totals[subj_id][stu_id] = (
+                subject_student_totals[subj_id].get(stu_id, 0) + score
+            )
+
+        grade_ranges = grade_scale.get_grade_ranges() if grade_scale else []
+
+        for subject_id, subject_data in subject_scores.items():
+            totals = subject_student_totals.get(subject_id, {})
+            ranked = sorted(totals.items(), key=lambda x: x[1], reverse=True)
+            subject_position = None
+            for rank, (sid, _) in enumerate(ranked, start=1):
+                if sid == student_id:
+                    subject_position = rank
+                    break
+            subject_data['subject_position'] = subject_position
+
+            max_total = subject_data.get('max_total', 0)
+            subj_pct = (subject_data['total'] / max_total * 100) if max_total > 0 else 0
+            teacher_remark = ''
+            for r in grade_ranges:
+                if r['min_score'] <= subj_pct <= r['max_score']:
+                    teacher_remark = r.get('remark', '')
+                    break
+            subject_data['teacher_remark'] = teacher_remark
+
+        # --- Attendance stats ---
+        attendance_records = Attendance.query.filter_by(
+            student_id=student_id,
+            term_id=term_id
+        ).all()
+        present_count = sum(
+            1 for a in attendance_records if a.status in ('present', 'late', 'excused')
+        )
+        absent_count = sum(1 for a in attendance_records if a.status == 'absent')
+        days_open = present_count + absent_count
+        attendance_stats = {
+            'days_open': days_open,
+            'present': present_count,
+            'absent': absent_count,
+            'holidays': 0,
+        }
+
         return {
             'student': {
                 'id': student_id,
@@ -544,7 +638,8 @@ class ReportGenerator:
                 'image': user.image,
                 'gender': user.gender,
                 'class_name': class_room.class_room_name,
-                'class_id': class_room_id
+                'class_id': class_room_id,
+                'house': getattr(student, 'house', '') or '',
             },
             'school': {
                 'name': school.school_name,
@@ -559,7 +654,10 @@ class ReportGenerator:
                 'name': term.term_name,
                 'session': term.academic_session,
                 'start_date': term.start_date.strftime('%Y-%m-%d') if term.start_date else '-',
-                'end_date': term.end_date.strftime('%Y-%m-%d') if term.end_date else '-'
+                'end_date': term.end_date.strftime('%Y-%m-%d') if term.end_date else '-',
+                'teacher_remarks': '',
+                'house_master_remarks': '',
+                'principal_remarks': '',
             },
             'assessment_types': returned_assessment_types,
             'scores': subject_scores,
@@ -568,14 +666,19 @@ class ReportGenerator:
             'class_average': class_average,
             'overall_total': sum(s['total'] for s in subject_scores.values()),
             'overall_max': sum(s['max_total'] for s in subject_scores.values()),
-            # Include configuration metadata for client-side rendering
             'config': config.to_dict() if config else None,
             'grade_scale': grade_scale.to_dict() if grade_scale else None,
             'custom_variables': config.get_layout_config().get('custom_variables', {}) if config and config.get_layout_config() else {},
             'trait_scores': {
-                st.trait_id: st.score
+                st.trait_definition.name: st.score
                 for st in StudentTrait.query.filter_by(student_id=user.id, term_id=term_id).all()
+                if st.trait_definition
             },
+            'trait_definitions': [
+                {'name': t.name, 'max_score': t.max_score}
+                for t in TraitDefinition.query.filter_by(school_id=school.school_id, is_active=True).order_by(TraitDefinition.sort_order).all()
+            ],
+            'attendance_stats': attendance_stats,
         }
 
     @staticmethod
@@ -834,7 +937,8 @@ class ReportGenerator:
                 'image': '',
                 'gender': 'Male',
                 'class_name': 'JSS 1A',
-                'class_id': 'sample'
+                'class_id': 'sample',
+                'house': 'Eagle House',
             },
             'school': {
                 'name': 'Sample School International',
@@ -849,17 +953,20 @@ class ReportGenerator:
                 'name': 'First Term',
                 'session': '2025/2026',
                 'start_date': '2025-09-01',
-                'end_date': '2025-12-15'
+                'end_date': '2025-12-15',
+                'teacher_remarks': '',
+                'house_master_remarks': '',
+                'principal_remarks': '',
             },
             'assessment_types': [
                 {'code': 'ca', 'name': 'CA', 'max_score': 40, 'order': 1},
                 {'code': 'exam', 'name': 'Exam', 'max_score': 60, 'order': 2}
             ],
             'scores': {
-                'sub1': {'subject_name': 'Mathematics', 'assessments': {'ca': {'score': 30, 'max_score': 40}, 'exam': {'score': 50, 'max_score': 60}}, 'total': 80, 'max_total': 100},
-                'sub2': {'subject_name': 'English Language', 'assessments': {'ca': {'score': 35, 'max_score': 40}, 'exam': {'score': 55, 'max_score': 60}}, 'total': 90, 'max_total': 100},
-                'sub3': {'subject_name': 'Basic Science', 'assessments': {'ca': {'score': 28, 'max_score': 40}, 'exam': {'score': 42, 'max_score': 60}}, 'total': 70, 'max_total': 100},
-                'sub4': {'subject_name': 'Social Studies', 'assessments': {'ca': {'score': 32, 'max_score': 40}, 'exam': {'score': 48, 'max_score': 60}}, 'total': 80, 'max_total': 100},
+                'sub1': {'subject_name': 'Mathematics', 'assessments': {'ca': {'score': 30, 'max_score': 40}, 'exam': {'score': 50, 'max_score': 60}}, 'total': 80, 'max_total': 100, 'subject_position': 2, 'teacher_remark': 'Very Good'},
+                'sub2': {'subject_name': 'English Language', 'assessments': {'ca': {'score': 35, 'max_score': 40}, 'exam': {'score': 55, 'max_score': 60}}, 'total': 90, 'max_total': 100, 'subject_position': 1, 'teacher_remark': 'Excellent'},
+                'sub3': {'subject_name': 'Basic Science', 'assessments': {'ca': {'score': 28, 'max_score': 40}, 'exam': {'score': 42, 'max_score': 60}}, 'total': 70, 'max_total': 100, 'subject_position': 3, 'teacher_remark': 'Good'},
+                'sub4': {'subject_name': 'Social Studies', 'assessments': {'ca': {'score': 32, 'max_score': 40}, 'exam': {'score': 48, 'max_score': 60}}, 'total': 80, 'max_total': 100, 'subject_position': 2, 'teacher_remark': 'Very Good'},
             },
             'position': 5,
             'total_students': 30,
@@ -877,7 +984,18 @@ class ReportGenerator:
                     {'grade': 'E', 'min_score': 40, 'max_score': 44, 'remark': 'Pass'},
                     {'grade': 'F', 'min_score': 0, 'max_score': 39, 'remark': 'Fail'},
                 ]
-            }
+            },
+            'trait_scores': {
+                'Punctuality': 4,
+                'Attitude to Study': 5,
+                'Class Attendance': 4,
+            },
+            'attendance_stats': {
+                'days_open': 60,
+                'present': 57,
+                'absent': 3,
+                'holidays': 0,
+            },
         }
 
     @staticmethod

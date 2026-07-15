@@ -15,6 +15,7 @@ from routes.dashboard import dashboard_route
 from routes.session_monitor_routes import session_monitor_routes
 from routes.staff_routes import staff_routes
 from routes.student_routes import student_route
+from routes.promotion_routes import promotion_routes
 
 # Conditionally import report routes based on availability
 try:
@@ -138,20 +139,16 @@ admin_action_route(app)
 staff_routes(app)
 student_route(app)
 session_monitor_routes(app)
+promotion_routes(app)
 if report_bp:
     app.register_blueprint(report_bp)
 # Initialize the database
 with app.app_context():
     db.create_all()
 
-    # Run pending migrations
-    try:
-        db.session.execute(
-            db.text("ALTER TABLE school ADD COLUMN setup_skipped BOOLEAN NOT NULL DEFAULT 0")
-        )
-        db.session.commit()
-    except Exception:
-        db.session.rollback()
+    # Run pending migrations automatically
+    from utils.migration_runner import run_pending_migrations
+    run_pending_migrations(app)
 
     # Auto-initialize default data on first startup if enabled
     if app.config.get("AUTO_INITIALIZE_DATA", True):
@@ -177,7 +174,7 @@ with app.app_context():
                 print(f"⚠️  Error during data initialization: {e}")
                 print("Continuing with app startup...")
         else:
-            print("✓ App already initialized - skipping default data creation")
+            print("[OK] App already initialized - skipping default data creation")
     else:
         print("AUTO_INITIALIZE_DATA is disabled - skipping default data creation")
 
@@ -215,6 +212,24 @@ def inject_school_info():
         }
     except Exception:
         return {"school_info": {"name": "Your School", "logo_url": None}}
+
+
+@app.context_processor
+def inject_form_master_status():
+    """Make is_form_master available to all staff templates."""
+    from models.class_room import ClassRoom
+
+    try:
+        user_id = session.get("user_id")
+        user = User.query.get(user_id) if user_id else None
+        if user and user.role == "staff":
+            is_form_master = ClassRoom.query.filter_by(
+                form_teacher_id=user_id, is_active=True
+            ).first() is not None
+            return {"is_form_master": is_form_master}
+    except Exception:
+        pass
+    return {"is_form_master": False}
 
 
 # Error handlers to render custom templates for HTML requests

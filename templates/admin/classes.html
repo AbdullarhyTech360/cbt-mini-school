@@ -285,7 +285,7 @@ content %}
                     <td
                         class="px-4 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white"
                     >
-                        {{ class_room.number_of_students }} students
+                        {{ student_counts.get(class_room.class_room_id, 0) }} students
                     </td>
                     <td
                         class="px-4 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white"
@@ -313,6 +313,8 @@ content %}
                                 data-group="{{ class_room.group or '' }}"
                                 data-academic-year="{{ class_room.academic_year or '' }}"
                                 data-is-active="{{ class_room.is_active|lower }}"
+                                data-class-rep="{{ class_room.class_rep_id or '' }}"
+                                data-class-rep-name="{{ class_room.class_rep.full_name() if class_room.class_rep else '' }}"
                             >
                                 <span class="material-symbols-outlined text-lg">edit</span>
                             </button>
@@ -793,6 +795,31 @@ content %}
                         </option>
                         {% endfor %}
                     </select>
+                </div>
+                <div>
+                    <label
+                        for="editClassRepSearch"
+                        class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2"
+                        >Class Representative</label
+                    >
+                    <div class="relative" id="editClassRepWrapper">
+                        <input
+                            type="text"
+                            id="editClassRepSearch"
+                            placeholder="Search by name, admission number, or username..."
+                            autocomplete="off"
+                            class="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition"
+                        />
+                        <input type="hidden" id="editClassRepId" name="class_rep_id" />
+                        <div id="editClassRepSelected" class="hidden mt-2 flex items-center gap-2 p-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                            <span class="material-symbols-outlined text-blue-600 text-lg">person</span>
+                            <span id="editClassRepName" class="text-sm font-medium text-blue-800 dark:text-blue-200"></span>
+                            <button type="button" id="editClearClassRep" class="ml-auto text-gray-400 hover:text-red-500">
+                                <span class="material-symbols-outlined text-lg">close</span>
+                            </button>
+                        </div>
+                        <div id="editClassRepDropdown" class="hidden absolute z-10 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg max-h-60 overflow-y-auto"></div>
+                    </div>
                 </div>
                 <div>
                     <label for="editSectionId" class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Section</label>

@@ -2121,16 +2121,27 @@ Include context field for tables, diagrams, formulas referenced in questions."""
         current_user = User.query.get(session["user_id"])
         class_rooms = db.session.query(ClassRoom).all()
         teachers = db.session.query(User).filter_by(role="staff").all()
-        students = db.session.query(Student).all()
-        average_class_size = len(students) / len(class_rooms) if class_rooms else 0
+
+        # Compute real student counts per class
+        student_counts = {}
+        total_students = 0
+        for cls in class_rooms:
+            count = User.query.filter_by(
+                class_room_id=cls.class_room_id, role="student", is_active=True
+            ).count()
+            student_counts[cls.class_room_id] = count
+            total_students += count
+
+        average_class_size = total_students // len(class_rooms) if class_rooms else 0
+
         return render_template(
             "admin/classes.html",
             current_user=current_user,
             class_rooms=class_rooms,
             teachers=teachers,
-            students=students,
+            student_counts=student_counts,
             sections=Section.query.all(),
-            average_class_size=int(average_class_size),
+            average_class_size=average_class_size,
         )
 
     @app.route("/admin/create_class", methods=["POST"])
@@ -2219,6 +2230,11 @@ Include context field for tables, diagrams, formulas referenced in questions."""
             )
             class_room.is_active = data.get("is_active", class_room.is_active)
 
+            # Handle class rep (allow clearing with empty string or null)
+            if "class_rep_id" in data:
+                class_rep_id = data.get("class_rep_id") or None
+                class_room.class_rep_id = class_rep_id
+
             db.session.commit()
             return (
                 jsonify({"success": True, "message": "Class updated successfully"}),
@@ -2234,6 +2250,50 @@ Include context field for tables, diagrams, formulas referenced in questions."""
                 ),
                 500,
             )
+
+    @app.route("/admin/api/students/search", methods=["GET"])
+    @admin_required
+    def search_students_for_class_rep():
+        try:
+            from models.student import Student
+
+            query = request.args.get("q", "").strip()
+            class_id = request.args.get("class_id", "").strip()
+
+            if not class_id:
+                return jsonify({"success": True, "students": []}), 200
+
+            students = (
+                User.query.outerjoin(Student, Student.user_id == User.id)
+                .filter(
+                    User.class_room_id == class_id,
+                    User.role == "student",
+                    User.is_active == True,
+                    db.or_(
+                        User.first_name.ilike(f"%{query}%"),
+                        User.last_name.ilike(f"%{query}%"),
+                        User.username.ilike(f"%{query}%"),
+                        Student.admission_number.ilike(f"%{query}%"),
+                    ),
+                )
+                .limit(20)
+                .all()
+            )
+
+            students_data = []
+            for s in students:
+                student_profile = Student.query.filter_by(user_id=s.id).first()
+                students_data.append({
+                    "id": s.id,
+                    "first_name": s.first_name,
+                    "last_name": s.last_name,
+                    "username": s.username,
+                    "admission_number": student_profile.admission_number if student_profile else "",
+                })
+
+            return jsonify({"success": True, "students": students_data}), 200
+        except Exception as e:
+            return jsonify({"success": False, "message": str(e)}), 500
 
     @app.route("/admin/settings/permissions", methods=["POST"])
     @admin_required

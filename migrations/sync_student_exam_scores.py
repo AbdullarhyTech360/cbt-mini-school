@@ -111,14 +111,14 @@ def run_migration():
             traceback.print_exc()
             return False
 
+def upgrade():
+    """Run the student exam scores sync migration."""
+    return run_migration()
+
+
 if __name__ == "__main__":
     success = run_migration()
     if success:
-        # print("\n✓ Migration completed successfully!")
-        # print("\nNext steps:")
-        # print("1. Restart your server")
-        # print("2. Test the reset exam feature")
-        # print("3. Verify scores are showing correctly")
+        pass  # migration complete
     else:
-        # print("\n✗ Migration failed!")
-        # print("Please check the error messages above")
+        pass  # migration failed

@@ -43,6 +43,14 @@ document.addEventListener("DOMContentLoaded", function () {
     confirmPassword: document.getElementById("confirm_password_status"),
   };
 
+  function debounce(fn, delay) {
+    let timer;
+    return function (...args) {
+      clearTimeout(timer);
+      timer = setTimeout(() => fn.apply(this, args), delay);
+    };
+  }
+
   // Password visibility toggles
   document.querySelectorAll('#password + button, #confirm_password + button').forEach(btn => {
     btn.addEventListener("click", function () {
@@ -263,7 +271,7 @@ document.addEventListener("DOMContentLoaded", function () {
       .catch(() => setStatus(status.registerNumber, "Error checking", true));
   };
 
-  els.registerNumber.addEventListener("input", checkRegisterNumber);
+  els.registerNumber.addEventListener("input", debounce(checkRegisterNumber, 400));
 
   const checkEmailField = () => {
     if (!els.email.value.trim()) {
@@ -289,7 +297,7 @@ document.addEventListener("DOMContentLoaded", function () {
       .catch(() => setStatus(status.email, "Error checking", true));
   };
 
-  els.email.addEventListener("input", checkEmailField);
+  els.email.addEventListener("input", debounce(checkEmailField, 400));
 
   // Role switching with animation
   els.role.addEventListener("change", function () {
@@ -379,17 +387,42 @@ document.addEventListener("DOMContentLoaded", function () {
     clearError(els.classRoom); clearError(els.registerNumber); clearError(els.email);
     clearError(els.dob);
 
-    inputFieldChecker(els.firstName, status.firstName, 3, "First Name");
-    inputFieldChecker(els.lastName, status.lastName, 3, "Last Name");
-    inputFieldChecker(els.password, status.password, 4, "Password");
-    confirmPasswordChecker();
-    selectFieldChecker(els.gender, status.gender, "Gender");
-    selectFieldChecker(els.role, status.role, "Role");
-    selectFieldChecker(els.classRoom, status.classRoom, "Class");
-    checkDOB();
+    const fnOk = inputFieldChecker(els.firstName, status.firstName, 3, "First Name");
+    const lnOk = inputFieldChecker(els.lastName, status.lastName, 3, "Last Name");
+    const pwOk = inputFieldChecker(els.password, status.password, 4, "Password");
+    const cpOk = confirmPasswordChecker();
+    const genOk = selectFieldChecker(els.gender, status.gender, "Gender");
+    const roleOk = selectFieldChecker(els.role, status.role, "Role");
+    const dobOk = checkDOB();
 
-    if (els.role.value === "student") checkRegisterNumber();
-    else if (els.role.value === "staff" || els.role.value === "admin") checkEmailField();
+    let extraOk = true;
+    if (els.role.value === "student") {
+      const classOk = selectFieldChecker(els.classRoom, status.classRoom, "Class");
+      const regOk = els.registerNumber.value.length >= 1;
+      if (!regOk) {
+        setStatus(status.registerNumber, "Register number is required", true);
+        markError(els.registerNumber);
+      }
+      extraOk = classOk && regOk;
+    } else if (els.role.value === "staff" || els.role.value === "admin") {
+      if (!els.email.value.trim()) {
+        setStatus(status.email, "Email is required", true);
+        markError(els.email);
+        extraOk = false;
+      } else if (!emailRe.test(els.email.value)) {
+        setStatus(status.email, "Must be name@domain.com", true);
+        markError(els.email);
+        extraOk = false;
+      }
+    }
+
+    if (!fnOk || !lnOk || !pwOk || !cpOk || !genOk || !roleOk || !dobOk || !extraOk) {
+      // Re-enable button in case it was visually disabled
+      els.registerSubmit.disabled = false;
+      els.registerBtnText.classList.remove("hidden");
+      els.registerBtnSpinner.classList.add("hidden");
+      return;
+    }
 
     // Show loading
     els.registerSubmit.disabled = true;
@@ -420,23 +453,30 @@ document.addEventListener("DOMContentLoaded", function () {
       method: "POST",
       body: formData,
     })
-      .then((r) => r.json())
-      .then((data) => {
+      .then((r) => r.json().then(data => ({ ok: r.ok, status: r.status, data })))
+      .then(({ ok, status, data }) => {
         els.registerSubmit.disabled = false;
         els.registerBtnText.classList.remove("hidden");
         els.registerBtnSpinner.classList.add("hidden");
 
-        if (data.success) {
+        if (ok && data.success) {
           els.alertName.textContent = els.firstName.value + " " + els.lastName.value;
           els.alertUsername.textContent = data.username;
           els.alertContent.innerHTML = `Your account has been created successfully, your username is <span class="font-semibold">${data.username}</span>. Please login to <a href="${LOGIN_URL}" class="text-primary font-semibold underline">access your account.</a>`;
           openModal("alert");
+        } else {
+          // Show server error
+          const msg = data.error || data.message || "Registration failed. Please try again.";
+          const generalStatus = document.getElementById("role_status");
+          setStatus(generalStatus, msg, true);
         }
       })
       .catch(() => {
         els.registerSubmit.disabled = false;
         els.registerBtnText.classList.remove("hidden");
         els.registerBtnSpinner.classList.add("hidden");
+        const generalStatus = document.getElementById("role_status");
+        setStatus(generalStatus, "Network error. Please try again.", true);
       });
   });
 

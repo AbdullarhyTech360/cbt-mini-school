@@ -13,24 +13,15 @@ from models.exam import Exam
 
 def upgrade():
     """Add is_active and is_finished columns to exams table"""
-    try:
-        # Add is_active column (default True - exams are active by default)
-        db.session.execute(db.text(
-            "ALTER TABLE exams ADD COLUMN is_active BOOLEAN DEFAULT TRUE"
-        ))
-        
-        # Add is_finished column (default False - exams are not finished by default)
-        db.session.execute(db.text(
-            "ALTER TABLE exams ADD COLUMN is_finished BOOLEAN DEFAULT FALSE"
-        ))
-        
-        db.session.commit()
-        # print("✅ Successfully added is_active and is_finished columns to exams table")
-        
-    except Exception as e:
-        db.session.rollback()
-        # print(f"❌ Error adding columns: {str(e)}")
-        raise
+    for col, default in [("is_active", "TRUE"), ("is_finished", "FALSE")]:
+        try:
+            db.session.execute(db.text(
+                f"ALTER TABLE exams ADD COLUMN {col} BOOLEAN DEFAULT {default}"
+            ))
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+            # Column already exists — ignore
 
 def downgrade():
     """Remove is_active and is_finished columns from exams table"""

@@ -25,13 +25,14 @@ def rollback_migration():
     # print("✓ Documentation removed")
     return True
 
+def upgrade():
+    """Run the resumption config migration."""
+    return run_migration()
+
+
 if __name__ == "__main__":
     success = run_migration()
     if success:
-        # print("\n✓ Migration completed successfully!")
-        # print("\nNext steps:")
-        # print("1. Restart your server")
-        # print("2. Resumption dates will automatically appear on report cards")
-        # print("3. They are calculated as 14 days after the term end date")
+        pass  # migration complete
     else:
-        # print("\n✗ Migration failed!")
+        pass  # migration failed
