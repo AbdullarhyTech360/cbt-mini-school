@@ -47,6 +47,7 @@ class_subject = db.Table(
     "class_subject",
     db.Column("class_room_id", db.String(36), db.ForeignKey("class_room.class_room_id"), primary_key=True),
     db.Column("subject_id", db.String(36), db.ForeignKey("subject.subject_id"), primary_key=True),
+    db.Column("display_order", db.Integer, nullable=True, default=0),
 )
 
 # Many-to-Many: Students and Exams (tracks completed exams)

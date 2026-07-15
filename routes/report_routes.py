@@ -342,6 +342,66 @@ def get_assessment_types():
     return jsonify({"success": True, "assessments": [a.to_dict() for a in assessments]})
 
 
+@report_bp.route("/api/class-subjects/order", methods=["PUT"])
+@admin_or_staff_required
+def update_subject_order():
+    """Update the display order of subjects for a class on report cards"""
+    try:
+        from models import class_subject, db
+
+        data = request.get_json()
+        class_room_id = data.get("class_room_id")
+        subject_orders = data.get("subject_orders", [])  # [{subject_id, display_order}, ...]
+
+        if not class_room_id:
+            return jsonify({"success": False, "error": "class_room_id required"}), 400
+
+        for item in subject_orders:
+            db.session.execute(
+                class_subject.update()
+                .where(
+                    class_subject.c.class_room_id == class_room_id,
+                    class_subject.c.subject_id == item["subject_id"]
+                )
+                .values(display_order=item.get("display_order", 0))
+            )
+
+        db.session.commit()
+        return jsonify({"success": True, "message": "Subject order updated successfully"})
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@report_bp.route("/api/class-subjects/<class_room_id>", methods=["GET"])
+@admin_or_staff_required
+def get_class_subjects_ordered(class_room_id):
+    """Get subjects for a class sorted by display_order"""
+    try:
+        from models import class_subject, Subject
+
+        results = db.session.query(Subject, class_subject.c.display_order).join(
+            class_subject, class_subject.c.subject_id == Subject.subject_id
+        ).filter(
+            class_subject.c.class_room_id == class_room_id
+        ).order_by(
+            class_subject.c.display_order.asc(),
+            Subject.subject_name.asc()
+        ).all()
+
+        subjects = []
+        for subject, display_order in results:
+            s = subject.to_dict()
+            s["display_order"] = display_order or 0
+            subjects.append(s)
+
+        return jsonify({"success": True, "subjects": subjects})
+
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
 @report_bp.route("/api/terms", methods=["GET"])
 @admin_or_staff_required
 def get_terms():

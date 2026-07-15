@@ -126,6 +126,29 @@
             </div>
         </div>
 
+    <!-- Subject Display Order -->
+    <div id="subjectOrderPanel" class="hidden mb-6 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl shadow-sm dark:shadow-gray-900/30 p-6 border border-gray-100 dark:border-gray-700/50">
+        <div class="flex items-center justify-between mb-4">
+            <div class="flex items-center gap-3">
+                <div class="w-9 h-9 rounded-xl bg-purple-50 dark:bg-purple-500/10 flex items-center justify-center">
+                    <span class="material-symbols-outlined text-lg text-purple-600 dark:text-purple-400">swap_vert</span>
+                </div>
+                <div>
+                    <h3 class="font-bold uppercase tracking-widest text-xs text-gray-500 dark:text-gray-400">Subject Display Order</h3>
+                    <p class="text-xs text-gray-400 dark:text-gray-500 mt-0.5">Drag to reorder how subjects appear on report cards</p>
+                </div>
+            </div>
+            <button onclick="saveSubjectOrder()"
+                class="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-xl active:scale-[0.98] transition-all duration-200 text-sm font-semibold shadow-sm">
+                <span class="material-symbols-outlined text-lg">save</span>
+                <span>Save Order</span>
+            </button>
+        </div>
+        <div id="subject-order-sortable" class="space-y-2">
+            <p class="text-xs text-gray-400 italic">Select a class to load subjects</p>
+        </div>
+    </div>
+
     <!-- Students List -->
     <div class="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl shadow-sm dark:shadow-gray-900/30 border border-gray-100 dark:border-gray-700/50">
         <div class="p-6 border-b border-gray-100 dark:border-gray-700/50 flex justify-between items-center">
