@@ -125,7 +125,7 @@ def debug_session():
 @app.route("/current_user")
 def current_user():
     # Get the current logged-in user
-    current_user = User.query.get(session.get("user_id"))
+    current_user = db.session.get(User, session.get("user_id"))
 
     if current_user is None:
         return jsonify({"error": "User not found"}), 404
@@ -221,7 +221,7 @@ def inject_form_master_status():
 
     try:
         user_id = session.get("user_id")
-        user = User.query.get(user_id) if user_id else None
+        user = db.session.get(User, user_id) if user_id else None
         if user and user.role == "staff":
             is_form_master = ClassRoom.query.filter_by(
                 form_teacher_id=user_id, is_active=True

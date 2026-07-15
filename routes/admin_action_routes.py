@@ -4736,9 +4736,10 @@ Include context field for tables, diagrams, formulas referenced in questions."""
     @app.route("/admin/traits")
     @admin_required
     def admin_traits_page():
+        current_user = User.query.get(session["user_id"])
         school = School.query.first()
         traits = TraitDefinition.query.filter_by(school_id=school.school_id).order_by(TraitDefinition.sort_order).all()
-        return render_template("admin/traits.html", school=school, traits=traits)
+        return render_template("admin/traits.html", current_user=current_user, school=school, traits=traits)
 
     @app.route("/admin/api/traits", methods=["GET"])
     @admin_required
