@@ -460,12 +460,31 @@ function hideLoading() {
     }
 }
 
+function showToast(message, type = 'success') {
+    const container = document.getElementById('toastContainer');
+    if (!container) { alert(message); return; }
+    const toast = document.createElement('div');
+    const config = {
+        success: { bg: 'bg-emerald-600', border: 'border-emerald-700', icon: 'check_circle' },
+        error:   { bg: 'bg-red-600',     border: 'border-red-700',     icon: 'error' },
+        warning: { bg: 'bg-amber-600',   border: 'border-amber-700',   icon: 'warning' },
+        info:    { bg: 'bg-blue-600',    border: 'border-blue-700',    icon: 'info' }
+    };
+    const c = config[type] || config.info;
+    toast.className = `flex items-center gap-3 px-5 py-3.5 rounded-xl border-2 ${c.border} ${c.bg} shadow-2xl text-white text-sm font-semibold transform transition-all duration-300 translate-x-full opacity-0`;
+    toast.innerHTML = `<span class="material-symbols-outlined text-lg">${c.icon}</span><span>${message}</span>`;
+    container.appendChild(toast);
+    requestAnimationFrame(() => { toast.classList.remove('translate-x-full', 'opacity-0'); });
+    setTimeout(() => {
+        toast.classList.add('translate-x-full', 'opacity-0');
+        setTimeout(() => toast.remove(), 300);
+    }, 3500);
+}
+
 function showSuccess(message) {
-    // You can implement a toast notification here
-    alert(message);
+    showToast(message, 'success');
 }
 
 function showError(message) {
-    // You can implement a toast notification here
-    alert('Error: ' + message);
+    showToast(message, 'error');
 }

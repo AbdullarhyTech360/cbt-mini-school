@@ -54,6 +54,17 @@
     </div>
 </div>
 
+<!-- Section Overlap Warning -->
+<div id="overlapWarning" class="hidden mb-6 md:mb-8 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-2xl p-4 md:p-5">
+    <div class="flex items-start gap-3">
+        <span class="material-symbols-outlined text-amber-500 dark:text-amber-400 mt-0.5">warning</span>
+        <div>
+            <h3 class="text-sm font-semibold text-amber-800 dark:text-amber-200 mb-1">Section Overlap Detected</h3>
+            <p class="text-sm text-amber-700 dark:text-amber-300" id="overlapMessage"></p>
+        </div>
+    </div>
+</div>
+
 <!-- Grade Scales List -->
 <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-100 dark:border-gray-700 overflow-hidden">
     <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
@@ -118,6 +129,19 @@
                     </div>
                 </div>
 
+                <!-- Section Assignment -->
+                <div class="bg-gray-50 dark:bg-gray-700/30 rounded-xl p-5">
+                    <h3 class="text-lg font-semibold text-gray-800 dark:text-white mb-4 flex items-center">
+                        <span class="material-symbols-outlined mr-2 text-primary">school</span>Section Assignment
+                    </h3>
+                    <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">Select the sections this grade scale applies to. Leave unchecked for a school-wide scale.</p>
+                    
+                    <div id="sectionCheckboxes" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                        <!-- Section checkboxes will be loaded here -->
+                    </div>
+                    <p id="noSectionsMsg" class="text-sm text-gray-500 dark:text-gray-400 italic hidden">No sections configured yet. Create sections in Settings first.</p>
+                </div>
+
                 <!-- Grade Ranges -->
                 <div class="bg-gray-50 dark:bg-gray-700/30 rounded-xl p-5">
                     <h3 class="text-lg font-semibold text-gray-800 dark:text-white mb-4 flex items-center">
@@ -163,11 +187,50 @@
 let currentScaleId = null;
 let gradeRangeCount = 0;
 let loadedScales = [];
+let loadedSections = [];
 
 // Load initial data
 document.addEventListener('DOMContentLoaded', () => {
+    loadSections();
     loadScales();
 });
+
+async function loadSections() {
+    try {
+        const response = await fetch('/admin/settings/sections');
+        const data = await response.json();
+
+        if (data.success && data.sections) {
+            loadedSections = data.sections.filter(s => s.is_active);
+            renderSectionCheckboxes();
+        }
+    } catch (error) {
+        console.error('Error loading sections:', error);
+    }
+}
+
+function renderSectionCheckboxes() {
+    const container = document.getElementById('sectionCheckboxes');
+    const noSectionsMsg = document.getElementById('noSectionsMsg');
+
+    if (loadedSections.length === 0) {
+        container.innerHTML = '';
+        noSectionsMsg.classList.remove('hidden');
+        return;
+    }
+
+    noSectionsMsg.classList.add('hidden');
+    container.innerHTML = loadedSections.map(section => `
+        <label class="flex items-center gap-3 p-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer transition">
+            <input type="checkbox" value="${section.section_id}" 
+                class="section-checkbox w-4 h-4 text-primary bg-gray-100 border-gray-300 rounded focus:ring-primary dark:focus:ring-primary dark:ring-offset-gray-800 dark:bg-gray-700 dark:border-gray-600">
+            <div>
+                <span class="text-sm font-medium text-gray-800 dark:text-white">${section.name}</span>
+                <span class="text-xs text-gray-500 dark:text-gray-400 ml-1">(${section.abbreviation})</span>
+            </div>
+        </label>
+    `).join('');
+}
 
 async function loadScales() {
     const container = document.getElementById('scalesList');
@@ -186,6 +249,7 @@ async function loadScales() {
             loadedScales = data.scales;
             renderScales(data.scales);
             updateStats(data.scales);
+            detectSectionOverlaps(data.scales);
         } else {
             container.innerHTML = `
                 <div class="text-center py-12">
@@ -222,6 +286,42 @@ function updateStats(scales) {
     document.getElementById('defaultScales').textContent = defaultScales;
 }
 
+function detectSectionOverlaps(scales) {
+    const warning = document.getElementById('overlapWarning');
+    const message = document.getElementById('overlapMessage');
+
+    // Build a map: section_name -> [{scale_name, is_default}]
+    const sectionMap = {};
+    scales.forEach(scale => {
+        if (scale.section_names && scale.section_names.length > 0 && scale.is_active) {
+            scale.section_names.forEach(name => {
+                if (!sectionMap[name]) sectionMap[name] = [];
+                sectionMap[name].push({ name: scale.name, is_default: scale.is_default });
+            });
+        }
+    });
+
+    // Find sections with more than one active scale
+    const overlaps = Object.entries(sectionMap).filter(([, items]) => items.length > 1);
+
+    if (overlaps.length === 0) {
+        warning.classList.add('hidden');
+        return;
+    }
+
+    const details = overlaps.map(([section, items]) => {
+        const winner = items.find(i => i.is_default);
+        const winnerName = winner ? winner.name : items[0].name;
+        const loserNames = items.filter(i => i.name !== winnerName).map(i => i.name).join(', ');
+        return `<strong>${section}</strong>: "${winnerName}" will be used` +
+            (winner ? ` (marked as Default)` : ` (first created)`) +
+            (loserNames ? ` — also assigned: ${loserNames}` : '');
+    });
+
+    message.innerHTML = details.join('<br>');
+    warning.classList.remove('hidden');
+}
+
 function renderScales(scales) {
     const container = document.getElementById('scalesList');
 
@@ -250,6 +350,7 @@ function renderScales(scales) {
                             <h3 class="scale-name text-lg font-semibold text-gray-800 dark:text-white">${scale.name}</h3>
                             ${scale.is_default ? '<span class="bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 text-xs px-2.5 py-1 rounded-full font-medium">Default</span>' : ''}
                             ${!scale.is_active ? '<span class="bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300 text-xs px-2.5 py-1 rounded-full font-medium">Inactive</span>' : ''}
+                            ${(scale.section_names && scale.section_names.length > 0) ? scale.section_names.map(name => `<span class="bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300 text-xs px-2.5 py-1 rounded-full font-medium">${name}</span>`).join('') : '<span class="bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300 text-xs px-2.5 py-1 rounded-full font-medium">School-wide</span>'}
                         </div>
                         <p class="text-sm text-gray-600 dark:text-gray-400 mb-3">${scale.description || 'No description'}</p>
                         <div class="text-sm text-gray-600 dark:text-gray-400">
@@ -299,6 +400,9 @@ function openScaleModal() {
     document.getElementById('gradeRangesList').innerHTML = '';
     gradeRangeCount = 0;
 
+    // Clear section checkboxes
+    document.querySelectorAll('.section-checkbox').forEach(cb => cb.checked = false);
+
     openModal('scaleModal');
 }
 
@@ -334,6 +438,11 @@ async function editScale(scaleId) {
         gradeRangeCount = 0;
         scale.grade_ranges.forEach(range => {
             addGradeRange(range);
+        });
+
+        // Set section checkboxes
+        document.querySelectorAll('.section-checkbox').forEach(cb => {
+            cb.checked = scale.section_ids && scale.section_ids.includes(cb.value);
         });
 
         openEditScaleModal();
@@ -505,7 +614,8 @@ document.getElementById('scaleForm').addEventListener('submit', async (e) => {
         description: scaleDescription,
         is_active: isActive,
         is_default: isDefault,
-        grade_ranges: gradeRanges
+        grade_ranges: gradeRanges,
+        section_ids: Array.from(document.querySelectorAll('.section-checkbox:checked')).map(cb => cb.value)
     };
 
     // Disable submit button

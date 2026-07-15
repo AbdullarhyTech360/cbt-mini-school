@@ -1,0 +1,685 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Student Report Card</title>
+<style>
+  {% set school = report_data.school %}
+  {% set student = report_data.student %}
+  {% set term = report_data.term %}
+  {% set scores = report_data.scores %}
+  {% set assessment_types = report_data.assessment_types %}
+  {% set grade_scale = report_data.grade_scale %}
+  {% set trait_scores = report_data.trait_scores|default({}) %}
+  {% set trait_definitions = report_data.trait_definitions|default([]) %}
+  {% set position = report_data.position %}
+  {% set total_students = report_data.total_students %}
+  {% set class_average = report_data.class_average|default(0) %}
+  {% set config = report_data.config %}
+
+  {% set overall_total = report_data.overall_total|default(0) %}
+  {% set overall_max = report_data.overall_max|default(100) %}
+  {% set overall_percentage = (overall_total / overall_max * 100)|round(1) if overall_max > 0 else 0 %}
+  {% set num_subjects = scores|length %}
+  {% set average = (overall_total / num_subjects)|round(1) if num_subjects > 0 else 0 %}
+
+  {% set overall_grade_ns = namespace(grade='F') %}
+  {% if grade_scale and grade_scale.grade_ranges %}
+    {% for r in grade_scale.grade_ranges %}
+      {% if r.min_score <= overall_percentage <= r.max_score %}
+        {% set overall_grade_ns.grade = r.grade %}
+      {% endif %}
+    {% endfor %}
+  {% else %}
+    {% if overall_percentage >= 70 %}{% set overall_grade_ns.grade = 'A' %}
+    {% elif overall_percentage >= 60 %}{% set overall_grade_ns.grade = 'B' %}
+    {% elif overall_percentage >= 50 %}{% set overall_grade_ns.grade = 'C' %}
+    {% elif overall_percentage >= 45 %}{% set overall_grade_ns.grade = 'D' %}
+    {% elif overall_percentage >= 40 %}{% set overall_grade_ns.grade = 'E' %}
+    {% endif %}
+  {% endif %}
+  {% set overall_grade = overall_grade_ns.grade %}
+
+  {% set typography = report_data.typography|default(4)|int %}
+  {% if typography == 1 %}{% set scale = 0.65 %}
+  {% elif typography == 2 %}{% set scale = 0.77 %}
+  {% elif typography == 3 %}{% set scale = 0.88 %}
+  {% elif typography == 5 %}{% set scale = 1.12 %}
+  {% elif typography == 6 %}{% set scale = 1.23 %}
+  {% elif typography == 7 %}{% set scale = 1.35 %}
+  {% else %}{% set scale = 1.0 %}
+  {% endif %}
+
+  :root{
+    --navy:#0B2E4A;
+    --navy-deep:#081F33;
+    --sky:#1B87C9;
+    --sky-deep:#1367A1;
+    --gold:#F2AE2E;
+    --gold-deep:#D6900F;
+    --gold-text:#9A6B00;
+    --paper:#FBFAF6;
+    --paper-tint:#EEF6FC;
+    --line:#D8E4EC;
+    --ink:#12232F;
+    --ink-soft:#253D4E;
+    --scale:{{ scale }};
+  }
+
+  *{ box-sizing:border-box; margin:0; padding:0; }
+
+  body{
+    margin:0; padding:0;
+    font-family:'Inter', system-ui, sans-serif;
+    color:#12232F;
+    text-align:center;
+  }
+
+  @page{ size:A4; margin:8mm; }
+
+  .sheet{
+    position:relative;
+    width:100%;
+    max-width:750px;
+    margin:0 auto;
+    background:#FBFAF6;
+    border-radius:16px;
+    overflow:hidden;
+    text-align:left;
+  }
+
+  /* ---------- watermark ---------- */
+  .watermark{
+    position:absolute;
+    top:0; right:0; bottom:0; left:0;
+    z-index:10;
+    pointer-events:none;
+    overflow:hidden;
+  }
+  .watermark img{
+    position:absolute;
+    top:50%; left:50%;
+    margin-left:-190px; margin-top:-190px;
+    width:380px;
+    max-width:55%;
+    opacity:0.06;
+    -webkit-transform:rotate(-8deg);
+    transform:rotate(-8deg);
+  }
+
+  /* ---------- header band ---------- */
+  .header-table{
+    width:100%;
+    border-collapse:collapse;
+    background:linear-gradient(135deg, #081F33 0%, #0B2E4A 55%, #1B87C9 130%);
+    color:#fff;
+    padding:0;
+  }
+  .header-table td{
+    vertical-align:middle;
+    padding:calc(10px * var(--scale));
+  }
+  .crest-cell{ width:56px; text-align:center; }
+  .crest{
+    width:50px; height:50px;
+    border-radius:50%;
+    background:#fff;
+    padding:3px;
+    display:inline-block;
+    box-shadow:0 4px 10px rgba(0,0,0,.25);
+  }
+  .crest img{ width:100%; height:100%; border-radius:50%; }
+
+  .title-block{ }
+  .eyebrow{
+    font-family:'JetBrains Mono', monospace;
+    font-size:calc(9px * var(--scale));
+    letter-spacing:.14em;
+    text-transform:uppercase;
+    color:#F2AE2E;
+    margin:0 0 calc(2px * var(--scale));
+  }
+  .school-name{
+    font-family:'Space Grotesk', sans-serif;
+    font-weight:700;
+    font-size:calc(15px * var(--scale));
+    line-height:1.2;
+    margin:0 0 calc(2px * var(--scale));
+  }
+  .school-sub{
+    font-size:calc(9.5px * var(--scale));
+    color:#A8C3D8;
+    margin:0 0 calc(1px * var(--scale));
+  }
+  .motto{
+    font-size:calc(9px * var(--scale));
+    font-style:italic;
+    color:#F2AE2E;
+    margin:calc(3px * var(--scale)) 0 0;
+  }
+
+  .stamp-cell{ width:64px; text-align:center; }
+  .stamp{
+    display:inline-block;
+    width:58px; height:58px;
+    border:2px dashed #F2AE2E;
+    border-radius:50%;
+    text-align:center;
+    vertical-align:middle;
+    line-height:1.15;
+    -webkit-transform:rotate(-9deg);
+    transform:rotate(-9deg);
+    font-family:'Space Grotesk', sans-serif;
+    font-weight:700;
+    font-size:calc(8.5px * var(--scale));
+    letter-spacing:.05em;
+    color:#F2AE2E;
+    padding-top:calc(14px * var(--scale));
+  }
+
+  /* ---------- meta strip ---------- */
+  .meta-strip{
+    width:100%;
+    border-collapse:collapse;
+    background:#EEF6FC;
+    border-bottom:1px solid #D8E4EC;
+  }
+  .meta-strip td{ padding:calc(8px * var(--scale)) calc(10px * var(--scale)); vertical-align:top; }
+
+  .meta-main{
+    width:100%;
+    border-collapse:collapse;
+  }
+  .meta-main td{ padding:0 calc(10px * var(--scale)) calc(8px * var(--scale)) 0; vertical-align:top; }
+  .meta-main tr:last-child td{ padding-bottom:0; }
+
+  .field{
+    padding-bottom:calc(5px * var(--scale));
+    border-bottom:1px solid #D8E4EC;
+  }
+  .field label{
+    display:block;
+    font-family:'JetBrains Mono', monospace;
+    font-size:calc(8.5px * var(--scale));
+    letter-spacing:.08em;
+    text-transform:uppercase;
+    color:var(--ink);
+    font-weight:600;
+    margin-bottom:calc(1px * var(--scale));
+  }
+  .field .val{
+    font-family:'Space Grotesk', sans-serif;
+    font-size:calc(12px * var(--scale));
+    font-weight:600;
+    color:#081F33;
+    padding:0 0 calc(2px * var(--scale));
+  }
+  .field .val.grade-pill{
+    font-size:calc(10.5px * var(--scale));
+  }
+
+  /* photo frame */
+  .photo-cell{ width:80px; text-align:center; vertical-align:middle; }
+  .photo-box{
+    width:66px; height:80px;
+    border-radius:8px;
+    border:2px solid #F2AE2E;
+    background:#EEF6FC;
+    overflow:hidden;
+    margin:0 auto;
+    text-align:center;
+    line-height:76px;
+  }
+  .photo-box svg{ width:34px; height:34px; opacity:.35; vertical-align:middle; }
+  .photo-box img{ width:100%; height:100%; }
+  .photo-cap{
+    display:block;
+    font-family:'JetBrains Mono', monospace;
+    font-size:calc(7.5px * var(--scale));
+    letter-spacing:.06em;
+    text-transform:uppercase;
+    color:#1A3345;
+    text-align:center;
+    margin-top:calc(4px * var(--scale));
+  }
+
+  /* ---------- body ---------- */
+  .body-content{ position:relative; z-index:1; padding:calc(8px * var(--scale)) calc(10px * var(--scale)) calc(3px * var(--scale)); }
+
+  .section-title{
+    overflow:hidden;
+    margin:0 0 calc(4px * var(--scale));
+    white-space:nowrap;
+  }
+  .section-title .num{
+    display:inline-block;
+    font-family:'JetBrains Mono', monospace;
+    font-size:calc(9px * var(--scale));
+    background:#061A2B;
+    color:#fff;
+    padding:calc(2px * var(--scale)) calc(7px * var(--scale));
+    border-radius:5px;
+    vertical-align:middle;
+    margin-right:calc(8px * var(--scale));
+  }
+  .section-title h2{
+    display:inline-block;
+    font-family:'Space Grotesk', sans-serif;
+    font-size:calc(13.5px * var(--scale));
+    margin:0;
+    color:#061A2B;
+    letter-spacing:.02em;
+    vertical-align:middle;
+    margin-right:calc(8px * var(--scale));
+  }
+  .section-title.section-title-emphasis h2{
+    font-size:calc(14.5px * var(--scale));
+  }
+  .section-title .rule{
+    display:inline-block;
+    vertical-align:middle;
+    height:1px;
+    background:#D8E4EC;
+  }
+
+  .subjects-table-wrap{
+    border-radius:8px;
+    overflow:hidden;
+  }
+  table.subjects-table{
+    width:100%;
+    border-collapse:separate;
+    border-spacing:0;
+    font-size:calc(10px * var(--scale));
+    background:#fff;
+    border:1px solid #D8E4EC;
+    box-shadow:0 1px 3px rgba(0,0,0,0.05);
+  }
+  table.subjects-table thead th{
+    background:#0B2E4A;
+    color:#fff;
+    font-family:'Space Grotesk', sans-serif;
+    font-weight:600;
+    font-size:calc(8.5px * var(--scale));
+    text-transform:uppercase;
+    letter-spacing:.03em;
+    padding:calc(4px * var(--scale)) calc(4px * var(--scale));
+    text-align:center;
+    line-height:1.25;
+  }
+  table.subjects-table thead th.subj-col{ text-align:left; padding-left:calc(9px * var(--scale)); }
+  table.subjects-table tbody td{
+    padding:calc(2px * var(--scale)) calc(4px * var(--scale));
+    text-align:center;
+    border-bottom:1px solid #EDF2F6;
+  }
+  table.subjects-table tbody td.subject-name{
+    text-align:left;
+    padding-left:calc(9px * var(--scale));
+    font-weight:600;
+    color:#081F33;
+    font-size:calc(10px * var(--scale));
+  }
+  table.subjects-table tbody tr:nth-child(even){ background:#F7FAFC; }
+
+  .grade-pill{
+    display:inline-block;
+    min-width:16px;
+    padding:calc(1px * var(--scale)) calc(5px * var(--scale));
+    border-radius:5px;
+    font-weight:700;
+    font-family:'JetBrains Mono', monospace;
+    font-size:calc(9px * var(--scale));
+  }
+  .grade-A{ background:#E1F4E7; color:#1F7A44; }
+  .grade-B{ background:#E4F1FA; color:#1367A1; }
+  .grade-C{ background:#FCF3D9; color:#9A6B00; }
+  .grade-D{ background:#FBE7D6; color:#B45400; }
+  .grade-F{ background:#FADADA; color:#B01818; }
+
+  .foot-note{
+    font-size:calc(9.5px * var(--scale)); color:var(--ink); font-weight:600; margin:calc(5px * var(--scale)) calc(2px * var(--scale)) 0;
+    font-family:'JetBrains Mono',monospace;
+  }
+
+  /* ---------- cols-2 layout via table ---------- */
+  .cols-2{ width:100%; border-collapse:collapse; }
+  .cols-2 td{ vertical-align:top; padding:0; }
+  .cols-2 td.col-left{ width:60%; padding-right:16px; }
+  .cols-2 td.col-right{ width:40%; }
+
+  /* behaviour ratings via table */
+  .behaviour-card{
+    width:100%;
+    border-collapse:collapse;
+    background:#fff;
+    border-radius:8px;
+    overflow:hidden;
+    box-shadow:0 1px 0 #D8E4EC;
+  }
+  .behaviour-card td{
+    padding:calc(4.5px * var(--scale)) calc(8px * var(--scale));
+    border-bottom:1px solid #EDF2F6;
+    font-size:calc(9.5px * var(--scale));
+    vertical-align:middle;
+  }
+  .behaviour-card td.b-right{ border-left:1px solid #EDF2F6; }
+  .b-name{ color:#081F33; font-weight:500; line-height:1.15; }
+  .dots{ white-space:nowrap; }
+  .dot{
+    font-size:calc(11px * var(--scale));
+    line-height:1;
+    color:var(--ink);
+  }
+  .dot.on{ color:var(--gold-text); }
+
+  .side-cards{ }
+  .side-cards .key-card + .key-card{ margin-top:calc(10px * var(--scale)); }
+  .key-card{
+    background:#fff;
+    border:1px solid #D8E4EC;
+    border-radius:8px;
+    padding:calc(7px * var(--scale)) calc(11px * var(--scale));
+  }
+  .key-card h3{
+    font-family:'Space Grotesk', sans-serif;
+    font-size:calc(9.5px * var(--scale));
+    text-transform:uppercase;
+    letter-spacing:.05em;
+    color:var(--sky-deep);
+    margin:0 0 calc(4px * var(--scale));
+  }
+  .key-line{ overflow:hidden; font-size:calc(9.5px * var(--scale)); font-weight:500; padding:calc(1px * var(--scale)) 0; color:var(--ink); }
+  .key-line span{ float:left; }
+  .key-line b{ float:right; color:#12232F; }
+
+  .observance-grid{ width:100%; border-collapse:collapse; }
+  .observance-grid td{ padding:calc(2px * var(--scale)) 0; font-size:calc(9.5px * var(--scale)); }
+  .observance-grid td.obs-label{ color:var(--ink); font-weight:500; }
+  .observance-grid td.obs-val{ color:#0B2E4A; font-family:'JetBrains Mono',monospace; font-weight:700; text-align:right; padding-left:10px; }
+
+  .comment-block{ margin-top:calc(4px * var(--scale)); }
+  .comment-line{
+    overflow:hidden;
+    padding:calc(5px * var(--scale)) 0;
+    border-bottom:1px dotted #D8E4EC;
+    font-size:calc(9.5px * var(--scale));
+  }
+  .comment-line:last-child{ border-bottom:none; }
+  .comment-line .c-label{
+    float:left;
+    font-family:'Space Grotesk', sans-serif;
+    font-weight:600;
+    font-size:calc(9.5px * var(--scale));
+    color:#081F33;
+    white-space:nowrap;
+    margin-right:calc(8px * var(--scale));
+  }
+  .comment-line .c-fill{ overflow:hidden; color:#12232F; }
+  .principal-row{ background:#EEF6FC; margin:calc(6px * var(--scale)) calc(-10px * var(--scale)) calc(-4px * var(--scale)); padding:calc(8px * var(--scale)) calc(10px * var(--scale)) calc(12px * var(--scale)); }
+  .principal-row .c-label{ color:var(--gold-text); }
+
+  .footer-table{
+    width:100%;
+    border-collapse:collapse;
+    position:relative;
+    z-index:1;
+    padding:calc(8px * var(--scale)) calc(10px * var(--scale)) calc(12px * var(--scale));
+    font-size:calc(9px * var(--scale));
+    color:#000000;
+    font-weight:700;
+    font-family:'JetBrains Mono', monospace;
+  }
+  .footer-table td{ padding:calc(8px * var(--scale)) calc(10px * var(--scale)) calc(12px * var(--scale)); }
+  .footer-table .brand{ color:#000000; font-weight:700; }
+
+  @media print{
+    body{ background:#fff; padding:0; }
+    .sheet{ box-shadow:none; border-radius:0; max-width:100%; }
+    *{ -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+  }
+
+  {{ custom_css|default('', true) }}
+</style>
+</head>
+<body>
+
+  <div class="sheet" id="sheet">
+
+    {% if school.logo %}
+    <div class="watermark"><img src="{{ school.logo }}" alt=""></div>
+    {% endif %}
+
+    <table class="header-table">
+      <tr>
+        <td class="crest-cell">
+          <div class="crest">
+            {% if school.logo %}
+              <img src="{{ school.logo }}" alt="Logo">
+            {% else %}
+              <svg viewBox="0 0 24 24" fill="#0B2E4A" xmlns="http://www.w3.org/2000/svg">
+                <path d="M12 12c2.7 0 4.9-2.2 4.9-4.9S14.7 2.2 12 2.2 7.1 4.4 7.1 7.1 9.3 12 12 12zm0 2.4c-3.3 0-9.8 1.6-9.8 4.9v2.4h19.6v-2.4c0-3.3-6.5-4.9-9.8-4.9z"/>
+              </svg>
+            {% endif %}
+          </div>
+        </td>
+        <td class="title-block">
+          <p class="eyebrow">Training for Excellence</p>
+          <h1 class="school-name">{{ school.name|upper }}</h1>
+          <p class="school-sub">{{ school.address }} &nbsp;&middot;&nbsp; Senior Secondary School Report</p>
+          <p class="motto">&ldquo;{% if school.motto %}{{ school.motto }}{% else %}Knowledge is Light{% endif %}&rdquo; &nbsp;&mdash;&nbsp; {{ term.name|upper }}, {{ term.session }} Academic Session</p>
+        </td>
+        <td class="stamp-cell">
+          <div class="stamp">ORIGINAL<br>COPY</div>
+        </td>
+      </tr>
+    </table>
+
+    <table class="meta-strip">
+      <tr>
+        <td>
+          <table class="meta-main">
+            <tr>
+              <td><div class="field"><label>Student Name</label><div class="val">{{ student.name }}</div></div></td>
+              <td><div class="field"><label>Total Score</label><div class="val">{{ overall_total|round(0)|int }}</div></div></td>
+              <td><div class="field"><label>No. in Class</label><div class="val">{{ total_students }}</div></div></td>
+            </tr>
+            <tr>
+              <td><div class="field"><label>Reg. No.</label><div class="val">{{ student.admission_number|default('') }}</div></div></td>
+              <td><div class="field"><label>Average</label><div class="val">{{ average }}%</div></div></td>
+              <td><div class="field"><label>Position</label><div class="val">{{ position }}{{ 'st' if position == 1 else ('nd' if position == 2 else ('rd' if position == 3 else 'th')) }} of {{ total_students }}</div></div></td>
+            </tr>
+            <tr>
+              <td><div class="field"><label>Sex</label><div class="val">{{ student.gender|default('')|upper }}</div></div></td>
+              <td><div class="field"><label>Class Average</label><div class="val">{{ class_average|default('--', true) }}%</div></div></td>
+              <td><div class="field"><label>House</label><div class="val">{{ student.house|default('N/A', true) }}</div></div></td>
+            </tr>
+            <tr>
+              <td><div class="field"><label>Class</label><div class="val">{{ student.class_name }}</div></div></td>
+              <td><div class="field"><label>Overall Grade</label><div class="val"><span class="grade-pill grade-{{ overall_grade }}">{{ overall_grade }}</span></div></div></td>
+              <td><div class="field"><label>Date of Resumption</label><div class="val">{% if config and config.resumption_date %}{{ config.resumption_date }}{% endif %}</div></div></td>
+            </tr>
+          </table>
+        </td>
+        <td class="photo-cell">
+          <div class="photo-box">
+            {% if student.image %}
+              <img src="{{ student.image }}" alt="Photo">
+            {% else %}
+              <svg viewBox="0 0 24 24" fill="#0B2E4A" xmlns="http://www.w3.org/2000/svg">
+                <path d="M12 12c2.7 0 4.9-2.2 4.9-4.9S14.7 2.2 12 2.2 7.1 4.4 7.1 7.1 9.3 12 12 12zm0 2.4c-3.3 0-9.8 1.6-9.8 4.9v2.4h19.6v-2.4c0-3.3-6.5-4.9-9.8-4.9z"/>
+              </svg>
+            {% endif %}
+          </div>
+          <span class="photo-cap">Student Photo</span>
+        </td>
+      </tr>
+    </table>
+
+    <div class="body-content">
+
+      <div class="section-title">
+        <span class="num">A</span><h2>Cognitive Domain &mdash; Subject Performance</h2><span class="rule"></span>
+      </div>
+
+      <div class="subjects-table-wrap">
+      <table class="subjects-table">
+        <thead>
+          <tr>
+            <th class="subj-col">Subject</th>
+            {% for at in assessment_types %}
+            <th>{{ at.name }}</th>
+            {% endfor %}
+            <th>Total</th>
+            <th>Grade</th>
+            <th>Subj.<br>Pos.</th>
+            <th>Teacher's<br>Remark</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for subject_id, subject_data in scores.items() %}
+          {% set subj_pct = (subject_data.total / subject_data.max_total * 100) if subject_data.max_total > 0 else 0 %}
+          {% set ns = namespace(subj_grade='F') %}
+          {% if grade_scale and grade_scale.grade_ranges %}
+            {% for r in grade_scale.grade_ranges %}
+              {% if r.min_score <= subj_pct <= r.max_score %}
+                {% set ns.subj_grade = r.grade %}
+              {% endif %}
+            {% endfor %}
+          {% else %}
+            {% if subj_pct >= 70 %}{% set ns.subj_grade = 'A' %}
+            {% elif subj_pct >= 60 %}{% set ns.subj_grade = 'B' %}
+            {% elif subj_pct >= 50 %}{% set ns.subj_grade = 'C' %}
+            {% elif subj_pct >= 45 %}{% set ns.subj_grade = 'D' %}
+            {% elif subj_pct >= 40 %}{% set ns.subj_grade = 'E' %}
+            {% endif %}
+          {% endif %}
+          {% set subj_grade = ns.subj_grade %}
+          <tr>
+            <td class="subject-name">{{ subject_data.subject_name }}</td>
+            {% for at in assessment_types %}
+              {% set assessment = subject_data.assessments.get(at.code) %}
+              <td>{% if assessment %}{{ assessment.score }}{% else %}-{% endif %}</td>
+            {% endfor %}
+            <td style="font-weight:700;">{{ subject_data.total|round(1) }}</td>
+            <td><span class="grade-pill grade-{{ subj_grade }}">{{ subj_grade }}</span></td>
+            <td>{% set sp = subject_data.subject_position|default(None, true) %}{% if sp %}{{ sp }}{{ 'st' if sp == 1 else ('nd' if sp == 2 else ('rd' if sp == 3 else 'th')) }}{% else %}__{% endif %}</td>
+            <td style="font-size:calc(8px * var(--scale));">{% if subject_data.teacher_remark %}{{ subject_data.teacher_remark }}{% else %}__{% endif %}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      </div>
+
+      <p class="foot-note">
+        Key to grades
+        {% if grade_scale and grade_scale.grade_ranges %}
+          {% for r in grade_scale.grade_ranges %}
+            &nbsp; {{ r.grade }} = {{ r.min_score }}&ndash;{{ r.max_score }}{% if not loop.last %} &nbsp;|&nbsp;{% endif %}
+          {% endfor %}
+        {% else %}
+          &nbsp; A = 70&ndash;100 &nbsp;|&nbsp; B = 60&ndash;69 &nbsp;|&nbsp; C = 50&ndash;59 &nbsp;|&nbsp; D = 45&ndash;49 &nbsp;|&nbsp; E = 40&ndash;44 &nbsp;|&nbsp; F = 0&ndash;39
+        {% endif %}
+      </p>
+
+      <div style="height:calc(12px * var(--scale));"></div>
+
+      <div class="section-title section-title-emphasis">
+        <span class="num">B</span><h2>Psychomotive Domain &amp; Term Summary</h2><span class="rule"></span>
+      </div>
+
+      <table class="cols-2">
+        <tr>
+          <td class="col-left">
+            <table class="behaviour-card">
+              {% for i in range(0, trait_definitions|length, 2) %}
+              <tr>
+                {% set left = trait_definitions[i].name %}
+                {% set left_rating = trait_scores.get(left, 0) if trait_scores else 0 %}
+                <td>
+                  <span class="b-name">{{ left }}</span>&nbsp;
+                  <span class="dots">{% for j in range(1, 6) %}<span class="dot{% if j <= left_rating %} on{% endif %}">{% if j <= left_rating %}&#9733;{% else %}&#9734;{% endif %}</span>{% endfor %}</span>
+                </td>
+                {% if i + 1 < trait_definitions|length %}
+                  {% set right = trait_definitions[i + 1].name %}
+                  {% set right_rating = trait_scores.get(right, 0) if trait_scores else 0 %}
+                  <td class="b-right">
+                    <span class="b-name">{{ right }}</span>&nbsp;
+                    <span class="dots">{% for j in range(1, 6) %}<span class="dot{% if j <= right_rating %} on{% endif %}">{% if j <= right_rating %}&#9733;{% else %}&#9734;{% endif %}</span>{% endfor %}</span>
+                  </td>
+                {% else %}
+                  <td class="b-right"></td>
+                {% endif %}
+              </tr>
+              {% endfor %}
+            </table>
+          </td>
+          <td class="col-right">
+            <div class="side-cards">
+              <div class="key-card">
+                <h3>Key to Ratings</h3>
+                <div class="key-line"><span>5</span><b>Very Good</b></div>
+                <div class="key-line"><span>4</span><b>Good</b></div>
+                <div class="key-line"><span>3</span><b>Fair</b></div>
+                <div class="key-line"><span>2</span><b>Weak</b></div>
+                <div class="key-line"><span>1</span><b>Poor</b></div>
+              </div>
+
+              <div class="key-card">
+                <h3>Observance</h3>
+                <table class="observance-grid">
+                  <tr>
+                    <td class="obs-label">Days open</td><td class="obs-val">{% if attendance_stats and attendance_stats.days_open %}{{ attendance_stats.days_open }}{% else %}&mdash;{% endif %}</td>
+                    <td class="obs-label">Holidays</td><td class="obs-val">{% if attendance_stats and attendance_stats.holidays %}{{ attendance_stats.holidays }}{% else %}&mdash;{% endif %}</td>
+                  </tr>
+                  <tr>
+                    <td class="obs-label">Present</td><td class="obs-val">{% if attendance_stats and attendance_stats.present %}{{ attendance_stats.present }}{% else %}&mdash;{% endif %}</td>
+                    <td class="obs-label">Absent</td><td class="obs-val">{% if attendance_stats and attendance_stats.absent %}{{ attendance_stats.absent }}{% else %}&mdash;{% endif %}</td>
+                  </tr>
+                </table>
+              </div>
+            </div>
+          </td>
+        </tr>
+      </table>
+
+      <div class="section-title" style="margin-top:calc(12px * var(--scale));">
+        <span class="num">C</span><h2>Remarks</h2><span class="rule"></span>
+      </div>
+
+      <div class="comment-block">
+        <div class="comment-line">
+          <span class="c-label">Form Master's Comment</span>
+          <span class="c-fill">{% if term.teacher_remarks %}{{ term.teacher_remarks }}{% endif %}</span>
+        </div>
+        <div class="comment-line">
+          <span class="c-label">Principal/Headmaster Comment</span>
+          <span class="c-fill">{% if term.house_master_remarks %}{{ term.house_master_remarks }}{% endif %}</span>
+        </div>
+        <div class="comment-line">
+          <span class="c-label">School Fees for Next Term</span>
+          <span class="c-fill">{% if config and config.next_term_fees %}{{ config.next_term_fees }}{% endif %}</span>
+        </div>
+      </div>
+
+      <div class="principal-row">
+        <div class="comment-line" style="border:none;">
+          <span class="c-label">Principal's Comment</span>
+          <span class="c-fill">{% if term.principal_remarks %}{{ term.principal_remarks }}{% endif %}</span>
+        </div>
+      </div>
+
+    </div>
+
+    <table class="footer-table">
+      <tr>
+        <td><span class="brand">{{ school.name|upper }}</span> &middot; {{ school.address }}</td>
+        <td style="text-align:right;">Report generated for internal school use</td>
+      </tr>
+    </table>
+
+  </div>
+
+</body>
+</html>

@@ -34,8 +34,12 @@ def add_exam_sessions_table():
             # print("- Preserves question order and time remaining")
             
         except Exception as e:
-            # print(f"✗ Error creating exam_sessions table: {str(e)}")
-            # print("\nIf the table already exists, you can ignore this error.")
+            pass  # table may already exist
+
+
+def upgrade():
+    """Run the exam sessions table migration."""
+    add_exam_sessions_table()
 
 
 if __name__ == "__main__":

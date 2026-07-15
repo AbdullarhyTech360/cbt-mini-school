@@ -1,0 +1,596 @@
+<!doctype html>
+{% extends "admin/base.html" %}
+{% block title %}Student Promotion - Admin Panel{% endblock %}
+{% block sidebar_nav %}{{ super() }}{% endblock %}
+{% block content %}
+
+<div class="mb-6 md:mb-8">
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+            <h1 class="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white mb-2">Student Promotion</h1>
+            <p class="text-gray-600 dark:text-gray-400 text-sm md:text-base">
+                Manage end-of-session promotions with rules, preview, and execution.
+            </p>
+        </div>
+    </div>
+</div>
+
+<!-- Tab Navigation -->
+<div class="border-b border-gray-200 dark:border-gray-700 mb-6">
+    <nav class="flex gap-0 -mb-px overflow-x-auto" id="promoTabs">
+        <button class="tab-btn active whitespace-nowrap px-5 py-3 text-sm font-semibold border-b-2 transition-colors" data-tab="rules">
+            <span class="material-symbols-outlined text-lg align-middle mr-1">rule</span> Rules
+        </button>
+        <button class="tab-btn whitespace-nowrap px-5 py-3 text-sm font-semibold border-b-2 transition-colors" data-tab="preview">
+            <span class="material-symbols-outlined text-lg align-middle mr-1">visibility</span> Preview
+        </button>
+        <button class="tab-btn whitespace-nowrap px-5 py-3 text-sm font-semibold border-b-2 transition-colors" data-tab="execute" disabled>
+            <span class="material-symbols-outlined text-lg align-middle mr-1">play_arrow</span> Execute
+        </button>
+        <button class="tab-btn whitespace-nowrap px-5 py-3 text-sm font-semibold border-b-2 transition-colors" data-tab="history">
+            <span class="material-symbols-outlined text-lg align-middle mr-1">history</span> History
+        </button>
+    </nav>
+</div>
+
+<!-- ═══════════════════ RULES TAB ═══════════════════ -->
+<div class="tab-content" id="tab-rules">
+    <div class="flex justify-between items-center mb-4">
+        <h2 class="text-lg font-bold text-gray-900 dark:text-white">Promotion Rules</h2>
+        <button onclick="showCreateRuleForm()" class="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-primary to-blue-600 hover:from-primary/90 hover:to-blue-700 text-white rounded-lg shadow-md text-sm font-semibold transition-all">
+            <span class="material-symbols-outlined text-lg">add</span> Add Rule
+        </button>
+    </div>
+
+    <!-- Rule Form (hidden by default) -->
+    <div id="ruleForm" class="hidden bg-white dark:bg-gray-800 rounded-xl shadow-md border border-gray-200 dark:border-gray-700 p-5 mb-6">
+        <h3 id="ruleFormTitle" class="text-base font-bold text-gray-900 dark:text-white mb-4">Create Promotion Rule</h3>
+        <input type="hidden" id="editingRuleId" value="">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Rule Name</label>
+                <input type="text" id="ruleName" placeholder="e.g., Primary 1 to Primary 2" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white px-3 py-2 text-sm focus:ring-2 focus:ring-primary focus:border-primary">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Fail Action</label>
+                <select id="ruleFailAction" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white px-3 py-2 text-sm focus:ring-2 focus:ring-primary">
+                    <option value="repeat">Repeat (stay in same class)</option>
+                    <option value="withdraw">Withdraw</option>
+                    <option value="manual">Manual decision required</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Source Section</label>
+                <select id="ruleSourceSection" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white px-3 py-2 text-sm focus:ring-2 focus:ring-primary">
+                    <option value="">Select section...</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Source Level</label>
+                <input type="number" id="ruleSourceLevel" min="1" max="20" placeholder="e.g., 1" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white px-3 py-2 text-sm focus:ring-2 focus:ring-primary">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Destination Section</label>
+                <select id="ruleDestSection" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white px-3 py-2 text-sm focus:ring-2 focus:ring-primary">
+                    <option value="">Select section...</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Destination Level</label>
+                <input type="number" id="ruleDestLevel" min="1" max="20" placeholder="e.g., 2" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white px-3 py-2 text-sm focus:ring-2 focus:ring-primary">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Minimum Average (%)</label>
+                <input type="number" id="ruleMinAverage" min="0" max="100" step="0.1" placeholder="Leave empty = all students pass" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white px-3 py-2 text-sm focus:ring-2 focus:ring-primary">
+            </div>
+        </div>
+        <div class="flex gap-3 mt-5">
+            <button onclick="saveRule()" class="px-5 py-2 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white rounded-lg text-sm font-semibold shadow transition-all">Save Rule</button>
+            <button onclick="hideRuleForm()" class="px-5 py-2 bg-gray-200 dark:bg-gray-600 hover:bg-gray-300 dark:hover:bg-gray-500 text-gray-700 dark:text-gray-200 rounded-lg text-sm font-semibold transition-all">Cancel</button>
+        </div>
+    </div>
+
+    <div id="rulesList" class="space-y-3">
+        <p class="text-gray-500 dark:text-gray-400 text-sm">Loading rules...</p>
+    </div>
+</div>
+
+<!-- ═══════════════════ PREVIEW TAB ═══════════════════ -->
+<div class="tab-content hidden" id="tab-preview">
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-md border border-gray-200 dark:border-gray-700 p-5 mb-6">
+        <h2 class="text-lg font-bold text-gray-900 dark:text-white mb-4">Preview Promotion</h2>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Source Session</label>
+                <input type="text" id="previewSourceSession" placeholder="e.g., 2024-2025" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white px-3 py-2 text-sm focus:ring-2 focus:ring-primary">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Destination Session</label>
+                <input type="text" id="previewDestSession" placeholder="e.g., 2025-2026" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white px-3 py-2 text-sm focus:ring-2 focus:ring-primary">
+            </div>
+            <div>
+                <button onclick="runPreview()" id="previewBtn" class="w-full px-5 py-2 bg-gradient-to-r from-primary to-blue-600 hover:from-primary/90 hover:to-blue-700 text-white rounded-lg text-sm font-semibold shadow transition-all">
+                    <span class="material-symbols-outlined text-lg align-middle mr-1">visibility</span> Run Preview
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Preview Summary -->
+    <div id="previewSummary" class="hidden">
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+            <div class="bg-gradient-to-br from-green-500 to-green-600 p-4 rounded-xl shadow text-center">
+                <p class="text-white/80 text-xs font-medium">Promoted</p>
+                <p id="countPromoted" class="text-2xl font-bold text-white">0</p>
+            </div>
+            <div class="bg-gradient-to-br from-yellow-500 to-yellow-600 p-4 rounded-xl shadow text-center">
+                <p class="text-white/80 text-xs font-medium">Repeated</p>
+                <p id="countRepeated" class="text-2xl font-bold text-white">0</p>
+            </div>
+            <div class="bg-gradient-to-br from-red-500 to-red-600 p-4 rounded-xl shadow text-center">
+                <p class="text-white/80 text-xs font-medium">Withdrawn</p>
+                <p id="countWithdrawn" class="text-2xl font-bold text-white">0</p>
+            </div>
+            <div class="bg-gradient-to-br from-gray-500 to-gray-600 p-4 rounded-xl shadow text-center">
+                <p class="text-white/80 text-xs font-medium">No Rule Match</p>
+                <p id="countNoRule" class="text-2xl font-bold text-white">0</p>
+            </div>
+        </div>
+
+        <div class="flex justify-end mb-4">
+            <button onclick="switchTab('execute')" id="proceedToExecuteBtn" class="px-5 py-2 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white rounded-lg text-sm font-semibold shadow transition-all">
+                <span class="material-symbols-outlined text-lg align-middle mr-1">arrow_forward</span> Proceed to Execute
+            </button>
+        </div>
+
+        <!-- Student lists -->
+        <div class="space-y-4" id="previewResults"></div>
+    </div>
+</div>
+
+<!-- ═══════════════════ EXECUTE TAB ═══════════════════ -->
+<div class="tab-content hidden" id="tab-execute">
+    <div id="executeEmpty" class="bg-white dark:bg-gray-800 rounded-xl shadow-md border border-gray-200 dark:border-gray-700 p-8 text-center">
+        <span class="material-symbols-outlined text-5xl text-gray-400 mb-3">info</span>
+        <p class="text-gray-600 dark:text-gray-400">Run a promotion preview first, then come here to execute.</p>
+    </div>
+    <div id="executeContent" class="hidden">
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-md border border-gray-200 dark:border-gray-700 p-5 mb-6">
+            <h2 class="text-lg font-bold text-gray-900 dark:text-white mb-2">Confirm Promotion Execution</h2>
+            <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                Review the changes below. This will move students to their new classes and archive old classes.
+            </p>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4" id="executeSummary"></div>
+            <div id="executeDecisions" class="max-h-96 overflow-y-auto space-y-2 mb-4"></div>
+            <div class="flex gap-3">
+                <button onclick="executePromotion()" class="px-6 py-2.5 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white rounded-lg text-sm font-bold shadow-md transition-all">
+                    <span class="material-symbols-outlined text-lg align-middle mr-1">check_circle</span> Execute Promotion
+                </button>
+                <button onclick="switchTab('preview')" class="px-5 py-2 bg-gray-200 dark:bg-gray-600 hover:bg-gray-300 dark:hover:bg-gray-500 text-gray-700 dark:text-gray-200 rounded-lg text-sm font-semibold transition-all">Back to Preview</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════════════ HISTORY TAB ═══════════════════ -->
+<div class="tab-content hidden" id="tab-history">
+    <h2 class="text-lg font-bold text-gray-900 dark:text-white mb-4">Promotion History</h2>
+    <div id="historyList" class="space-y-3">
+        <p class="text-gray-500 dark:text-gray-400 text-sm">Loading history...</p>
+    </div>
+</div>
+
+<style>
+    .tab-btn { color: #6b7280; border-bottom-color: transparent; }
+    .tab-btn.active { color: #6366f1; border-bottom-color: #6366f1; }
+    .tab-btn:hover:not(.active) { color: #374151; }
+    .tab-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    .student-row { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; border-radius: 8px; border: 1px solid #e5e7eb; background: white; }
+    .dark .student-row { border-color: #374151; background: #1f2937; }
+    .student-row.promoted { border-left: 4px solid #10b981; }
+    .student-row.repeated { border-left: 4px solid #f59e0b; }
+    .student-row.withdrawn { border-left: 4px solid #ef4444; }
+    .student-row.no-rule { border-left: 4px solid #6b7280; }
+</style>
+
+<script>
+// ─── State ──────────────────────────────────────────────
+let sections = [];
+let rules = [];
+let previewData = null;
+let overrides = {};
+
+// ─── Tabs ───────────────────────────────────────────────
+function switchTab(tab) {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
+    document.querySelector(`.tab-btn[data-tab="${tab}"]`).classList.add('active');
+    document.getElementById(`tab-${tab}`).classList.remove('hidden');
+    if (tab === 'execute') renderExecuteTab();
+    if (tab === 'history') loadHistory();
+}
+
+document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        if (btn.disabled) return;
+        switchTab(btn.dataset.tab);
+    });
+});
+
+// ─── Init ───────────────────────────────────────────────
+async function init() {
+    await loadSections();
+    await loadRules();
+}
+
+async function loadSections() {
+    try {
+        const resp = await fetch('/api/sections');
+        const data = await resp.json();
+        sections = data.sections || data || [];
+        populateSectionDropdowns();
+    } catch (e) {
+        console.error('Failed to load sections', e);
+    }
+}
+
+function populateSectionDropdowns() {
+    const opts = sections.map(s => `<option value="${s.section_id}">${s.name} (${s.abbreviation})</option>`).join('');
+    const blank = '<option value="">Select section...</option>';
+    document.getElementById('ruleSourceSection').innerHTML = blank + opts;
+    document.getElementById('ruleDestSection').innerHTML = blank + opts;
+}
+
+// ─── Rules ──────────────────────────────────────────────
+async function loadRules() {
+    try {
+        const resp = await fetch('/api/promotion/rules');
+        const data = await resp.json();
+        rules = data.rules || [];
+        renderRules();
+    } catch (e) {
+        console.error('Failed to load rules', e);
+    }
+}
+
+function renderRules() {
+    const container = document.getElementById('rulesList');
+    if (!rules.length) {
+        container.innerHTML = '<p class="text-gray-500 dark:text-gray-400 text-sm text-center py-8">No promotion rules defined yet. Click "Add Rule" to create one.</p>';
+        return;
+    }
+    container.innerHTML = rules.map(r => `
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 flex flex-col md:flex-row md:items-center justify-between gap-3">
+            <div>
+                <h4 class="font-bold text-gray-900 dark:text-white text-sm">${esc(r.name)}</h4>
+                <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    ${esc(r.source_section_name || '?')} Level ${r.source_level}
+                    <span class="material-symbols-outlined text-xs align-middle mx-1">arrow_forward</span>
+                    ${esc(r.dest_section_name || '?')} Level ${r.dest_level}
+                    ${r.min_average != null ? `&nbsp;| Min avg: <strong>${r.min_average}%</strong>` : '&nbsp;| No minimum'}
+                    &nbsp;| Fail: <span class="font-medium">${r.fail_action}</span>
+                </p>
+            </div>
+            <div class="flex gap-2">
+                <button onclick="editRule('${r.id}')" class="px-3 py-1.5 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-lg text-xs font-semibold hover:bg-blue-100 dark:hover:bg-blue-900/50 transition">Edit</button>
+                <button onclick="deleteRule('${r.id}')" class="px-3 py-1.5 bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-lg text-xs font-semibold hover:bg-red-100 dark:hover:bg-red-900/50 transition">Delete</button>
+            </div>
+        </div>
+    `).join('');
+}
+
+function showCreateRuleForm() {
+    document.getElementById('editingRuleId').value = '';
+    document.getElementById('ruleFormTitle').textContent = 'Create Promotion Rule';
+    document.getElementById('ruleName').value = '';
+    document.getElementById('ruleSourceSection').value = '';
+    document.getElementById('ruleSourceLevel').value = '';
+    document.getElementById('ruleDestSection').value = '';
+    document.getElementById('ruleDestLevel').value = '';
+    document.getElementById('ruleMinAverage').value = '';
+    document.getElementById('ruleFailAction').value = 'repeat';
+    document.getElementById('ruleForm').classList.remove('hidden');
+}
+
+function hideRuleForm() {
+    document.getElementById('ruleForm').classList.add('hidden');
+}
+
+function editRule(id) {
+    const r = rules.find(x => x.id === id);
+    if (!r) return;
+    document.getElementById('editingRuleId').value = id;
+    document.getElementById('ruleFormTitle').textContent = 'Edit Promotion Rule';
+    document.getElementById('ruleName').value = r.name;
+    document.getElementById('ruleSourceSection').value = r.source_section_id;
+    document.getElementById('ruleSourceLevel').value = r.source_level;
+    document.getElementById('ruleDestSection').value = r.dest_section_id;
+    document.getElementById('ruleDestLevel').value = r.dest_level;
+    document.getElementById('ruleMinAverage').value = r.min_average ?? '';
+    document.getElementById('ruleFailAction').value = r.fail_action;
+    document.getElementById('ruleForm').classList.remove('hidden');
+}
+
+async function saveRule() {
+    const id = document.getElementById('editingRuleId').value;
+    const payload = {
+        name: document.getElementById('ruleName').value.trim(),
+        source_section_id: document.getElementById('ruleSourceSection').value,
+        source_level: parseInt(document.getElementById('ruleSourceLevel').value),
+        dest_section_id: document.getElementById('ruleDestSection').value,
+        dest_level: parseInt(document.getElementById('ruleDestLevel').value),
+        min_average: document.getElementById('ruleMinAverage').value || null,
+        fail_action: document.getElementById('ruleFailAction').value,
+    };
+    if (!payload.name || !payload.source_section_id || !payload.dest_section_id) {
+        return alert('Please fill in all required fields.');
+    }
+    try {
+        const url = id ? `/api/promotion/rules/${id}` : '/api/promotion/rules';
+        const resp = await fetch(url, { method: id ? 'PUT' : 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+        const data = await resp.json();
+        if (!data.success) return alert(data.message);
+        hideRuleForm();
+        await loadRules();
+    } catch (e) { alert('Error saving rule: ' + e.message); }
+}
+
+async function deleteRule(id) {
+    if (!confirm('Delete this rule?')) return;
+    try {
+        const resp = await fetch(`/api/promotion/rules/${id}`, { method: 'DELETE' });
+        const data = await resp.json();
+        if (!data.success) return alert(data.message);
+        await loadRules();
+    } catch (e) { alert('Error: ' + e.message); }
+}
+
+// ─── Preview ────────────────────────────────────────────
+async function runPreview() {
+    const source = document.getElementById('previewSourceSession').value.trim();
+    const dest = document.getElementById('previewDestSession').value.trim();
+    if (!source || !dest) return alert('Enter both source and destination sessions.');
+    if (source === dest) return alert('Source and destination sessions must differ.');
+
+    const btn = document.getElementById('previewBtn');
+    btn.disabled = true; btn.innerHTML = '<span class="material-symbols-outlined text-lg align-middle mr-1 animate-spin">progress_activity</span> Evaluating...';
+    overrides = {};
+
+    try {
+        const resp = await fetch('/api/promotion/preview', {
+            method: 'POST', headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({ source_session: source, dest_session: dest })
+        });
+        const data = await resp.json();
+        if (!data.success) return alert(data.message);
+        previewData = data;
+        renderPreview(data);
+        document.getElementById('previewSummary').classList.remove('hidden');
+        document.querySelector('.tab-btn[data-tab="execute"]').disabled = false;
+    } catch (e) { alert('Error: ' + e.message); }
+    finally { btn.disabled = false; btn.innerHTML = '<span class="material-symbols-outlined text-lg align-middle mr-1">visibility</span> Run Preview'; }
+}
+
+function renderPreview(data) {
+    document.getElementById('countPromoted').textContent = data.summary.promoted;
+    document.getElementById('countRepeated').textContent = data.summary.repeated;
+    document.getElementById('countWithdrawn').textContent = data.summary.withdrawn;
+    document.getElementById('countNoRule').textContent = data.summary.no_rule;
+
+    const container = document.getElementById('previewResults');
+    const sections = [
+        { title: 'Promoted', key: 'promoted', cls: 'promoted', color: 'green' },
+        { title: 'Repeated', key: 'repeated', cls: 'repeated', color: 'yellow' },
+        { title: 'Withdrawn', key: 'withdrawn', cls: 'withdrawn', color: 'red' },
+        { title: 'No Rule Match', key: 'no_rule', cls: 'no-rule', color: 'gray' },
+    ];
+    container.innerHTML = sections.map(s => {
+        const items = data[s.key];
+        if (!items.length) return '';
+        return `
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4">
+                <h4 class="font-bold text-gray-900 dark:text-white text-sm mb-3">${s.title} (${items.length})</h4>
+                <div class="space-y-2">
+                    ${items.map(st => renderStudentRow(st, s.cls)).join('')}
+                </div>
+            </div>`;
+    }).join('');
+}
+
+function renderStudentRow(st, cls) {
+    const overrideKey = st.student_id;
+    const isOverridden = overrides[overrideKey];
+    const actionLabel = isOverridden ? `Overridden → ${overrides[overrideKey].action}` : st.action;
+    return `
+        <div class="student-row ${cls}" id="row-${st.student_id}">
+            <div class="flex-1 min-w-0">
+                <p class="text-sm font-semibold text-gray-900 dark:text-white truncate">${esc(st.student_name)} <span class="text-gray-400 font-normal">(${esc(st.admission_number || '-')})</span></p>
+                <p class="text-xs text-gray-500 dark:text-gray-400">${esc(st.source_class_name)} | Avg: <strong>${st.average != null ? st.average + '%' : 'N/A'}</strong>${st.min_average != null ? ` (min: ${st.min_average}%)` : ''}</p>
+            </div>
+            <div class="flex items-center gap-2 ml-3">
+                <span class="text-xs font-medium px-2 py-1 rounded-full ${cls === 'promoted' ? 'bg-green-100 text-green-700' : cls === 'repeated' ? 'bg-yellow-100 text-yellow-700' : cls === 'withdrawn' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-600'}">${actionLabel}</span>
+                <select onchange="applyOverride('${st.student_id}', this.value)" class="text-xs rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 px-1.5 py-1">
+                    <option value="">Keep</option>
+                    <option value="promoted">Promote</option>
+                    <option value="repeated">Repeat</option>
+                    <option value="withdrawn">Withdraw</option>
+                </select>
+            </div>
+        </div>`;
+}
+
+function applyOverride(studentId, action) {
+    if (!action) { delete overrides[studentId]; return; }
+    // Find the student in preview data
+    let student = null;
+    for (const key of ['promoted','repeated','withdrawn','no_rule']) {
+        student = previewData[key].find(s => s.student_id === studentId);
+        if (student) break;
+    }
+    if (!student) return;
+    overrides[studentId] = { ...student, action };
+    // Re-render the affected sections
+    // Rebuild preview data with overrides applied
+    applyOverridesToPreview();
+    renderPreview(previewData);
+}
+
+function applyOverridesToPreview() {
+    // Reset
+    const all = [...previewData.promoted, ...previewData.repeated, ...previewData.withdrawn, ...previewData.no_rule];
+    previewData.promoted = [];
+    previewData.repeated = [];
+    previewData.withdrawn = [];
+    previewData.no_rule = [];
+    for (const st of all) {
+        const ov = overrides[st.student_id];
+        const entry = ov || st;
+        const action = entry.action || st.action;
+        if (action === 'promoted') previewData.promoted.push({ ...st, ...ov, action: 'promoted' });
+        else if (action === 'repeated') previewData.repeated.push({ ...st, ...ov, action: 'repeated' });
+        else if (action === 'withdrawn') previewData.withdrawn.push({ ...st, ...ov, action: 'withdrawn' });
+        else previewData.no_rule.push({ ...st, ...ov, action: 'manual' });
+    }
+    previewData.summary = {
+        total: all.length,
+        promoted: previewData.promoted.length,
+        repeated: previewData.repeated.length,
+        withdrawn: previewData.withdrawn.length,
+        no_rule: previewData.no_rule.length,
+    };
+}
+
+// ─── Execute ────────────────────────────────────────────
+function renderExecuteTab() {
+    if (!previewData) return;
+    document.getElementById('executeEmpty').classList.add('hidden');
+    document.getElementById('executeContent').classList.remove('hidden');
+
+    const s = previewData.summary;
+    document.getElementById('executeSummary').innerHTML = `
+        <div class="bg-green-50 dark:bg-green-900/20 p-3 rounded-lg text-center"><p class="text-xs text-green-700 dark:text-green-400 font-medium">Promoted</p><p class="text-xl font-bold text-green-700 dark:text-green-400">${s.promoted}</p></div>
+        <div class="bg-yellow-50 dark:bg-yellow-900/20 p-3 rounded-lg text-center"><p class="text-xs text-yellow-700 dark:text-yellow-400 font-medium">Repeated</p><p class="text-xl font-bold text-yellow-700 dark:text-yellow-400">${s.repeated}</p></div>
+        <div class="bg-red-50 dark:bg-red-900/20 p-3 rounded-lg text-center"><p class="text-xs text-red-700 dark:text-red-400 font-medium">Withdrawn</p><p class="text-xl font-bold text-red-700 dark:text-red-400">${s.withdrawn}</p></div>
+        <div class="bg-gray-50 dark:bg-gray-700 p-3 rounded-lg text-center"><p class="text-xs text-gray-600 dark:text-gray-400 font-medium">Total</p><p class="text-xl font-bold text-gray-700 dark:text-gray-300">${s.total}</p></div>
+    `;
+
+    const all = [...previewData.promoted, ...previewData.repeated, ...previewData.withdrawn];
+    document.getElementById('executeDecisions').innerHTML = all.map(st => `
+        <div class="student-row ${st.action}" style="font-size: 12px;">
+            <span class="font-semibold text-gray-900 dark:text-white">${esc(st.student_name)}</span>
+            <span class="text-gray-500">${esc(st.source_class_name)} → ${st.action === 'promoted' ? esc(st.dest_class_name || 'Auto') : st.action === 'repeated' ? 'Same class' : 'Withdrawn'}</span>
+        </div>
+    `).join('');
+}
+
+async function executePromotion() {
+    if (!previewData) return;
+    const source = document.getElementById('previewSourceSession').value.trim();
+    const dest = document.getElementById('previewDestSession').value.trim();
+    if (!confirm(`This will promote ${previewData.summary.total} students from ${source} to ${dest}. This action can be reversed later. Continue?`)) return;
+
+    const all = [...previewData.promoted, ...previewData.repeated, ...previewData.withdrawn, ...previewData.no_rule];
+    const decisions = all.map(st => {
+        const ov = overrides[st.student_id];
+        const action = ov ? ov.action : st.action;
+        return {
+            student_id: st.student_id,
+            source_class_id: st.source_class_id,
+            action: action,
+            rule_id: st.rule_id || null,
+            dest_class_id: ov?.dest_class_id || st.dest_class_id || null,
+            meets_criteria: st.meets_criteria,
+            is_override: !!ov,
+            override_reason: ov?.override_reason || null,
+        };
+    }).filter(d => d.action && d.action !== 'manual');
+
+    try {
+        const resp = await fetch('/api/promotion/execute', {
+            method: 'POST', headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({ source_session: source, dest_session: dest, decisions })
+        });
+        const data = await resp.json();
+        if (!data.success) return alert(data.message);
+        alert(data.message);
+        previewData = null;
+        overrides = {};
+        document.getElementById('previewSummary').classList.add('hidden');
+        document.getElementById('executeContent').classList.add('hidden');
+        document.getElementById('executeEmpty').classList.remove('hidden');
+        document.querySelector('.tab-btn[data-tab="execute"]').disabled = true;
+        switchTab('history');
+    } catch (e) { alert('Error: ' + e.message); }
+}
+
+// ─── History ────────────────────────────────────────────
+async function loadHistory() {
+    try {
+        const resp = await fetch('/api/promotion/history');
+        const data = await resp.json();
+        if (!data.success) return;
+        renderHistory(data.batches);
+    } catch (e) { console.error('Failed to load history', e); }
+}
+
+function renderHistory(batches) {
+    const container = document.getElementById('historyList');
+    if (!batches.length) {
+        container.innerHTML = '<p class="text-gray-500 dark:text-gray-400 text-sm text-center py-8">No promotion history yet.</p>';
+        return;
+    }
+    container.innerHTML = batches.map(b => `
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4">
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-3">
+                <div>
+                    <h4 class="font-bold text-gray-900 dark:text-white text-sm">${esc(b.name)}</h4>
+                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                        <span class="px-2 py-0.5 rounded-full text-xs font-semibold ${b.status === 'completed' ? 'bg-green-100 text-green-700' : b.status === 'reversed' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-600'}">${b.status}</span>
+                        &nbsp;| ${b.promoted_count} promoted, ${b.repeated_count} repeated, ${b.withdrawn_count} withdrawn
+                        &nbsp;| By ${esc(b.executor_name || 'System')} ${b.executed_at ? 'on ' + new Date(b.executed_at).toLocaleDateString() : ''}
+                    </p>
+                </div>
+                <div class="flex gap-2">
+                    <button onclick="viewBatch('${b.id}')" class="px-3 py-1.5 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-lg text-xs font-semibold hover:bg-blue-100 dark:hover:bg-blue-900/50 transition">View Details</button>
+                    ${b.status === 'completed' ? `<button onclick="reverseBatch('${b.id}')" class="px-3 py-1.5 bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-lg text-xs font-semibold hover:bg-red-100 dark:hover:bg-red-900/50 transition">Reverse</button>` : ''}
+                </div>
+            </div>
+        </div>
+    `).join('');
+}
+
+async function viewBatch(batchId) {
+    try {
+        const resp = await fetch(`/api/promotion/history/${batchId}`);
+        const data = await resp.json();
+        if (!data.success) return alert(data.message);
+        const details = data.promotions.map(p => `
+            <div class="student-row ${p.action}" style="font-size:12px;">
+                <span class="font-semibold text-gray-900 dark:text-white">${esc(p.student_name || p.student_id)}</span>
+                <span class="text-gray-500">${esc(p.source_class_name || '?')} → ${p.action === 'promoted' ? esc(p.dest_class_name || '?') : p.action}</span>
+            </div>
+        `).join('');
+        const w = window.open('', '_blank', 'width=700,height=600');
+        w.document.write(`<html><head><title>Promotion Details</title><style>body{font-family:system-ui;padding:20px;} .row{display:flex;justify-content:space-between;padding:8px 12px;margin:4px 0;border-radius:6px;border:1px solid #e5e7eb;font-size:13px;} .promoted{border-left:4px solid #10b981;} .repeated{border-left:4px solid #f59e0b;} .withdrawn{border-left:4px solid #ef4444;} h2{margin-bottom:12px;}</style></head><body><h2>Promotion Batch Details</h2>${details}</body></html>`);
+    } catch (e) { alert('Error: ' + e.message); }
+}
+
+async function reverseBatch(batchId) {
+    if (!confirm('This will reverse the entire promotion batch and restore old class assignments. Continue?')) return;
+    try {
+        const resp = await fetch(`/api/promotion/reverse/${batchId}`, { method: 'POST' });
+        const data = await resp.json();
+        if (!data.success) return alert(data.message);
+        alert(data.message);
+        await loadHistory();
+    } catch (e) { alert('Error: ' + e.message); }
+}
+
+// ─── Helpers ────────────────────────────────────────────
+function esc(s) { if (!s) return ''; const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
+// Boot
+init();
+</script>
+
+{% endblock %}

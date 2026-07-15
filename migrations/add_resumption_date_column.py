@@ -22,7 +22,7 @@ def upgrade():
                 db.session.rollback()
                 # Column might already exist
                 if "duplicate" in str(e).lower() or "already exists" in str(e).lower():
-                    # print("✓ resumption_date column already exists")
+                    pass  # column already exists
                 else:
                     raise e
             # print("✓ Added resumption_date column to report_config table")
@@ -47,6 +47,6 @@ if __name__ == "__main__":
     # print("Running migration: Add resumption_date column to report_config table")
     success = upgrade()
     if success:
-        # print("Migration completed successfully!")
+        pass  # migration complete
     else:
-        # print("Migration failed!")
+        pass  # migration failed

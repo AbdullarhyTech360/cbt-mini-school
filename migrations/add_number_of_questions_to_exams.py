@@ -58,6 +58,11 @@ def migrate():
             conn.close()
         return False
 
+def upgrade():
+    """Run the number_of_questions migration."""
+    return migrate()
+
+
 if __name__ == "__main__":
     # print("=" * 60)
     # print("Database Migration: Add number_of_questions to exams table")
@@ -66,10 +71,8 @@ if __name__ == "__main__":
     success = migrate()
     
     if success:
-        # print("\n✓ Migration completed successfully!")
-        # print("You can now restart your Flask application.")
+        pass  # migration complete
     else:
-        # print("\n✗ Migration failed!")
-        # print("Please check the error messages above.")
+        pass  # migration failed
     
     # print("=" * 60)

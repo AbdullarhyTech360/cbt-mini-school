@@ -60,14 +60,14 @@ def run_migration():
             traceback.print_exc()
             return False
 
+def upgrade():
+    """Run the show results permission migration."""
+    return run_migration()
+
+
 if __name__ == "__main__":
     success = run_migration()
     if success:
-        # print("\n✓ Migration completed successfully!")
-        # print("\nNext steps:")
-        # print("1. Restart your server")
-        # print("2. Go to Admin → Settings → Permissions")
-        # print("3. Enable 'Show Results Immediately' if desired")
-        # print("4. Students will see results after submission when enabled")
+        pass  # migration complete
     else:
-        # print("\n✗ Migration failed!")
+        pass  # migration failed

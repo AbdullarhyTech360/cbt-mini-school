@@ -32,6 +32,12 @@ class GradeScale(db.Model):
     
     # Relationships
     school = db.relationship("School", backref="grade_scales")
+    sections = db.relationship(
+        "Section",
+        secondary="grade_scale_section",
+        backref=db.backref("grade_scales", lazy="dynamic"),
+        lazy="joined",
+    )
     
     def get_grade_ranges(self):
         """Parse and return grade ranges"""
@@ -74,6 +80,8 @@ class GradeScale(db.Model):
             "grade_ranges": self.get_grade_ranges(),
             "is_active": self.is_active,
             "is_default": self.is_default,
+            "section_ids": [s.section_id for s in self.sections],
+            "section_names": [s.name for s in self.sections],
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
         }

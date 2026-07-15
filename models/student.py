@@ -16,6 +16,7 @@ class Student(db.Model):
     blood_group = db.Column(db.String(5), nullable=True)
     address = db.Column(db.Text, nullable=True)
     performance = db.Column(db.Float, nullable=True)
+    is_class_rep = db.Column(db.Boolean, default=False)
     
 
     def full_name(self):

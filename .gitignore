@@ -16,9 +16,11 @@ __pycache__/
 /designs
 /dist
 /build
-# /sketch
+/sketch
 
 # Uploaded files (keep directory structure but ignore uploaded content)
 static/uploads/*
 !static/uploads/.gitkeep
 !static/uploads/school_logos/.gitkeep
+
+/AGENTS.md

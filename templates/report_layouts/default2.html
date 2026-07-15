@@ -309,6 +309,7 @@
         {% set assessment_types = report_data.assessment_types %}
         {% set grade_scale = report_data.grade_scale %}
         {% set trait_scores = report_data.trait_scores|default({}) %}
+        {% set trait_definitions = report_data.trait_definitions|default([]) %}
         {% set position = report_data.position %}
         {% set total_students = report_data.total_students %}
         {% set config = report_data.config %}
@@ -454,31 +455,11 @@
                         </tr>
                     </thead>
                     <tbody>
-                        {% set psychomotor_behaviours = [
-                            'Punctuality',
-                            'Class Attendance',
-                            'Carrying out Assignment',
-                            'Neatness',
-                            'Politeness',
-                            'Relationship with Staff',
-                            'Relationship with Students',
-                            'Attentiveness',
-                            'Initiative',
-                            'Emotional Stability',
-                            'Attitude to Study',
-                            'Attitude to school',
-                            'Attitude to Property',
-                            'Club and Society',
-                            'Games and sports'
-                        ] %}
-                        {% set trait_values = trait_scores.values()|list %}
-                        {% for behaviour in psychomotor_behaviours %}
+                        {% for trait in trait_definitions %}
                         <tr>
-                            <td>{{ behaviour }}</td>
+                            <td>{{ trait.name }}</td>
                             <td>
-                                {% if trait_values[loop.index0] is defined %}
-                                    {{ trait_values[loop.index0] }}
-                                {% endif %}
+                                {{ trait_scores.get(trait.name, '') }}
                             </td>
                         </tr>
                         {% endfor %}

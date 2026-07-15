@@ -88,15 +88,6 @@ if __name__ == '__main__':
     success = upgrade()
     # print("-" * 50)
     if success:
-        # print("Migration complete!")
-        # print("\nYour CBT system now supports:")
-        # print("- Mathematical equations (LaTeX)")
-        # print("- Scientific notation")
-        # print("- Images in questions and options")
-        # print("- Unicode symbols (√, ∑, ∫, π, etc.)")
-        # print("\nNext steps:")
-        # print("1. Update routes/student_routes.py (see MANUAL_UPDATE_REQUIRED.md)")
-        # print("2. Restart your application")
-        # print("3. Test with sample questions")
+        pass  # migration complete
     else:
-        # print("Migration failed. Please check the error messages above.")
+        pass  # migration failed

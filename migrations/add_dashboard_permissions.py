@@ -75,7 +75,10 @@ def add_dashboard_permissions():
     }
 
 
+def upgrade():
+    """Run the dashboard permissions migration."""
+    add_dashboard_permissions()
+
+
 if __name__ == "__main__":
-    # print("This migration should be run from app.py")
-    # print("Usage: from migrations.add_dashboard_permissions import add_dashboard_permissions")
-    # print("       add_dashboard_permissions()")
+    pass

@@ -1208,10 +1208,25 @@ def get_default_grade_scale():
         school_id=school.school_id, is_default=True
     ).first()
 
+    # Auto-create a default grade scale if none exists
     if not default_scale:
-        return jsonify(
-            {"success": False, "error": "Default grade scale not found"}
-        ), 404
+        default_ranges = [
+            {"min": 70, "max": 100, "label": "A", "description": "Excellent"},
+            {"min": 59, "max": 69,  "label": "B", "description": "Very Good"},
+            {"min": 40, "max": 58,  "label": "C", "description": "Good"},
+            {"min": 30, "max": 39,  "label": "D", "description": "Fair"},
+            {"min": 0,  "max": 29,  "label": "F", "description": "Fail"},
+        ]
+        default_scale = GradeScale(
+            school_id=school.school_id,
+            name="Default Grade Scale",
+            description="Standard A-F grading scale",
+            is_active=True,
+            is_default=True,
+        )
+        default_scale.set_grade_ranges(default_ranges)
+        db.session.add(default_scale)
+        db.session.commit()
 
     return jsonify({"success": True, "scale": default_scale.to_dict()})
 
@@ -1222,6 +1237,7 @@ def create_grade_scale():
     """Create a new grade scale"""
     try:
         from models.grade_scale import GradeScale
+        from models.section import Section
         from models.school import School
 
         data = request.get_json()
@@ -1248,7 +1264,18 @@ def create_grade_scale():
                 school_id=school.school_id, is_default=True
             ).update({"is_default": False})
 
+        # Set section assignments
+        section_ids = data.get("section_ids", [])
+
         db.session.add(scale)
+        db.session.flush()  # Flush to get scale_id before setting relationships
+
+        if section_ids:
+            sections = Section.query.filter(
+                Section.section_id.in_(section_ids)
+            ).all()
+            scale.sections = sections
+
         db.session.commit()
 
         return jsonify(
@@ -1270,6 +1297,7 @@ def update_grade_scale(scale_id):
     """Update a grade scale"""
     try:
         from models.grade_scale import GradeScale
+        from models.section import Section
 
         data = request.get_json()
         scale = GradeScale.query.get(scale_id)
@@ -1302,6 +1330,14 @@ def update_grade_scale(scale_id):
                     GradeScale.scale_id != scale_id,
                     GradeScale.is_default == True,
                 ).update({"is_default": False})
+
+        # Update section assignments
+        if "section_ids" in data:
+            section_ids = data["section_ids"]
+            sections = Section.query.filter(
+                Section.section_id.in_(section_ids)
+            ).all()
+            scale.sections = sections
 
         db.session.commit()
 

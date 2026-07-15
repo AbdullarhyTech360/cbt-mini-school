@@ -145,6 +145,8 @@ document.addEventListener('DOMContentLoaded', function() {
             const group = this.getAttribute('data-group');
             const academicYear = this.getAttribute('data-academic-year');
             const isActive = this.getAttribute('data-is-active') === 'true';
+            const classRepId = this.getAttribute('data-class-rep') || '';
+            const classRepName = this.getAttribute('data-class-rep-name') || '';
             
             // Populate edit form
             document.getElementById('editClassId').value = classId;
@@ -157,6 +159,29 @@ document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('editAcademicYear').value = academicYear || '';
             document.getElementById('editIsActive').checked = isActive;
             document.getElementById('editClassNamePreview').textContent = className;
+
+            // Set class rep
+            const repIdInput = document.getElementById('editClassRepId');
+            const repSearchInput = document.getElementById('editClassRepSearch');
+            const repSelectedDiv = document.getElementById('editClassRepSelected');
+            const repNameSpan = document.getElementById('editClassRepName');
+            const repDropdown = document.getElementById('editClassRepDropdown');
+            
+            repIdInput.value = classRepId;
+            repSearchInput.value = '';
+            repDropdown.classList.add('hidden');
+            
+            if (classRepId && classRepName) {
+                repSelectedDiv.classList.remove('hidden');
+                repNameSpan.textContent = classRepName;
+                repSearchInput.placeholder = 'Search to change...';
+            } else {
+                repSelectedDiv.classList.add('hidden');
+                repSearchInput.placeholder = 'Search by name, admission number, or username...';
+            }
+
+            // Store current class_id for student search
+            repSearchInput.setAttribute('data-class-id', classId);
 
             // Attach listeners for live updates in edit modal
             ['editSectionId','editLevel','editGroup'].forEach(id => {
@@ -264,6 +289,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const group = document.getElementById('editGroup').value;
         const academicYear = document.getElementById('editAcademicYear').value;
         const isActive = document.getElementById('editIsActive').checked;
+        const classRepId = document.getElementById('editClassRepId').value;
 
         const data = {
             class_name: className,
@@ -274,7 +300,8 @@ document.addEventListener('DOMContentLoaded', function() {
             level: level,
             group: group,
             academic_year: academicYear,
-            is_active: isActive
+            is_active: isActive,
+            class_rep_id: classRepId || null
         };
 
         fetch(`/admin/update/class/${classId}`, {
@@ -329,6 +356,82 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     });
+
+    // Class rep search functionality
+    const editClassRepSearch = document.getElementById('editClassRepSearch');
+    const editClassRepDropdown = document.getElementById('editClassRepDropdown');
+    const editClassRepId = document.getElementById('editClassRepId');
+    const editClassRepSelected = document.getElementById('editClassRepSelected');
+    const editClassRepName = document.getElementById('editClassRepName');
+    const editClearClassRep = document.getElementById('editClearClassRep');
+    let classRepSearchTimeout = null;
+
+    if (editClassRepSearch) {
+        editClassRepSearch.addEventListener('input', function() {
+            const query = this.value.trim();
+            clearTimeout(classRepSearchTimeout);
+
+            if (query.length < 2) {
+                editClassRepDropdown.classList.add('hidden');
+                return;
+            }
+
+            const classId = this.getAttribute('data-class-id');
+            classRepSearchTimeout = setTimeout(() => {
+                fetch(`/admin/api/students/search?q=${encodeURIComponent(query)}&class_id=${classId}`)
+                    .then(res => res.json())
+                    .then(data => {
+                        editClassRepDropdown.innerHTML = '';
+                        const students = data.students || [];
+                        if (!data.success || students.length === 0) {
+                            editClassRepDropdown.innerHTML = '<div class="px-4 py-3 text-sm text-gray-500">No students found</div>';
+                            editClassRepDropdown.classList.remove('hidden');
+                            return;
+                        }
+                        students.forEach(student => {
+                            const item = document.createElement('div');
+                            item.className = 'px-4 py-3 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer border-b border-gray-100 dark:border-gray-700 last:border-0';
+                            const fullName = `${student.first_name} ${student.last_name}`;
+                            item.innerHTML = `
+                                <div class="flex items-center gap-3">
+                                    <span class="material-symbols-outlined text-gray-400">person</span>
+                                    <div>
+                                        <div class="font-medium text-gray-800 dark:text-white">${fullName}</div>
+                                        <div class="text-xs text-gray-500 dark:text-gray-400">${student.admission_number || student.username}</div>
+                                    </div>
+                                </div>
+                            `;
+                            item.addEventListener('click', () => {
+                                editClassRepId.value = student.id;
+                                editClassRepName.textContent = fullName;
+                                editClassRepSelected.classList.remove('hidden');
+                                editClassRepSearch.value = '';
+                                editClassRepSearch.placeholder = 'Search to change...';
+                                editClassRepDropdown.classList.add('hidden');
+                            });
+                            editClassRepDropdown.appendChild(item);
+                        });
+                        editClassRepDropdown.classList.remove('hidden');
+                    });
+            }, 300);
+        });
+
+        // Close dropdown on outside click
+        document.addEventListener('click', function(e) {
+            if (!editClassRepSearch.contains(e.target) && !editClassRepDropdown.contains(e.target)) {
+                editClassRepDropdown.classList.add('hidden');
+            }
+        });
+    }
+
+    if (editClearClassRep) {
+        editClearClassRep.addEventListener('click', function() {
+            editClassRepId.value = '';
+            editClassRepSelected.classList.add('hidden');
+            editClassRepName.textContent = '';
+            editClassRepSearch.placeholder = 'Search by name, reg number, or username...';
+        });
+    }
 
     // Create class form submission
     document.getElementById('createClassForm')?.addEventListener('submit', function(e) {

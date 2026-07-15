@@ -1029,8 +1029,8 @@ async function refreshCanvasPreview() {
     await previewClassListPDF();
     return;
   }
-  // Recording sheet data has `assessment_types` array - use recording preview
-  if (window.currentPreviewData.assessment_types && typeof previewRecordingSheet === 'function') {
+  // Recording sheet data has `metadata` property - use recording preview
+  if (window.currentPreviewData.metadata && typeof previewRecordingSheet === 'function') {
     await previewRecordingSheet();
     return;
   }
@@ -1046,8 +1046,8 @@ async function downloadFromPreview() {
       await printClassList();
       return;
     }
-    // Recording sheet data has `assessment_types` array - use recording download
-    if (window.currentPreviewData.assessment_types && typeof printRecordingSheet === 'function') {
+    // Recording sheet data has `metadata` property - use recording download
+    if (window.currentPreviewData.metadata && typeof printRecordingSheet === 'function') {
       await printRecordingSheet();
       return;
     }
