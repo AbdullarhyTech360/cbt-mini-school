@@ -4004,6 +4004,7 @@ Include context field for tables, diagrams, formulas referenced in questions."""
                     end_date=term_end_date,
                     academic_session=academic_session,
                     school_id=school.school_id,
+                    open_days=data.get("open_days"),
                 )
                 # check if term already exists
                 if SchoolTerm.query.filter_by(term_name=term_name).first():
@@ -4026,6 +4027,7 @@ Include context field for tables, diagrams, formulas referenced in questions."""
                         "end_date": term.end_date.strftime("%Y-%m-%d"),
                         "is_active": term.is_active,
                         "is_current": term.is_current,
+                        "open_days": term.open_days,
                     },
                 }
 
@@ -4040,7 +4042,6 @@ Include context field for tables, diagrams, formulas referenced in questions."""
                 return jsonify(body), 500
 
         terms = SchoolTerm.query.all()
-        # print("Terms:", terms)
         body = {
             "success": True,
             "terms": [
@@ -4052,6 +4053,7 @@ Include context field for tables, diagrams, formulas referenced in questions."""
                     "end_date": term.end_date.strftime("%Y-%m-%d"),
                     "is_active": term.is_active,
                     "is_current": term.is_current,
+                    "open_days": term.open_days,
                 }
                 for term in terms
             ],
@@ -4086,6 +4088,10 @@ Include context field for tables, diagrams, formulas referenced in questions."""
                 term.end_date = datetime.strptime(
                     data.get("end_date"), "%Y-%m-%d")
 
+            # Update open_days if provided
+            if "open_days" in data:
+                term.open_days = data.get("open_days")
+
             # If setting as current, unset other current terms
             if data.get("is_current"):
                 SchoolTerm.query.filter(SchoolTerm.term_id != term_id).update(
@@ -4107,6 +4113,7 @@ Include context field for tables, diagrams, formulas referenced in questions."""
                             "end_date": term.end_date.strftime("%Y-%m-%d"),
                             "is_active": term.is_active,
                             "is_current": term.is_current,
+                            "open_days": term.open_days,
                         },
                     }
                 ),

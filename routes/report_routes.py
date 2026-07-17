@@ -94,6 +94,22 @@ def admin_or_staff_required(f):
     return decorated_function
 
 
+def _rewrite_static_urls(html_string):
+    """Rewrite /static/ paths to file:/// URLs for WeasyPrint local font loading."""
+    import re
+
+    # Resolve static folder from project root (no Flask context needed)
+    _project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    static_folder = os.path.join(_project_root, "static").replace("\\", "/")
+    # Replace /static/... with file:///absolute/path/static/...
+    html_string = re.sub(
+        r'(url\(["\']?)/static/',
+        rf'\1file:///{static_folder}/',
+        html_string,
+    )
+    return html_string
+
+
 @report_bp.route("/config")
 @admin_or_staff_required
 def report_config_page():
@@ -203,6 +219,10 @@ def create_config():
         if "custom_data_fields" in data:
             config.set_custom_data_fields(data["custom_data_fields"])
 
+        # Set school fees
+        if "next_term_fees" in data:
+            config.next_term_fees = data["next_term_fees"] or None
+
         # If this is set as default, unset other defaults
         if config.is_default:
             ReportConfig.query.filter_by(
@@ -277,6 +297,10 @@ def update_config(config_id):
         # Update custom data fields
         if "custom_data_fields" in data:
             config.set_custom_data_fields(data["custom_data_fields"])
+
+        # Update school fees
+        if "next_term_fees" in data:
+            config.next_term_fees = data["next_term_fees"] or None
 
         # If this is set as default, unset other defaults
         if config.is_default:
@@ -822,6 +846,7 @@ def download_single_pdf():
                         _base = request.host_url
                     except RuntimeError:
                         _base = ''
+                    html_string = _rewrite_static_urls(html_string)
                     pdf_bytes = HTML(string=html_string, base_url=_base).write_pdf(
                         optimize_size=("fonts", "images"),  # Compress fonts & images
                         presentational_hints=True,  # Use CSS efficiently
@@ -830,8 +855,8 @@ def download_single_pdf():
                         javascript=False,
                         # Reduce DPI for faster rendering
                         resolution=60,  # Even lower DPI for faster rendering
-                        # Disable embedded fonts for faster processing
-                        embed_fonts=False,
+                        # Enable font embedding so custom fonts appear in PDF
+                        embed_fonts=True,
                         # Disable smart anchors for faster processing
                         smart_quotes=False,
                         # Disable attachments for faster processing
@@ -1061,6 +1086,7 @@ def download_class_pdf():
                         _base_cls = request.host_url
                     except RuntimeError:
                         _base_cls = ''
+                    html_string = _rewrite_static_urls(html_string)
                     pdf_bytes = HTML(string=html_string, base_url=_base_cls).write_pdf(
                         optimize_size=("fonts", "images"),  # Compress fonts & images
                         presentational_hints=True,  # Use CSS efficiently
@@ -1069,8 +1095,8 @@ def download_class_pdf():
                         javascript=False,
                         # Reduce DPI for faster rendering
                         resolution=60,  # Even lower DPI for faster rendering
-                        # Disable embedded fonts for faster processing
-                        embed_fonts=False,
+                        # Enable font embedding so custom fonts appear in PDF
+                        embed_fonts=True,
                         # Disable smart anchors for faster processing
                         smart_quotes=False,
                         # Disable attachments for faster processing
@@ -2388,7 +2414,11 @@ def export_broad_sheet_pdf(
         )
 
         # Convert to PDF
-        pdf_bytes = HTML(string=html_content).write_pdf()
+        html_content = _rewrite_static_urls(html_content)
+        pdf_bytes = HTML(string=html_content, base_url=request.host_url).write_pdf(
+            embed_fonts=True,
+            presentational_hints=True,
+        )
 
         # Create filename
         class_name = metadata["class_name"].replace(" ", "_")
@@ -3363,12 +3393,13 @@ def download_recording_sheet_pdf():
         except (ImportError, OSError) as e:
             return jsonify({"success": False, "error": f"WeasyPrint import failed: {e}"}), 500
 
-        pdf_bytes = HTML(string=html).write_pdf(
+        html = _rewrite_static_urls(html)
+        pdf_bytes = HTML(string=html, base_url=request.host_url).write_pdf(
             optimize_size=("fonts", "images"),
             presentational_hints=True,
             javascript=False,
             uncompressed_pdf=False,
-            embed_fonts=False,
+            embed_fonts=True,
         )
 
         filename = f"Recording_Sheet_{metadata.get('class_name', 'Unknown').replace(' ', '_')}.pdf"

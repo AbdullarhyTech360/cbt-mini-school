@@ -14,7 +14,7 @@ class ReportConfig(db.Model):
     # School and term association
     school_id = db.Column(db.String(36), db.ForeignKey("school.school_id"), nullable=False)
     term_id = db.Column(db.String(36), db.ForeignKey("school_term.term_id"), nullable=True)
-    class_room_id = db.Column(db.String(36), db.ForeignKey("class_room.class_room_id"), nullable=True)
+    class_room_id = db.Column(db.String(500), nullable=True)
     section_id = db.Column(db.String(36), db.ForeignKey("section.section_id"), nullable=True)
     
     # Configuration name
@@ -51,6 +51,9 @@ class ReportConfig(db.Model):
     # Example: {"template": "modern_portrait", "page_settings": {...}, "sections": [...]}
     layout_config = db.Column(db.Text, nullable=True)
     
+    # School fees for next term (free-text to allow notes like "₦45,000 including hostel")
+    next_term_fees = db.Column(db.String(300), nullable=True)
+
     # Custom data fields (stored as JSON)
     # Example: [{"field_name": "attendance", "data_type": "number", "label": "Days Present"}]
     custom_data_fields = db.Column(db.Text, nullable=True)
@@ -58,7 +61,7 @@ class ReportConfig(db.Model):
     # Relationships
     school = db.relationship("School", backref="report_configs")
     term = db.relationship("SchoolTerm", backref="report_configs")
-    class_room = db.relationship("ClassRoom", backref="report_configs")
+    # class_room removed — class_room_id now stores comma-separated IDs
     section = db.relationship("Section", backref="report_configs")
     # Add relationship to GradeScale
     grade_scale = db.relationship("GradeScale", backref="report_configs")
@@ -138,6 +141,7 @@ class ReportConfig(db.Model):
             "grade_scale_id": self.grade_scale_id,
             "layout_config": self.get_layout_config(),
             "custom_data_fields": self.get_custom_data_fields(),
+            "next_term_fees": self.next_term_fees or "",
             "is_active": self.is_active,
             "is_default": self.is_default,
             "created_at": self.created_at.isoformat() if self.created_at else None,

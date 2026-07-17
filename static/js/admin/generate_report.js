@@ -2,6 +2,7 @@ let currentStudents = [];
 let currentFilters = {};
 let currentReportData = null;
 let subjectOrderSortable = null;
+let availableConfigs = [];
 
 document.addEventListener("DOMContentLoaded", () => {
   loadTerms();
@@ -16,6 +17,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const classId = classFilter.value;
       if (classId) {
         loadSubjectOrder(classId);
+        autoSelectConfigForClass(classId);
       } else {
         document.getElementById("subjectOrderPanel").classList.add("hidden");
       }
@@ -489,6 +491,7 @@ async function loadConfigs() {
     const data = await response.json();
 
     if (data.success) {
+      availableConfigs = data.configs;
       select.innerHTML = '<option value="">Default</option>';
       data.configs.forEach((config) => {
         const option = document.createElement("option");
@@ -510,31 +513,26 @@ async function loadConfigs() {
   }
 }
 
+function autoSelectConfigForClass(classId) {
+  const select = document.getElementById("configFilter");
+  if (!select || !availableConfigs.length) return;
+
+  const matching = availableConfigs.filter((cfg) => {
+    if (!cfg.class_room_id) return false;
+    const ids = cfg.class_room_id.split(",").map((s) => s.trim());
+    return ids.includes(classId);
+  });
+
+  if (matching.length === 0) return;
+
+  const best = matching.find((c) => c.is_default) || matching[0];
+  select.value = best.config_id;
+}
+
 async function loadLayoutStyles() {
   const select = document.getElementById("layoutStyleFilter");
   if (!select) return;
-  select.innerHTML = '<option value="">Loading...</option>';
-  select.disabled = true;
-  try {
-    const response = await fetch("/reports/api/configs");
-    const data = await response.json();
-    if (data.success) {
-      select.innerHTML = '<option value="">Default</option><option value="default2">Classic Nigerian (Default 2)</option><option value="default3">Standard Default 3</option>';
-      data.configs.forEach((config) => {
-        const option = document.createElement("option");
-        option.value = config.config_id;
-        option.textContent = config.config_name;
-        select.appendChild(option);
-      });
-    } else {
-      select.innerHTML = '<option value="">Default</option>';
-    }
-  } catch (error) {
-    console.error("Error loading layout styles:", error);
-    select.innerHTML = '<option value="">Default</option>';
-  } finally {
-    select.disabled = false;
-  }
+  select.innerHTML = '<option value="">Default</option><option value="default2">Classic Nigerian (Default 2)</option><option value="default3">Standard Default 3</option>';
 }
 
 function showNotification(message, type = "info") {

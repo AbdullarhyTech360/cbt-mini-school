@@ -2,6 +2,7 @@
 import os
 import base64
 import mimetypes
+from datetime import timedelta
 
 from models import db
 from models.grade import Grade
@@ -625,15 +626,30 @@ class ReportGenerator:
             1 for a in attendance_records if a.status in ('present', 'late', 'excused')
         )
         absent_count = sum(1 for a in attendance_records if a.status == 'absent')
-        days_open = present_count + absent_count
+
+        # Calculate days_open from term's stored value, fallback to weekday count
+        if term.open_days is not None:
+            days_open = term.open_days
+        elif term.start_date and term.end_date:
+            days_open = 0
+            current_day = term.start_date
+            while current_day <= term.end_date:
+                if current_day.weekday() < 5:  # Mon-Fri
+                    days_open += 1
+                current_day += timedelta(days=1)
+        else:
+            days_open = 0
+
+        holidays = max(0, days_open - present_count - absent_count)
+
         attendance_stats = {
             'days_open': days_open,
             'present': present_count,
             'absent': absent_count,
-            'holidays': 0,
+            'holidays': holidays,
         }
 
-        return {
+        report_data = {
             'student': {
                 'id': student_id,
                 'name': f"{user.first_name} {user.last_name}".upper(),
@@ -682,6 +698,150 @@ class ReportGenerator:
                 for t in TraitDefinition.query.filter_by(school_id=school.school_id, is_active=True).order_by(TraitDefinition.sort_order).all()
             ],
             'attendance_stats': attendance_stats,
+        }
+
+        auto = ReportGenerator.generate_auto_remarks(report_data)
+        if not report_data['term']['teacher_remarks']:
+            report_data['term']['teacher_remarks'] = auto['teacher_remarks']
+        if not report_data['term']['house_master_remarks']:
+            report_data['term']['house_master_remarks'] = auto['house_master_remarks']
+        if not report_data['term']['principal_remarks']:
+            report_data['term']['principal_remarks'] = auto['principal_remarks']
+
+        return report_data
+
+    @staticmethod
+    def generate_auto_remarks(report_data):
+        """Generate performance-based remarks for form master, house master, and principal."""
+        overall_total = report_data.get('overall_total', 0)
+        overall_max = report_data.get('overall_max', 100)
+        percentage = (overall_total / overall_max * 100) if overall_max > 0 else 0
+        position = report_data.get('position')
+        total_students = report_data.get('total_students', 1)
+        class_average = report_data.get('class_average', 0)
+        attendance = report_data.get('attendance_stats', {})
+        days_open = attendance.get('days_open', 0)
+        present = attendance.get('present', 0)
+        absent = attendance.get('absent', 0)
+        student_name = report_data.get('student', {}).get('name', '')
+        first_name = student_name.split()[0] if student_name else 'the student'
+        house = report_data.get('student', {}).get('house', '')
+        trait_scores = report_data.get('trait_scores', {})
+
+        # --- Helpers ---
+        def _position_ratio():
+            if not position or not total_students:
+                return 0.5
+            return position / total_students
+
+        def _attendance_rate():
+            if days_open <= 0:
+                return 1.0
+            return present / days_open
+
+        def _trait_average():
+            if not trait_scores:
+                return None
+            values = list(trait_scores.values())
+            return sum(values) / len(values) if values else None
+
+        # --- Form Master's Comment ---
+        teacher_remarks = ''
+        if percentage >= 70:
+            if _position_ratio() <= 0.2:
+                teacher_remarks = (
+                    f'{first_name} is a diligent and highly focused student who consistently '
+                    f'excels academically. A role model to peers. Keep up the outstanding work.'
+                )
+            else:
+                teacher_remarks = (
+                    f'{first_name} is a hardworking student with a strong grasp of the subjects. '
+                    f'Continued dedication will yield even greater results.'
+                )
+        elif percentage >= 50:
+            if _position_ratio() <= 0.4:
+                teacher_remarks = (
+                    f'{first_name} shows good promise and has performed above average. '
+                    f'Consistent effort and focus will push the results even higher.'
+                )
+            else:
+                teacher_remarks = (
+                    f'{first_name} has performed satisfactorily this term. '
+                    f'More effort in weak areas is encouraged for improvement.'
+                )
+        elif percentage >= 40:
+            teacher_remarks = (
+                f'{first_name} needs to put in more effort across all subjects. '
+                f'Attending extra lessons and dedicating more time to study is strongly advised.'
+            )
+        else:
+            teacher_remarks = (
+                f'{first_name}\'s performance this term is below expectation. '
+                f'A complete turnaround in study habits is urgently needed. '
+                f'Parental guidance and extra lessons are highly recommended.'
+            )
+
+        # Attendance modifier
+        att_rate = _attendance_rate()
+        if days_open > 0 and att_rate < 0.8:
+            teacher_remarks += (
+                f' Note: Attendance has been poor ({present} of {days_open} days). '
+                f'Regular attendance is critical for academic progress.'
+            )
+
+        # --- House Master's Comment ---
+        trait_avg = _trait_average()
+        house_remarks = ''
+        if _position_ratio() <= 0.2 and (trait_avg is None or trait_avg >= 0.6):
+            house_remarks = (
+                f'{first_name} is a responsible student who demonstrates good discipline '
+                f'and relates well with peers. Encouraged to take on leadership roles.'
+            )
+        elif _position_ratio() <= 0.6:
+            if house:
+                house_remarks = (
+                    f'{first_name} cooperates well with fellow {house} House members '
+                    f'and participates actively in school activities. '
+                    f'Encouraged to take on more responsibilities.'
+                )
+            else:
+                house_remarks = (
+                    f'{first_name} cooperates well with peers and is an active member of the school community. '
+                    f'Encouraged to take on more responsibilities.'
+                )
+        else:
+            house_remarks = (
+                f'{first_name} needs to show greater discipline and commitment to school activities. '
+                f'Improved conduct and participation are expected next term.'
+            )
+
+        # --- Principal's Comment ---
+        principal_remarks = ''
+        if percentage >= 50 and _position_ratio() <= 0.5:
+            principal_remarks = (
+                f'A commendable result this term. {first_name} is promoted on merit. '
+                f'Well done, keep striving for excellence.'
+            )
+        elif percentage >= 50:
+            principal_remarks = (
+                f'Satisfactory performance overall. {first_name} is promoted on trial. '
+                f'Must improve class standing next term through greater effort.'
+            )
+        elif percentage >= 40:
+            principal_remarks = (
+                f'Below expectations this term. {first_name} is promoted on trial. '
+                f'Strict improvement in academics and conduct is required next term.'
+            )
+        else:
+            principal_remarks = (
+                f'Unsatisfactory performance. {first_name} needs significant improvement '
+                f'in all areas. Dedicated effort and parental involvement are expected next term.'
+            )
+
+        return {
+            'teacher_remarks': teacher_remarks,
+            'house_master_remarks': house_remarks,
+            'principal_remarks': principal_remarks,
         }
 
     @staticmethod

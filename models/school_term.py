@@ -23,6 +23,9 @@ class SchoolTerm(db.Model):
     is_active = db.Column(db.Boolean, nullable=False, default=True)
     is_current = db.Column(db.Boolean, nullable=False, default=False)
 
+    # School days configuration
+    open_days = db.Column(db.Integer, nullable=True)  # Number of school days the term is open (weekdays minus holidays)
+
     # Timestamps
     created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
     updated_at = db.Column(
@@ -42,6 +45,7 @@ class SchoolTerm(db.Model):
             "academic_session": self.academic_session,
             "is_active": self.is_active,
             "is_current": self.is_current,
+            "open_days": self.open_days,
             "school_id": self.school_id,
         }
     def __repr__(self):
