@@ -26,6 +26,9 @@ class Attendance(db.Model):
     status = db.Column(
         db.String(20), nullable=False, default="present"
     )  # present, absent, late, excused
+    source = db.Column(
+        db.String(10), nullable=False, default="daily"
+    )  # daily or bulk
     remarks = db.Column(db.Text, nullable=True)
 
     # Academic session tracking
@@ -65,6 +68,7 @@ class Attendance(db.Model):
             if self.attendance_date
             else None,
             "status": self.status,
+            "source": self.source,
             "remarks": self.remarks,
             "term_id": self.term_id,
             "academic_session": self.academic_session,

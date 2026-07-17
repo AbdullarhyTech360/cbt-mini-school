@@ -1,0 +1,711 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>NCAT Aviation School Report Card</title>
+        <style>
+            /* Print & Layout Setup */
+            * {
+                box-sizing: border-box;
+            }
+            body {
+                background-color: #e0e0e0;
+                display: flex;
+                justify-content: center;
+                padding: 20px;
+                margin: 0;
+                font-family:
+                    "Times New Roman", Times, serif; /* Exact font matching */
+            }
+            .report-card {
+                width: 210mm; /* A4 */
+                background: #ffffff;
+                padding: 25px 20px;
+                border: 1px solid #000;
+                box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+                position: relative;
+            }
+
+            /* HEADER */
+            .header-container {
+                display: flex;
+                align-items: flex-start;
+                border-bottom: 2px solid #000;
+                padding-bottom: 8px;
+                margin-bottom: 15px;
+                position: relative;
+            }
+            .logo-placeholder {
+                width: 90px;
+                height: 110px;
+                border: 1px dashed #555;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 12px;
+                color: #555;
+                margin-right: 15px;
+                flex-shrink: 0;
+            }
+            .header-text {
+                text-align: left;
+                flex-grow: 1;
+            }
+            .header-text h2 {
+                margin: 0;
+                font-size: 18px;
+                font-weight: bold;
+                line-height: 1.2;
+            }
+            .header-text h3 {
+                margin: 3px 0;
+                font-size: 14px;
+                font-weight: normal;
+            }
+            .header-text p {
+                margin: 2px 0;
+                font-size: 13px;
+            }
+            .report-title {
+                font-weight: bold;
+                font-size: 16px;
+                margin-top: 5px;
+            }
+            .session {
+                font-weight: bold;
+                font-size: 14px;
+                margin-top: 2px;
+            }
+
+            /* ORIGINAL STAMP */
+            .stamp {
+                position: absolute;
+                right: 5px;
+                top: 5px;
+                width: 75px;
+                height: 100px;
+                border: 2px solid #000;
+                border-radius: 50%;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                font-weight: bold;
+                font-size: 14px;
+                background: #fff;
+                transform: rotate(-12deg);
+                letter-spacing: 1px;
+            }
+
+            /* STUDENT INFO (2-Column Grid) */
+            .student-info-grid {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 5px 40px;
+                margin-bottom: 12px;
+            }
+            .info-row {
+                display: flex;
+                align-items: flex-end;
+            }
+            .info-label {
+                font-weight: bold;
+                white-space: nowrap;
+                margin-right: 5px;
+                font-size: 14px;
+            }
+            .info-line {
+                border-bottom: 1px dotted #000;
+                flex-grow: 1;
+                height: 1.2em;
+            }
+
+            /* SCORES */
+            .score-totals {
+                display: flex;
+                gap: 30px;
+                margin-bottom: 15px;
+                font-size: 14px;
+                font-weight: bold;
+            }
+            .score-row {
+                display: flex;
+                align-items: flex-end;
+            }
+            .score-label {
+                margin-right: 5px;
+            }
+
+            /* MAIN TABLES WRAPPER */
+            .tables-wrapper {
+                display: flex;
+                border: 1px solid #000;
+                border-bottom: none; /* Individual row bottoms handle this */
+            }
+
+            /* TABLES GENERAL */
+            table {
+                width: 100%;
+                border-collapse: collapse;
+                font-size: 13px;
+                font-family: inherit;
+            }
+            th,
+            td {
+                border: 1px solid #000;
+                padding: 3px 4px;
+                text-align: center;
+                vertical-align: middle;
+            }
+            .section-header th {
+                font-weight: bold;
+                background: #fff;
+            }
+            .cognitive-wrapper table td:first-child {
+                text-align: left;
+            }
+            .psychomotor-wrapper table td:first-child {
+                text-align: left;
+            }
+
+            /* EXACTLY MATCHING THE VERTICAL DIVIDER LINE */
+            /* The vertical line stops exactly after row 15 (HISTORY). */
+            .cognitive-wrapper table tr:nth-child(-n + 17) td:last-child {
+                border-right: 1px solid #000;
+            }
+            /* Rows 18 (Further Maths) and 19 (Hausa) will NOT have the right border. */
+
+            /* PSYCHOMOTOR TABLE */
+            .psychomotor-wrapper {
+                flex-grow: 1;
+                /* Part B is separated completely, the line is on the left table rows 1-15 */
+            }
+
+            /* BOTTOM SECTION */
+            .bottom-wrapper {
+                display: flex;
+                border: 1px solid #000;
+                border-top: 1px solid #000;
+                margin-top: -1px; /* Merges with the bottom border of the tables above */
+            }
+            .bottom-left-col {
+                flex: 67%;
+                display: flex;
+                flex-direction: column;
+                border-right: 1px solid #000;
+            }
+            .grading-key-box {
+                border: 1px solid #000; /* Key to grades HAS a border */
+                padding: 4px 8px;
+                font-size: 14px;
+                margin: 0;
+            }
+            .observance-table-wrapper table {
+                border: none;
+                margin: 0;
+            }
+            .observance-table-wrapper table th {
+                border-top: none;
+                border-left: none;
+                border-right: none;
+            }
+            .observance-table-wrapper table td {
+                border-left: none;
+                border-right: none;
+                border-bottom: 1px solid #000;
+            }
+            .observance-table-wrapper table tr:last-child td {
+                border-bottom: none;
+            }
+
+            .bottom-right-col {
+                flex: 33%;
+                display: flex;
+                align-items: stretch;
+            }
+            .ratings-box {
+                width: 100%;
+                border: none;
+                padding: 5px 10px;
+                display: flex;
+                flex-direction: column;
+                justify-content: space-between;
+            }
+            .ratings-box h4 {
+                margin: 0 0 5px 0;
+                text-align: center;
+                border-bottom: 1px solid #000;
+                padding-bottom: 2px;
+                font-size: 14px;
+            }
+            .ratings-box p {
+                margin: 2px 0;
+                font-size: 13px;
+            }
+            .ratings-box .val {
+                display: inline-block;
+                width: 15px;
+                text-align: center;
+            }
+
+            /* COMMENTS */
+            .comments-section {
+                margin-top: 15px;
+                font-size: 14px;
+                font-family: inherit;
+            }
+            .comment-row {
+                display: flex;
+                margin-bottom: 8px;
+                align-items: flex-end;
+            }
+            .comment-label {
+                font-weight: bold;
+                white-space: nowrap;
+                margin-right: 5px;
+            }
+            .comment-line {
+                border-bottom: 1px dotted #000;
+                flex-grow: 1;
+                height: 1.2em;
+            }
+
+            @media print {
+                body {
+                    background: #fff;
+                    padding: 0;
+                }
+                .report-card {
+                    box-shadow: none;
+                    padding: 15px;
+                    width: 100%;
+                }
+                .logo-placeholder {
+                    border: none;
+                } /* Removes dashed border for print if you have an actual image */
+            }
+        </style>
+    </head>
+    <body>
+        <div class="report-card">
+            <!-- Header with Logo Space -->
+            <div class="header-container">
+                <div class="logo-placeholder">Logo Here</div>
+                <div class="stamp">ORIGINAL</div>
+                <div class="header-text">
+                    <h2>
+                        NIGERIAN COLLEGE OF AVIATION TECHNOLOGY, AVIATION
+                        SCHOOL, ZARIA
+                    </h2>
+                    <h3>SITE II AVIATION QUARTERS, ZARIA</h3>
+                    <p>MOTTO: KNOWLEDGE IS LIGHT</p>
+                    <div class="report-title">
+                        SENIOR SECONDARY SCHOOL REPORT
+                    </div>
+                    <div class="session">
+                        SECOND TERM 2024/2025 ACADEMIC SESSION
+                    </div>
+                </div>
+            </div>
+
+            <!-- Student Info (2-Column Grid) -->
+            <div class="student-info-grid">
+                <div class="info-row">
+                    <span class="info-label">NAME:</span
+                    ><span class="info-line"></span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Class:</span
+                    ><span class="info-line"></span>
+                </div>
+
+                <div class="info-row">
+                    <span class="info-label">Reg.No:</span
+                    ><span class="info-line"></span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Position:</span
+                    ><span class="info-line"></span>
+                </div>
+
+                <div class="info-row">
+                    <span class="info-label">Sex:</span
+                    ><span class="info-line"></span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">House:</span
+                    ><span class="info-line"></span>
+                </div>
+
+                <div class="info-row">
+                    <span class="info-label">No. in Class:</span
+                    ><span class="info-line"></span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Date of Resumption:</span
+                    ><span class="info-line"></span>
+                </div>
+            </div>
+
+            <!-- Totals -->
+            <div class="score-totals">
+                <div class="score-row">
+                    <span class="score-label">Total Score:</span
+                    ><span class="info-line" style="width: 80px"></span>
+                </div>
+                <div class="score-row">
+                    <span class="score-label">Average:</span
+                    ><span class="info-line" style="width: 80px"></span>
+                </div>
+                <div class="score-row">
+                    <span class="score-label">Class Average:</span
+                    ><span class="info-line" style="width: 80px"></span>
+                </div>
+            </div>
+
+            <!-- Main Tables -->
+            <div class="tables-wrapper">
+                <!-- Part A: Cognitive (Left) -->
+                <div class="cognitive-wrapper">
+                    <table>
+                        <thead>
+                            <tr class="section-header">
+                                <th colspan="8">PART A: COGNITIVE DOMAIN</th>
+                            </tr>
+                            <tr>
+                                <th>Subject</th>
+                                <th>1st C.A.<br />(20%)</th>
+                                <th>2nd C.A.<br />(20%)</th>
+                                <th>Exam<br />(60%)</th>
+                                <th>Total<br />Score<br />(100%)</th>
+                                <th>Grade</th>
+                                <th>Subject<br />Position</th>
+                                <th>Teacher's<br />Signature</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Rows 1 to 15 have the vertical right border added via CSS nth-child -->
+                            <tr>
+                                <td>ENGLISH LANGUAGE</td>
+                                <td></td>
+                                <td></td>
+                                <td></td>
+                                <td></td>
+                                <td></td>
+                                <td></td>
+                                <td></td>
+                            </tr>
+                            <tr>
+                                <td>MATHEMATICS</td>
+                                <td></td>
+                                <td></td>
+                                <td></td>
+                                <td></td>
+                                <td></td>
+                                <td></td>
+                                <td></td>
+                            </tr>
+                            <tr>
+                                <td>PHYSICS</td>
+                                <td></td>
+                                <td></td>
+                                <td></td>
+                                <td></td>
+                                <td></td>
+                                <td></td>
+                                <td></td>
+                            </tr>
+                            <tr>
+                                <td>CHEMISTRY</td>
+                                <td></td>
+                                <td></td>
+                                <td></td>
+                                <td></td>
+                                <td></td>
+                                <td></td>
+                                <td></td>
+                            </tr>
+                            <tr>
+                                <td>BIOLOGY</td>
+                                <td></td>
+                                <td></td>
+                                <td></td>
+                                <td></td>
+                                <td></td>
+                                <td></td>
+                                <td></td>
+                            </tr>
+                            <tr>
+                                <td>AGRIC SCIENCE</td>
+                                <td></td>
+                                <td></td>
+                                <td></td>
+                                <td></td>
+                                <td></td>
+                                <td></td>
+                                <td></td>
+                            </tr>
+                            <tr>
+                                <td>GOVERNMENT</td>
+                                <td></td>
+                                <td></td>
+                                <td></td>
+                                <td></td>
+                                <td></td>
+                                <td></td>
+                                <td></td>
+                            </tr>
+                            <tr>
+                                <td>ECONOMICS</td>
+                                <td></td>
+                                <td></td>
+                                <td></td>
+                                <td></td>
+                                <td></td>
+                                <td></td>
+                                <td></td>
+                            </tr>
+                            <tr>
+                                <td>ENTREPRENEURSHIP</td>
+                                <td></td>
+                                <td></td>
+                                <td></td>
+                                <td></td>
+                                <td></td>
+                                <td></td>
+                                <td></td>
+                            </tr>
+                            <tr>
+                                <td>CIVIC EDUCATION</td>
+                                <td></td>
+                                <td></td>
+                                <td></td>
+                                <td></td>
+                                <td></td>
+                                <td></td>
+                                <td></td>
+                            </tr>
+                            <tr>
+                                <td>C.R.S/I.R.S.</td>
+                                <td></td>
+                                <td></td>
+                                <td></td>
+                                <td></td>
+                                <td></td>
+                                <td></td>
+                                <td></td>
+                            </tr>
+                            <tr>
+                                <td>GEOGRAPHY</td>
+                                <td></td>
+                                <td></td>
+                                <td></td>
+                                <td></td>
+                                <td></td>
+                                <td></td>
+                                <td></td>
+                            </tr>
+                            <tr>
+                                <td>CREATIVE ART</td>
+                                <td></td>
+                                <td></td>
+                                <td></td>
+                                <td></td>
+                                <td></td>
+                                <td></td>
+                                <td></td>
+                            </tr>
+                            <tr>
+                                <td>HOME ECONOMICS</td>
+                                <td></td>
+                                <td></td>
+                                <td></td>
+                                <td></td>
+                                <td></td>
+                                <td></td>
+                                <td></td>
+                            </tr>
+                            <tr>
+                                <td>HISTORY</td>
+                                <td></td>
+                                <td></td>
+                                <td></td>
+                                <td></td>
+                                <td></td>
+                                <td></td>
+                                <td></td>
+                            </tr>
+                            <!-- Rows 16 & 17 do NOT have the divider. The vertical line stops here. -->
+                            <tr>
+                                <td>FURTHER MATHS</td>
+                                <td></td>
+                                <td></td>
+                                <td></td>
+                                <td></td>
+                                <td></td>
+                                <td></td>
+                                <td></td>
+                            </tr>
+                            <tr>
+                                <td>HAUSA LANGUAGE</td>
+                                <td></td>
+                                <td></td>
+                                <td></td>
+                                <td></td>
+                                <td></td>
+                                <td></td>
+                                <td></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Part B: Psychomotor (Right) -->
+                <div class="psychomotor-wrapper">
+                    <table>
+                        <thead>
+                            <tr class="section-header">
+                                <th colspan="2">PART B: PSYCHOMOTOR DOMAIN</th>
+                            </tr>
+                            <tr>
+                                <th>BEHAVIOUR</th>
+                                <th>Ratings</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Punctuality</td>
+                                <td></td>
+                            </tr>
+                            <tr>
+                                <td>Class Attendance</td>
+                                <td></td>
+                            </tr>
+                            <tr>
+                                <td>Carrying out Assignment</td>
+                                <td></td>
+                            </tr>
+                            <tr>
+                                <td>Neatness</td>
+                                <td></td>
+                            </tr>
+                            <tr>
+                                <td>Politeness</td>
+                                <td></td>
+                            </tr>
+                            <tr>
+                                <td>Relationship with Staff</td>
+                                <td></td>
+                            </tr>
+                            <tr>
+                                <td>Relationship with Students</td>
+                                <td></td>
+                            </tr>
+                            <tr>
+                                <td>Attentiveness</td>
+                                <td></td>
+                            </tr>
+                            <tr>
+                                <td>Initiative</td>
+                                <td></td>
+                            </tr>
+                            <tr>
+                                <td>Emotional Stability</td>
+                                <td></td>
+                            </tr>
+                            <tr>
+                                <td>Attitude to Study</td>
+                                <td></td>
+                            </tr>
+                            <tr>
+                                <td>Attitude to school</td>
+                                <td></td>
+                            </tr>
+                            <tr>
+                                <td>Attitude to Property</td>
+                                <td></td>
+                            </tr>
+                            <tr>
+                                <td>Club and Society</td>
+                                <td></td>
+                            </tr>
+                            <tr>
+                                <td>Games and sports</td>
+                                <td></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Bottom: Keys, Observances & Ratings -->
+            <div class="bottom-wrapper">
+                <div class="bottom-left-col">
+                    <div class="grading-key-box">
+                        Key to grades: A = 70-100 &nbsp;&nbsp; B = 60 - 69
+                        &nbsp;&nbsp; C = 50 - 59 &nbsp;&nbsp; D = 40 - 49
+                        &nbsp;&nbsp; F = 0 - 39
+                    </div>
+                    <div class="observance-table-wrapper">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>OBSERVANCE</th>
+                                    <th>FREQUENCIES</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>No. of times school open</td>
+                                    <td></td>
+                                </tr>
+                                <tr>
+                                    <td>No. of holidays observed</td>
+                                    <td></td>
+                                </tr>
+                                <tr>
+                                    <td>No. of times present in school</td>
+                                    <td></td>
+                                </tr>
+                                <tr>
+                                    <td>No. of times absent from school</td>
+                                    <td></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="bottom-right-col">
+                    <div class="ratings-box">
+                        <h4>KEY TO RATINGS</h4>
+                        <p><span class="val">5</span> = VERY GOOD</p>
+                        <p><span class="val">4</span> = GOOD</p>
+                        <p><span class="val">3</span> = FAIR</p>
+                        <p><span class="val">2</span> = WEAK</p>
+                        <p><span class="val">1</span> = POOR</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Comments -->
+            <div class="comments-section">
+                <div class="comment-row">
+                    <span class="comment-label">Form Master's Comment:</span
+                    ><span class="comment-line"></span>
+                </div>
+                <div class="comment-row">
+                    <span class="comment-label">House Master's Comment:</span
+                    ><span class="comment-line"></span>
+                </div>
+                <div class="comment-row">
+                    <span class="comment-label">School Fees for Next Term:</span
+                    ><span class="comment-line"></span>
+                </div>
+                <div class="comment-row">
+                    <span class="comment-label">PRINCIPAL'S COMMENT:</span
+                    ><span class="comment-line"></span>
+                </div>
+            </div>
+        </div>
+    </body>
+</html>

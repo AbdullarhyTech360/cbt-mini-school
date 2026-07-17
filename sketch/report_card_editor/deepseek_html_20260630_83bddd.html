@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en" class="">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Report Card Studio</title>
+  <!-- Tailwind & external resources -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            primary: '#1173d4',
+            'primary-light': '#e3f2fd',
+            'primary-dark': '#0d5ca6',
+            success: '#10b981',
+            error: '#ef4444',
+            warning: '#f0b429',
+            surface: '#ffffff',
+            'surface-dark': '#1a1f2e',
+            bg: '#f6f7f8',
+            'bg-dark': '#101922',
+            'border': '#e5e7eb',
+            'border-dark': '#374151',
+            text: '#4a5568',
+            'text-dark': '#e2e8f0',
+            muted: '#64748b',
+          }
+        }
+      }
+    }
+  </script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <!-- Our custom CSS -->
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body class="bg-[#f6f7f8] dark:bg-[#101922] text-[#4a5568] dark:text-[#e2e8f0]">
+
+<header class="flex items-center justify-between px-4 py-2 bg-white dark:bg-[#1a1f2e] border-b border-gray-200 dark:border-gray-700 shadow-sm z-10">
+  <div class="flex items-center gap-3">
+    <div class="w-8 h-8 rounded-lg bg-primary flex items-center justify-center text-white font-bold text-sm">📋</div>
+    <h1 class="text-sm font-semibold text-gray-800 dark:text-white">Report Card Studio</h1>
+    <span class="text-xs text-gray-500 dark:text-gray-400 hidden sm:block">Design & Export</span>
+  </div>
+  <div class="flex items-center gap-2">
+    <button id="btn-undo" onclick="undo()" class="text-xs font-medium px-3 py-1.5 rounded-md bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition-all btn-disabled">↩</button>
+    <button id="btn-redo" onclick="redo()" class="text-xs font-medium px-3 py-1.5 rounded-md bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition-all btn-disabled">↪</button>
+    <div class="w-px h-5 bg-gray-200 dark:bg-gray-700"></div>
+    <button onclick="groupSelected()" class="text-xs font-medium px-3 py-1.5 rounded-md bg-warning text-black hover:bg-amber-400 transition-all">📦 Group</button>
+    <button onclick="ungroupSelected()" class="text-xs font-medium px-3 py-1.5 rounded-md bg-warning/20 text-warning border border-warning/30 hover:bg-warning/30 transition-all">📦 Ungroup</button>
+    <div class="w-px h-5 bg-gray-200 dark:bg-gray-700"></div>
+    <button onclick="savePage()" class="text-xs font-medium px-3 py-1.5 rounded-md bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition-all">💾</button>
+    <button onclick="exportPDF()" class="text-xs font-bold px-4 py-1.5 rounded-md bg-primary text-white hover:bg-primary-dark transition-all shadow-sm">⬇ Export PDF</button>
+    <button onclick="toggleDarkMode()" class="p-2 rounded-md bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition-all" title="Toggle theme">
+      <span id="theme-icon">🌙</span>
+    </button>
+  </div>
+</header>
+
+<div class="flex flex-1 overflow-hidden relative main-container">
+
+  <aside id="sidebar" class="w-56 flex-shrink-0 bg-white dark:bg-[#1a1f2e] border-r border-gray-200 dark:border-gray-700 overflow-y-auto p-3 transition-all duration-300" style="max-height: calc(100vh - 48px);">
+    <div class="flex items-center justify-between mb-3">
+      <h2 class="text-[11px] font-bold uppercase tracking-wider text-primary">Components</h2>
+      <button onclick="toggleSidebar()" class="text-xs p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800">◀</button>
+    </div>
+    <div class="space-y-1">
+      <div class="comp-chip" onclick="addBlock('school-header')"><span>🏫</span><span class="text-xs">School Header</span></div>
+      <div class="comp-chip" onclick="addBlock('student-info')"><span>👤</span><span class="text-xs">Student Info</span></div>
+      <div class="comp-chip" onclick="addBlock('grades')"><span>📊</span><span class="text-xs">Grades Table</span></div>
+      <div class="comp-chip" onclick="addBlock('comments')"><span>💬</span><span class="text-xs">Comments</span></div>
+      <div class="comp-chip" onclick="addBlock('attendance')"><span>📅</span><span class="text-xs">Attendance</span></div>
+      <div class="comp-chip" onclick="addBlock('signature')"><span>✍️</span><span class="text-xs">Signatures</span></div>
+    </div>
+    <div class="my-3 border-t border-gray-200 dark:border-gray-700"></div>
+    <h2 class="text-[11px] font-bold uppercase tracking-wider text-primary mb-3">Primitives</h2>
+    <div class="space-y-1">
+      <div class="comp-chip" onclick="addBlock('table')"><span>⊞</span><span class="text-xs">Table</span></div>
+      <div class="comp-chip" onclick="addBlock('cell')"><span>▢</span><span class="text-xs">Cell</span></div>
+      <div class="comp-chip" onclick="addBlock('image')"><span>🖼</span><span class="text-xs">Image</span></div>
+      <div class="comp-chip" onclick="addBlock('text')"><span>Aa</span><span class="text-xs">Text Block</span></div>
+      <div class="comp-chip" onclick="addBlock('divider')"><span>—</span><span class="text-xs">Divider</span></div>
+    </div>
+    <div class="my-3 border-t border-gray-200 dark:border-gray-700"></div>
+    <h2 class="text-[11px] font-bold uppercase tracking-wider text-primary mb-3">My Presets</h2>
+    <div id="custom-presets-list" class="space-y-1.5 text-[10px] text-gray-500 dark:text-gray-400 italic">No presets saved.</div>
+    <div class="my-3 border-t border-gray-200 dark:border-gray-700"></div>
+    <h2 class="text-[11px] font-bold uppercase tracking-wider text-primary mb-3">Layers</h2>
+    <div id="layers-list" class="space-y-1"></div>
+  </aside>
+
+  <button id="sidebar-open-btn" onclick="openSidebar()" class="hidden absolute left-2 top-2 z-20 bg-white dark:bg-[#1a1f2e] border border-gray-200 dark:border-gray-700 rounded-md p-1.5 shadow hover:bg-gray-50 dark:hover:bg-gray-800 transition-all">
+    <span class="text-lg">☰</span>
+  </button>
+
+  <div id="canvas-scroll">
+    <div id="report-canvas" onclick="canvasClick(event)"></div>
+  </div>
+
+  <aside class="w-64 flex-shrink-0 bg-white dark:bg-[#1a1f2e] border-l border-gray-200 dark:border-gray-700 overflow-y-auto p-3">
+    <div id="props-empty" class="flex flex-col items-center justify-center py-16 text-center">
+      <div class="text-3xl mb-2">👆</div>
+      <p class="text-xs text-gray-500 dark:text-gray-400">Select a block or double‑click to drill into children.</p>
+    </div>
+    <div id="props-panel" class="hidden space-y-4">
+      <div class="flex items-center justify-between">
+        <span id="props-block-name" class="text-xs font-bold bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded uppercase tracking-wider"></span>
+        <button onclick="deleteSelected()" class="text-xs text-red-500 hover:text-red-400">🗑</button>
+      </div>
+      <button id="parent-nav-btn" class="parent-btn" onclick="navigateToParent()">⬆ Parent</button>
+      <div class="flex gap-1 p-1 bg-gray-100 dark:bg-gray-800 rounded-lg">
+        <button class="tab-btn active flex-1" onclick="switchTab('layout')" id="tab-layout">Layout</button>
+        <button class="tab-btn flex-1" onclick="switchTab('style')" id="tab-style">Style</button>
+        <button class="tab-btn flex-1" onclick="switchTab('content')" id="tab-content">Content</button>
+      </div>
+      <div id="tab-layout-panel" class="space-y-3">
+        <div id="layout-multi-select-notice" class="hidden bg-amber-50 dark:bg-amber-900/20 p-3 rounded-lg border border-amber-200 dark:border-amber-500/30">
+          <p class="text-xs text-amber-700 dark:text-amber-400 font-semibold mb-2">Multiple Selection Active</p>
+          <button onclick="groupSelected()" class="w-full py-2 text-xs font-bold bg-warning text-black rounded-lg hover:bg-amber-400 transition-all">📦 Group Selection</button>
+        </div>
+        <div id="layout-single-item-panel" class="space-y-3">
+          <div class="prop-group"><label class="prop-label">Position & Size</label>
+            <div class="prop-row">
+              <div class="prop-group"><span class="prop-label">X</span><input type="number" class="prop-input" id="prop-x" oninput="liveSet('x',+this.value);renderLayerLabel()"></div>
+              <div class="prop-group"><span class="prop-label">Y</span><input type="number" class="prop-input" id="prop-y" oninput="liveSet('y',+this.value);renderLayerLabel()"></div>
+            </div>
+            <div class="prop-row">
+              <div class="prop-group"><span class="prop-label">W</span><input type="number" class="prop-input" id="prop-w" oninput="liveSet('w',+this.value)"></div>
+              <div class="prop-group"><span class="prop-label">H</span><input type="text" class="prop-input" id="prop-h" placeholder="auto" oninput="liveSet('h',this.value||'auto')"></div>
+            </div>
+          </div>
+          <div class="prop-group"><label class="prop-label">Padding</label><input type="text" class="prop-input" id="prop-padding" placeholder="12px 16px" oninput="liveSet('padding',this.value)"></div>
+          <div class="prop-group"><label class="prop-label">Border Radius</label><input type="text" class="prop-input" id="prop-radius" placeholder="8px" oninput="liveSet('borderRadius',this.value)"></div>
+          <div class="prop-group"><label class="prop-label">Z-Index</label><input type="number" class="prop-input" id="prop-z" oninput="liveSet('zIndex',+this.value)"></div>
+        </div>
+      </div>
+      <div id="tab-style-panel" class="hidden space-y-3">
+        <div class="prop-group"><label class="prop-label">Background</label>
+          <select class="prop-input" id="prop-bg-type" onchange="bgTypeChange(this.value)">
+            <option value="none">Transparent</option><option value="solid">Solid Color</option><option value="gradient">Linear Gradient</option>
+          </select>
+        </div>
+        <div id="bg-solid-panel" class="prop-group hidden"><label class="prop-label">Color</label>
+          <div class="flex gap-2"><input type="color" class="prop-input w-10 h-8 p-0.5" id="prop-bg-color" oninput="onBgColorChange(this.value)"><input type="text" class="prop-input" id="prop-bg-hex" placeholder="#ffffff" oninput="onBgHexChange(this.value)"></div>
+        </div>
+        <div id="bg-gradient-panel" class="hidden space-y-2">
+          <div class="prop-group"><label class="prop-label">Angle</label>
+            <div class="flex gap-2 items-center"><input type="range" class="prop-range flex-1" id="prop-grad-angle" min="0" max="360" value="135" oninput="onGradAngleChange(this.value)"><span id="grad-angle-lbl" class="text-xs w-10 text-right">135°</span></div>
+          </div>
+          <div><label class="prop-label">Color Stops</label><div id="grad-stops" class="space-y-2"></div><button onclick="addGradStop()" class="text-xs text-primary hover:underline mt-2">＋ Add Stop</button></div>
+        </div>
+        <div class="border-t border-gray-200 dark:border-gray-700 pt-3"></div>
+        <div class="prop-group"><label class="prop-label">Text Color</label>
+          <div class="flex gap-2"><input type="color" class="prop-input w-10 h-8 p-0.5" id="prop-color" oninput="onTextColorChange(this.value)"><input type="text" class="prop-input" id="prop-color-hex" placeholder="#1a1a1a" oninput="onColorHexChange(this.value)"></div>
+        </div>
+        <div class="prop-row">
+          <div class="prop-group"><label class="prop-label">Size (px)</label><input type="number" class="prop-input" id="prop-fs" placeholder="12" oninput="liveSet('fontSize',this.value?this.value+'px':'')"></div>
+          <div class="prop-group"><label class="prop-label">Weight</label>
+            <select class="prop-input" id="prop-fw" onchange="liveSet('fontWeight',this.value)">
+              <option value="">Default</option><option value="300">Light</option><option value="400">Normal</option><option value="500">Medium</option><option value="600">Semi-Bold</option><option value="700">Bold</option>
+            </select>
+          </div>
+        </div>
+        <div class="prop-group"><label class="prop-label">Font Style</label>
+          <select class="prop-input" id="prop-font-style" onchange="liveSet('fontStyle',this.value)">
+            <option value="">Default</option><option value="normal">Normal</option><option value="italic">Italic</option><option value="oblique">Oblique</option>
+          </select>
+        </div>
+        <div class="prop-group"><label class="prop-label">Font Family</label>
+          <select class="prop-input" id="prop-ff" onchange="liveSet('fontFamily',this.value)">
+            <option value="">Default</option>
+            <option value="'Inter', sans-serif">Inter</option>
+            <option value="'Arial', sans-serif">Arial</option>
+            <option value="'Times New Roman', serif">Times New Roman</option>
+            <option value="'Verdana', sans-serif">Verdana</option>
+            <option value="'Courier New', monospace">Courier New</option>
+            <option value="'Georgia', serif">Georgia</option>
+            <option value="'Trebuchet MS', sans-serif">Trebuchet MS</option>
+            <option value="'Comic Sans MS', cursive">Comic Sans MS</option>
+            <option value="'Impact', sans-serif">Impact</option>
+            <option value="'Palatino Linotype', serif">Palatino Linotype</option>
+            <option value="'Garamond', serif">Garamond</option>
+          </select>
+        </div>
+        <div class="prop-group"><label class="prop-label">Text Align</label>
+          <div class="flex gap-1">
+            <button onclick="saveSnapshot();liveSet('textAlign','left')" class="flex-1 py-1.5 text-xs rounded border border-gray-200 dark:border-gray-700 hover:border-primary transition-all">L</button>
+            <button onclick="saveSnapshot();liveSet('textAlign','center')" class="flex-1 py-1.5 text-xs rounded border border-gray-200 dark:border-gray-700 hover:border-primary transition-all">C</button>
+            <button onclick="saveSnapshot();liveSet('textAlign','right')" class="flex-1 py-1.5 text-xs rounded border border-gray-200 dark:border-gray-700 hover:border-primary transition-all">R</button>
+          </div>
+        </div>
+        <!-- Divider line color panel -->
+        <div id="divider-line-color-panel" class="hidden prop-group">
+          <label class="prop-label">Line Color</label>
+          <div class="flex gap-2">
+            <input type="color" class="prop-input w-10 h-8 p-0.5" id="prop-div-line-color" oninput="onDivLineColorChange(this.value)">
+            <input type="text" class="prop-input" id="prop-div-line-hex" placeholder="#e5e7eb" oninput="onDivLineHexChange(this.value)">
+          </div>
+        </div>
+        <!-- Border controls -->
+        <div class="border-t border-gray-200 dark:border-gray-700 pt-3"></div>
+        <div class="prop-group"><label class="prop-label">Border Width</label>
+          <input type="text" class="prop-input" id="prop-bw" placeholder="2px" oninput="updateBorder()">
+        </div>
+        <div class="prop-group"><label class="prop-label">Border Style</label>
+          <select class="prop-input" id="prop-bs" onchange="updateBorder()">
+            <option value="solid">Solid</option><option value="dashed">Dashed</option><option value="dotted">Dotted</option>
+            <option value="double">Double</option><option value="none">None</option>
+          </select>
+        </div>
+        <div class="prop-group"><label class="prop-label">Border Color</label>
+          <div class="flex gap-2">
+            <input type="color" class="prop-input w-10 h-8 p-0.5" id="prop-bc" oninput="onBorderColorChange(this.value)">
+            <input type="text" class="prop-input" id="prop-bc-hex" placeholder="#e5e7eb" oninput="onBorderHexChange(this.value)">
+          </div>
+        </div>
+      </div>
+      <div id="tab-content-panel" class="hidden space-y-3">
+        <div id="content-fields"></div>
+        <!-- Sub-element properties -->
+        <div id="sub-element-props-panel" class="hidden space-y-3 border border-primary/30 rounded-lg p-3 bg-primary/5">
+          <div class="flex items-center gap-2 mb-2">
+            <span class="text-xs font-bold text-primary">🎨 Sub-Element Properties</span>
+            <span id="sub-element-name" class="text-[10px] text-gray-500"></span>
+          </div>
+          <div class="prop-group"><label class="prop-label">Background</label>
+            <div class="flex gap-2"><input type="color" class="prop-input w-10 h-8 p-0.5" id="sub-prop-bg" oninput="onSubPropChange('bg', this.value)"><input type="text" class="prop-input" id="sub-prop-bg-hex" placeholder="#ffffff" oninput="onSubPropHexChange('bg', this.value)"></div>
+          </div>
+          <div class="prop-group"><label class="prop-label">Text Color</label>
+            <div class="flex gap-2"><input type="color" class="prop-input w-10 h-8 p-0.5" id="sub-prop-color" oninput="onSubPropChange('c', this.value)"><input type="text" class="prop-input" id="sub-prop-color-hex" placeholder="#1a1a1a" oninput="onSubPropHexChange('c', this.value)"></div>
+          </div>
+          <div class="prop-row">
+            <div class="prop-group"><label class="prop-label">Font Weight</label>
+              <select class="prop-input" id="sub-prop-fw" onchange="onSubPropChange('fw', this.value)">
+                <option value="">Default</option><option value="300">Light</option><option value="400">Normal</option><option value="500">Medium</option><option value="600">Semi-Bold</option><option value="700">Bold</option>
+              </select>
+            </div>
+            <div class="prop-group"><label class="prop-label">Font Style</label>
+              <select class="prop-input" id="sub-prop-fs" onchange="onSubPropChange('fs', this.value)">
+                <option value="">Default</option><option value="normal">Normal</option><option value="italic">Italic</option><option value="oblique">Oblique</option>
+              </select>
+            </div>
+          </div>
+          <div class="prop-group"><label class="prop-label">Font Family</label>
+            <select class="prop-input" id="sub-prop-ff" onchange="onSubPropChange('ff', this.value)">
+              <option value="">Default</option>
+              <option value="'Inter', sans-serif">Inter</option>
+              <option value="'Arial', sans-serif">Arial</option>
+              <option value="'Times New Roman', serif">Times New Roman</option>
+              <option value="'Verdana', sans-serif">Verdana</option>
+              <option value="'Courier New', monospace">Courier New</option>
+              <option value="'Georgia', serif">Georgia</option>
+              <option value="'Trebuchet MS', sans-serif">Trebuchet MS</option>
+              <option value="'Comic Sans MS', cursive">Comic Sans MS</option>
+              <option value="'Impact', sans-serif">Impact</option>
+              <option value="'Palatino Linotype', serif">Palatino Linotype</option>
+              <option value="'Garamond', serif">Garamond</option>
+            </select>
+          </div>
+          <div class="prop-group"><label class="prop-label">Font Size</label><input type="text" class="prop-input" id="sub-prop-font-size" placeholder="inherit" oninput="onSubPropChange('fz', this.value)"></div>
+          <div class="prop-group"><label class="prop-label">Text Align</label>
+            <select class="prop-input" id="sub-prop-ta" onchange="onSubPropChange('ta', this.value)">
+              <option value="">Default</option><option value="left">Left</option><option value="center">Center</option><option value="right">Right</option>
+            </select>
+          </div>
+          <div class="prop-group"><label class="prop-label">Padding</label><input type="text" class="prop-input" id="sub-prop-padding" placeholder="8px" oninput="onSubPropChange('p', this.value)"></div>
+          <div class="prop-group"><label class="prop-label">Border Radius</label><input type="text" class="prop-input" id="sub-prop-br" placeholder="0px" oninput="onSubPropChange('br', this.value)"></div>
+          <button onclick="saveSnapshot();clearSubElementSelection()" class="w-full py-1.5 text-[10px] font-bold rounded border border-red-200 dark:border-red-900/40 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/10 transition-all">Reset Sub-Element Style</button>
+        </div>
+        <!-- Cell properties -->
+        <div id="cell-props-panel" class="hidden space-y-3 border border-primary/30 rounded-lg p-3 bg-primary/5">
+          <div class="flex items-center gap-2 mb-2">
+            <span class="text-xs font-bold text-primary">🎨 Cell Properties</span>
+            <span id="cell-coords" class="text-[10px] text-gray-500"></span>
+          </div>
+          <div class="prop-group"><label class="prop-label">Cell Background</label>
+            <div class="flex gap-2"><input type="color" class="prop-input w-10 h-8 p-0.5" id="cell-prop-bg" oninput="onCellPropChange('bg', this.value)"><input type="text" class="prop-input" id="cell-prop-bg-hex" placeholder="#ffffff" oninput="onCellPropHexChange('bg', this.value)"></div>
+          </div>
+          <div class="prop-group"><label class="prop-label">Cell Text Color</label>
+            <div class="flex gap-2"><input type="color" class="prop-input w-10 h-8 p-0.5" id="cell-prop-color" oninput="onCellPropChange('c', this.value)"><input type="text" class="prop-input" id="cell-prop-color-hex" placeholder="#1a1a1a" oninput="onCellPropHexChange('c', this.value)"></div>
+          </div>
+          <div class="prop-group"><label class="prop-label">Cell Padding</label><input type="text" class="prop-input" id="cell-prop-padding" placeholder="8px" oninput="onCellPropChange('p', this.value)"></div>
+          <div class="prop-row">
+            <div class="prop-group"><label class="prop-label">Font Weight</label>
+              <select class="prop-input" id="cell-prop-fw" onchange="onCellPropChange('fw', this.value)">
+                <option value="">Default</option><option value="300">Light</option><option value="400">Normal</option><option value="500">Medium</option><option value="600">Semi-Bold</option><option value="700">Bold</option>
+              </select>
+            </div>
+            <div class="prop-group"><label class="prop-label">Text Align</label>
+              <select class="prop-input" id="cell-prop-ta" onchange="onCellPropChange('ta', this.value)">
+                <option value="">Default</option><option value="left">Left</option><option value="center">Center</option><option value="right">Right</option>
+              </select>
+            </div>
+          </div>
+          <div class="prop-group"><label class="prop-label">Font Family</label>
+            <select class="prop-input" id="cell-prop-ff" onchange="onCellPropChange('ff', this.value)">
+              <option value="">Default</option>
+              <option value="'Inter', sans-serif">Inter</option>
+              <option value="'Arial', sans-serif">Arial</option>
+              <option value="'Times New Roman', serif">Times New Roman</option>
+              <option value="'Verdana', sans-serif">Verdana</option>
+              <option value="'Courier New', monospace">Courier New</option>
+              <option value="'Georgia', serif">Georgia</option>
+              <option value="'Trebuchet MS', sans-serif">Trebuchet MS</option>
+              <option value="'Comic Sans MS', cursive">Comic Sans MS</option>
+              <option value="'Impact', sans-serif">Impact</option>
+              <option value="'Palatino Linotype', serif">Palatino Linotype</option>
+              <option value="'Garamond', serif">Garamond</option>
+            </select>
+          </div>
+          <div class="prop-group"><label class="prop-label">Border Radius</label><input type="text" class="prop-input" id="cell-prop-br" placeholder="0px" oninput="onCellPropChange('br', this.value)"></div>
+          <div class="prop-group"><label class="prop-label">Font Size</label><input type="text" class="prop-input" id="cell-prop-fs" placeholder="inherit" oninput="onCellPropChange('fs', this.value)"></div>
+          <div class="flex gap-2 mt-2">
+            <button onclick="saveSnapshot();applyCellStyleToRow()" class="flex-1 py-1.5 text-[10px] font-bold rounded border border-primary/50 text-primary hover:bg-primary/10 transition-all">Apply to Row</button>
+            <button onclick="saveSnapshot();applyCellStyleToCol()" class="flex-1 py-1.5 text-[10px] font-bold rounded border border-primary/50 text-primary hover:bg-primary/10 transition-all">Apply to Column</button>
+          </div>
+          <button onclick="saveSnapshot();applyCellStyleToTable()" class="w-full py-1.5 text-[10px] font-bold rounded bg-primary/10 border border-primary/30 text-primary hover:bg-primary/20 transition-all">📋 Apply to Entire Table</button>
+          <button onclick="saveSnapshot();resetCellStyle()" class="w-full py-1.5 text-[10px] font-bold rounded border border-red-200 dark:border-red-900/40 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/10 transition-all">Reset Cell Style</button>
+        </div>
+      </div>
+      <div id="group-action-panel" class="hidden space-y-2">
+        <label class="prop-label text-warning">Group Preset Tools</label>
+        <button onclick="saveSelectedAsPreset()" class="w-full py-2 text-xs font-bold bg-primary text-white rounded-lg hover:bg-primary-dark transition-all shadow">💾 Save Group to Presets</button>
+        <button onclick="ungroupSelected()" class="w-full py-2 text-xs font-bold text-warning border border-warning/40 rounded-lg hover:bg-warning/10 transition-all">📦 Ungroup Components</button>
+      </div>
+      <button id="deconstruct-btn" onclick="deconstructCurrentTemplate()" class="w-full py-2 text-xs font-bold text-amber-500 border border-amber-200 dark:border-amber-500/30 rounded-lg hover:bg-amber-50 dark:hover:bg-amber-900/15 transition-all hidden">🧩 Deconstruct Template</button>
+      <button onclick="deleteSelected()" class="w-full py-2 text-xs font-bold text-red-500 border border-red-200 dark:border-red-900/40 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/10 transition-all">🗑 Delete Selection</button>
+    </div>
+  </aside>
+</div>
+
+<div id="toast" class="fixed bottom-6 left-1/2 -translate-x-1/2 translate-y-20 bg-gray-800 text-white text-xs font-semibold px-5 py-3 rounded-full shadow-xl z-50 pointer-events-none transition-transform duration-300">Saved</div>
+<input type="file" id="file-input" accept="image/*" class="hidden" onchange="handleFileUpload(event)">
+
+<!-- Main application script -->
+<script src="app.js"></script>
+</body>
+</html>

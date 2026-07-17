@@ -60,6 +60,31 @@ document.addEventListener("DOMContentLoaded", function () {
       });
     }
 
+    // Auto-calculate open_days when dates change
+    const startDateInput = document.getElementById("start-date");
+    const endDateInput = document.getElementById("end-date");
+    const openDaysInput = document.getElementById("open-days");
+
+    function recalcOpenDays() {
+      if (!startDateInput || !endDateInput || !openDaysInput) return;
+      const start = startDateInput.value;
+      const end = endDateInput.value;
+      if (!start || !end) return;
+      const startDate = new Date(start);
+      const endDate = new Date(end);
+      if (endDate <= startDate) return;
+      let count = 0;
+      const d = new Date(startDate);
+      while (d <= endDate) {
+        if (d.getDay() > 0 && d.getDay() < 6) count++;
+        d.setDate(d.getDate() + 1);
+      }
+      openDaysInput.value = count;
+    }
+
+    if (startDateInput) startDateInput.addEventListener("change", recalcOpenDays);
+    if (endDateInput) endDateInput.addEventListener("change", recalcOpenDays);
+
     // Details toggle animation
     const detailsElements = document.querySelectorAll("details");
     detailsElements.forEach((details) => {
@@ -114,6 +139,7 @@ document.addEventListener("DOMContentLoaded", function () {
     document.getElementById("term-name").value = term.term_name;
     document.getElementById("start-date").value = term.start_date;
     document.getElementById("end-date").value = term.end_date;
+    document.getElementById("open-days").value = term.open_days || "";
     document.getElementById("is-active").checked = term.is_active;
     document.getElementById("is-current").checked = term.is_current;
 
@@ -132,6 +158,7 @@ document.addEventListener("DOMContentLoaded", function () {
       academic_session: document.getElementById("academic-session").value,
       start_date: document.getElementById("start-date").value,
       end_date: document.getElementById("end-date").value,
+      open_days: document.getElementById("open-days").value ? parseInt(document.getElementById("open-days").value) : null,
       is_active: document.getElementById("is-active").checked,
       is_current: document.getElementById("is-current").checked,
     };
@@ -309,6 +336,7 @@ document.addEventListener("DOMContentLoaded", function () {
                             <span class="material-symbols-outlined text-sm">calendar_month</span>
                             ${startDate} - ${endDate}
                         </span>
+                        ${term.open_days ? `<span class="flex items-center gap-1"><span class="material-symbols-outlined text-sm">event_available</span>${term.open_days} school days</span>` : ""}
                     </div>
                 </div>
                 <div class="flex items-center gap-2">

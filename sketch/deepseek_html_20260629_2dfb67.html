@@ -1,0 +1,1424 @@
+<!DOCTYPE html>
+<html lang="en" class="">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Report Card Studio</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<script>
+    tailwind.config = {
+        darkMode: 'class',
+        theme: {
+            extend: {
+                colors: {
+                    primary: '#1173d4',
+                    'primary-light': '#e3f2fd',
+                    'primary-dark': '#0d5ca6',
+                    success: '#10b981',
+                    error: '#ef4444',
+                    warning: '#f0b429',
+                    surface: '#ffffff',
+                    'surface-dark': '#1a1f2e',
+                    bg: '#f6f7f8',
+                    'bg-dark': '#101922',
+                    'border': '#e5e7eb',
+                    'border-dark': '#374151',
+                    text: '#4a5568',
+                    'text-dark': '#e2e8f0',
+                    muted: '#64748b',
+                }
+            }
+        }
+    }
+</script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+    * { box-sizing: border-box; }
+    html, body {
+        margin: 0; padding: 0;
+        font-family: 'Inter', sans-serif;
+        background: #f6f7f8;
+        color: #4a5568;
+        overflow: hidden;
+        height: 100vh;
+    }
+    .dark body, .dark {
+        background: #101922;
+        color: #e2e8f0;
+    }
+
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #cbd5e0; border-radius: 3px; }
+    .dark ::-webkit-scrollbar-thumb { background: #4b5563; }
+
+    .prop-input {
+        width: 100%; background: #fff; border: 1px solid #e5e7eb; color: #4a5568;
+        border-radius: 6px; padding: 6px 8px; font-size: 12px; outline: none;
+        transition: border-color 0.15s; font-family: inherit;
+    }
+    .dark .prop-input { background: #0f1419; border-color: #374151; color: #e2e8f0; }
+    .prop-input:focus { border-color: #1173d4; box-shadow: 0 0 0 2px rgba(17,115,212,0.15); }
+    .prop-label { font-size: 10px; color: #64748b; margin-bottom: 4px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; display: block; }
+    .prop-group { margin-bottom: 12px; }
+    .prop-row { display: flex; gap: 8px; }
+    .prop-row .prop-group { flex: 1; }
+    input[type=color].prop-input { padding: 2px; height: 32px; cursor: pointer; }
+    input[type=range].prop-range { width: 100%; accent-color: #1173d4; }
+    select.prop-input { cursor: pointer; }
+
+    .main-container { height: calc(100vh - 48px); }
+
+    #canvas-scroll {
+        flex: 1; overflow-y: auto;
+        background: #f6f7f8;
+        display: flex; justify-content: center; align-items: flex-start;
+        padding: 40px; position: relative;
+        scroll-behavior: smooth;
+    }
+    .dark #canvas-scroll { background: #101922; }
+
+    #canvas-scroll::-webkit-scrollbar { width: 10px; }
+    #canvas-scroll::-webkit-scrollbar-thumb { background: #cbd5e0; border-radius: 5px; }
+    #canvas-scroll::-webkit-scrollbar-thumb:hover { background: #a0aec0; }
+    .dark #canvas-scroll::-webkit-scrollbar-thumb { background: #4b5563; }
+    .dark #canvas-scroll::-webkit-scrollbar-thumb:hover { background: #6b7280; }
+
+    #report-canvas {
+        position: relative; background: #ffffff; width: 794px; min-height: 1123px;
+        padding-bottom: 200px;
+        box-shadow: 0 10px 40px rgba(0,0,0,0.08); border-radius: 4px; flex-shrink: 0;
+    }
+    .dark #report-canvas { background: #ffffff; color: #000; }
+
+    .rc-block { position: absolute; cursor: default; user-select: none; transition: box-shadow 0.15s; }
+    .rc-block.dragging { box-shadow: 0 10px 40px rgba(17,115,212,0.3); z-index: 1000; }
+    .block-outline { position: absolute; inset: 0; pointer-events: none; border: 2px solid transparent; border-radius: 1px; transition: border-color 0.15s; }
+    .rc-block:not(.selected):hover .block-outline { border-color: rgba(17,115,212,0.4); }
+    .rc-block.selected .block-outline { border-color: #1173d4; box-shadow: 0 0 0 3px rgba(17,115,212,0.15), inset 0 0 0 1px rgba(17,115,212,0.2); }
+    .rc-block.group-block.selected .block-outline { border-color: #f0b429; box-shadow: 0 0 0 3px rgba(240,180,41,0.15), inset 0 0 0 1px rgba(240,180,41,0.2); }
+
+    .drag-handle {
+        position: absolute; top: -26px; left: 50%; transform: translateX(-50%);
+        background: linear-gradient(135deg, #1173d4, #0d5ca6); color: #fff;
+        font-size: 11px; padding: 4px 14px; border-radius: 5px 5px 0 0;
+        cursor: grab; white-space: nowrap; display: none; align-items: center; gap: 5px;
+        z-index: 25; font-weight: 600; letter-spacing: 0.5px; box-shadow: 0 2px 8px rgba(17,115,212,0.4);
+    }
+    .drag-handle:hover { background: linear-gradient(135deg, #1a82e8, #0f6bbf); }
+    .drag-handle:active { cursor: grabbing; }
+    .rc-block.selected .drag-handle { display: flex; }
+
+    .resize-handle {
+        position: absolute; width: 12px; height: 12px; background: #1173d4;
+        border: 2px solid #fff; border-radius: 2px; z-index: 30; display: none;
+        cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+    }
+    .rc-block.selected .resize-handle { display: block; }
+    .rh-nw { top: -6px; left: -6px; cursor: nw-resize; } .rh-ne { top: -6px; right: -6px; cursor: ne-resize; }
+    .rh-sw { bottom: -6px; left: -6px; cursor: sw-resize; } .rh-se { bottom: -6px; right: -6px; cursor: se-resize; }
+    .rh-n { top: -6px; left: 50%; transform: translateX(-50%); cursor: n-resize; }
+    .rh-s { bottom: -6px; left: 50%; transform: translateX(-50%); cursor: s-resize; }
+    .rh-e { right: -6px; top: 50%; transform: translateY(-50%); cursor: e-resize; }
+    .rh-w { left: -6px; top: 50%; transform: translateY(-50%); cursor: w-resize; }
+
+    .block-delete {
+        position: absolute; top: -26px; right: 0; background: #ef4444; color: #fff;
+        border: none; border-radius: 5px 5px 0 0; font-size: 10px; padding: 4px 10px;
+        cursor: pointer; display: none; z-index: 25; font-weight: 600;
+    }
+    .block-delete:hover { background: #dc2626; }
+    .rc-block.selected .block-delete { display: block; }
+
+    .pdf-header { width:100%; height:100%; display:flex; align-items:center; justify-content:center; flex-direction:column; text-align:center; padding:20px 24px; gap:6px; }
+    .hd-logo { width:70px; height:70px; border-radius:50%; object-fit:cover; border:2px solid rgba(255,255,255,.2); margin-bottom:6px; }
+    .hd-logo-ph { width:70px; height:70px; border-radius:50%; background:rgba(255,255,255,.12); display:flex; align-items:center; justify-content:center; margin-bottom:6px; font-size:28px; cursor:pointer; border:2px dashed rgba(255,255,255,.3); color:rgba(255,255,255,.6); transition:all .2s; }
+    .hd-logo-ph:hover { background:rgba(255,255,255,.2); border-color:rgba(255,255,255,.5); }
+    .hd-school { font-size:22px; font-weight:700; letter-spacing:.06em; min-height:24px; }
+    .hd-sub { font-size:12px; opacity:.9; min-height:18px; }
+    .hd-title { font-size:14px; font-weight:600; margin-top:8px; padding-top:8px; border-top:1px solid rgba(255,255,255,.3); width:85%; min-height:18px; }
+    .pdf-student { width:100%; height:100%; display:grid; grid-template-columns:1fr 1fr; font-size:12px; border:1px solid #ddd; }
+    .si-field { display:flex; align-items:stretch; border-bottom:1px solid #ddd; }
+    .si-field:nth-child(2n) { border-right:1px solid #ddd; }
+    .si-label { background:#f5f5f5; padding:8px 10px; font-weight:700; font-size:9px; color:#444; min-width:120px; display:flex; align-items:center; text-transform:uppercase; letter-spacing:.04em; border-right:1px solid #ddd; flex-shrink:0; }
+    .si-value { padding:8px 10px; flex:1; color:inherit; display:flex; align-items:center; min-height:32px; }
+    .si-photo-wrap { border:1px solid #ddd; display:flex; align-items:center; justify-content:center; background:#fafafa; grid-row:1/5; grid-column:2; }
+    .si-photo-img { width:85px; height:110px; object-fit:cover; border-radius:4px; border:1px solid #e5e7eb; }
+    .si-photo-ph { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; font-size:10px; color:#9ca3af; cursor:pointer; padding:15px; text-align:center; width:85px; height:110px; border:1.5px dashed #d1d5db; border-radius:4px; background:#f9fafb; transition:all .2s; }
+    .si-photo-ph:hover { background:#f3f4f6; border-color:#9ca3af; }
+    .pdf-grades { width:100%; height:100%; padding:14px; overflow:auto; }
+    .pdf-grades h3 { font-size:13px; font-weight:700; margin-bottom:10px; text-transform:uppercase; letter-spacing:.06em; color:inherit; min-height:20px; }
+    .grades-tbl { width:100%; border-collapse:collapse; font-size:11px; }
+    .grades-tbl th { padding:8px; text-align:left; font-size:10px; letter-spacing:.04em; text-transform:uppercase; font-weight:700; }
+    .grades-tbl td { padding:7px 8px; border-bottom:1px solid #eee; min-height:24px; }
+    .grades-tbl tr:nth-child(even) td { background:#f9f9f9; }
+    .grades-tbl td.cell-selected { outline:2.5px solid #1173d4 !important; outline-offset:-1px; box-shadow:0 0 0 4px rgba(17,115,212,0.25) !important; }
+    .pdf-add-row { margin-top:8px; font-size:10px; padding:4px 12px; background:#f3f4f6; border:1px dashed #9ca3af; border-radius:4px; cursor:pointer; transition:all .2s; }
+    .pdf-add-row:hover { background:#e5e7eb; border-color:#6b7280; }
+    .pdf-del-row { color:#ef4444; font-size:10px; cursor:pointer; background:none; border:none; padding:2px 4px; transition:color .2s; }
+    .pdf-del-row:hover { color:#dc2626; }
+    .pdf-comments { width:100%; height:100%; padding:14px; }
+    .pdf-comments h3 { font-size:13px; font-weight:700; margin-bottom:8px; text-transform:uppercase; letter-spacing:.06em; color:inherit; min-height:20px; }
+    .comment-body { font-size:11px; line-height:1.8; color:inherit; padding:10px; border:1px solid #eee; border-radius:3px; background:#fafafa; min-height:50px; }
+    .pdf-attendance { width:100%; height:100%; padding:14px; }
+    .pdf-attendance h3 { font-size:13px; font-weight:700; margin-bottom:10px; text-transform:uppercase; letter-spacing:.06em; }
+    .att-grid { display:flex; gap:12px; }
+    .att-card { flex:1; border:1px solid #e5e7eb; border-radius:6px; padding:12px; text-align:center; background:#f9fafb; transition:all .2s; }
+    .att-card:hover { border-color:#d1d5db; background:#f3f4f6; }
+    .att-val { font-size:28px; font-weight:700; color:inherit; display:block; line-height:1; min-height:32px; }
+    .att-lbl { font-size:9px; color:#6b7280; margin-top:6px; text-transform:uppercase; letter-spacing:.05em; }
+    .pdf-signature { width:100%; height:100%; padding:16px 20px; }
+    .sig-row { display:flex; gap:20px; }
+    .sig-field { flex:1; display:flex; flex-direction:column; gap:4px; }
+    .sig-line { border-bottom:1px solid #333; height:44px; }
+    .sig-lbl { font-size:9px; color:inherit; text-transform:uppercase; letter-spacing:.04em; min-height:16px; }
+    .pdf-divider { width:100%; height:100%; display:flex; align-items:center; padding:0 12px; }
+    .pdf-divider hr { width:100%; border:none; border-top:1.5px solid #e5e7eb; }
+
+    .pdf-text { width:100%; height:100%; font-size: inherit; line-height:1.6; padding:10px 16px; color:inherit; }
+    .pdf-image { width:100%; height:100%; display:flex; align-items:center; justify-content:center; overflow:hidden; }
+    .pdf-image img { width:100%; height:100%; object-fit:contain; pointer-events: none; user-select: none; -webkit-user-drag: none; }
+    .pdf-img-ph { width:100%; height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px; background:#f9fafb; border:2px dashed #d1d5db; cursor:pointer; color:#9ca3af; font-size:12px; transition:all .2s; }
+    .pdf-img-ph:hover { background:#f3f4f6; border-color:#9ca3af; color:#6b7280; }
+    .pdf-table-wrap { width:100%; height:100%; padding:8px; overflow:auto; }
+    .pdf-table { width:100%; border-collapse:collapse; font-size:11px; }
+    .pdf-table td,.pdf-table th { border:1px solid #d1d5db; padding:8px; min-width:40px; color:inherit; background:inherit; cursor:pointer; transition:outline 0.1s; position:relative; }
+    .pdf-table th { background:#f3f4f6; font-weight:700; font-size:10px; text-transform:uppercase; }
+    .table-cell-selected { outline:2.5px solid #1173d4 !important; outline-offset:-1px; z-index:5; box-shadow:0 0 0 4px rgba(17,115,212,0.25) !important; }
+    .table-controls { margin-top:8px; display:flex; gap:6px; flex-wrap:wrap; }
+    .table-controls button { font-size:10px; padding:3px 10px; background:#f3f4f6; border:1px solid #d1d5db; border-radius:3px; cursor:pointer; transition:all .2s; font-family:inherit; }
+    .table-controls button:hover { background:#e5e7eb; border-color:#9ca3af; }
+    .pdf-cell { width:100%; height:100%; display:flex; flex-direction:column; justify-content:center; align-items:stretch; padding:12px; font-size: inherit; border:1px solid #d1d5db; color:inherit; min-height:50px; background:transparent; }
+    .pdf-cell[contenteditable=true]:focus { outline:2px solid #1173d4; background:#fff; }
+
+    .btn-disabled { opacity: 0.4; pointer-events: none; cursor: not-allowed; }
+
+    .comp-chip {
+        display: flex; align-items: center; gap: 8px; padding: 8px 10px;
+        background: #ffffff; border: 1px solid #e5e7eb; border-radius: 8px;
+        cursor: pointer; transition: all 0.15s; margin-bottom: 6px;
+    }
+    .comp-chip:hover { background: #e3f2fd; border-color: #1173d4; }
+    .dark .comp-chip { background: #1a1f2e; border-color: #374151; }
+    .dark .comp-chip:hover { background: #1e293b; border-color: #1173d4; }
+
+    .layer-item { display: flex; align-items: center; gap: 6px; padding: 6px 8px; border-radius: 6px; cursor: pointer; font-size: 11px; transition: all 0.15s; margin-bottom: 3px; }
+    .layer-item:hover { background: rgba(0,0,0,0.04); }
+    .layer-item.active { background: rgba(17,115,212,0.1); color: #1173d4; border: 1px solid rgba(17,115,212,0.3); }
+    .dark .layer-item:hover { background: rgba(255,255,255,0.05); }
+    .dark .layer-item.active { background: rgba(17,115,212,0.2); color: #fff; border-color: rgba(17,115,212,0.4); }
+
+    .tab-btn { padding: 6px 12px; font-size: 11px; border-radius: 5px; cursor: pointer; transition: all 0.15s; border: none; background: transparent; color: #64748b; font-weight: 600; }
+    .tab-btn.active { background: #1173d4; color: #fff; }
+    .tab-btn:hover:not(.active) { color: #4a5568; }
+    .dark .tab-btn { color: #94a3b8; }
+    .dark .tab-btn:hover:not(.active) { color: #cbd5e1; }
+    .dark .tab-btn.active { background: #1173d4; color: #fff; }
+
+    .parent-btn {
+        display: none; font-size: 11px; padding: 4px 10px; background: #e3f2fd;
+        border: 1px solid #1173d4; color: #1173d4; border-radius: 5px; cursor: pointer;
+        margin-top: 8px; transition: background 0.2s;
+    }
+    .parent-btn:hover { background: #bbdefb; }
+
+    .sub-element-selected {
+        outline: 2.5px solid #1173d4 !important;
+        outline-offset: -1px;
+        box-shadow: 0 0 0 4px rgba(17,115,212,0.25) !important;
+        position: relative;
+        z-index: 10;
+    }
+</style>
+</head>
+<body class="bg-[#f6f7f8] dark:bg-[#101922] text-[#4a5568] dark:text-[#e2e8f0]">
+
+<header class="flex items-center justify-between px-4 py-2 bg-white dark:bg-[#1a1f2e] border-b border-gray-200 dark:border-gray-700 shadow-sm z-10">
+  <div class="flex items-center gap-3">
+    <div class="w-8 h-8 rounded-lg bg-primary flex items-center justify-center text-white font-bold text-sm">📋</div>
+    <h1 class="text-sm font-semibold text-gray-800 dark:text-white">Report Card Studio</h1>
+    <span class="text-xs text-gray-500 dark:text-gray-400 hidden sm:block">Design & Export</span>
+  </div>
+  <div class="flex items-center gap-2">
+    <button id="btn-undo" onclick="undo()" class="text-xs font-medium px-3 py-1.5 rounded-md bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition-all btn-disabled">↩</button>
+    <button id="btn-redo" onclick="redo()" class="text-xs font-medium px-3 py-1.5 rounded-md bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition-all btn-disabled">↪</button>
+    <div class="w-px h-5 bg-gray-200 dark:bg-gray-700"></div>
+    <button onclick="groupSelected()" class="text-xs font-medium px-3 py-1.5 rounded-md bg-warning text-black hover:bg-amber-400 transition-all">📦 Group</button>
+    <button onclick="ungroupSelected()" class="text-xs font-medium px-3 py-1.5 rounded-md bg-warning/20 text-warning border border-warning/30 hover:bg-warning/30 transition-all">📦 Ungroup</button>
+    <div class="w-px h-5 bg-gray-200 dark:bg-gray-700"></div>
+    <button onclick="savePage()" class="text-xs font-medium px-3 py-1.5 rounded-md bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition-all">💾</button>
+    <button onclick="exportPDF()" class="text-xs font-bold px-4 py-1.5 rounded-md bg-primary text-white hover:bg-primary-dark transition-all shadow-sm">⬇ Export PDF</button>
+    <button onclick="toggleDarkMode()" class="p-2 rounded-md bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition-all" title="Toggle theme">
+      <span id="theme-icon">🌙</span>
+    </button>
+  </div>
+</header>
+
+<div class="flex flex-1 overflow-hidden relative main-container">
+
+  <aside id="sidebar" class="w-56 flex-shrink-0 bg-white dark:bg-[#1a1f2e] border-r border-gray-200 dark:border-gray-700 overflow-y-auto p-3 transition-all duration-300" style="max-height: calc(100vh - 48px);">
+    <div class="flex items-center justify-between mb-3">
+      <h2 class="text-[11px] font-bold uppercase tracking-wider text-primary">Components</h2>
+      <button onclick="toggleSidebar()" class="text-xs p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800">◀</button>
+    </div>
+    <div class="space-y-1">
+      <div class="comp-chip" onclick="addBlock('school-header')"><span>🏫</span><span class="text-xs">School Header</span></div>
+      <div class="comp-chip" onclick="addBlock('student-info')"><span>👤</span><span class="text-xs">Student Info</span></div>
+      <div class="comp-chip" onclick="addBlock('grades')"><span>📊</span><span class="text-xs">Grades Table</span></div>
+      <div class="comp-chip" onclick="addBlock('comments')"><span>💬</span><span class="text-xs">Comments</span></div>
+      <div class="comp-chip" onclick="addBlock('attendance')"><span>📅</span><span class="text-xs">Attendance</span></div>
+      <div class="comp-chip" onclick="addBlock('signature')"><span>✍️</span><span class="text-xs">Signatures</span></div>
+    </div>
+    <div class="my-3 border-t border-gray-200 dark:border-gray-700"></div>
+    <h2 class="text-[11px] font-bold uppercase tracking-wider text-primary mb-3">Primitives</h2>
+    <div class="space-y-1">
+      <div class="comp-chip" onclick="addBlock('table')"><span>⊞</span><span class="text-xs">Table</span></div>
+      <div class="comp-chip" onclick="addBlock('cell')"><span>▢</span><span class="text-xs">Cell</span></div>
+      <div class="comp-chip" onclick="addBlock('image')"><span>🖼</span><span class="text-xs">Image</span></div>
+      <div class="comp-chip" onclick="addBlock('text')"><span>Aa</span><span class="text-xs">Text Block</span></div>
+      <div class="comp-chip" onclick="addBlock('divider')"><span>—</span><span class="text-xs">Divider</span></div>
+    </div>
+    <div class="my-3 border-t border-gray-200 dark:border-gray-700"></div>
+    <h2 class="text-[11px] font-bold uppercase tracking-wider text-primary mb-3">My Presets</h2>
+    <div id="custom-presets-list" class="space-y-1.5 text-[10px] text-gray-500 dark:text-gray-400 italic">No presets saved.</div>
+    <div class="my-3 border-t border-gray-200 dark:border-gray-700"></div>
+    <h2 class="text-[11px] font-bold uppercase tracking-wider text-primary mb-3">Layers</h2>
+    <div id="layers-list" class="space-y-1"></div>
+  </aside>
+
+  <button id="sidebar-open-btn" onclick="openSidebar()" class="hidden absolute left-2 top-2 z-20 bg-white dark:bg-[#1a1f2e] border border-gray-200 dark:border-gray-700 rounded-md p-1.5 shadow hover:bg-gray-50 dark:hover:bg-gray-800 transition-all">
+    <span class="text-lg">☰</span>
+  </button>
+
+  <div id="canvas-scroll">
+    <div id="report-canvas" onclick="canvasClick(event)"></div>
+  </div>
+
+  <aside class="w-64 flex-shrink-0 bg-white dark:bg-[#1a1f2e] border-l border-gray-200 dark:border-gray-700 overflow-y-auto p-3">
+    <div id="props-empty" class="flex flex-col items-center justify-center py-16 text-center">
+      <div class="text-3xl mb-2">👆</div>
+      <p class="text-xs text-gray-500 dark:text-gray-400">Select a block or double‑click to drill into children.</p>
+    </div>
+    <div id="props-panel" class="hidden space-y-4">
+      <div class="flex items-center justify-between">
+        <span id="props-block-name" class="text-xs font-bold bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded uppercase tracking-wider"></span>
+        <button onclick="deleteSelected()" class="text-xs text-red-500 hover:text-red-400">🗑</button>
+      </div>
+      <button id="parent-nav-btn" class="parent-btn" onclick="navigateToParent()">⬆ Parent</button>
+      <div class="flex gap-1 p-1 bg-gray-100 dark:bg-gray-800 rounded-lg">
+        <button class="tab-btn active flex-1" onclick="switchTab('layout')" id="tab-layout">Layout</button>
+        <button class="tab-btn flex-1" onclick="switchTab('style')" id="tab-style">Style</button>
+        <button class="tab-btn flex-1" onclick="switchTab('content')" id="tab-content">Content</button>
+      </div>
+      <div id="tab-layout-panel" class="space-y-3">
+        <div id="layout-multi-select-notice" class="hidden bg-amber-50 dark:bg-amber-900/20 p-3 rounded-lg border border-amber-200 dark:border-amber-500/30">
+          <p class="text-xs text-amber-700 dark:text-amber-400 font-semibold mb-2">Multiple Selection Active</p>
+          <button onclick="groupSelected()" class="w-full py-2 text-xs font-bold bg-warning text-black rounded-lg hover:bg-amber-400 transition-all">📦 Group Selection</button>
+        </div>
+        <div id="layout-single-item-panel" class="space-y-3">
+          <div class="prop-group"><label class="prop-label">Position & Size</label>
+            <div class="prop-row">
+              <div class="prop-group"><span class="prop-label">X</span><input type="number" class="prop-input" id="prop-x" oninput="liveSet('x',+this.value);renderLayerLabel()"></div>
+              <div class="prop-group"><span class="prop-label">Y</span><input type="number" class="prop-input" id="prop-y" oninput="liveSet('y',+this.value);renderLayerLabel()"></div>
+            </div>
+            <div class="prop-row">
+              <div class="prop-group"><span class="prop-label">W</span><input type="number" class="prop-input" id="prop-w" oninput="liveSet('w',+this.value)"></div>
+              <div class="prop-group"><span class="prop-label">H</span><input type="text" class="prop-input" id="prop-h" placeholder="auto" oninput="liveSet('h',this.value||'auto')"></div>
+            </div>
+          </div>
+          <div class="prop-group"><label class="prop-label">Padding</label><input type="text" class="prop-input" id="prop-padding" placeholder="12px 16px" oninput="liveSet('padding',this.value)"></div>
+          <div class="prop-group"><label class="prop-label">Border Radius</label><input type="text" class="prop-input" id="prop-radius" placeholder="8px" oninput="liveSet('borderRadius',this.value)"></div>
+          <div class="prop-group"><label class="prop-label">Z-Index</label><input type="number" class="prop-input" id="prop-z" oninput="liveSet('zIndex',+this.value)"></div>
+        </div>
+      </div>
+      <div id="tab-style-panel" class="hidden space-y-3">
+        <div class="prop-group"><label class="prop-label">Background</label>
+          <select class="prop-input" id="prop-bg-type" onchange="bgTypeChange(this.value)">
+            <option value="none">Transparent</option><option value="solid">Solid Color</option><option value="gradient">Linear Gradient</option>
+          </select>
+        </div>
+        <div id="bg-solid-panel" class="prop-group hidden"><label class="prop-label">Color</label>
+          <div class="flex gap-2"><input type="color" class="prop-input w-10 h-8 p-0.5" id="prop-bg-color" oninput="onBgColorChange(this.value)"><input type="text" class="prop-input" id="prop-bg-hex" placeholder="#ffffff" oninput="onBgHexChange(this.value)"></div>
+        </div>
+        <div id="bg-gradient-panel" class="hidden space-y-2">
+          <div class="prop-group"><label class="prop-label">Angle</label>
+            <div class="flex gap-2 items-center"><input type="range" class="prop-range flex-1" id="prop-grad-angle" min="0" max="360" value="135" oninput="onGradAngleChange(this.value)"><span id="grad-angle-lbl" class="text-xs w-10 text-right">135°</span></div>
+          </div>
+          <div><label class="prop-label">Color Stops</label><div id="grad-stops" class="space-y-2"></div><button onclick="addGradStop()" class="text-xs text-primary hover:underline mt-2">＋ Add Stop</button></div>
+        </div>
+        <div class="border-t border-gray-200 dark:border-gray-700 pt-3"></div>
+        <div class="prop-group"><label class="prop-label">Text Color</label>
+          <div class="flex gap-2"><input type="color" class="prop-input w-10 h-8 p-0.5" id="prop-color" oninput="onTextColorChange(this.value)"><input type="text" class="prop-input" id="prop-color-hex" placeholder="#1a1a1a" oninput="onColorHexChange(this.value)"></div>
+        </div>
+        <div class="prop-row">
+          <div class="prop-group"><label class="prop-label">Size (px)</label><input type="number" class="prop-input" id="prop-fs" placeholder="12" oninput="liveSet('fontSize',this.value?this.value+'px':'')"></div>
+          <div class="prop-group"><label class="prop-label">Weight</label>
+            <select class="prop-input" id="prop-fw" onchange="liveSet('fontWeight',this.value)">
+              <option value="">Default</option><option value="300">Light</option><option value="400">Normal</option><option value="500">Medium</option><option value="600">Semi-Bold</option><option value="700">Bold</option>
+            </select>
+          </div>
+        </div>
+        <div class="prop-group"><label class="prop-label">Font Style</label>
+          <select class="prop-input" id="prop-font-style" onchange="liveSet('fontStyle',this.value)">
+            <option value="">Default</option><option value="normal">Normal</option><option value="italic">Italic</option><option value="oblique">Oblique</option>
+          </select>
+        </div>
+        <div class="prop-group"><label class="prop-label">Font Family</label>
+          <select class="prop-input" id="prop-ff" onchange="liveSet('fontFamily',this.value)">
+            <option value="">Default</option>
+            <option value="'Inter', sans-serif">Inter</option>
+            <option value="'Arial', sans-serif">Arial</option>
+            <option value="'Times New Roman', serif">Times New Roman</option>
+            <option value="'Verdana', sans-serif">Verdana</option>
+            <option value="'Courier New', monospace">Courier New</option>
+            <option value="'Georgia', serif">Georgia</option>
+            <option value="'Trebuchet MS', sans-serif">Trebuchet MS</option>
+            <option value="'Comic Sans MS', cursive">Comic Sans MS</option>
+            <option value="'Impact', sans-serif">Impact</option>
+            <option value="'Palatino Linotype', serif">Palatino Linotype</option>
+            <option value="'Garamond', serif">Garamond</option>
+          </select>
+        </div>
+        <div class="prop-group"><label class="prop-label">Text Align</label>
+          <div class="flex gap-1">
+            <button onclick="saveSnapshot();liveSet('textAlign','left')" class="flex-1 py-1.5 text-xs rounded border border-gray-200 dark:border-gray-700 hover:border-primary transition-all">L</button>
+            <button onclick="saveSnapshot();liveSet('textAlign','center')" class="flex-1 py-1.5 text-xs rounded border border-gray-200 dark:border-gray-700 hover:border-primary transition-all">C</button>
+            <button onclick="saveSnapshot();liveSet('textAlign','right')" class="flex-1 py-1.5 text-xs rounded border border-gray-200 dark:border-gray-700 hover:border-primary transition-all">R</button>
+          </div>
+        </div>
+        <div id="divider-line-color-panel" class="hidden prop-group">
+          <label class="prop-label">Line Color</label>
+          <div class="flex gap-2">
+            <input type="color" class="prop-input w-10 h-8 p-0.5" id="prop-div-line-color" oninput="onDivLineColorChange(this.value)">
+            <input type="text" class="prop-input" id="prop-div-line-hex" placeholder="#e5e7eb" oninput="onDivLineHexChange(this.value)">
+          </div>
+        </div>
+        <!-- Border controls -->
+        <div class="border-t border-gray-200 dark:border-gray-700 pt-3"></div>
+        <div class="prop-group"><label class="prop-label">Border Width</label>
+          <input type="text" class="prop-input" id="prop-bw" placeholder="2px" oninput="updateBorder()">
+        </div>
+        <div class="prop-group"><label class="prop-label">Border Style</label>
+          <select class="prop-input" id="prop-bs" onchange="updateBorder()">
+            <option value="solid">Solid</option><option value="dashed">Dashed</option><option value="dotted">Dotted</option>
+            <option value="double">Double</option><option value="none">None</option>
+          </select>
+        </div>
+        <div class="prop-group"><label class="prop-label">Border Color</label>
+          <div class="flex gap-2">
+            <input type="color" class="prop-input w-10 h-8 p-0.5" id="prop-bc" oninput="onBorderColorChange(this.value)">
+            <input type="text" class="prop-input" id="prop-bc-hex" placeholder="#e5e7eb" oninput="onBorderHexChange(this.value)">
+          </div>
+        </div>
+      </div>
+      <div id="tab-content-panel" class="hidden space-y-3">
+        <div id="content-fields"></div>
+        <div id="sub-element-props-panel" class="hidden space-y-3 border border-primary/30 rounded-lg p-3 bg-primary/5">
+          <div class="flex items-center gap-2 mb-2">
+            <span class="text-xs font-bold text-primary">🎨 Sub-Element Properties</span>
+            <span id="sub-element-name" class="text-[10px] text-gray-500"></span>
+          </div>
+          <div class="prop-group"><label class="prop-label">Background</label>
+            <div class="flex gap-2"><input type="color" class="prop-input w-10 h-8 p-0.5" id="sub-prop-bg" oninput="onSubPropChange('bg', this.value)"><input type="text" class="prop-input" id="sub-prop-bg-hex" placeholder="#ffffff" oninput="onSubPropHexChange('bg', this.value)"></div>
+          </div>
+          <div class="prop-group"><label class="prop-label">Text Color</label>
+            <div class="flex gap-2"><input type="color" class="prop-input w-10 h-8 p-0.5" id="sub-prop-color" oninput="onSubPropChange('c', this.value)"><input type="text" class="prop-input" id="sub-prop-color-hex" placeholder="#1a1a1a" oninput="onSubPropHexChange('c', this.value)"></div>
+          </div>
+          <div class="prop-row">
+            <div class="prop-group"><label class="prop-label">Font Weight</label>
+              <select class="prop-input" id="sub-prop-fw" onchange="onSubPropChange('fw', this.value)">
+                <option value="">Default</option><option value="300">Light</option><option value="400">Normal</option><option value="500">Medium</option><option value="600">Semi-Bold</option><option value="700">Bold</option>
+              </select>
+            </div>
+            <div class="prop-group"><label class="prop-label">Font Style</label>
+              <select class="prop-input" id="sub-prop-fs" onchange="onSubPropChange('fs', this.value)">
+                <option value="">Default</option><option value="normal">Normal</option><option value="italic">Italic</option><option value="oblique">Oblique</option>
+              </select>
+            </div>
+          </div>
+          <div class="prop-group"><label class="prop-label">Font Family</label>
+            <select class="prop-input" id="sub-prop-ff" onchange="onSubPropChange('ff', this.value)">
+              <option value="">Default</option>
+              <option value="'Inter', sans-serif">Inter</option>
+              <option value="'Arial', sans-serif">Arial</option>
+              <option value="'Times New Roman', serif">Times New Roman</option>
+              <option value="'Verdana', sans-serif">Verdana</option>
+              <option value="'Courier New', monospace">Courier New</option>
+              <option value="'Georgia', serif">Georgia</option>
+              <option value="'Trebuchet MS', sans-serif">Trebuchet MS</option>
+              <option value="'Comic Sans MS', cursive">Comic Sans MS</option>
+              <option value="'Impact', sans-serif">Impact</option>
+              <option value="'Palatino Linotype', serif">Palatino Linotype</option>
+              <option value="'Garamond', serif">Garamond</option>
+            </select>
+          </div>
+          <div class="prop-group"><label class="prop-label">Font Size</label><input type="text" class="prop-input" id="sub-prop-font-size" placeholder="inherit" oninput="onSubPropChange('fz', this.value)"></div>
+          <div class="prop-group"><label class="prop-label">Text Align</label>
+            <select class="prop-input" id="sub-prop-ta" onchange="onSubPropChange('ta', this.value)">
+              <option value="">Default</option><option value="left">Left</option><option value="center">Center</option><option value="right">Right</option>
+            </select>
+          </div>
+          <div class="prop-group"><label class="prop-label">Padding</label><input type="text" class="prop-input" id="sub-prop-padding" placeholder="8px" oninput="onSubPropChange('p', this.value)"></div>
+          <div class="prop-group"><label class="prop-label">Border Radius</label><input type="text" class="prop-input" id="sub-prop-br" placeholder="0px" oninput="onSubPropChange('br', this.value)"></div>
+          <button onclick="saveSnapshot();clearSubElementSelection()" class="w-full py-1.5 text-[10px] font-bold rounded border border-red-200 dark:border-red-900/40 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/10 transition-all">Reset Sub-Element Style</button>
+        </div>
+        <div id="cell-props-panel" class="hidden space-y-3 border border-primary/30 rounded-lg p-3 bg-primary/5">
+          <div class="flex items-center gap-2 mb-2">
+            <span class="text-xs font-bold text-primary">🎨 Cell Properties</span>
+            <span id="cell-coords" class="text-[10px] text-gray-500"></span>
+          </div>
+          <div class="prop-group"><label class="prop-label">Cell Background</label>
+            <div class="flex gap-2"><input type="color" class="prop-input w-10 h-8 p-0.5" id="cell-prop-bg" oninput="onCellPropChange('bg', this.value)"><input type="text" class="prop-input" id="cell-prop-bg-hex" placeholder="#ffffff" oninput="onCellPropHexChange('bg', this.value)"></div>
+          </div>
+          <div class="prop-group"><label class="prop-label">Cell Text Color</label>
+            <div class="flex gap-2"><input type="color" class="prop-input w-10 h-8 p-0.5" id="cell-prop-color" oninput="onCellPropChange('c', this.value)"><input type="text" class="prop-input" id="cell-prop-color-hex" placeholder="#1a1a1a" oninput="onCellPropHexChange('c', this.value)"></div>
+          </div>
+          <div class="prop-group"><label class="prop-label">Cell Padding</label><input type="text" class="prop-input" id="cell-prop-padding" placeholder="8px" oninput="onCellPropChange('p', this.value)"></div>
+          <div class="prop-row">
+            <div class="prop-group"><label class="prop-label">Font Weight</label>
+              <select class="prop-input" id="cell-prop-fw" onchange="onCellPropChange('fw', this.value)">
+                <option value="">Default</option><option value="300">Light</option><option value="400">Normal</option><option value="500">Medium</option><option value="600">Semi-Bold</option><option value="700">Bold</option>
+              </select>
+            </div>
+            <div class="prop-group"><label class="prop-label">Text Align</label>
+              <select class="prop-input" id="cell-prop-ta" onchange="onCellPropChange('ta', this.value)">
+                <option value="">Default</option><option value="left">Left</option><option value="center">Center</option><option value="right">Right</option>
+              </select>
+            </div>
+          </div>
+          <div class="prop-group"><label class="prop-label">Font Family</label>
+            <select class="prop-input" id="cell-prop-ff" onchange="onCellPropChange('ff', this.value)">
+              <option value="">Default</option>
+              <option value="'Inter', sans-serif">Inter</option>
+              <option value="'Arial', sans-serif">Arial</option>
+              <option value="'Times New Roman', serif">Times New Roman</option>
+              <option value="'Verdana', sans-serif">Verdana</option>
+              <option value="'Courier New', monospace">Courier New</option>
+              <option value="'Georgia', serif">Georgia</option>
+              <option value="'Trebuchet MS', sans-serif">Trebuchet MS</option>
+              <option value="'Comic Sans MS', cursive">Comic Sans MS</option>
+              <option value="'Impact', sans-serif">Impact</option>
+              <option value="'Palatino Linotype', serif">Palatino Linotype</option>
+              <option value="'Garamond', serif">Garamond</option>
+            </select>
+          </div>
+          <div class="prop-group"><label class="prop-label">Border Radius</label><input type="text" class="prop-input" id="cell-prop-br" placeholder="0px" oninput="onCellPropChange('br', this.value)"></div>
+          <div class="prop-group"><label class="prop-label">Font Size</label><input type="text" class="prop-input" id="cell-prop-fs" placeholder="inherit" oninput="onCellPropChange('fs', this.value)"></div>
+          <div class="flex gap-2 mt-2">
+            <button onclick="saveSnapshot();applyCellStyleToRow()" class="flex-1 py-1.5 text-[10px] font-bold rounded border border-primary/50 text-primary hover:bg-primary/10 transition-all">Apply to Row</button>
+            <button onclick="saveSnapshot();applyCellStyleToCol()" class="flex-1 py-1.5 text-[10px] font-bold rounded border border-primary/50 text-primary hover:bg-primary/10 transition-all">Apply to Column</button>
+          </div>
+          <button onclick="saveSnapshot();applyCellStyleToTable()" class="w-full py-1.5 text-[10px] font-bold rounded bg-primary/10 border border-primary/30 text-primary hover:bg-primary/20 transition-all">📋 Apply to Entire Table</button>
+          <button onclick="saveSnapshot();resetCellStyle()" class="w-full py-1.5 text-[10px] font-bold rounded border border-red-200 dark:border-red-900/40 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/10 transition-all">Reset Cell Style</button>
+        </div>
+      </div>
+      <div id="group-action-panel" class="hidden space-y-2">
+        <label class="prop-label text-warning">Group Preset Tools</label>
+        <button onclick="saveSelectedAsPreset()" class="w-full py-2 text-xs font-bold bg-primary text-white rounded-lg hover:bg-primary-dark transition-all shadow">💾 Save Group to Presets</button>
+        <button onclick="ungroupSelected()" class="w-full py-2 text-xs font-bold text-warning border border-warning/40 rounded-lg hover:bg-warning/10 transition-all">📦 Ungroup Components</button>
+      </div>
+      <button id="deconstruct-btn" onclick="deconstructCurrentTemplate()" class="w-full py-2 text-xs font-bold text-amber-500 border border-amber-200 dark:border-amber-500/30 rounded-lg hover:bg-amber-50 dark:hover:bg-amber-900/15 transition-all hidden">🧩 Deconstruct Template</button>
+      <button onclick="deleteSelected()" class="w-full py-2 text-xs font-bold text-red-500 border border-red-200 dark:border-red-900/40 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/10 transition-all">🗑 Delete Selection</button>
+    </div>
+  </aside>
+</div>
+
+<div id="toast" class="fixed bottom-6 left-1/2 -translate-x-1/2 translate-y-20 bg-gray-800 text-white text-xs font-semibold px-5 py-3 rounded-full shadow-xl z-50 pointer-events-none transition-transform duration-300">Saved</div>
+<input type="file" id="file-input" accept="image/*" class="hidden" onchange="handleFileUpload(event)">
+
+<script>
+// ────────────────────── STATE ──────────────────────
+let blocks = [];
+let selectedIds = [];
+let idCounter = 0;
+let dragState = null;
+let fileTarget = null;
+let activeTab = 'layout';
+let customPresets = [];
+let activeTableCell = null;
+let activeSubElement = null;
+
+// Undo/Redo
+let historyStack = [];
+let historyIndex = -1;
+const MAX_HISTORY = 100;
+let editingSnapshotTaken = false;
+
+const canvas = document.getElementById('report-canvas');
+const CW = 794;
+
+function esc(s) { return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+
+function getStateSnapshot() {
+    return blocks.map(b => { const copy = JSON.parse(JSON.stringify(b)); delete copy._el; return copy; });
+}
+
+function saveSnapshot() {
+    if (historyIndex < historyStack.length - 1) { historyStack = historyStack.slice(0, historyIndex + 1); }
+    historyStack.push(getStateSnapshot());
+    historyIndex++;
+    if (historyStack.length > MAX_HISTORY) { historyStack.shift(); historyIndex--; }
+    updateUndoRedoButtons();
+}
+
+function undo() {
+    if (historyIndex <= 0) return;
+    historyIndex--;
+    blocks = JSON.parse(JSON.stringify(historyStack[historyIndex]));
+    selectedIds = [];
+    clearActiveTableCell();
+    clearSubElementSelection();
+    renderAll();
+    showEmptyProps();
+    editingSnapshotTaken = false;
+    updateUndoRedoButtons();
+    toast('Undo');
+}
+
+function redo() {
+    if (historyIndex >= historyStack.length - 1) return;
+    historyIndex++;
+    blocks = JSON.parse(JSON.stringify(historyStack[historyIndex]));
+    selectedIds = [];
+    clearActiveTableCell();
+    clearSubElementSelection();
+    renderAll();
+    showEmptyProps();
+    editingSnapshotTaken = false;
+    updateUndoRedoButtons();
+    toast('Redo');
+}
+
+function updateUndoRedoButtons() {
+    document.getElementById('btn-undo').classList.toggle('btn-disabled', historyIndex <= 0);
+    document.getElementById('btn-redo').classList.toggle('btn-disabled', historyIndex >= historyStack.length - 1);
+}
+
+document.addEventListener('focusin', (e) => {
+    if (e.target.closest('input, textarea, select, [contenteditable="true"]')) {
+        if (!editingSnapshotTaken) { saveSnapshot(); editingSnapshotTaken = true; }
+    }
+});
+document.addEventListener('blur', (e) => {
+    if (e.target.closest('input, textarea, select, [contenteditable="true"]')) { editingSnapshotTaken = false; }
+}, true);
+
+function toggleDarkMode() {
+    document.documentElement.classList.toggle('dark');
+    document.getElementById('theme-icon').textContent = document.documentElement.classList.contains('dark') ? '☀️' : '🌙';
+}
+
+function toggleSidebar() {
+    const sidebar = document.getElementById('sidebar');
+    const openBtn = document.getElementById('sidebar-open-btn');
+    if (sidebar.classList.contains('w-56')) {
+        sidebar.classList.remove('w-56', 'p-3');
+        sidebar.classList.add('w-0', 'overflow-hidden', 'p-0');
+        openBtn.classList.remove('hidden');
+    } else {
+        openSidebar();
+    }
+}
+
+function openSidebar() {
+    const sidebar = document.getElementById('sidebar');
+    const openBtn = document.getElementById('sidebar-open-btn');
+    sidebar.classList.remove('w-0', 'overflow-hidden', 'p-0');
+    sidebar.classList.add('w-56', 'p-3');
+    openBtn.classList.add('hidden');
+}
+
+// ────────────────────── BLOCK UTILITIES ──────────────────────
+function findBlockById(id) {
+    for (const b of blocks) {
+        if (b.id === id) return b;
+        if (b.children) {
+            const found = findInChildren(b.children, id);
+            if (found) return found;
+        }
+    }
+    return null;
+}
+
+function findInChildren(children, id) {
+    for (const c of children) {
+        if (c.id === id) return c;
+        if (c.children) {
+            const found = findInChildren(c.children, id);
+            if (found) return found;
+        }
+    }
+    return null;
+}
+
+function getParentGroup(childId) {
+    for (const b of blocks) {
+        if (b.children) {
+            for (const c of b.children) {
+                if (c.id === childId) return b;
+                if (c.children) {
+                    const deeper = findParentInChildren(c.children, childId, c);
+                    if (deeper) return deeper;
+                }
+            }
+        }
+    }
+    return null;
+}
+
+function findParentInChildren(children, childId, parent) {
+    for (const c of children) {
+        if (c.id === childId) return parent;
+        if (c.children) {
+            const found = findParentInChildren(c.children, childId, c);
+            if (found) return found;
+        }
+    }
+    return null;
+}
+
+function isChildOfGroup(blockId) {
+    return getParentGroup(blockId) !== null;
+}
+
+// ────────────────────── SELECTION & DRILL DOWN ──────────────────────
+function selectBlock(id) {
+    clearActiveTableCell();
+    clearSubElementSelection();
+    selectedIds = [id];
+    renderAll();
+    const b = findBlockById(id);
+    if (b) {
+        populateProperties(b);
+        updateParentButtonVisibility();
+    }
+}
+
+function toggleSelect(id) {
+    clearActiveTableCell();
+    clearSubElementSelection();
+    const idx = selectedIds.indexOf(id);
+    if (idx >= 0) {
+        selectedIds.splice(idx, 1);
+        if (selectedIds.length === 0) selectedIds = [id];
+    } else {
+        selectedIds.push(id);
+    }
+    renderAll();
+    if (selectedIds.length === 1) {
+        const b = findBlockById(selectedIds[0]);
+        if (b) populateProperties(b);
+        updateParentButtonVisibility();
+    } else if (selectedIds.length > 1) {
+        showMultiSelectProps();
+    }
+}
+
+function navigateToParent() {
+    if (selectedIds.length !== 1) return;
+    if (activeSubElement) {
+        clearSubElementSelection();
+        if (selectedIds.length === 1) {
+            const b = findBlockById(selectedIds[0]);
+            if (b) populateProperties(b);
+        }
+        return;
+    }
+    if (activeTableCell) {
+        const tableId = activeTableCell.blockId;
+        clearActiveTableCell();
+        selectBlock(tableId);
+        return;
+    }
+    const parentGroup = getParentGroup(selectedIds[0]);
+    if (parentGroup) {
+        selectBlock(parentGroup.id);
+        return;
+    }
+    const block = findBlockById(selectedIds[0]);
+    if (block && block._parentGroupId) {
+        const parent = findBlockById(block._parentGroupId);
+        if (parent) selectBlock(parent.id);
+        return;
+    }
+}
+
+function drillIntoChildren() {
+    if (selectedIds.length !== 1) return;
+    const block = findBlockById(selectedIds[0]);
+    if (!block) return;
+
+    if (block.type === 'table') {
+        if (!activeTableCell || activeTableCell.blockId !== block.id) {
+            selectTableCell(block.id, 0, 0, 'table');
+            return;
+        }
+    }
+    if (block.type === 'grades') {
+        if (!activeTableCell || activeTableCell.blockId !== block.id) {
+            onGradesCellClick(new Event('dblclick'), block.id, 0, 0);
+            return;
+        }
+    }
+    if (block.children && block.children.length > 0) {
+        const firstChild = block.children[0];
+        saveSnapshot();
+        selectedIds = [firstChild.id];
+        renderAll();
+        populateProperties(firstChild);
+        updateParentButtonVisibility();
+        toast(`Editing child: ${getBlockLabel(firstChild.type)}`);
+        return;
+    }
+
+    const templateTypes = ['school-header', 'student-info', 'comments', 'attendance', 'signature'];
+    if (templateTypes.includes(block.type)) {
+        const subIds = getSubElementIds(block.type);
+        if (subIds.length > 0) {
+            selectSubElement(block.id, subIds[0]);
+            return;
+        }
+    }
+    toast('No deeper children available');
+}
+
+function getSubElementIds(type) {
+    switch (type) {
+        case 'school-header': return ['logo', 'schoolName', 'schoolSub', 'reportTitle'];
+        case 'student-info': {
+            const block = findBlockById(selectedIds[0]);
+            if (!block || !block.fields) return ['photo'];
+            const ids = ['photo'];
+            block.fields.forEach((_, i) => { ids.push(`label-${i}`, `value-${i}`); });
+            return ids;
+        }
+        case 'comments': return ['title', 'body'];
+        case 'attendance': return ['present', 'absent', 'late', 'present-lbl', 'absent-lbl', 'late-lbl'];
+        case 'signature': {
+            const block = findBlockById(selectedIds[0]);
+            if (!block || !block.sigs) return [];
+            return block.sigs.map((_, i) => `sig-${i}`);
+        }
+        default: return [];
+    }
+}
+
+function selectSubElement(blockId, subId) {
+    clearActiveTableCell();
+    clearSubElementSelection();
+    activeSubElement = { blockId, subId };
+    const block = findBlockById(blockId);
+    if (!block || !block._el) return;
+    const el = block._el.querySelector(`[data-subid="${subId}"]`);
+    if (el) el.classList.add('sub-element-selected');
+    const panel = document.getElementById('sub-element-props-panel');
+    panel.classList.remove('hidden');
+    document.getElementById('sub-element-name').textContent = subId.replace(/-/g, ' ');
+    document.getElementById('cell-props-panel').classList.add('hidden');
+    const styles = (block.subStyles && block.subStyles[subId]) || {};
+    document.getElementById('sub-prop-bg').value = styles.bg || '';
+    document.getElementById('sub-prop-bg-hex').value = styles.bg || '';
+    document.getElementById('sub-prop-color').value = styles.c || '';
+    document.getElementById('sub-prop-color-hex').value = styles.c || '';
+    document.getElementById('sub-prop-fw').value = styles.fw || '';
+    document.getElementById('sub-prop-fs').value = styles.fs || '';
+    document.getElementById('sub-prop-ff').value = styles.ff || '';
+    document.getElementById('sub-prop-font-size').value = styles.fz || '';
+    document.getElementById('sub-prop-ta').value = styles.ta || '';
+    document.getElementById('sub-prop-padding').value = styles.p || '';
+    document.getElementById('sub-prop-br').value = styles.br || '';
+    switchTab('content');
+    updateParentButtonVisibility();
+}
+
+function clearSubElementSelection() {
+    if (activeSubElement) {
+        const block = findBlockById(activeSubElement.blockId);
+        if (block && block._el) {
+            block._el.querySelectorAll('.sub-element-selected').forEach(el => el.classList.remove('sub-element-selected'));
+        }
+    }
+    activeSubElement = null;
+    document.getElementById('sub-element-props-panel').classList.add('hidden');
+    updateParentButtonVisibility();
+}
+
+function onSubPropChange(key, value) {
+    if (!activeSubElement) return;
+    const { blockId, subId } = activeSubElement;
+    const block = findBlockById(blockId);
+    if (!block) return;
+    if (!block.subStyles) block.subStyles = {};
+    if (!block.subStyles[subId]) block.subStyles[subId] = {};
+    block.subStyles[subId][key] = value;
+    reRenderBlock(blockId);
+    setTimeout(() => {
+        const b = findBlockById(blockId);
+        if (b && b._el) {
+            const el = b._el.querySelector(`[data-subid="${subId}"]`);
+            if (el) el.classList.add('sub-element-selected');
+        }
+    }, 20);
+}
+
+function onSubPropHexChange(key, value) {
+    if (/^#[0-9a-fA-F]{6}$/.test(value)) {
+        if (key === 'bg') document.getElementById('sub-prop-bg').value = value;
+        if (key === 'c') document.getElementById('sub-prop-color').value = value;
+        onSubPropChange(key, value);
+    }
+}
+
+function attachSubElementListeners() {
+    document.querySelectorAll('[data-subid]').forEach(el => {
+        el.onclick = (e) => {
+            e.stopPropagation();
+            const blockId = el.closest('.rc-block')?.dataset.id;
+            if (blockId) selectSubElement(blockId, el.dataset.subid);
+        };
+    });
+}
+
+function updateParentButtonVisibility() {
+    const btn = document.getElementById('parent-nav-btn');
+    if (selectedIds.length !== 1) {
+        btn.style.display = 'none';
+        return;
+    }
+    const hasCell = activeTableCell !== null;
+    const hasSub = activeSubElement !== null;
+    const isChild = isChildOfGroup(selectedIds[0]);
+    const block = findBlockById(selectedIds[0]);
+    const hasGroupParent = block && block._parentGroupId;
+    btn.style.display = (hasCell || hasSub || isChild || hasGroupParent) ? 'block' : 'none';
+}
+
+// ────────────────────── CELL UTILITIES ──────────────────────
+function ensureCellObject(cell) {
+    if (typeof cell === 'string' || typeof cell === 'number') return { t: String(cell), bg: '', c: '', p: '', fw: '', ta: '', br: '', fs: '', ff: '' };
+    if (cell && typeof cell === 'object') return {
+        t: cell.t !== undefined ? String(cell.t) : '', bg: cell.bg || '', c: cell.c || '',
+        p: cell.p || '', fw: cell.fw || '', ta: cell.ta || '', br: cell.br || '', fs: cell.fs || '', ff: cell.ff || ''
+    };
+    return { t: '', bg: '', c: '', p: '', fw: '', ta: '', br: '', fs: '', ff: '' };
+}
+
+function getCellText(cell) {
+    if (typeof cell === 'string' || typeof cell === 'number') return String(cell);
+    if (cell && typeof cell === 'object') return String(cell.t !== undefined ? cell.t : '');
+    return '';
+}
+
+function getCellStyleObj(cell, globalBlock) {
+    const co = ensureCellObject(cell);
+    const style = [];
+    if (co.bg) style.push('background:' + co.bg);
+    else if (globalBlock && globalBlock.cellBg) style.push('background:' + globalBlock.cellBg);
+    if (co.c) style.push('color:' + co.c);
+    else if (globalBlock && globalBlock.cellColor) style.push('color:' + globalBlock.cellColor);
+    if (co.p) style.push('padding:' + co.p);
+    if (co.fw) style.push('font-weight:' + co.fw);
+    if (co.ta) style.push('text-align:' + co.ta);
+    if (co.br) style.push('border-radius:' + co.br);
+    if (co.fs) style.push('font-size:' + co.fs);
+    if (co.ff) style.push('font-family:' + co.ff);
+    else if (globalBlock && globalBlock.cellFont && !co.ff) style.push('font-family:' + globalBlock.cellFont);
+    if (globalBlock && globalBlock.cellBorderW) style.push('border:' + globalBlock.cellBorderW + ' solid ' + (globalBlock.cellBorderC || '#d1d5db'));
+    return style.join('; ');
+}
+
+function clearActiveTableCell() {
+    if (activeTableCell) {
+        const prevBlock = blocks.find(b => b.id === activeTableCell.blockId);
+        if (prevBlock && prevBlock._el) {
+            prevBlock._el.querySelectorAll('.table-cell-selected, .cell-selected').forEach(c => c.classList.remove('table-cell-selected', 'cell-selected'));
+        }
+    }
+    activeTableCell = null;
+    document.getElementById('cell-props-panel').classList.add('hidden');
+    updateParentButtonVisibility();
+}
+
+function selectTableCell(blockId, row, col, tableType) {
+    clearActiveTableCell();
+    clearSubElementSelection();
+    activeTableCell = { blockId, row, col, tableType: tableType || 'table' };
+    const block = blocks.find(b => b.id === blockId);
+    if (!block || !block._el) return;
+    if (tableType === 'grades') {
+        const allTds = block._el.querySelectorAll('.grades-tbl tbody td');
+        const targetIndex = row * 5 + col;
+        if (allTds[targetIndex]) allTds[targetIndex].classList.add('cell-selected');
+    } else {
+        const tdElements = block._el.querySelectorAll('.pdf-table td, .pdf-table th');
+        const cols = block.cols || (block.data && block.data[0] ? block.data[0].length : 3);
+        const targetIndex = row * cols + col;
+        if (tdElements[targetIndex]) tdElements[targetIndex].classList.add('table-cell-selected');
+    }
+    switchTab('content');
+    document.getElementById('sub-element-props-panel').classList.add('hidden');
+    populateCellProperties(block, row, col, tableType);
+    updateParentButtonVisibility();
+}
+
+function populateCellProperties(block, row, col, tableType) {
+    const panel = document.getElementById('cell-props-panel');
+    panel.classList.remove('hidden');
+    document.getElementById('cell-coords').textContent = `Row ${row + 1}, Col ${col + 1}`;
+    let cellData;
+    if (tableType === 'grades') {
+        const rowData = block.rows[row];
+        const keys = ['subject', 'score', 'grade', 'remark'];
+        const key = keys[col];
+        const styles = (block.rowStyles && block.rowStyles[row] && block.rowStyles[row][key]) ? block.rowStyles[row][key] : {};
+        cellData = { t: rowData ? rowData[key] : '', ff: '', ...styles };
+    } else {
+        const rawCell = (block.data && block.data[row] && block.data[row][col] !== undefined) ? block.data[row][col] : '';
+        cellData = ensureCellObject(rawCell);
+    }
+    document.getElementById('cell-prop-bg').value = cellData.bg || '#ffffff';
+    document.getElementById('cell-prop-bg-hex').value = cellData.bg || '';
+    document.getElementById('cell-prop-color').value = cellData.c || '#1a1a1a';
+    document.getElementById('cell-prop-color-hex').value = cellData.c || '';
+    document.getElementById('cell-prop-padding').value = cellData.p || '';
+    document.getElementById('cell-prop-fw').value = cellData.fw || '';
+    document.getElementById('cell-prop-ta').value = cellData.ta || '';
+    document.getElementById('cell-prop-ff').value = cellData.ff || '';
+    document.getElementById('cell-prop-br').value = cellData.br || '';
+    document.getElementById('cell-prop-fs').value = cellData.fs || '';
+}
+
+// ────────────────────── BLOCK FACTORY ──────────────────────
+function newBlock(type) {
+    const id = 'b' + (++idCounter);
+    const base = {
+        id, type, x: 20, y: 20, w: CW - 40, h: 'auto',
+        bgType: 'none', bgColor: '#ffffff', gradAngle: 135,
+        gradStops: [{color: '#1a2744', pos: 0}, {color: '#3b5998', pos: 100}],
+        color: '', fontSize: '', fontWeight: '', fontFamily: '', fontStyle: '', textAlign: '',
+        padding: '', borderRadius: '', zIndex: 0,
+        borderWidth: '', borderStyle: 'solid', borderColor: '#e5e7eb',
+        boxShadow: '', opacity: 1, children: [], subStyles: {}
+    };
+    switch(type) {
+        case 'school-header': return { ...base, x: 0, y: 0, w: CW, h: 150, bgType: 'gradient', gradAngle: 135, gradStops: [{color: '#0f1d45', pos: 0}, {color: '#1e4488', pos: 70}, {color: '#c9a84c', pos: 100}], color: '#ffffff', schoolName: 'GREENFIELD ACADEMY', schoolSub: '123 Learning Lane · Edu City · (555) 000-1234', reportTitle: 'ACADEMIC PROGRESS REPORT — 2024/2025', logoImg: null };
+        case 'student-info': return { ...base, y: 160, h: 200, bgType: 'solid', bgColor: '#ffffff', fields: [{label: 'Student Name', value: 'Jane Adaeze Smith'}, {label: 'Student ID', value: 'GFA-2024-089'}, {label: 'Grade / Class', value: 'Grade 8 — Section B'}, {label: 'Academic Year', value: '2024 / 2025'}, {label: 'Term', value: 'Second Term'}, {label: 'Date of Birth', value: 'March 12, 2012'}], photoImg: null };
+        case 'grades': return { ...base, y: 370, h: 270, bgType: 'solid', bgColor: '#ffffff', title: 'Subject Performance', headerBg: '#1a2744', headerColor: '#ffffff', rows: [{subject: 'Mathematics', score: '92', grade: 'A', remark: 'Excellent'}, {subject: 'English Language', score: '85', grade: 'B', remark: 'Very Good'}, {subject: 'Science', score: '78', grade: 'C', remark: 'Good'}, {subject: 'Social Studies', score: '88', grade: 'B', remark: 'Very Good'}, {subject: 'Fine Arts', score: '95', grade: 'A', remark: 'Outstanding'}, {subject: 'Physical Ed.', score: '90', grade: 'A', remark: 'Excellent'}], rowStyles: [] };
+        case 'comments': return { ...base, y: 650, h: 130, bgType: 'solid', bgColor: '#ffffff', title: "Teacher's Comment", text: 'Jane has demonstrated remarkable dedication this term...' };
+        case 'attendance': return { ...base, y: 790, h: 120, bgType: 'solid', bgColor: '#ffffff', present: '78', absent: '4', late: '2' };
+        case 'signature': return { ...base, y: 920, h: 110, bgType: 'none', sigs: ["Class Teacher's Signature", "Principal's Signature", "Parent / Guardian"] };
+        case 'divider': return { ...base, h: 20, bgType: 'none', w: CW - 40, lineColor: '#e5e7eb' };
+        case 'text': return { ...base, h: 60, bgType: 'none', text: 'Click here to edit this text block.' };
+        case 'image': return { ...base, w: 180, h: 180, bgType: 'none', imgSrc: null };
+        case 'cell': return { ...base, w: 120, h: 60, bgType: 'solid', bgColor: '#fafafa', borderWidth: '1px', text: 'Cell Content' };
+        case 'table': return { ...base, y: 660, h: 200, w: CW - 60, bgType: 'solid', bgColor: '#ffffff', rows: 3, cols: 3, data: [['Subject Header', 'Score', 'Remark'], ['Subject Core', '88%', 'Very Good'], ['Subject Elective', '95%', 'Excellent']], cellBg: '#ffffff', cellColor: '#1a1a1a', cellFont: '', cellBorderW: '1px', cellBorderC: '#d1d5db', cellBorderR: '0px' };
+        case 'group': return { ...base, w: 400, h: 300, bgType: 'solid', bgColor: 'rgba(240,180,41,.05)', borderWidth: '1.5px', borderStyle: 'dashed', borderColor: '#6c63ff', children: [] };
+    }
+    return base;
+}
+
+// ────────────────────── RENDERING ──────────────────────
+function renderAll() {
+    canvas.innerHTML = '';
+    blocks.forEach(b => {
+        const el = buildBlockEl(b);
+        canvas.appendChild(el);
+        b._el = el;
+    });
+    renderLayers();
+    updateGroupPanels();
+    renderPresetsSidebar();
+    attachSubElementListeners();
+    if (activeTableCell) {
+        const block = blocks.find(b => b.id === activeTableCell.blockId);
+        if (block && block._el) {
+            if (activeTableCell.tableType === 'grades') {
+                const allTds = block._el.querySelectorAll('.grades-tbl tbody td');
+                const targetIndex = activeTableCell.row * 5 + activeTableCell.col;
+                if (allTds[targetIndex]) allTds[targetIndex].classList.add('cell-selected');
+            } else {
+                const tdElements = block._el.querySelectorAll('.pdf-table td, .pdf-table th');
+                const cols = block.cols || (block.data && block.data[0] ? block.data[0].length : 3);
+                const targetIndex = activeTableCell.row * cols + activeTableCell.col;
+                if (tdElements[targetIndex]) tdElements[targetIndex].classList.add('table-cell-selected');
+            }
+        }
+    }
+    if (activeSubElement) {
+        const block = findBlockById(activeSubElement.blockId);
+        if (block && block._el) {
+            const el = block._el.querySelector(`[data-subid="${activeSubElement.subId}"]`);
+            if (el) el.classList.add('sub-element-selected');
+        }
+    }
+}
+
+function buildBlockEl(b) {
+    const el = document.createElement('div');
+    el.className = 'rc-block' + (b.type === 'group' ? ' group-block' : '');
+    if (selectedIds.includes(b.id)) el.classList.add('selected');
+    if (selectedIds.length > 1 && selectedIds.includes(b.id)) el.classList.add('multi-selected');
+    el.dataset.id = b.id;
+    const isChild = b._parentGroupId !== undefined;
+    el.style.cssText = getBlockCSS(b, isChild);
+    el.innerHTML = getBlockHTML(b);
+    applySubStylesToElement(el, b);
+    const outline = document.createElement('div');
+    outline.className = 'block-outline';
+    el.appendChild(outline);
+    if (!isChild) {
+        const dh = document.createElement('div');
+        dh.className = 'drag-handle';
+        dh.dataset.drag = b.id;
+        dh.textContent = '⠿ ' + getBlockLabel(b.type) + (b.type === 'group' ? ' 📦' : '');
+        el.appendChild(dh);
+        const del = document.createElement('button');
+        del.className = 'block-delete';
+        del.textContent = '✕';
+        del.onclick = e => { e.stopPropagation(); deleteBlock(b.id); };
+        el.appendChild(del);
+        ['nw','ne','sw','se','n','s','e','w'].forEach(dir => {
+            const rh = document.createElement('div');
+            rh.className = 'resize-handle rh-' + dir;
+            rh.dataset.id = b.id;
+            rh.addEventListener('mousedown', e => onResizeMouseDown(e, dir));
+            el.appendChild(rh);
+        });
+    }
+    el.addEventListener('mousedown', e => onBlockMouseDown(e, b.id));
+    el.addEventListener('click', e => {
+        if (e.detail === 2) {
+            e.preventDefault();
+            e.stopPropagation();
+            drillIntoChildren();
+            return;
+        }
+        if (e.shiftKey) {
+            toggleSelect(b.id);
+            return;
+        }
+        if (selectedIds.includes(b.id)) {
+            const target = e.target.closest('[contenteditable="true"]');
+            if (target) { target.focus(); e.stopPropagation(); return; }
+            e.stopPropagation();
+            return;
+        } else {
+            e.stopPropagation();
+            selectBlock(b.id);
+        }
+    });
+    return el;
+}
+
+function getBlockCSS(b, isChild) {
+    let bg = '';
+    if (b.bgType === 'solid') bg = b.bgColor;
+    else if (b.bgType === 'gradient' && b.gradStops?.length) {
+        const stops = [...b.gradStops].sort((a, c) => a.pos - c.pos).map(s => `${s.color} ${s.pos}%`).join(', ');
+        bg = `linear-gradient(${b.gradAngle}deg, ${stops})`;
+    }
+    const border = b.borderWidth ? `${b.borderWidth} ${b.borderStyle} ${b.borderColor}` : '';
+    return [
+        `position: absolute`, `left: ${b.x}px`, `top: ${b.y}px`, `width: ${b.w}px`,
+        b.h !== 'auto' ? `height: ${b.h}px` : '', bg ? `background: ${bg}` : '',
+        b.color ? `color: ${b.color}` : '', b.fontSize ? `font-size: ${b.fontSize}` : '',
+        b.fontWeight ? `font-weight: ${b.fontWeight}` : '',
+        b.fontStyle ? `font-style: ${b.fontStyle}` : '',
+        b.fontFamily ? `font-family: ${b.fontFamily}` : '',
+        b.textAlign ? `text-align: ${b.textAlign}` : '', b.padding ? `padding: ${b.padding}` : '',
+        b.borderRadius ? `border-radius: ${b.borderRadius}` : '', b.zIndex ? `z-index: ${b.zIndex}` : '',
+        border ? `border: ${border}` : '', b.boxShadow ? `box-shadow: ${b.boxShadow}` : '',
+        b.opacity !== 1 ? `opacity: ${b.opacity}` : ''
+    ].filter(Boolean).join('; ');
+}
+
+function getBlockLabel(type) {
+    const labels = { 'school-header': 'Header', 'student-info': 'Student Info', 'grades': 'Grades', 'comments': 'Comments', 'attendance': 'Attendance', 'signature': 'Signatures', 'divider': 'Divider', 'text': 'Text', 'image': 'Image', 'cell': 'Cell', 'table': 'Table', 'group': 'Group' };
+    return labels[type] || type;
+}
+
+function applySubStylesToElement(el, b) {
+    if (b.subStyles) {
+        Object.entries(b.subStyles).forEach(([subId, styles]) => {
+            const subEl = el.querySelector(`[data-subid="${subId}"]`);
+            if (subEl) {
+                Object.entries(styles).forEach(([key, val]) => {
+                    switch (key) {
+                        case 'bg': subEl.style.background = val; break;
+                        case 'c': subEl.style.color = val; break;
+                        case 'fw': subEl.style.fontWeight = val; break;
+                        case 'fs': subEl.style.fontStyle = val; break;
+                        case 'ff': subEl.style.fontFamily = val; break;
+                        case 'fz': subEl.style.fontSize = val; break;
+                        case 'ta': subEl.style.textAlign = val; break;
+                        case 'p': subEl.style.padding = val; break;
+                        case 'br': subEl.style.borderRadius = val; break;
+                    }
+                });
+            }
+        });
+    }
+}
+
+function getBlockHTML(b) {
+    if (b.type === 'group') {
+        const childrenHtml = (b.children || []).map(child => {
+            const childEl = document.createElement('div');
+            childEl.className = 'group-child';
+            childEl.style.cssText = getBlockCSS(child, true);
+            childEl.innerHTML = getBlockHTML(child);
+            childEl.dataset.childId = child.id;
+            return childEl.outerHTML;
+        }).join('');
+        return `<div style="position:relative;width:100%;height:100%;min-height:50px;overflow:hidden;pointer-events:auto;">${childrenHtml}</div>`;
+    }
+    switch(b.type) {
+        case 'school-header': {
+            const logo = b.logoImg ? `<img class="hd-logo" src="${b.logoImg}" data-subid="logo">` : `<div class="hd-logo-ph" onclick="uploadImage(event,'${b.id}','logoImg')" data-subid="logo">🏫</div>`;
+            return `<div class="pdf-header">${logo}<div class="hd-school" contenteditable="true" onblur="syncBlockText(event,'${b.id}','schoolName')" data-subid="schoolName">${esc(b.schoolName)}</div><div class="hd-sub" contenteditable="true" onblur="syncBlockText(event,'${b.id}','schoolSub')" data-subid="schoolSub">${esc(b.schoolSub)}</div><div class="hd-title" contenteditable="true" onblur="syncBlockText(event,'${b.id}','reportTitle')" data-subid="reportTitle">${esc(b.reportTitle)}</div></div>`;
+        }
+        case 'student-info': {
+            const fields = b.fields.map((f, i) => `<div class="si-field"><div class="si-label" data-subid="label-${i}">${esc(f.label)}</div><div class="si-value" contenteditable="true" onblur="syncStudentField(event,'${b.id}',${i})" data-subid="value-${i}">${esc(f.value)}</div></div>`).join('');
+            const photo = b.photoImg ? `<img class="si-photo-img" src="${b.photoImg}" data-subid="photo">` : `<div class="si-photo-ph" onclick="uploadImage(event,'${b.id}','photoImg')" data-subid="photo">👤<br>Upload</div>`;
+            return `<div class="pdf-student">${fields}<div class="si-photo-wrap">${photo}</div></div>`;
+        }
+        case 'grades': {
+            const keys = ['subject', 'score', 'grade', 'remark'];
+            const rows = b.rows.map((r, i) => {
+                const cells = keys.map((key, ci) => {
+                    const styles = (b.rowStyles && b.rowStyles[i] && b.rowStyles[i][key]) ? b.rowStyles[i][key] : {};
+                    const styleStr = [styles.bg ? 'background:'+styles.bg : '', styles.c ? 'color:'+styles.c : '', styles.p ? 'padding:'+styles.p : '', styles.fw ? 'font-weight:'+styles.fw : '', styles.ta ? 'text-align:'+styles.ta : '', styles.br ? 'border-radius:'+styles.br : '', styles.fs ? 'font-size:'+styles.fs : '', styles.ff ? 'font-family:'+styles.ff : ''].filter(Boolean).join('; ');
+                    return `<td style="${styleStr}" contenteditable="true" onclick="event.stopPropagation();onGradesCellClick(event,'${b.id}',${i},${ci})" onblur="syncGradeCell(event,'${b.id}',${i},'${key}')">${esc(r[key])}</td>`;
+                }).join('');
+                return `<tr>${cells}<td style="text-align:center"><button class="pdf-del-row" onclick="event.stopPropagation();deleteGradeRow('${b.id}',${i})">✕</button></td></tr>`;
+            }).join('');
+            return `<div class="pdf-grades"><h3 contenteditable="true" onblur="syncBlockText(event,'${b.id}','title')">${esc(b.title)}</h3><table class="grades-tbl"><thead><tr style="background:${b.headerBg};color:${b.headerColor}"><th>Subject</th><th style="text-align:center">Score (%)</th><th style="text-align:center">Grade</th><th>Remark</th><th style="width:30px"></th></tr></thead><tbody>${rows}</tbody></table><button class="pdf-add-row" onclick="event.stopPropagation();addGradeRow('${b.id}')">＋ Add Row</button></div>`;
+        }
+        case 'comments': return `<div class="pdf-comments"><h3 contenteditable="true" onblur="syncBlockText(event,'${b.id}','title')" data-subid="title">${esc(b.title)}</h3><div class="comment-body" contenteditable="true" onblur="syncBlockText(event,'${b.id}','text')" data-subid="body">${esc(b.text)}</div></div>`;
+        case 'attendance': return `<div class="pdf-attendance"><h3>Attendance Summary</h3><div class="att-grid"><div class="att-card"><span class="att-val" contenteditable="true" onblur="syncBlockText(event,'${b.id}','present')" data-subid="present">${esc(b.present)}</span><div class="att-lbl" data-subid="present-lbl">Days Present</div></div><div class="att-card"><span class="att-val" contenteditable="true" onblur="syncBlockText(event,'${b.id}','absent')" data-subid="absent">${esc(b.absent)}</span><div class="att-lbl" data-subid="absent-lbl">Days Absent</div></div><div class="att-card"><span class="att-val" contenteditable="true" onblur="syncBlockText(event,'${b.id}','late')" data-subid="late">${esc(b.late)}</span><div class="att-lbl" data-subid="late-lbl">Days Late</div></div></div></div>`;
+        case 'signature': {
+            const sigs = b.sigs.map((s, i) => `<div class="sig-field"><div class="sig-line"></div><div class="sig-lbl" contenteditable="true" onblur="syncSignatureLabel(event,'${b.id}',${i})" data-subid="sig-${i}">${esc(s)}</div></div>`).join('');
+            return `<div class="pdf-signature"><div class="sig-row">${sigs}</div></div>`;
+        }
+        case 'divider': return `<div class="pdf-divider"><hr style="border-top-color: ${b.lineColor || '#e5e7eb'}"></div>`;
+        case 'text': return `<div class="pdf-text" contenteditable="true" onblur="syncBlockText(event,'${b.id}','text')">${esc(b.text)}</div>`;
+        case 'image': if (b.imgSrc) { return `<div class="pdf-image"><img src="${b.imgSrc}" alt="image" draggable="false" style="pointer-events:none"></div>`; } return `<div class="pdf-img-ph"><span style="font-size:32px">🖼</span><span>Click to upload image</span><span style="font-size:9px">Use the button in the Content tab</span></div>`;
+        case 'cell': return `<div class="pdf-cell" contenteditable="true" onblur="syncBlockText(event,'${b.id}','text')">${esc(b.text)}</div>`;
+        case 'table': {
+            const data = b.data || [];
+            const rows = data.map((row, ri) => {
+                const cells = row.map((cell, ci) => {
+                    const isHeader = ri === 0;
+                    const tag = isHeader ? 'th' : 'td';
+                    const cellObj = ensureCellObject(cell);
+                    const styleStr = getCellStyleObj(cell, b);
+                    return `<${tag} style="${styleStr}" contenteditable="true" onclick="event.stopPropagation();onTableCellClick(event,'${b.id}',${ri},${ci})" onblur="syncTableCell(event,'${b.id}',${ri},${ci})">${esc(getCellText(cell))}</${tag}>`;
+                }).join('');
+                return `<tr>${cells}</tr>`;
+            }).join('');
+            return `<div class="pdf-table-wrap"><table class="pdf-table">${rows}</table><div class="table-controls"><button onclick="event.stopPropagation();addTableRow('${b.id}')">＋ Row</button><button onclick="event.stopPropagation();addTableCol('${b.id}')">＋ Column</button><button onclick="event.stopPropagation();removeTableRow('${b.id}')">✕ Del Row</button><button onclick="event.stopPropagation();removeTableCol('${b.id}')">✕ Del Col</button></div></div>`;
+        }
+        default: return '';
+    }
+}
+
+function onTableCellClick(event, blockId, row, col) { event.stopPropagation(); if (activeTableCell && activeTableCell.blockId === blockId && activeTableCell.row === row && activeTableCell.col === col) { const block = blocks.find(b => b.id === blockId); if (block && block._el) { const td = block._el.querySelectorAll('.pdf-table td, .pdf-table th')[row * (block.cols || 3) + col]; if (td) td.focus(); } return; } selectTableCell(blockId, row, col, 'table'); if (!selectedIds.includes(blockId)) selectBlock(blockId); else populateProperties(blocks.find(b => b.id === blockId)); }
+function onGradesCellClick(event, blockId, row, col) { event.stopPropagation(); if (activeTableCell && activeTableCell.blockId === blockId && activeTableCell.row === row && activeTableCell.col === col) { const block = blocks.find(b => b.id === blockId); if (block && block._el) { const allTds = block._el.querySelectorAll('.grades-tbl tbody td'); const targetIndex = row * 5 + col; if (allTds[targetIndex]) allTds[targetIndex].focus(); } return; } selectTableCell(blockId, row, col, 'grades'); if (!selectedIds.includes(blockId)) selectBlock(blockId); else populateProperties(blocks.find(b => b.id === blockId)); }
+
+function addBlock(type) {
+    saveSnapshot();
+    const b = newBlock(type);
+    const canvasScroll = document.getElementById('canvas-scroll');
+    const visibleY = canvasScroll.scrollTop + 100;
+    b.y = Math.max(20, visibleY);
+    b.x = 20 + Math.random() * 80;
+    blocks.push(b);
+    clearActiveTableCell();
+    clearSubElementSelection();
+    renderAll();
+    selectBlock(b.id);
+    toast(`${getBlockLabel(type)} added`);
+}
+function deleteBlock(id) { saveSnapshot(); if (activeTableCell && activeTableCell.blockId === id) clearActiveTableCell(); if (activeSubElement && activeSubElement.blockId === id) clearSubElementSelection(); const b = blocks.find(x => x.id === id); if (b && b.type === 'group') { const childIds = (b.children || []).map(c => c.id); blocks = blocks.filter(bl => bl.id !== id && !childIds.includes(bl.id)); } else { blocks = blocks.filter(bl => bl.id !== id); } selectedIds = selectedIds.filter(sid => sid !== id); if (selectedIds.length === 0) selectedIds = blocks.length > 0 ? [blocks[0].id] : []; renderAll(); toast('Block deleted'); }
+function deleteSelected() { saveSnapshot(); if (selectedIds.length === 0) return; const toDelete = new Set(selectedIds); if (activeTableCell && toDelete.has(activeTableCell.blockId)) clearActiveTableCell(); if (activeSubElement && toDelete.has(activeSubElement.blockId)) clearSubElementSelection(); const newBlocks = []; for (const b of blocks) { if (toDelete.has(b.id)) continue; if (b.type === 'group') { const childIds = (b.children || []).map(c => c.id); let keep = true; for (const cid of childIds) { if (toDelete.has(cid)) { keep = false; break; } } if (!keep) continue; } newBlocks.push(b); } blocks = newBlocks; selectedIds = []; if (blocks.length > 0) selectedIds = [blocks[0].id]; renderAll(); toast('Selection deleted'); }
+function canvasClick(e) { if (e.target === canvas) { clearActiveTableCell(); clearSubElementSelection(); selectedIds = []; renderAll(); showEmptyProps(); } }
+
+function showMultiSelectProps() { document.getElementById('props-empty').classList.add('hidden'); document.getElementById('props-panel').classList.remove('hidden'); const nameEl = document.getElementById('props-block-name'); nameEl.textContent = `📦 Multiple (${selectedIds.length})`; nameEl.style.color = '#f0b429'; document.getElementById('layout-multi-select-notice').classList.remove('hidden'); document.getElementById('layout-single-item-panel').classList.add('hidden'); document.getElementById('group-action-panel').classList.add('hidden'); document.getElementById('deconstruct-btn').classList.add('hidden'); document.getElementById('cell-props-panel').classList.add('hidden'); document.getElementById('sub-element-props-panel').classList.add('hidden'); switchTab('layout'); }
+function showEmptyProps() { document.getElementById('props-empty').classList.remove('hidden'); document.getElementById('props-panel').classList.add('hidden'); document.getElementById('deconstruct-btn').classList.add('hidden'); document.getElementById('cell-props-panel').classList.add('hidden'); document.getElementById('sub-element-props-panel').classList.add('hidden'); document.getElementById('parent-nav-btn').style.display = 'none'; }
+function switchTab(tab) { activeTab = tab; ['layout', 'style', 'content'].forEach(t => { const panel = document.getElementById('tab-' + t + '-panel'); if (panel) panel.classList.toggle('hidden', t !== tab); const btn = document.getElementById('tab-' + t); if (btn) btn.classList.toggle('active', t === tab); }); }
+function populateProperties(b) {
+    if (!b) return;
+    document.getElementById('props-empty').classList.add('hidden');
+    document.getElementById('props-panel').classList.remove('hidden');
+    document.getElementById('layout-multi-select-notice').classList.add('hidden');
+    document.getElementById('layout-single-item-panel').classList.remove('hidden');
+    const nameEl = document.getElementById('props-block-name');
+    nameEl.textContent = getBlockLabel(b.type);
+    nameEl.style.color = b.type === 'group' ? '#f0b429' : '';
+    const groupActionPanel = document.getElementById('group-action-panel');
+    groupActionPanel.classList.toggle('hidden', b.type !== 'group');
+    const decBtn = document.getElementById('deconstruct-btn');
+    const complexTemplates = ['school-header', 'student-info', 'attendance', 'signature', 'comments', 'grades'];
+    if (complexTemplates.includes(b.type)) { decBtn.classList.remove('hidden'); decBtn.textContent = `🧩 Deconstruct ${getBlockLabel(b.type)}`; } else { decBtn.classList.add('hidden'); }
+    document.getElementById('prop-x').value = b.x; document.getElementById('prop-y').value = b.y;
+    document.getElementById('prop-w').value = b.w; document.getElementById('prop-h').value = b.h === 'auto' ? '' : b.h;
+    document.getElementById('prop-padding').value = b.padding || ''; document.getElementById('prop-radius').value = b.borderRadius || '';
+    document.getElementById('prop-z').value = b.zIndex || 0;
+    document.getElementById('prop-bg-type').value = b.bgType || 'none'; bgTypeChange(b.bgType || 'none', false);
+    document.getElementById('prop-bg-color').value = b.bgColor || '#ffffff'; document.getElementById('prop-bg-hex').value = b.bgColor || '';
+    document.getElementById('prop-grad-angle').value = b.gradAngle || 135; document.getElementById('grad-angle-lbl').textContent = (b.gradAngle || 135) + '°';
+    renderGradientStops(b);
+    document.getElementById('prop-color').value = b.color || '#000000'; document.getElementById('prop-color-hex').value = b.color || '';
+    document.getElementById('prop-fs').value = b.fontSize ? parseInt(b.fontSize) : ''; document.getElementById('prop-fw').value = b.fontWeight || '';
+    document.getElementById('prop-font-style').value = b.fontStyle || '';
+    document.getElementById('prop-ff').value = b.fontFamily || '';
+    const divLinePanel = document.getElementById('divider-line-color-panel');
+    if (b.type === 'divider') {
+        divLinePanel.classList.remove('hidden');
+        document.getElementById('prop-div-line-color').value = b.lineColor || '#e5e7eb';
+        document.getElementById('prop-div-line-hex').value = b.lineColor || '#e5e7eb';
+    } else {
+        divLinePanel.classList.add('hidden');
+    }
+    // Border controls
+    document.getElementById('prop-bw').value = b.borderWidth || '';
+    document.getElementById('prop-bs').value = b.borderStyle || 'solid';
+    document.getElementById('prop-bc').value = b.borderColor || '#e5e7eb';
+    document.getElementById('prop-bc-hex').value = b.borderColor || '';
+    document.getElementById('prop-shadow').value = b.boxShadow || '';
+    const opVal = Math.round((b.opacity || 1) * 100); document.getElementById('prop-opacity').value = opVal; document.getElementById('opacity-lbl').textContent = opVal + '%';
+    populateContentFields(b);
+    if (activeTableCell && activeTableCell.blockId === b.id) { document.getElementById('cell-props-panel').classList.remove('hidden'); document.getElementById('sub-element-props-panel').classList.add('hidden'); populateCellProperties(b, activeTableCell.row, activeTableCell.col, activeTableCell.tableType); }
+    else if (activeSubElement && activeSubElement.blockId === b.id) { document.getElementById('sub-element-props-panel').classList.remove('hidden'); document.getElementById('cell-props-panel').classList.add('hidden'); }
+    else { document.getElementById('cell-props-panel').classList.add('hidden'); document.getElementById('sub-element-props-panel').classList.add('hidden'); }
+    updateParentButtonVisibility();
+}
+function renderGradientStops(b) { const stops = b.gradStops || [{color: '#1a2744', pos: 0}, {color: '#3b5998', pos: 100}]; document.getElementById('grad-stops').innerHTML = stops.map((s, i) => `<div class="grad-stop"><input type="color" value="${s.color}" oninput="updateGradStop(${i}, 'color', this.value)"><input type="number" class="prop-input" style="width:52px" value="${s.pos}" min="0" max="100" oninput="updateGradStop(${i}, 'pos', +this.value)"><span style="font-size:10px">%</span>${stops.length > 2 ? `<button onclick="removeGradStop(${i})" style="color:#ef4444;border:none;cursor:pointer;font-size:11px">✕</button>` : ''}</div>`).join(''); }
+function populateContentFields(b) { const f = document.getElementById('content-fields'); let html = ''; switch(b.type) { case 'grades': html = `<div class="prop-group"><label class="prop-label">Table Header Background</label><div class="flex gap-2"><input type="color" class="prop-input w-10 h-8 p-0.5" value="${b.headerBg || '#1a2744'}" oninput="setAndRender('${b.id}','headerBg',this.value)"><input type="text" class="prop-input" value="${b.headerBg || '#1a2744'}" oninput="setAndRender('${b.id}','headerBg',this.value)"></div></div><div class="prop-group"><label class="prop-label">Header Text Color</label><input type="color" class="prop-input w-10 h-8 p-0.5" value="${b.headerColor || '#ffffff'}" oninput="setAndRender('${b.id}','headerColor',this.value)"></div><div class="prop-group"><label class="prop-label">Table Rows (${b.rows.length})</label><button onclick="addGradeRow('${b.id}')" class="w-full text-xs py-2 rounded border border-dashed border-gray-300 dark:border-gray-600 text-gray-500 hover:text-primary transition-all">＋ Add New Row</button></div>`; break; case 'table': html = `<div class="prop-group"><label class="prop-label">Table Grid Size</label><p class="text-xs text-gray-500 mb-2">${b.rows} rows × ${b.cols} columns</p><div class="flex gap-2"><div class="prop-group"><label class="prop-label">Rows</label><input type="number" class="prop-input" value="${b.rows}" min="1" max="25" onchange="resizeTable('${b.id}','rows',+this.value)"></div><div class="prop-group"><label class="prop-label">Columns</label><input type="number" class="prop-input" value="${b.cols}" min="1" max="25" onchange="resizeTable('${b.id}','cols',+this.value)"></div></div></div><div class="prop-group"><label class="prop-label">Global Cell Defaults</label><div class="prop-group"><label class="prop-label">Default Cell Bg</label><input type="color" class="prop-input w-10 h-8 p-0.5" value="${b.cellBg || '#ffffff'}" oninput="setAndRender('${b.id}','cellBg',this.value)"></div><div class="prop-group"><label class="prop-label">Default Text Color</label><input type="color" class="prop-input w-10 h-8 p-0.5" value="${b.cellColor || '#1a1a1a'}" oninput="setAndRender('${b.id}','cellColor',this.value)"></div></div>`; break; case 'student-info': html = `<div class="prop-group"><label class="prop-label">Student Photo</label><button onclick="uploadImage(event,'${b.id}','photoImg')" class="w-full text-xs py-2 rounded border border-dashed border-gray-300 dark:border-gray-600 text-gray-500 hover:text-primary transition-all">📸 Upload Photo</button>${b.photoImg ? `<button onclick="clearImage('${b.id}','photoImg')" class="w-full text-xs py-1.5 text-red-500 hover:text-red-400 mt-2 transition-colors">Clear Photo</button>` : ''}</div><div class="prop-group"><label class="prop-label">Student Fields</label>${b.fields.map((f,i) => `<div class="flex gap-2 mb-2"><input type="text" class="prop-input flex-1" value="${esc(f.label)}" placeholder="Label" oninput="updateStudentField('${b.id}',${i},'label',this.value)"><input type="text" class="prop-input flex-1" value="${esc(f.value)}" placeholder="Value" oninput="updateStudentField('${b.id}',${i},'value',this.value)"></div>`).join('')}</div>`; break; case 'school-header': html = `<div class="prop-group"><label class="prop-label">School Logo</label><button onclick="uploadImage(event,'${b.id}','logoImg')" class="w-full text-xs py-2 rounded border border-dashed border-gray-300 dark:border-gray-600 text-gray-500 hover:text-primary transition-all">🏫 Upload School Logo</button>${b.logoImg ? `<button onclick="clearImage('${b.id}','logoImg')" class="w-full text-xs py-1.5 text-red-500 hover:text-red-400 mt-2 transition-colors">Clear Logo</button>` : ''}</div><div class="prop-group"><label class="prop-label">School Name</label><input type="text" class="prop-input" value="${esc(b.schoolName)}" oninput="setAndRender('${b.id}','schoolName',this.value)"></div><div class="prop-group"><label class="prop-label">Subtitle</label><input type="text" class="prop-input" value="${esc(b.schoolSub)}" oninput="setAndRender('${b.id}','schoolSub',this.value)"></div><div class="prop-group"><label class="prop-label">Report Title</label><input type="text" class="prop-input" value="${esc(b.reportTitle)}" oninput="setAndRender('${b.id}','reportTitle',this.value)"></div>`; break; case 'signature': html = `<div class="prop-group"><label class="prop-label">Signatures (${b.sigs.length})</label>${b.sigs.map((s,i) => `<div class="flex gap-2 mb-2"><input type="text" class="prop-input flex-1" value="${esc(s)}" oninput="updateSignatureLabel('${b.id}',${i},this.value)">${b.sigs.length>1?`<button onclick="removeSignature('${b.id}',${i})" class="text-red-500 hover:text-red-400 transition-colors">✕</button>`:''}</div>`).join('')}<button onclick="addSignature('${b.id}')" class="w-full text-xs py-2 rounded border border-dashed border-gray-300 dark:border-gray-600 text-gray-500 hover:text-primary transition-all mt-2">＋ Add Signature Line</button></div>`; break; case 'text': html = `<div class="prop-group"><label class="prop-label">Text Content</label><textarea class="prop-input" rows="4" oninput="setAndRender('${b.id}','text',this.value)">${esc(b.text)}</textarea></div>`; break; case 'cell': html = `<div class="prop-group"><label class="prop-label">Cell Text</label><textarea class="prop-input" rows="3" oninput="setAndRender('${b.id}','text',this.value)">${esc(b.text)}</textarea></div>`; break; case 'image': html = `<div class="prop-group"><label class="prop-label">Image</label><button onclick="uploadImage(event,'${b.id}','imgSrc')" class="w-full text-xs py-2 rounded border border-dashed border-gray-300 dark:border-gray-600 text-gray-500 hover:text-primary transition-all">🖼 Upload Image</button>${b.imgSrc ? `<button onclick="clearImage('${b.id}','imgSrc')" class="w-full text-xs py-1.5 text-red-500 hover:text-red-400 mt-2 transition-colors">Clear Image</button>` : ''}</div>`; break; default: html = `<p class="text-xs text-gray-500">Double click elements on the canvas to modify text content instantly.</p>`; } f.innerHTML = html; }
+
+function liveSet(key, val) { if (selectedIds.length !== 1) return; const b = findBlockById(selectedIds[0]); if (!b) return; b[key] = val; applyStyle(b); }
+function applyStyle(b) { const el = canvas.querySelector(`[data-id="${b.id}"]`); if (el) { el.style.cssText = getBlockCSS(b, false); } if (b.type === 'group') { reRenderBlock(b.id); } }
+function setAndRender(id, key, val) { const b = findBlockById(id); if (!b) return; b[key] = val; reRenderBlock(id); }
+function reRenderBlock(id) { const b = findBlockById(id); if (!b) return; const old = canvas.querySelector(`[data-id="${id}"]`); if (!old) return; const neu = buildBlockEl(b); canvas.replaceChild(neu, old); if (selectedIds.includes(id)) populateProperties(b); updateGroupPanels(); if (activeTableCell && activeTableCell.blockId === id) { const refreshedBlock = findBlockById(id); if (refreshedBlock && refreshedBlock._el) { if (activeTableCell.tableType === 'grades') { const allTds = refreshedBlock._el.querySelectorAll('.grades-tbl tbody td'); const targetIndex = activeTableCell.row * 5 + activeTableCell.col; if (allTds[targetIndex]) allTds[targetIndex].classList.add('cell-selected'); } else { const tdElements = refreshedBlock._el.querySelectorAll('.pdf-table td, .pdf-table th'); const cols = refreshedBlock.cols || (refreshedBlock.data && refreshedBlock.data[0] ? refreshedBlock.data[0].length : 3); const targetIndex = activeTableCell.row * cols + activeTableCell.col; if (tdElements[targetIndex]) tdElements[targetIndex].classList.add('table-cell-selected'); } } } if (activeSubElement && activeSubElement.blockId === id) { const refreshedBlock = findBlockById(id); if (refreshedBlock && refreshedBlock._el) { const el = refreshedBlock._el.querySelector(`[data-subid="${activeSubElement.subId}"]`); if (el) el.classList.add('sub-element-selected'); } } }
+
+function onCellPropChange(key, value) { if (!activeTableCell) return; const { blockId, row, col, tableType } = activeTableCell; const block = findBlockById(blockId); if (!block) return; if (tableType === 'grades') { const keys = ['subject', 'score', 'grade', 'remark']; const fieldKey = keys[col]; if (!block.rowStyles) block.rowStyles = []; if (!block.rowStyles[row]) block.rowStyles[row] = {}; if (!block.rowStyles[row][fieldKey]) block.rowStyles[row][fieldKey] = {}; block.rowStyles[row][fieldKey][key] = value; } else { let cell = (block.data && block.data[row] && block.data[row][col] !== undefined) ? block.data[row][col] : ''; let cellObj = ensureCellObject(cell); cellObj[key] = value; if (!block.data) block.data = []; if (!block.data[row]) block.data[row] = []; block.data[row][col] = cellObj; } reRenderBlock(blockId); setTimeout(() => { const refreshedBlock = findBlockById(blockId); if (refreshedBlock) selectTableCell(blockId, row, col, tableType); }, 50); }
+function onCellPropHexChange(key, value) { if (/^#[0-9a-fA-F]{6}$/.test(value)) { if (key === 'bg') document.getElementById('cell-prop-bg').value = value; if (key === 'c') document.getElementById('cell-prop-color').value = value; onCellPropChange(key, value); } }
+function applyCellStyleToRow() { if (!activeTableCell) return; const { blockId, row, col, tableType } = activeTableCell; const block = findBlockById(blockId); if (!block) return; if (tableType === 'grades') { const keys = ['subject', 'score', 'grade', 'remark']; const sourceKey = keys[col]; const sourceStyle = (block.rowStyles && block.rowStyles[row] && block.rowStyles[row][sourceKey]) ? block.rowStyles[row][sourceKey] : {}; if (!block.rowStyles) block.rowStyles = []; if (!block.rowStyles[row]) block.rowStyles[row] = {}; keys.forEach(k => { block.rowStyles[row][k] = { ...sourceStyle }; }); } else { const sourceCell = (block.data && block.data[row] && block.data[row][col] !== undefined) ? block.data[row][col] : ''; const sourceObj = ensureCellObject(sourceCell); const cols = block.cols || (block.data && block.data[0] ? block.data[0].length : 3); if (!block.data) block.data = []; if (!block.data[row]) block.data[row] = []; for (let c = 0; c < cols; c++) { const existing = ensureCellObject(block.data[row][c] || ''); block.data[row][c] = { ...existing, bg: sourceObj.bg, c: sourceObj.c, p: sourceObj.p, fw: sourceObj.fw, ta: sourceObj.ta, br: sourceObj.br, fs: sourceObj.fs, ff: sourceObj.ff, t: existing.t }; } } reRenderBlock(blockId); setTimeout(() => selectTableCell(blockId, row, col, tableType), 50); toast('Style applied to entire row'); }
+function applyCellStyleToCol() { if (!activeTableCell) return; const { blockId, row, col, tableType } = activeTableCell; const block = findBlockById(blockId); if (!block) return; if (tableType === 'grades') { const keys = ['subject', 'score', 'grade', 'remark']; const sourceKey = keys[col]; const sourceStyle = (block.rowStyles && block.rowStyles[row] && block.rowStyles[row][sourceKey]) ? block.rowStyles[row][sourceKey] : {}; if (!block.rowStyles) block.rowStyles = []; block.rows.forEach((_, r) => { if (!block.rowStyles[r]) block.rowStyles[r] = {}; block.rowStyles[r][sourceKey] = { ...sourceStyle }; }); } else { const sourceCell = (block.data && block.data[row] && block.data[row][col] !== undefined) ? block.data[row][col] : ''; const sourceObj = ensureCellObject(sourceCell); const rows = block.rows || (block.data ? block.data.length : 3); if (!block.data) block.data = []; for (let r = 0; r < rows; r++) { if (!block.data[r]) block.data[r] = []; const existing = ensureCellObject(block.data[r][col] || ''); block.data[r][col] = { ...existing, bg: sourceObj.bg, c: sourceObj.c, p: sourceObj.p, fw: sourceObj.fw, ta: sourceObj.ta, br: sourceObj.br, fs: sourceObj.fs, ff: sourceObj.ff, t: existing.t }; } } reRenderBlock(blockId); setTimeout(() => selectTableCell(blockId, row, col, tableType), 50); toast('Style applied to entire column'); }
+function applyCellStyleToTable() { if (!activeTableCell) return; const { blockId, row, col, tableType } = activeTableCell; const block = findBlockById(blockId); if (!block) return; if (tableType === 'grades') { const keys = ['subject', 'score', 'grade', 'remark']; const sourceKey = keys[col]; const sourceStyle = (block.rowStyles && block.rowStyles[row] && block.rowStyles[row][sourceKey]) ? block.rowStyles[row][sourceKey] : {}; if (!block.rowStyles) block.rowStyles = []; block.rows.forEach((_, r) => { if (!block.rowStyles[r]) block.rowStyles[r] = {}; keys.forEach(k => { block.rowStyles[r][k] = { ...sourceStyle }; }); }); } else { const sourceCell = (block.data && block.data[row] && block.data[row][col] !== undefined) ? block.data[row][col] : ''; const sourceObj = ensureCellObject(sourceCell); const rows = block.rows || (block.data ? block.data.length : 3); const cols = block.cols || (block.data && block.data[0] ? block.data[0].length : 3); if (!block.data) block.data = []; for (let r = 0; r < rows; r++) { if (!block.data[r]) block.data[r] = []; for (let c = 0; c < cols; c++) { const existing = ensureCellObject(block.data[r][c] || ''); block.data[r][c] = { ...existing, bg: sourceObj.bg, c: sourceObj.c, p: sourceObj.p, fw: sourceObj.fw, ta: sourceObj.ta, br: sourceObj.br, fs: sourceObj.fs, ff: sourceObj.ff, t: existing.t }; } } } reRenderBlock(blockId); setTimeout(() => selectTableCell(blockId, row, col, tableType), 50); toast('Style applied to entire table'); }
+function resetCellStyle() { if (!activeTableCell) return; const { blockId, row, col, tableType } = activeTableCell; const block = findBlockById(blockId); if (!block) return; if (tableType === 'grades') { const keys = ['subject', 'score', 'grade', 'remark']; const fieldKey = keys[col]; if (block.rowStyles && block.rowStyles[row] && block.rowStyles[row][fieldKey]) { delete block.rowStyles[row][fieldKey]; } } else { if (block.data && block.data[row] && block.data[row][col] !== undefined) { const cell = block.data[row][col]; if (typeof cell === 'object') { block.data[row][col] = cell.t || ''; } } } clearActiveTableCell(); reRenderBlock(blockId); toast('Cell style reset'); }
+
+// Divider line color handlers
+function onDivLineColorChange(v) {
+    document.getElementById('prop-div-line-hex').value = v;
+    if (selectedIds.length === 1) {
+        const b = findBlockById(selectedIds[0]);
+        if (b && b.type === 'divider') {
+            b.lineColor = v;
+            reRenderBlock(b.id);
+        }
+    }
+}
+function onDivLineHexChange(v) {
+    if (/^#[0-9a-fA-F]{6}$/.test(v)) {
+        document.getElementById('prop-div-line-color').value = v;
+        onDivLineColorChange(v);
+    }
+}
+
+// Border handlers
+function updateBorder() {
+    if (selectedIds.length !== 1) return;
+    const b = findBlockById(selectedIds[0]);
+    if (!b) return;
+    b.borderWidth = document.getElementById('prop-bw').value;
+    b.borderStyle = document.getElementById('prop-bs').value;
+    b.borderColor = document.getElementById('prop-bc').value;
+    document.getElementById('prop-bc-hex').value = b.borderColor;
+    applyStyle(b);
+}
+function onBorderColorChange(v) {
+    document.getElementById('prop-bc-hex').value = v;
+    updateBorder();
+}
+function onBorderHexChange(v) {
+    if (/^#[0-9a-fA-F]{6}$/.test(v)) {
+        document.getElementById('prop-bc').value = v;
+        updateBorder();
+    }
+}
+
+function bgTypeChange(type, apply = true) { document.getElementById('bg-solid-panel').classList.toggle('hidden', type !== 'solid'); document.getElementById('bg-gradient-panel').classList.toggle('hidden', type !== 'gradient'); if (apply && selectedIds.length === 1) { const b = findBlockById(selectedIds[0]); if (b) { b.bgType = type; applyStyle(b); } } }
+function onBgColorChange(v) { document.getElementById('prop-bg-hex').value = v; if (selectedIds.length !== 1) return; const b = findBlockById(selectedIds[0]); if (!b) return; b.bgColor = v; applyStyle(b); }
+function onBgHexChange(v) { if (/^#[0-9a-fA-F]{6}$/.test(v)) { document.getElementById('prop-bg-color').value = v; onBgColorChange(v); } }
+function onGradAngleChange(v) { document.getElementById('grad-angle-lbl').textContent = v + '°'; if (selectedIds.length !== 1) return; const b = findBlockById(selectedIds[0]); if (!b) return; b.gradAngle = +v; applyStyle(b); }
+function updateGradStop(i, key, val) { if (selectedIds.length !== 1) return; const b = findBlockById(selectedIds[0]); if (!b || !b.gradStops[i]) return; b.gradStops[i][key] = val; applyStyle(b); }
+function addGradStop() { if (selectedIds.length !== 1) return; saveSnapshot(); const b = findBlockById(selectedIds[0]); if (!b) return; b.gradStops = [...(b.gradStops || []), {color: '#ffffff', pos: 50}]; applyStyle(b); renderGradientStops(b); }
+function removeGradStop(i) { if (selectedIds.length !== 1) return; saveSnapshot(); const b = findBlockById(selectedIds[0]); if (!b || b.gradStops.length <= 2) return; b.gradStops.splice(i, 1); applyStyle(b); renderGradientStops(b); }
+function onTextColorChange(v) { document.getElementById('prop-color-hex').value = v; liveSet('color', v); }
+function onColorHexChange(v) { if (/^#[0-9a-fA-F]{6}$/.test(v)) { document.getElementById('prop-color').value = v; liveSet('color', v); } }
+function onOpacityChange(v) { document.getElementById('opacity-lbl').textContent = v + '%'; liveSet('opacity', v / 100); }
+function syncBlockText(e, id, key) { const b = findBlockById(id); if (b) b[key] = e.target.innerText; }
+function syncStudentField(e, id, idx) { const b = findBlockById(id); if (b && b.fields[idx]) b.fields[idx].value = e.target.innerText; }
+function syncGradeCell(e, id, row, key) { const b = findBlockById(id); if (b && b.rows[row]) b.rows[row][key] = e.target.innerText; }
+function syncTableCell(e, id, row, col) { const b = findBlockById(id); if (!b || !b.data || !b.data[row]) return; const cell = b.data[row][col]; if (typeof cell === 'object') { cell.t = e.target.innerText; } else { b.data[row][col] = e.target.innerText; } }
+function syncSignatureLabel(e, id, i) { const b = findBlockById(id); if (b && b.sigs[i] !== undefined) b.sigs[i] = e.target.innerText; }
+function updateStudentField(id, idx, key, val) { const b = findBlockById(id); if (b && b.fields[idx]) { b.fields[idx][key] = val; reRenderBlock(id); } }
+function addGradeRow(id) { saveSnapshot(); const b = findBlockById(id); if (!b) return; b.rows.push({subject: 'New Subject', score: '0', grade: '—', remark: '—'}); reRenderBlock(id); }
+function deleteGradeRow(id, idx) { saveSnapshot(); const b = findBlockById(id); if (!b) return; b.rows.splice(idx, 1); if (b.rowStyles) b.rowStyles.splice(idx, 1); reRenderBlock(id); }
+function addTableRow(id) { saveSnapshot(); const b = findBlockById(id); if (!b) return; const cols = b.cols || 3; b.data.push(Array(cols).fill('Cell')); b.rows = b.data.length; reRenderBlock(id); }
+function addTableCol(id) { saveSnapshot(); const b = findBlockById(id); if (!b) return; b.data.forEach(row => row.push('Cell')); b.cols = b.data[0] ? b.data[0].length : 3; reRenderBlock(id); }
+function removeTableRow(id) { saveSnapshot(); const b = findBlockById(id); if (!b || b.data.length <= 1) return; b.data.pop(); b.rows = b.data.length; reRenderBlock(id); }
+function removeTableCol(id) { saveSnapshot(); const b = findBlockById(id); if (!b || b.cols <= 1) return; b.data.forEach(row => row.pop()); b.cols = b.data[0] ? b.data[0].length : 1; reRenderBlock(id); }
+function resizeTable(id, dim, val) { saveSnapshot(); const b = findBlockById(id); if (!b || val < 1) return; if (dim === 'rows') { while (b.data.length < val) { b.data.push(Array(b.cols).fill('Cell')); } while (b.data.length > val) b.data.pop(); b.rows = b.data.length; } else if (dim === 'cols') { b.data.forEach(row => { while (row.length < val) row.push('Cell'); while (row.length > val) row.pop(); }); b.cols = b.data[0] ? b.data[0].length : 1; } reRenderBlock(id); }
+function updateSignatureLabel(id, i, val) { const b = findBlockById(id); if (!b) return; b.sigs[i] = val; reRenderBlock(id); }
+function addSignature(id) { saveSnapshot(); const b = findBlockById(id); if (!b) return; b.sigs.push('Signee Authority'); reRenderBlock(id); }
+function removeSignature(id, i) { saveSnapshot(); const b = findBlockById(id); if (!b || b.sigs.length <= 1) return; b.sigs.splice(i, 1); reRenderBlock(id); }
+function uploadImage(e, id, field) { e.stopPropagation(); fileTarget = {id, field}; document.getElementById('file-input').click(); }
+function handleFileUpload(e) { const file = e.target.files[0]; if (!file || !fileTarget) return; const {id, field} = fileTarget; const reader = new FileReader(); reader.onload = ev => { const b = findBlockById(id); if (b) { saveSnapshot(); b[field] = ev.target.result; reRenderBlock(id); } }; reader.readAsDataURL(file); e.target.value = ''; fileTarget = null; }
+function clearImage(id, field) { saveSnapshot(); const b = findBlockById(id); if (b) { b[field] = null; reRenderBlock(id); } toast('Image cleared'); }
+function saveSelectedAsPreset() { if (selectedIds.length !== 1) return; const group = blocks.find(b => b.id === selectedIds[0]); if (!group || group.type !== 'group') return; const presetName = prompt("Enter a name for this custom component preset:", "Custom Studio Preset"); if (!presetName) return; const presetCopy = JSON.parse(JSON.stringify(group)); presetCopy.name = presetName; presetCopy.id = 'preset_' + Date.now(); customPresets.push(presetCopy); localStorage.setItem('rcstudio_presets', JSON.stringify(customPresets)); renderPresetsSidebar(); toast('Preset saved!'); }
+function loadPresets() { try { const raw = localStorage.getItem('rcstudio_presets'); if (raw) { customPresets = JSON.parse(raw); } } catch (e) {} }
+function renderPresetsSidebar() { const container = document.getElementById('custom-presets-list'); if (customPresets.length === 0) { container.innerHTML = `<p class="text-[10px] text-gray-500 dark:text-gray-400 italic">No custom presets saved.</p>`; return; } container.innerHTML = customPresets.map((p, index) => `<div class="flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg transition-all"><div class="flex items-center gap-1.5 cursor-pointer truncate mr-2" onclick="instantiatePreset('${p.id}')"><span class="text-xs">📦</span><span class="text-[11px] truncate font-medium">${esc(p.name)}</span></div><button onclick="deletePreset(event,'${p.id}')" class="text-red-500 hover:text-red-400 text-[10px] px-1 transition-colors">✕</button></div>`).join(''); }
+function instantiatePreset(presetId) { const template = customPresets.find(p => p.id === presetId); if (!template) return; saveSnapshot(); const clone = JSON.parse(JSON.stringify(template)); idCounter++; clone.id = 'b' + idCounter; const maxY = blocks.reduce((m, bl) => Math.max(m, bl.y + (bl.h === 'auto' ? 80 : +bl.h)), 20); clone.y = maxY + 15; clone.x = 20; clone.children = (clone.children || []).map(c => { idCounter++; c.id = 'b' + idCounter; c._parentGroupId = clone.id; return c; }); blocks.push(clone); clearActiveTableCell(); clearSubElementSelection(); renderAll(); selectBlock(clone.id); toast('Custom preset instantiated'); }
+function deletePreset(e, presetId) { e.stopPropagation(); customPresets = customPresets.filter(p => p.id !== presetId); localStorage.setItem('rcstudio_presets', JSON.stringify(customPresets)); renderPresetsSidebar(); toast('Preset deleted'); }
+function deconstructCurrentTemplate() { if (selectedIds.length !== 1) return; const b = findBlockById(selectedIds[0]); if (!b) return; clearActiveTableCell(); clearSubElementSelection(); saveSnapshot(); const styleProps = (src) => ({ bgType: src.bgType, bgColor: src.bgColor, gradAngle: src.gradAngle, gradStops: src.gradStops ? JSON.parse(JSON.stringify(src.gradStops)) : undefined, color: src.color, fontSize: src.fontSize, fontWeight: src.fontWeight, fontFamily: src.fontFamily, fontStyle: src.fontStyle, textAlign: src.textAlign, padding: src.padding, borderRadius: src.borderRadius, borderWidth: src.borderWidth, borderStyle: src.borderStyle, borderColor: src.borderColor, boxShadow: src.boxShadow, opacity: src.opacity }); const primitives = []; const startX = b.x, startY = b.y, W = b.w, H = b.h === 'auto' ? 120 : b.h; if (b.type === 'attendance') { primitives.push({ ...newBlock('text'), x: startX + 15, y: startY + 12, w: W - 30, h: 25, text: 'ATTENDANCE SUMMARY', fontWeight: '700', fontSize: '12px', zIndex: 2, ...styleProps(b) }); const colW = Math.floor((W - 40) / 3); const stats = [{ num: b.present || '0', label: 'Days Present' }, { num: b.absent || '0', label: 'Days Absent' }, { num: b.late || '0', label: 'Days Late' }]; stats.forEach((stat, i) => { const cardX = startX + 15 + (i * (colW + 10)); const bg = { ...newBlock('cell'), x: cardX, y: startY + 45, w: colW, h: 60, text: '', zIndex: 1, ...styleProps(b), bgColor: b.bgColor || '#f9fafb', borderRadius: b.borderRadius || '6px' }; const val = { ...newBlock('text'), x: cardX + 5, y: startY + 50, w: colW - 10, h: 30, text: stat.num, fontWeight: '700', fontSize: '24px', textAlign: 'center', zIndex: 3, color: b.color || '#1a1a1a' }; const lbl = { ...newBlock('text'), x: cardX + 5, y: startY + 80, w: colW - 10, h: 20, text: stat.label, fontWeight: '500', fontSize: '8px', textAlign: 'center', color: '#6b7280', zIndex: 3 }; primitives.push(bg, val, lbl); }); } else if (b.type === 'comments') { primitives.push({ ...newBlock('cell'), x: startX, y: startY, w: W, h: H, text: '', zIndex: 1, ...styleProps(b) }); primitives.push({ ...newBlock('text'), x: startX + 15, y: startY + 15, w: W - 30, h: 25, text: b.title || "Teacher's Comment", fontWeight: '700', fontSize: '13px', zIndex: 2, color: b.color || '#333' }); primitives.push({ ...newBlock('text'), x: startX + 15, y: startY + 45, w: W - 30, h: H - 60, text: b.text || "Type your evaluation here.", fontWeight: '400', fontSize: '11px', zIndex: 2, color: b.color || '#333' }); } else if (b.type === 'school-header') { const bgCell = { ...newBlock('cell'), x: startX, y: startY, w: W, h: H, text: '', zIndex: 1, bgType: b.bgType, bgColor: b.bgColor, gradAngle: b.gradAngle, gradStops: b.gradStops ? JSON.parse(JSON.stringify(b.gradStops)) : undefined }; primitives.push(bgCell); primitives.push({ ...newBlock('image'), x: startX + (W / 2) - 35, y: startY + 12, w: 70, h: 70, imgSrc: b.logoImg || null, zIndex: 2 }); primitives.push({ ...newBlock('text'), x: startX + 20, y: startY + 88, w: W - 40, h: 30, text: b.schoolName, fontSize: '18px', fontWeight: '700', textAlign: 'center', color: b.color || '#ffffff', zIndex: 3 }); primitives.push({ ...newBlock('text'), x: startX + 20, y: startY + 112, w: W - 40, h: 20, text: b.schoolSub, fontSize: '11px', textAlign: 'center', color: b.color || '#ffffff', opacity: 0.9, zIndex: 3 }); primitives.push({ ...newBlock('text'), x: startX + 20, y: startY + 130, w: W - 40, h: 20, text: b.reportTitle, fontSize: '12px', fontWeight: '600', textAlign: 'center', color: b.color || '#ffffff', zIndex: 3 }); } else if (b.type === 'student-info') { primitives.push({ ...newBlock('cell'), x: startX, y: startY, w: W, h: H, text: '', zIndex: 1, ...styleProps(b) }); primitives.push({ ...newBlock('image'), x: startX + W - 110, y: startY + 15, w: 95, h: 110, imgSrc: b.photoImg || null, zIndex: 2 }); const itemW = Math.floor((W - 130) / 2), rowH = 32; b.fields.forEach((field, i) => { const col = i % 2, row = Math.floor(i / 2); const fieldX = startX + (col * itemW), fieldY = startY + (row * rowH); primitives.push({ ...newBlock('cell'), x: fieldX, y: fieldY, w: 80, h: rowH, text: field.label, bgType: 'solid', bgColor: '#f5f5f5', fontSize: '9px', fontWeight: '700', borderWidth: '1px', borderColor: '#ddd', zIndex: 2 }); primitives.push({ ...newBlock('cell'), x: fieldX + 80, y: fieldY, w: itemW - 80, h: rowH, text: field.value, bgType: 'solid', bgColor: '#ffffff', fontSize: '11px', borderWidth: '1px', borderColor: '#ddd', zIndex: 2 }); }); } else if (b.type === 'signature') { const sigCount = b.sigs.length, colW = Math.floor((W - (sigCount * 20)) / sigCount); b.sigs.forEach((sigText, i) => { const sigX = startX + 10 + (i * (colW + 20)); primitives.push({ ...newBlock('divider'), x: sigX, y: startY + 30, w: colW, h: 10, zIndex: 1 }); primitives.push({ ...newBlock('text'), x: sigX, y: startY + 45, w: colW, h: 25, text: sigText, fontSize: '10px', fontWeight: '600', textAlign: 'center', zIndex: 2, color: b.color || '#6b7280' }); }); } else if (b.type === 'grades') { primitives.push({ ...newBlock('text'), x: startX, y: startY, w: W, h: 25, text: b.title || 'Subject Performance', fontWeight: '700', fontSize: '13px', zIndex: 1, color: b.color || '#1a1a1a' }); const tableData = [['Subject', 'Score', 'Grade', 'Remark']]; b.rows.forEach(r => { tableData.push([r.subject, r.score, r.grade, r.remark]); }); primitives.push({ ...newBlock('table'), x: startX, y: startY + 30, w: W, h: H - 30, rows: tableData.length, cols: 4, data: tableData, cellBg: '#ffffff', cellColor: '#1a1a1a', cellBorderC: '#eee', cellBorderW: '1px', zIndex: 1 }); } if (primitives.length > 0) { primitives.forEach(p => { idCounter++; p.id = 'b' + idCounter; }); blocks = blocks.filter(x => x.id !== b.id); blocks.push(...primitives); selectedIds = [primitives[0].id]; renderAll(); populateProperties(primitives[0]); } toast(`Deconstructed into ${primitives.length} modular blocks!`); }
+function groupSelected() { if (selectedIds.length < 2) { toast('Select at least 2 blocks to group', 'error'); return; } saveSnapshot(); clearActiveTableCell(); clearSubElementSelection(); const selected = blocks.filter(b => selectedIds.includes(b.id)); if (selected.some(b => b.type === 'group')) { toast('Cannot group an existing group directly.', 'error'); return; } if (selected.some(b => b._parentGroupId !== undefined)) { toast('Cannot group elements nested inside an existing group', 'error'); return; } let minX = Infinity, minY = Infinity, maxX = 0, maxY = 0; selected.forEach(b => { const w = b.w || 100, h = b.h === 'auto' ? 60 : (b.h || 60); if (b.x < minX) minX = b.x; if (b.y < minY) minY = b.y; if (b.x + w > maxX) maxX = b.x + w; if (b.y + h > maxY) maxY = b.y + h; }); const groupX = minX - 10, groupY = minY - 10, groupW = maxX - minX + 20, groupH = maxY - minY + 20; const group = newBlock('group'); group.x = Math.max(0, groupX); group.y = Math.max(0, groupY); group.w = Math.max(100, groupW); group.h = Math.max(50, groupH); group.bgType = 'solid'; group.bgColor = 'rgba(108,99,255,0.05)'; group.borderWidth = '1.5px'; group.borderStyle = 'dashed'; group.borderColor = '#6c63ff'; group.children = selected.map(b => { const child = JSON.parse(JSON.stringify(b)); child.x = b.x - group.x; child.y = b.y - group.y; child._parentGroupId = group.id; delete child._el; return child; }); const selectedIdsSet = new Set(selectedIds); blocks = blocks.filter(b => !selectedIdsSet.has(b.id)); blocks.push(group); selectedIds = [group.id]; renderAll(); populateProperties(group); toast(`Grouped ${selected.length} items`); }
+function ungroupSelected() { if (selectedIds.length !== 1) { toast('Select a single group to ungroup', 'error'); return; } saveSnapshot(); clearActiveTableCell(); clearSubElementSelection(); const group = blocks.find(b => b.id === selectedIds[0]); if (!group || group.type !== 'group') { toast('Selected block is not a grouped component', 'error'); return; } const children = group.children || []; if (children.length === 0) { toast('This group has no nested elements', 'error'); return; } blocks = blocks.filter(b => b.id !== group.id); const newIds = []; children.forEach(child => { const restored = JSON.parse(JSON.stringify(child)); restored.x = group.x + child.x; restored.y = group.y + child.y; restored._parentGroupId = undefined; restored.id = 'b' + (++idCounter); if (restored.type === 'group') { restored.children = (restored.children || []).map(gc => { gc._parentGroupId = restored.id; return gc; }); } blocks.push(restored); newIds.push(restored.id); }); selectedIds = newIds; renderAll(); if (newIds.length === 1) { populateProperties(findBlockById(newIds[0])); } else { showMultiSelectProps(); } toast(`Ungrouped into ${children.length} separate blocks`); }
+function updateGroupPanels() { const groupActionPanel = document.getElementById('group-action-panel'); if (selectedIds.length === 1) { const b = findBlockById(selectedIds[0]); if (b && b.type === 'group') { groupActionPanel.classList.remove('hidden'); return; } } groupActionPanel.classList.add('hidden'); }
+function renderLayers() { const list = document.getElementById('layers-list'); list.innerHTML = [...blocks].reverse().map(b => { const isGroup = b.type === 'group'; const childCount = isGroup ? (b.children || []).length : 0; return `<div class="layer-item ${selectedIds.includes(b.id) ? 'active' : ''}" onclick="selectBlock('${b.id}')"><span>${getBlockLabel(b.type)}${isGroup ? ' 📦' : ''}</span>${childCount > 0 ? `<span class="text-[9px] text-gray-500">(${childCount})</span>` : ''}<span class="ml-auto text-[10px] text-gray-600">${b.id}</span></div>`; }).join(''); }
+function renderLayerLabel() { renderLayers(); }
+function savePage() { try { const data = blocks.map(b => { const copy = JSON.parse(JSON.stringify(b)); delete copy._el; return copy; }); localStorage.setItem('rcstudio_blocks', JSON.stringify(data)); localStorage.setItem('rcstudio_counter', idCounter); toast('Saved to browser workspace ✓'); } catch (e) { toast('Failed to backup save'); } }
+function loadPage() { loadPresets(); try { const raw = localStorage.getItem('rcstudio_blocks'); if (raw) { blocks = JSON.parse(raw); idCounter = +(localStorage.getItem('rcstudio_counter') || 0); clearActiveTableCell(); clearSubElementSelection(); historyStack = [getStateSnapshot()]; historyIndex = 0; updateUndoRedoButtons(); renderAll(); if (blocks.length > 0) { selectedIds = [blocks[0].id]; populateProperties(findBlockById(blocks[0].id)); } return; } } catch (e) {} loadDefaults(); }
+function loadDefaults() { blocks = []; ['school-header', 'student-info', 'grades', 'comments', 'attendance', 'signature'].forEach(type => blocks.push(newBlock(type))); clearActiveTableCell(); clearSubElementSelection(); historyStack = [getStateSnapshot()]; historyIndex = 0; updateUndoRedoButtons(); renderAll(); if (blocks.length > 0) { selectedIds = [blocks[0].id]; populateProperties(findBlockById(blocks[0].id)); } }
+function exportPDF() { const prevSelected = [...selectedIds]; const prevCell = activeTableCell ? { ...activeTableCell } : null; const prevSub = activeSubElement ? { ...activeSubElement } : null; clearActiveTableCell(); clearSubElementSelection(); selectedIds = []; renderAll(); const el = document.getElementById('report-canvas'); const opt = { margin: 0, filename: 'custom-report-card.pdf', image: { type: 'jpeg', quality: 0.98 }, html2canvas: { scale: 2, useCORS: true, allowTaint: true, logging: false }, jsPDF: { unit: 'px', format: [794, 1123], orientation: 'portrait' } }; toast('Rendering Academic Report…'); html2pdf().set(opt).from(el).save().then(() => { selectedIds = prevSelected; if (prevCell) activeTableCell = prevCell; if (prevSub) activeSubElement = prevSub; renderAll(); toast('Export complete! ✓'); }); }
+function toast(msg, type = 'success') { const t = document.getElementById('toast'); t.textContent = msg; t.style.transform = 'translateX(-50%) translateY(0)'; t.style.background = type === 'error' ? '#ef4444' : '#1173d4'; clearTimeout(t._timeout); t._timeout = setTimeout(() => { t.style.transform = 'translateX(-50%) translateY(80px)'; }, 2200); }
+document.addEventListener('keydown', e => {
+    if (e.target.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName)) return;
+    if (e.key === 'Escape') {
+        if (activeSubElement) { clearSubElementSelection(); if (selectedIds.length === 1) { const b = findBlockById(selectedIds[0]); if (b) populateProperties(b); } return; }
+        if (activeTableCell) { clearActiveTableCell(); if (selectedIds.length === 1) { const b = findBlockById(selectedIds[0]); if (b) populateProperties(b); } else { showEmptyProps(); } return; }
+        if (selectedIds.length === 1) { const id = selectedIds[0]; const parent = getParentGroup(id); if (parent) { selectBlock(parent.id); return; } const block = findBlockById(id); if (block && block._parentGroupId) { const p = findBlockById(block._parentGroupId); if (p) selectBlock(p.id); return; } }
+        clearActiveTableCell(); clearSubElementSelection(); selectedIds = []; renderAll(); showEmptyProps();
+    }
+    if (e.key === 'Delete' || e.key === 'Backspace') deleteSelected();
+    if ((e.metaKey || e.ctrlKey) && e.key === 's') { e.preventDefault(); savePage(); }
+    if ((e.metaKey || e.ctrlKey) && e.key === 'z') { e.preventDefault(); undo(); }
+    if ((e.metaKey || e.ctrlKey) && e.key === 'y') { e.preventDefault(); redo(); }
+    if ((e.metaKey || e.ctrlKey) && e.key === 'g') { e.preventDefault(); groupSelected(); }
+    if ((e.metaKey || e.ctrlKey) && e.key === 'u') { e.preventDefault(); ungroupSelected(); }
+    if (selectedIds.length === 1) { const b = findBlockById(selectedIds[0]); if (b && b._parentGroupId === undefined) { const step = e.shiftKey ? 10 : 1; if (e.key === 'ArrowLeft') { e.preventDefault(); saveSnapshot(); b.x = Math.max(0, b.x - step); applyStyle(b); document.getElementById('prop-x').value = b.x; } if (e.key === 'ArrowRight') { e.preventDefault(); saveSnapshot(); b.x += step; applyStyle(b); document.getElementById('prop-x').value = b.x; } if (e.key === 'ArrowUp') { e.preventDefault(); saveSnapshot(); b.y = Math.max(0, b.y - step); applyStyle(b); document.getElementById('prop-y').value = b.y; } if (e.key === 'ArrowDown') { e.preventDefault(); saveSnapshot(); b.y += step; applyStyle(b); document.getElementById('prop-y').value = b.y; } } }
+});
+
+canvas.addEventListener('mousedown', e => { if (e.shiftKey) { const blockEl = e.target.closest('.rc-block'); if (blockEl) { e.preventDefault(); e.stopPropagation(); const id = blockEl.dataset.id; toggleSelect(id); } } }, true);
+canvas.addEventListener('mousedown', e => { if (e.shiftKey) return; if (e.target === canvas) { e.preventDefault(); const rect = canvas.getBoundingClientRect(); const startX = e.clientX - rect.left, startY = e.clientY - rect.top; const marquee = document.createElement('div'); marquee.className = 'selection-marquee'; marquee.style.left = startX + 'px'; marquee.style.top = startY + 'px'; canvas.appendChild(marquee); function onMouseMove(ev) { const currentX = ev.clientX - rect.left, currentY = ev.clientY - rect.top; const x1 = Math.min(startX, currentX), y1 = Math.min(startY, currentY), x2 = Math.max(startX, currentX), y2 = Math.max(startY, currentY); marquee.style.left = x1 + 'px'; marquee.style.top = y1 + 'px'; marquee.style.width = (x2 - x1) + 'px'; marquee.style.height = (y2 - y1) + 'px'; const insideIds = []; blocks.forEach(b => { const blockHeight = b.h === 'auto' ? (b._el ? b._el.offsetHeight : 80) : +b.h; const overlaps = !(b.x > x2 || b.x + b.w < x1 || b.y > y2 || b.y + blockHeight < y1); if (overlaps && b._parentGroupId === undefined) { insideIds.push(b.id); } }); selectedIds = insideIds; blocks.forEach(b => { if (b._el) { b._el.classList.toggle('selected', selectedIds.includes(b.id)); b._el.classList.toggle('multi-selected', selectedIds.length > 1 && selectedIds.includes(b.id)); } }); } function onMouseUp() { document.removeEventListener('mousemove', onMouseMove); document.removeEventListener('mouseup', onMouseUp); if (marquee.parentNode) marquee.parentNode.removeChild(marquee); clearActiveTableCell(); clearSubElementSelection(); renderAll(); if (selectedIds.length === 1) { const b = findBlockById(selectedIds[0]); if (b) populateProperties(b); } else if (selectedIds.length > 1) { showMultiSelectProps(); } else { showEmptyProps(); } } document.addEventListener('mousemove', onMouseMove); document.addEventListener('mouseup', onMouseUp); } });
+function onBlockMouseDown(e, id) { if (!e.target.closest('[data-drag]')) return; e.preventDefault(); if (!selectedIds.includes(id)) selectBlock(id); const b = findBlockById(id); if (!b || b._parentGroupId !== undefined) return; const el = canvas.querySelector(`[data-id="${id}"]`); if (!el) return; const dragGroup = blocks.filter(bl => selectedIds.includes(bl.id) && bl._parentGroupId === undefined); dragState = { type: 'move', startX: e.clientX, startY: e.clientY, targets: dragGroup.map(t => ({ id: t.id, startX: t.x, startY: t.y, w: t.w, el: canvas.querySelector(`[data-id="${t.id}"]`) })) }; saveSnapshot(); el.classList.add('dragging'); }
+function onResizeMouseDown(e, dir) { e.preventDefault(); e.stopPropagation(); const id = e.currentTarget.dataset.id; const b = findBlockById(id); if (!b || b._parentGroupId !== undefined) return; const el = canvas.querySelector(`[data-id="${id}"]`); if (!el) return; dragState = { id, type: 'resize', dir, startX: e.clientX, startY: e.clientY, w: b.w, h: b.h === 'auto' ? el.offsetHeight : +b.h, x: b.x, y: b.y }; saveSnapshot(); el.classList.add('dragging'); }
+document.addEventListener('mousemove', e => { if (!dragState) return; if (dragState.type === 'move') { const dx = e.clientX - dragState.startX, dy = e.clientY - dragState.startY; dragState.targets.forEach(target => { const b = findBlockById(target.id); if (!b) return; let nx = target.startX + dx, ny = target.startY + dy; nx = Math.max(0, Math.min(nx, CW - target.w)); ny = Math.max(0, ny); b.x = Math.round(nx); b.y = Math.round(ny); if (target.el) { target.el.style.left = b.x + 'px'; target.el.style.top = b.y + 'px'; } if (selectedIds.length === 1 && selectedIds[0] === target.id) { document.getElementById('prop-x').value = b.x; document.getElementById('prop-y').value = b.y; } }); } else if (dragState.type === 'resize') { const b = findBlockById(dragState.id); if (!b) return; const el = canvas.querySelector(`[data-id="${dragState.id}"]`); if (!el) return; const dx = e.clientX - dragState.startX, dy = e.clientY - dragState.startY, dir = dragState.dir; let nw = dragState.w, nh = dragState.h, nx = dragState.x, ny = dragState.y; if (dir.includes('e')) nw = Math.max(60, dragState.w + dx); if (dir.includes('s')) nh = Math.max(30, dragState.h + dy); if (dir.includes('w')) { nw = Math.max(60, dragState.w - dx); nx = dragState.x + (dragState.w - nw); } if (dir.includes('n')) { nh = Math.max(30, dragState.h - dy); ny = dragState.y + (dragState.h - nh); } b.w = Math.round(nw); b.h = Math.round(nh); b.x = Math.round(nx); b.y = Math.round(ny); el.style.left = b.x + 'px'; el.style.top = b.y + 'px'; el.style.width = b.w + 'px'; el.style.height = b.h + 'px'; if (selectedIds.length === 1 && selectedIds[0] === dragState.id) { document.getElementById('prop-x').value = b.x; document.getElementById('prop-y').value = b.y; document.getElementById('prop-w').value = b.w; document.getElementById('prop-h').value = b.h; } } });
+document.addEventListener('mouseup', () => { if (dragState) { if (dragState.type === 'move') { dragState.targets.forEach(target => { if (target.el) target.el.classList.remove('dragging'); }); } else if (dragState.id) { const el = canvas.querySelector(`[data-id="${dragState.id}"]`); if (el) el.classList.remove('dragging'); } } dragState = null; });
+
+loadPage();
+</script>
+</body>
+</html>

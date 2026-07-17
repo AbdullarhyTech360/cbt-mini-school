@@ -998,6 +998,7 @@ def staff_routes(app):
 
             # Get existing attendance records for this date
             from models.attendance import Attendance
+            from models.school_term import SchoolTerm
             from datetime import datetime as dt
 
             if attendance_date:
@@ -1005,9 +1006,13 @@ def staff_routes(app):
             else:
                 date_obj = dt.now().date()
 
+            current_term = SchoolTerm.query.filter_by(is_current=True).first()
             existing_attendance = Attendance.query.filter_by(
                 class_room_id=class_id, attendance_date=date_obj
-            ).all()
+            )
+            if current_term:
+                existing_attendance = existing_attendance.filter_by(term_id=current_term.term_id)
+            existing_attendance = existing_attendance.all()
 
             # Create a dictionary of existing attendance
             attendance_dict = {att.student_id: att for att in existing_attendance}
@@ -1040,7 +1045,7 @@ def staff_routes(app):
             )
 
         except Exception as e:
-            # print(f"Error getting students: {str(e)}")
+            app.logger.error(f"Error getting attendance students: {str(e)}")
             return jsonify({"success": False, "message": str(e)}), 500
 
     @app.route("/staff/attendance/mark/<user_id>", methods=["POST"])
@@ -1062,8 +1067,9 @@ def staff_routes(app):
                     400,
                 )
 
-            # Verify teacher is assigned to this class
+            # Verify teacher is assigned to this class (via teacher_classroom or form_teacher_id)
             from models.associations import teacher_classroom
+            from models.class_room import ClassRoom
 
             assignment = (
                 db.session.query(teacher_classroom)
@@ -1072,15 +1078,19 @@ def staff_routes(app):
             )
 
             if not assignment:
-                return (
-                    jsonify(
-                        {
-                            "success": False,
-                            "message": "You are not assigned to this class",
-                        }
-                    ),
-                    403,
-                )
+                form_master_class = ClassRoom.query.filter_by(
+                    form_teacher_id=user_id, class_room_id=class_id
+                ).first()
+                if not form_master_class:
+                    return (
+                        jsonify(
+                            {
+                                "success": False,
+                                "message": "You are not assigned to this class",
+                            }
+                        ),
+                        403,
+                    )
 
             # Get current term
             current_term = SchoolTerm.query.filter_by(is_current=True).first()
@@ -1090,12 +1100,60 @@ def staff_routes(app):
             from models.attendance import Attendance
 
             if attendance_date:
-                date_obj = dt.strptime(attendance_date, "%Y-%m-% d").date()
+                date_obj = dt.strptime(attendance_date, "%Y-%m-%d").date()
             else:
                 date_obj = dt.now().date()
 
+            # Validate date is within current term
+            if current_term and current_term.start_date and current_term.end_date:
+                if date_obj < current_term.start_date or date_obj > current_term.end_date:
+                    return (
+                        jsonify({"success": False, "message": f"Date must be within the current term ({current_term.start_date.strftime('%b %d')} - {current_term.end_date.strftime('%b %d, %Y')})"}),
+                        400,
+                    )
+
+            # Reject future dates
+            from datetime import date as _date
+            today = _date.today()
+            if date_obj > today:
+                return (
+                    jsonify({"success": False, "message": "Cannot mark attendance for a future date"}),
+                    400,
+                )
+
             saved_count = 0
             updated_count = 0
+
+            # Check for bulk records on this date — daily cannot overwrite bulk
+            # Exception: when editing from history, allow converting bulk to daily
+            is_editing = data.get("is_editing", False)
+            if not is_editing:
+                bulk_conflict = Attendance.query.filter_by(
+                    class_room_id=class_id, attendance_date=date_obj, source="bulk"
+                ).first()
+                if bulk_conflict:
+                    return (
+                        jsonify({"success": False, "message": "This date was bulk-marked. Edit the bulk record instead."}),
+                        400,
+                    )
+
+            # Validate all students belong to this class
+            student_ids = [r.get("student_id") for r in attendance_records if r.get("student_id")]
+            valid_students = (
+                User.query.filter(
+                    User.id.in_(student_ids),
+                    User.class_room_id == class_id,
+                    User.role == "student",
+                    User.is_active == True,
+                ).with_entities(User.id).all()
+            )
+            valid_ids = {s.id for s in valid_students}
+            invalid_ids = set(student_ids) - valid_ids
+            if invalid_ids:
+                return (
+                    jsonify({"success": False, "message": f"Some students do not belong to this class: {', '.join(invalid_ids)}"}),
+                    400,
+                )
 
             for record in attendance_records:
                 student_id = record.get("student_id")
@@ -1112,6 +1170,7 @@ def staff_routes(app):
                 if existing:
                     # Update existing record
                     existing.status = status
+                    existing.source = "daily"
                     existing.remarks = remarks
                     existing.marked_by_id = user_id
                     updated_count += 1
@@ -1122,6 +1181,7 @@ def staff_routes(app):
                         class_room_id=class_id,
                         attendance_date=date_obj,
                         status=status,
+                        source="daily",
                         remarks=remarks,
                         marked_by_id=user_id,
                         term_id=current_term.term_id if current_term else None,
@@ -1145,7 +1205,140 @@ def staff_routes(app):
 
         except Exception as e:
             db.session.rollback()
-            # print(f"Error marking attendance: {str(e)}")
+            app.logger.error(f"Error marking attendance: {str(e)}")
+            return jsonify({"success": False, "message": str(e)}), 500
+
+    @app.route("/staff/attendance/mark-bulk/<user_id>", methods=["POST"])
+    @staff_required
+    def mark_attendance_bulk(user_id):
+        if session.get("user_id") != user_id:
+            return jsonify({"success": False, "message": "Access denied"}), 403
+
+        try:
+            from datetime import datetime as dt, timedelta
+            from models.attendance import Attendance
+
+            data = request.get_json()
+            class_id = data.get("class_id")
+            start_date_str = data.get("start_date")
+            end_date_str = data.get("end_date")
+            records = data.get("records", [])
+
+            if not class_id or not start_date_str or not end_date_str or not records:
+                return jsonify({"success": False, "message": "Missing required fields"}), 400
+
+            from models.associations import teacher_classroom
+            from models.class_room import ClassRoom
+            assignment = db.session.query(teacher_classroom).filter_by(
+                teacher_id=user_id, classroom_id=class_id
+            ).first()
+            if not assignment:
+                form_master_class = ClassRoom.query.filter_by(
+                    form_teacher_id=user_id, class_room_id=class_id
+                ).first()
+                if not form_master_class:
+                    return jsonify({"success": False, "message": "You are not assigned to this class"}), 403
+
+            start_date = dt.strptime(start_date_str, "%Y-%m-%d").date()
+            end_date = dt.strptime(end_date_str, "%Y-%m-%d").date()
+
+            if end_date < start_date:
+                return jsonify({"success": False, "message": "End date must be after start date"}), 400
+
+            # Validate dates are within current term
+            current_term = SchoolTerm.query.filter_by(is_current=True).first()
+            if current_term and current_term.start_date and current_term.end_date:
+                if start_date < current_term.start_date or end_date > current_term.end_date:
+                    return jsonify({"success": False, "message": f"Date range must be within the current term ({current_term.start_date.strftime('%b %d')} - {current_term.end_date.strftime('%b %d, %Y')})"}), 400
+
+            # Reject future end dates
+            from datetime import date as _date
+            today = _date.today()
+            if end_date > today:
+                return jsonify({"success": False, "message": "Cannot mark attendance for future dates"}), 400
+
+            # Build the list of school days (exclude weekends, exclude future)
+            all_days = []
+            current = start_date
+            while current <= end_date:
+                if current.weekday() < 5 and current <= today:  # Mon-Fri, not future
+                    all_days.append(current)
+                current += timedelta(days=1)
+
+            total_days = len(all_days)
+            if total_days == 0:
+                return jsonify({"success": False, "message": "No school days in the selected range"}), 400
+
+            # Check for daily records in the range — bulk cannot overwrite daily
+            if all_days:
+                daily_conflicts = (
+                    db.session.query(Attendance.attendance_date)
+                    .filter(
+                        Attendance.class_room_id == class_id,
+                        Attendance.attendance_date.in_(all_days),
+                        Attendance.source == "daily",
+                    )
+                    .distinct()
+                    .all()
+                )
+                if daily_conflicts:
+                    conflict_dates = [r[0].strftime('%b %d') for r in daily_conflicts]
+                    return jsonify({"success": False, "message": f"These dates already have daily records: {', '.join(conflict_dates)}. Clear them first or adjust the range."}), 400
+
+            import random as _random
+            saved_count = 0
+            updated_count = 0
+
+            for rec in records:
+                student_id = rec.get("student_id")
+                days_present = min(int(rec.get("days_present", 0)), total_days)
+
+                # Shuffle day indices then pick first N as present
+                day_indices = list(range(total_days))
+                _random.shuffle(day_indices)
+                present_set = set(day_indices[:days_present])
+
+                for i, day in enumerate(all_days):
+                    existing = Attendance.query.filter_by(
+                        student_id=student_id,
+                        class_room_id=class_id,
+                        attendance_date=day,
+                    ).first()
+
+                    # Distribute: randomly assign present/absent across the range
+                    status = "present" if i in present_set else "absent"
+
+                    if existing:
+                        existing.status = status
+                        existing.source = "bulk"
+                        existing.marked_by_id = user_id
+                        updated_count += 1
+                    else:
+                        new_rec = Attendance(
+                            student_id=student_id,
+                            class_room_id=class_id,
+                            attendance_date=day,
+                            status=status,
+                            source="bulk",
+                            marked_by_id=user_id,
+                            term_id=current_term.term_id if current_term else None,
+                            academic_session=current_term.academic_session if current_term else None,
+                        )
+                        db.session.add(new_rec)
+                        saved_count += 1
+
+            db.session.commit()
+
+            return jsonify({
+                "success": True,
+                "message": f"Bulk attendance saved. {saved_count} new, {updated_count} updated across {total_days} days.",
+                "total_days": total_days,
+                "saved_count": saved_count,
+                "updated_count": updated_count,
+            })
+
+        except Exception as e:
+            db.session.rollback()
             return jsonify({"success": False, "message": str(e)}), 500
 
     @app.route("/staff/attendance/history/<user_id>", methods=["GET"])
@@ -1158,70 +1351,302 @@ def staff_routes(app):
         try:
             # Get recent attendance records marked by this teacher
             from models.attendance import Attendance
-            from sqlalchemy import func, distinct
+            from sqlalchemy import func, distinct, case
 
             # Get unique attendance dates for classes taught by this teacher
             from models.associations import teacher_classroom
 
             assigned_class_ids = [
-                row[0]
+                str(row[0])
                 for row in db.session.query(teacher_classroom.c.classroom_id)
                 .filter(teacher_classroom.c.teacher_id == user_id)
                 .all()
             ]
 
+            # Also include form-master classes
+            form_master_class_ids = [
+                str(cls.class_room_id)
+                for cls in ClassRoom.query.filter_by(form_teacher_id=user_id, is_active=True).all()
+            ]
+            for fid in form_master_class_ids:
+                if fid not in assigned_class_ids:
+                    assigned_class_ids.append(fid)
+
             if not assigned_class_ids:
                 return jsonify({"success": True, "history": []})
 
-            # Get attendance summary grouped by date and class
-            history_query = (
+            # Optional class filter
+            class_id_filter = request.args.get("class_id")
+            if class_id_filter:
+                if class_id_filter not in assigned_class_ids:
+                    return jsonify({"success": True, "history": []})
+                assigned_class_ids = [class_id_filter]
+
+            # Get attendance summary (past/today only)
+            from datetime import date as _today_date
+            today = _today_date.today()
+            history_data = []
+
+            # Daily records: grouped by date + class
+            daily_query = (
                 db.session.query(
                     Attendance.attendance_date,
                     Attendance.class_room_id,
                     ClassRoom.class_room_name,
                     func.count(Attendance.attendance_id).label("total_marked"),
-                    func.sum(
-                        func.case((Attendance.status == "present", 1), else_=0)
-                    ).label("present_count"),
-                    func.sum(
-                        func.case((Attendance.status == "absent", 1), else_=0)
-                    ).label("absent_count"),
+                    func.sum(case((Attendance.status == "present", 1), else_=0)).label("present_count"),
+                    func.sum(case((Attendance.status == "absent", 1), else_=0)).label("absent_count"),
                 )
                 .join(ClassRoom, Attendance.class_room_id == ClassRoom.class_room_id)
                 .filter(Attendance.class_room_id.in_(assigned_class_ids))
-                .group_by(
-                    Attendance.attendance_date,
-                    Attendance.class_room_id,
-                    ClassRoom.class_room_name,
-                )
-                .order_by(Attendance.attendance_date.desc())
-                .limit(10)
+                .filter(Attendance.attendance_date <= today)
+                .filter(Attendance.source == "daily")
+                .group_by(Attendance.attendance_date, Attendance.class_room_id, ClassRoom.class_room_name)
                 .all()
             )
+            for record in daily_query:
+                rate = (record.present_count / record.total_marked * 100) if record.total_marked > 0 else 0
+                history_data.append({
+                    "date": record.attendance_date.strftime("%Y-%m-%d"),
+                    "date_formatted": record.attendance_date.strftime("%B %d, %Y"),
+                    "end_date": None,
+                    "end_date_formatted": None,
+                    "class_id": record.class_room_id,
+                    "class_name": record.class_room_name,
+                    "total_marked": record.total_marked,
+                    "present_count": record.present_count,
+                    "absent_count": record.absent_count,
+                    "attendance_rate": round(rate, 1),
+                    "source": "daily",
+                })
 
-            history_data = []
-            for record in history_query:
-                attendance_rate = (
-                    (record.present_count / record.total_marked * 100)
-                    if record.total_marked > 0
-                    else 0
+            # Bulk records: grouped by class only, show date range
+            bulk_query = (
+                db.session.query(
+                    func.min(Attendance.attendance_date).label("start_date"),
+                    func.max(Attendance.attendance_date).label("end_date"),
+                    Attendance.class_room_id,
+                    ClassRoom.class_room_name,
+                    func.count(Attendance.attendance_id).label("total_marked"),
+                    func.sum(case((Attendance.status == "present", 1), else_=0)).label("present_count"),
+                    func.sum(case((Attendance.status == "absent", 1), else_=0)).label("absent_count"),
                 )
-                history_data.append(
-                    {
-                        "date": record.attendance_date.strftime("%Y-%m-%d"),
-                        "date_formatted": record.attendance_date.strftime("%B %d, %Y"),
-                        "class_name": record.class_room_name,
-                        "total_marked": record.total_marked,
-                        "present_count": record.present_count,
-                        "absent_count": record.absent_count,
-                        "attendance_rate": round(attendance_rate, 1),
-                    }
-                )
+                .join(ClassRoom, Attendance.class_room_id == ClassRoom.class_room_id)
+                .filter(Attendance.class_room_id.in_(assigned_class_ids))
+                .filter(Attendance.attendance_date <= today)
+                .filter(Attendance.source == "bulk")
+                .group_by(Attendance.class_room_id, ClassRoom.class_room_name)
+                .all()
+            )
+            for record in bulk_query:
+                rate = (record.present_count / record.total_marked * 100) if record.total_marked > 0 else 0
+                history_data.append({
+                    "date": record.start_date.strftime("%Y-%m-%d"),
+                    "date_formatted": record.start_date.strftime("%b %d"),
+                    "end_date": record.end_date.strftime("%Y-%m-%d"),
+                    "end_date_formatted": record.end_date.strftime("%b %d, %Y"),
+                    "class_id": record.class_room_id,
+                    "class_name": record.class_room_name,
+                    "total_marked": record.total_marked,
+                    "present_count": record.present_count,
+                    "absent_count": record.absent_count,
+                    "attendance_rate": round(rate, 1),
+                    "source": "bulk",
+                })
+
+            # Sort by date descending, limit 10
+            history_data.sort(key=lambda x: x["date"], reverse=True)
+            history_data = history_data[:10]
 
             return jsonify({"success": True, "history": history_data})
 
         except Exception as e:
-            # print(f"Error getting attendance history: {str(e)}")
+            app.logger.error(f"Error getting attendance history: {str(e)}")
+            return jsonify({"success": False, "message": str(e)}), 500
+
+    @app.route("/staff/attendance/history/<user_id>/<class_id>/<date>", methods=["GET"])
+    @staff_required
+    def get_attendance_history_detail(user_id, class_id, date):
+        if session.get("user_id") != user_id:
+            return jsonify({"success": False, "message": "Access denied"}), 403
+
+        try:
+            from models.attendance import Attendance
+            from datetime import datetime as dt
+
+            date_obj = dt.strptime(date, "%Y-%m-%d").date()
+
+            records = (
+                db.session.query(
+                    Attendance.student_id,
+                    User.first_name,
+                    User.last_name,
+                    Attendance.status,
+                    Attendance.remarks,
+                )
+                .join(User, Attendance.student_id == User.id)
+                .filter(
+                    Attendance.class_room_id == class_id,
+                    Attendance.attendance_date == date_obj,
+                )
+                .order_by(User.last_name, User.first_name)
+                .all()
+            )
+
+            records_data = [
+                {
+                    "student_id": r.student_id,
+                    "student_name": f"{r.first_name} {r.last_name}",
+                    "status": r.status,
+                    "remarks": r.remarks or "",
+                }
+                for r in records
+            ]
+
+            return jsonify({"success": True, "records": records_data})
+
+        except Exception as e:
+            app.logger.error(f"Error getting attendance history detail: {str(e)}")
+            return jsonify({"success": False, "message": str(e)}), 500
+
+    @app.route("/staff/attendance/delete/<user_id>", methods=["DELETE"])
+    @staff_required
+    def delete_attendance(user_id):
+        if session.get("user_id") != user_id:
+            return jsonify({"success": False, "message": "Access denied"}), 403
+
+        try:
+            from models.attendance import Attendance
+
+            data = request.get_json()
+            class_id = data.get("class_id")
+            attendance_date = data.get("attendance_date")
+            scope = data.get("scope", "date")  # "date" or "all"
+
+            # For "date" scope, class_id is required
+            if scope == "date" and not class_id:
+                return jsonify({"success": False, "message": "Class ID is required"}), 400
+
+            # Build list of allowed class IDs for this teacher
+            from models.associations import teacher_classroom
+            from models.class_room import ClassRoom
+
+            allowed_class_ids = [
+                str(row[0])
+                for row in db.session.query(teacher_classroom.c.classroom_id)
+                .filter(teacher_classroom.c.teacher_id == user_id)
+                .all()
+            ]
+            form_master_ids = [
+                str(cls.class_room_id)
+                for cls in ClassRoom.query.filter_by(form_teacher_id=user_id, is_active=True).all()
+            ]
+            for fid in form_master_ids:
+                if fid not in allowed_class_ids:
+                    allowed_class_ids.append(fid)
+
+            if not allowed_class_ids:
+                return jsonify({"success": False, "message": "You are not assigned to any classes"}), 403
+
+            # Determine which classes to delete from
+            if class_id:
+                if class_id not in allowed_class_ids:
+                    return jsonify({"success": False, "message": "You are not assigned to this class"}), 403
+                target_class_ids = [class_id]
+            else:
+                target_class_ids = allowed_class_ids
+
+            query = Attendance.query.filter(
+                Attendance.class_room_id.in_(target_class_ids)
+            )
+
+            if scope == "date":
+                if not attendance_date:
+                    return jsonify({"success": False, "message": "Date is required"}), 400
+                from datetime import datetime as dt
+                date_obj = dt.strptime(attendance_date, "%Y-%m-%d").date()
+                query = query.filter_by(attendance_date=date_obj)
+
+            deleted_count = query.delete()
+            db.session.commit()
+
+            label = f"for {attendance_date}" if scope == "date" else f"across {len(target_class_ids)} class(es)"
+            return jsonify({
+                "success": True,
+                "message": f"Deleted {deleted_count} attendance record(s) {label}.",
+                "deleted_count": deleted_count,
+            })
+
+        except Exception as e:
+            db.session.rollback()
+            app.logger.error(f"Error deleting attendance: {str(e)}")
+            return jsonify({"success": False, "message": str(e)}), 500
+
+    @app.route("/staff/attendance/get_bulk_students/<class_id>", methods=["GET"])
+    @staff_required
+    def get_bulk_students(class_id):
+        """Return students with aggregated days_present across a date range (for bulk edit)."""
+        try:
+            user_id = session.get("user_id")
+            start_date_str = request.args.get("start_date")
+            end_date_str = request.args.get("end_date")
+            if not start_date_str or not end_date_str:
+                return jsonify({"success": False, "message": "start_date and end_date are required"}), 400
+
+            from datetime import datetime as dt
+            start_date = dt.strptime(start_date_str, "%Y-%m-%d").date()
+            end_date = dt.strptime(end_date_str, "%Y-%m-%d").date()
+
+            # Permission check
+            from models.class_room import ClassRoom
+            from models.associations import teacher_classroom
+            assignment = db.session.query(teacher_classroom).filter_by(teacher_id=user_id, classroom_id=class_id).first()
+            if not assignment:
+                form_master_class = ClassRoom.query.filter_by(form_teacher_id=user_id, class_room_id=class_id).first()
+                if not form_master_class:
+                    return jsonify({"success": False, "message": "You are not assigned to this class"}), 403
+
+            students = (
+                User.query.filter_by(class_room_id=class_id, role="student", is_active=True)
+                .order_by(User.first_name, User.last_name)
+                .all()
+            )
+
+            # Aggregate days_present per student across the date range
+            from models.attendance import Attendance
+            from sqlalchemy import func as safunc
+            current_term = SchoolTerm.query.filter_by(is_current=True).first()
+            present_counts = (
+                db.session.query(
+                    Attendance.student_id,
+                    safunc.count(Attendance.attendance_id).label("days_present"),
+                )
+                .filter(
+                    Attendance.class_room_id == class_id,
+                    Attendance.attendance_date >= start_date,
+                    Attendance.attendance_date <= end_date,
+                    Attendance.status == "present",
+                )
+                .group_by(Attendance.student_id)
+                .all()
+            )
+            present_map = {str(row.student_id): row.days_present for row in present_counts}
+
+            students_data = []
+            for student in students:
+                students_data.append({
+                    "id": student.id,
+                    "first_name": student.first_name,
+                    "last_name": student.last_name,
+                    "full_name": student.full_name(),
+                    "email": student.email,
+                    "days_present": present_map.get(str(student.id), 0),
+                })
+
+            return jsonify({"success": True, "students": students_data, "total_students": len(students_data)})
+
+        except Exception as e:
+            app.logger.error(f"Error getting bulk students: {str(e)}")
             return jsonify({"success": False, "message": str(e)}), 500
 
     @app.route("/staff/upload_questions/<user_id>")

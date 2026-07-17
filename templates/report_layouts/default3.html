@@ -17,6 +17,7 @@
   {% set total_students = report_data.total_students %}
   {% set class_average = report_data.class_average|default(0) %}
   {% set config = report_data.config %}
+  {% set attendance_stats = report_data.attendance_stats|default({}) %}
 
   {% set overall_total = report_data.overall_total|default(0) %}
   {% set overall_max = report_data.overall_max|default(100) %}
@@ -51,6 +52,42 @@
   {% else %}{% set scale = 1.0 %}
   {% endif %}
 
+  @font-face {
+    font-family: 'Inter';
+    src: url('{{ url_for("static", filename="fonts/Inter/Inter-VariableFont_opsz,wght.ttf") }}') format('truetype');
+    font-weight: 100 900;
+    font-style: normal;
+    font-display: swap;
+  }
+  @font-face {
+    font-family: 'Inter';
+    src: url('{{ url_for("static", filename="fonts/Inter/Inter-Italic-VariableFont_opsz,wght.ttf") }}') format('truetype');
+    font-weight: 100 900;
+    font-style: italic;
+    font-display: swap;
+  }
+  @font-face {
+    font-family: 'Space Grotesk';
+    src: url('{{ url_for("static", filename="fonts/Space_Grotesk/SpaceGrotesk-VariableFont_wght.ttf") }}') format('truetype');
+    font-weight: 300 700;
+    font-style: normal;
+    font-display: swap;
+  }
+  @font-face {
+    font-family: 'JetBrains Mono';
+    src: url('{{ url_for("static", filename="fonts/JetBrains_Mono/JetBrainsMono-VariableFont_wght.ttf") }}') format('truetype');
+    font-weight: 100 800;
+    font-style: normal;
+    font-display: swap;
+  }
+  @font-face {
+    font-family: 'JetBrains Mono';
+    src: url('{{ url_for("static", filename="fonts/JetBrains_Mono/JetBrainsMono-Italic-VariableFont_wght.ttf") }}') format('truetype');
+    font-weight: 100 800;
+    font-style: italic;
+    font-display: swap;
+  }
+
   :root{
     --navy:#0B2E4A;
     --navy-deep:#081F33;
@@ -63,7 +100,7 @@
     --paper-tint:#EEF6FC;
     --line:#D8E4EC;
     --ink:#12232F;
-    --ink-soft:#253D4E;
+    --ink-soft:#5A7183;
     --scale:{{ scale }};
   }
 
@@ -112,15 +149,22 @@
   .header-table{
     width:100%;
     border-collapse:collapse;
-    background:linear-gradient(135deg, #081F33 0%, #0B2E4A 55%, #1B87C9 130%);
+    background-color:#0B2E4A;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100%25' height='100%25'%3E%3Cdefs%3E%3ClinearGradient id='bg' x1='0' y1='0' x2='1' y2='.4'%3E%3Cstop offset='0' stop-color='%23081F33'/%3E%3Cstop offset='.55' stop-color='%230B2E4A'/%3E%3Cstop offset='1' stop-color='%231B87C9'/%3E%3C/linearGradient%3E%3Cpattern id='st' patternUnits='userSpaceOnUse' width='26' height='26' patternTransform='rotate(-25 13 13)'%3E%3Crect width='.8' height='26' fill='white' fill-opacity='.08'/%3E%3C/pattern%3E%3C/defs%3E%3Crect width='100%25' height='100%25' fill='url(%23bg)'/%3E%3Crect width='100%25' height='100%25' fill='url(%23st)'/%3E%3C/svg%3E");
+    background-repeat:no-repeat;
+    background-size:100%25 100%25;
     color:#fff;
     padding:0;
   }
   .header-table td{
     vertical-align:middle;
-    padding:calc(10px * var(--scale));
+    padding:calc(14px * var(--scale)) calc(22px * var(--scale));
   }
-  .crest-cell{ width:56px; text-align:center; }
+  .crest-cell{
+    width:56px;
+    text-align:center;
+    padding:calc(14px * var(--scale)) calc(4px * var(--scale)) calc(14px * var(--scale)) calc(14px * var(--scale));
+  }
   .crest{
     width:50px; height:50px;
     border-radius:50%;
@@ -131,7 +175,9 @@
   }
   .crest img{ width:100%; height:100%; border-radius:50%; }
 
-  .title-block{ }
+  .title-block{
+    padding-left:calc(10px * var(--scale));
+  }
   .eyebrow{
     font-family:'JetBrains Mono', monospace;
     font-size:calc(9px * var(--scale));
@@ -149,7 +195,7 @@
   }
   .school-sub{
     font-size:calc(9.5px * var(--scale));
-    color:#A8C3D8;
+    color:#CFE4F2;
     margin:0 0 calc(1px * var(--scale));
   }
   .motto{
@@ -159,14 +205,13 @@
     margin:calc(3px * var(--scale)) 0 0;
   }
 
-  .stamp-cell{ width:64px; text-align:center; }
+  .stamp-cell{ width:64px; text-align:center; vertical-align:middle; }
   .stamp{
     display:inline-block;
     width:58px; height:58px;
     border:2px dashed #F2AE2E;
     border-radius:50%;
     text-align:center;
-    vertical-align:middle;
     line-height:1.15;
     -webkit-transform:rotate(-9deg);
     transform:rotate(-9deg);
@@ -175,7 +220,7 @@
     font-size:calc(8.5px * var(--scale));
     letter-spacing:.05em;
     color:#F2AE2E;
-    padding-top:calc(14px * var(--scale));
+    padding-top:calc(27px - 10px * var(--scale));
   }
 
   /* ---------- meta strip ---------- */
@@ -201,16 +246,15 @@
   .field label{
     display:block;
     font-family:'JetBrains Mono', monospace;
-    font-size:calc(8.5px * var(--scale));
+    font-size:calc(8px * var(--scale));
     letter-spacing:.08em;
     text-transform:uppercase;
-    color:var(--ink);
-    font-weight:600;
+    color:var(--ink-soft);
     margin-bottom:calc(1px * var(--scale));
   }
   .field .val{
     font-family:'Space Grotesk', sans-serif;
-    font-size:calc(12px * var(--scale));
+    font-size:calc(11.5px * var(--scale));
     font-weight:600;
     color:#081F33;
     padding:0 0 calc(2px * var(--scale));
@@ -220,26 +264,27 @@
   }
 
   /* photo frame */
-  .photo-cell{ width:80px; text-align:center; vertical-align:middle; }
+  .meta-strip td.photo-cell{ width:80px; text-align:center; vertical-align:middle; }
   .photo-box{
     width:66px; height:80px;
     border-radius:8px;
     border:2px solid #F2AE2E;
-    background:#EEF6FC;
+    background:linear-gradient(155deg, #ffffff, var(--paper-tint));
     overflow:hidden;
     margin:0 auto;
     text-align:center;
     line-height:76px;
+    box-shadow:0 3px 8px rgba(11,46,74,.12);
   }
   .photo-box svg{ width:34px; height:34px; opacity:.35; vertical-align:middle; }
   .photo-box img{ width:100%; height:100%; }
   .photo-cap{
     display:block;
     font-family:'JetBrains Mono', monospace;
-    font-size:calc(7.5px * var(--scale));
+    font-size:calc(7px * var(--scale));
     letter-spacing:.06em;
     text-transform:uppercase;
-    color:#1A3345;
+    color:var(--ink-soft);
     text-align:center;
     margin-top:calc(4px * var(--scale));
   }
@@ -396,8 +441,9 @@
 
   .observance-grid{ width:100%; border-collapse:collapse; }
   .observance-grid td{ padding:calc(2px * var(--scale)) 0; font-size:calc(9.5px * var(--scale)); }
-  .observance-grid td.obs-label{ color:var(--ink); font-weight:500; }
-  .observance-grid td.obs-val{ color:#0B2E4A; font-family:'JetBrains Mono',monospace; font-weight:700; text-align:right; padding-left:10px; }
+   .observance-grid td.obs-label{ color:var(--ink); font-weight:500; padding-right:calc(6px * var(--scale)); }
+    .observance-grid td.obs-val{ color:#0B2E4A; font-family:'JetBrains Mono',monospace; font-weight:700; text-align:right; }
+    .observance-grid td:nth-child(3){ padding-left:calc(14px * var(--scale)); }
 
   .comment-block{ margin-top:calc(4px * var(--scale)); }
   .comment-line{
@@ -425,14 +471,13 @@
     border-collapse:collapse;
     position:relative;
     z-index:1;
-    padding:calc(8px * var(--scale)) calc(10px * var(--scale)) calc(12px * var(--scale));
-    font-size:calc(9px * var(--scale));
-    color:#000000;
-    font-weight:700;
+    padding:calc(8px * var(--scale)) calc(22px * var(--scale)) calc(12px * var(--scale));
+    font-size:calc(8px * var(--scale));
+    color:var(--ink-soft);
     font-family:'JetBrains Mono', monospace;
   }
-  .footer-table td{ padding:calc(8px * var(--scale)) calc(10px * var(--scale)) calc(12px * var(--scale)); }
-  .footer-table .brand{ color:#000000; font-weight:700; }
+  .footer-table td{ padding:0; }
+  .footer-table .brand{ color:var(--sky); font-weight:700; }
 
   @media print{
     body{ background:#fff; padding:0; }
@@ -452,29 +497,29 @@
     {% endif %}
 
     <table class="header-table">
-      <tr>
-        <td class="crest-cell">
-          <div class="crest">
-            {% if school.logo %}
-              <img src="{{ school.logo }}" alt="Logo">
-            {% else %}
-              <svg viewBox="0 0 24 24" fill="#0B2E4A" xmlns="http://www.w3.org/2000/svg">
-                <path d="M12 12c2.7 0 4.9-2.2 4.9-4.9S14.7 2.2 12 2.2 7.1 4.4 7.1 7.1 9.3 12 12 12zm0 2.4c-3.3 0-9.8 1.6-9.8 4.9v2.4h19.6v-2.4c0-3.3-6.5-4.9-9.8-4.9z"/>
-              </svg>
-            {% endif %}
-          </div>
-        </td>
-        <td class="title-block">
-          <p class="eyebrow">Training for Excellence</p>
-          <h1 class="school-name">{{ school.name|upper }}</h1>
-          <p class="school-sub">{{ school.address }} &nbsp;&middot;&nbsp; Senior Secondary School Report</p>
-          <p class="motto">&ldquo;{% if school.motto %}{{ school.motto }}{% else %}Knowledge is Light{% endif %}&rdquo; &nbsp;&mdash;&nbsp; {{ term.name|upper }}, {{ term.session }} Academic Session</p>
-        </td>
-        <td class="stamp-cell">
-          <div class="stamp">ORIGINAL<br>COPY</div>
-        </td>
-      </tr>
-    </table>
+        <tr>
+          <td class="crest-cell">
+            <div class="crest">
+              {% if school.logo %}
+                <img src="{{ school.logo }}" alt="Logo">
+              {% else %}
+                <svg viewBox="0 0 24 24" fill="#0B2E4A" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M12 12c2.7 0 4.9-2.2 4.9-4.9S14.7 2.2 12 2.2 7.1 4.4 7.1 7.1 9.3 12 12 12zm0 2.4c-3.3 0-9.8 1.6-9.8 4.9v2.4h19.6v-2.4c0-3.3-6.5-4.9-9.8-4.9z"/>
+                </svg>
+              {% endif %}
+            </div>
+          </td>
+          <td class="title-block">
+            <p class="eyebrow">Training for Excellence &middot; Since 1964</p>
+            <h1 class="school-name">{{ school.name }}</h1>
+            <p class="school-sub">{{ school.address }} &nbsp;&middot;&nbsp; Senior Secondary School Report</p>
+            <p class="motto">&ldquo;{% if school.motto %}{{ school.motto }}{% else %}Knowledge is Light{% endif %}&rdquo; &nbsp;&mdash;&nbsp; {{ term.name }}, {{ term.session }} Academic Session</p>
+          </td>
+          <td class="stamp-cell">
+            <div class="stamp">ORIGINAL<br>COPY</div>
+          </td>
+        </tr>
+      </table>
 
     <table class="meta-strip">
       <tr>
@@ -483,12 +528,12 @@
             <tr>
               <td><div class="field"><label>Student Name</label><div class="val">{{ student.name }}</div></div></td>
               <td><div class="field"><label>Total Score</label><div class="val">{{ overall_total|round(0)|int }}</div></div></td>
-              <td><div class="field"><label>No. in Class</label><div class="val">{{ total_students }}</div></div></td>
+              <td><div class="field"><label>No. in Class</label><div class="val">{{ position }}{{ 'st' if position == 1 else ('nd' if position == 2 else ('rd' if position == 3 else 'th')) }} of {{ total_students }}</div></div></td>
             </tr>
             <tr>
               <td><div class="field"><label>Reg. No.</label><div class="val">{{ student.admission_number|default('') }}</div></div></td>
               <td><div class="field"><label>Average</label><div class="val">{{ average }}%</div></div></td>
-              <td><div class="field"><label>Position</label><div class="val">{{ position }}{{ 'st' if position == 1 else ('nd' if position == 2 else ('rd' if position == 3 else 'th')) }} of {{ total_students }}</div></div></td>
+              <td><div class="field"><label>Position</label><div class="val">{{ position }}{{ 'st' if position == 1 else ('nd' if position == 2 else ('rd' if position == 3 else 'th')) }}</div></div></td>
             </tr>
             <tr>
               <td><div class="field"><label>Sex</label><div class="val">{{ student.gender|default('')|upper }}</div></div></td>
@@ -498,7 +543,7 @@
             <tr>
               <td><div class="field"><label>Class</label><div class="val">{{ student.class_name }}</div></div></td>
               <td><div class="field"><label>Overall Grade</label><div class="val"><span class="grade-pill grade-{{ overall_grade }}">{{ overall_grade }}</span></div></div></td>
-              <td><div class="field"><label>Date of Resumption</label><div class="val">{% if config and config.resumption_date %}{{ config.resumption_date }}{% endif %}</div></div></td>
+              <td><div class="field"><label>Date of Resumption</label><div class="val">{% if config and config.resumption_date %}{{ config.resumption_date }}{% else %}&mdash;{% endif %}</div></div></td>
             </tr>
           </table>
         </td>
@@ -630,12 +675,12 @@
                 <h3>Observance</h3>
                 <table class="observance-grid">
                   <tr>
-                    <td class="obs-label">Days open</td><td class="obs-val">{% if attendance_stats and attendance_stats.days_open %}{{ attendance_stats.days_open }}{% else %}&mdash;{% endif %}</td>
-                    <td class="obs-label">Holidays</td><td class="obs-val">{% if attendance_stats and attendance_stats.holidays %}{{ attendance_stats.holidays }}{% else %}&mdash;{% endif %}</td>
+                    <td class="obs-label">Days open</td><td class="obs-val">{% if attendance_stats %}{{ attendance_stats.days_open }}{% else %}&mdash;{% endif %}</td>
+                    <td class="obs-label">Holidays</td><td class="obs-val">{% if attendance_stats %}{{ attendance_stats.holidays }}{% else %}&mdash;{% endif %}</td>
                   </tr>
                   <tr>
-                    <td class="obs-label">Present</td><td class="obs-val">{% if attendance_stats and attendance_stats.present %}{{ attendance_stats.present }}{% else %}&mdash;{% endif %}</td>
-                    <td class="obs-label">Absent</td><td class="obs-val">{% if attendance_stats and attendance_stats.absent %}{{ attendance_stats.absent }}{% else %}&mdash;{% endif %}</td>
+                    <td class="obs-label">Present</td><td class="obs-val">{% if attendance_stats %}{{ attendance_stats.present }}{% else %}&mdash;{% endif %}</td>
+                    <td class="obs-label">Absent</td><td class="obs-val">{% if attendance_stats %}{{ attendance_stats.absent }}{% else %}&mdash;{% endif %}</td>
                   </tr>
                 </table>
               </div>
@@ -654,18 +699,20 @@
           <span class="c-fill">{% if term.teacher_remarks %}{{ term.teacher_remarks }}{% endif %}</span>
         </div>
         <div class="comment-line">
-          <span class="c-label">Principal/Headmaster Comment</span>
+          <span class="c-label">House Master's Comment</span>
           <span class="c-fill">{% if term.house_master_remarks %}{{ term.house_master_remarks }}{% endif %}</span>
         </div>
+        {% if config and config.next_term_fees %}
         <div class="comment-line">
           <span class="c-label">School Fees for Next Term</span>
-          <span class="c-fill">{% if config and config.next_term_fees %}{{ config.next_term_fees }}{% endif %}</span>
+          <span class="c-fill">{{ config.next_term_fees }}</span>
         </div>
+        {% endif %}
       </div>
 
       <div class="principal-row">
         <div class="comment-line" style="border:none;">
-          <span class="c-label">Principal's Comment</span>
+          <span class="c-label">Principal/Headmaster's Comment</span>
           <span class="c-fill">{% if term.principal_remarks %}{{ term.principal_remarks }}{% endif %}</span>
         </div>
       </div>
@@ -674,7 +721,7 @@
 
     <table class="footer-table">
       <tr>
-        <td><span class="brand">{{ school.name|upper }}</span> &middot; {{ school.address }}</td>
+        <td><span class="brand">{{ school.name|upper }}</span> &middot;{% if school.established_date %} est. {{ school.established_date.year }}{% endif %}</td>
         <td style="text-align:right;">Report generated for internal school use</td>
       </tr>
     </table>

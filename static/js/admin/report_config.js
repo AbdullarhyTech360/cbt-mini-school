@@ -50,9 +50,8 @@ async function loadTerms() {
 }
 
 async function loadClasses() {
-  const select = document.getElementById("classRoomId");
-  select.innerHTML = '<option value="">Loading...</option>';
-  select.disabled = true;
+  const container = document.getElementById("classCheckboxes");
+  container.innerHTML = '<div class="col-span-full text-xs text-gray-500">Loading classes...</div>';
 
   try {
     const response = await fetch("/reports/api/classes");
@@ -60,26 +59,39 @@ async function loadClasses() {
 
     if (data.success && data.classes.length > 0) {
       classes = data.classes;
-      select.innerHTML = '<option value="">All Classes</option>';
-      data.classes.forEach((cls) => {
-        const option = document.createElement("option");
-        option.value = cls.class_room_id;
-        option.textContent = cls.class_name;
-        select.appendChild(option);
-      });
+      container.innerHTML = classes.map(cls => `
+        <label class="flex items-center gap-2 p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer transition">
+          <input type="checkbox" class="class-cb peer" value="${cls.class_room_id}" disabled
+            onchange="onClassCheckChange()" />
+          <span class="text-sm text-gray-700 dark:text-gray-300 truncate">${cls.class_name}</span>
+        </label>
+      `).join("");
     } else {
-      select.innerHTML = '<option value="">All Classes</option>';
+      container.innerHTML = '<div class="col-span-full text-xs text-gray-500">No classes found</div>';
     }
   } catch (error) {
     console.error("Error loading classes:", error);
-    select.innerHTML = '<option value="">All Classes</option>';
-    showNotification(
-      "Error loading classes. Please refresh the page.",
-      "error"
-    );
-  } finally {
-    select.disabled = false;
+    container.innerHTML = '<div class="col-span-full text-xs text-red-500">Error loading classes</div>';
   }
+}
+
+function toggleAllClasses(allChecked) {
+  const container = document.getElementById("classCheckboxes");
+  const checkboxes = container.querySelectorAll(".class-cb");
+
+  if (allChecked) {
+    container.classList.add("opacity-50", "pointer-events-none");
+    checkboxes.forEach(cb => { cb.checked = false; cb.disabled = true; });
+    document.getElementById("classRoomId").value = "";
+  } else {
+    container.classList.remove("opacity-50", "pointer-events-none");
+    checkboxes.forEach(cb => { cb.disabled = false; });
+  }
+}
+
+function onClassCheckChange() {
+  const checked = Array.from(document.querySelectorAll(".class-cb:checked")).map(cb => cb.value);
+  document.getElementById("classRoomId").value = checked.join(",");
 }
 
 async function loadGradeScales() {
@@ -247,7 +259,9 @@ function renderConfigs(configs) {
   container.innerHTML = configs
     .map((config) => {
       const term = terms.find((t) => t.term_id === config.term_id);
-      const cls = classes.find((c) => c.class_room_id === config.class_room_id);
+      const classIds = config.class_room_id ? config.class_room_id.split(",").map(s => s.trim()) : [];
+      const matchedClasses = classes.filter((c) => classIds.includes(c.class_room_id));
+      const classNames = matchedClasses.length > 0 ? matchedClasses.map(c => c.class_name).join(", ") : "All Classes";
       const scale = gradeScales.find(
         (s) => s.scale_id === config.grade_scale_id
       );
@@ -278,7 +292,7 @@ function renderConfigs(configs) {
                                 : "N/A"
                             }</p>
                             <p><span class="font-medium">Class:</span> ${
-                              cls ? cls.class_name : "All Classes"
+                              classNames
                             }</p>
                             <p><span class="font-medium">Grade Scale:</span> ${
                               scale ? scale.name : "Default"
@@ -327,6 +341,14 @@ function openConfigModal() {
   document.getElementById("showStudentImage").checked = true;
   document.getElementById("showPosition").checked = true;
   document.getElementById("treatTotalAsPercentage").checked = false;
+  document.getElementById("showSchoolFees").checked = false;
+  document.getElementById("nextTermFees").value = "";
+  document.getElementById("nextTermFees").disabled = true;
+
+  // Reset class checkboxes
+  document.getElementById("classAll").checked = true;
+  document.getElementById("classRoomId").value = "";
+  toggleAllClasses(true);
 
   // Clear merge rules
   document.getElementById("mergeRulesList").innerHTML = "";
@@ -362,10 +384,24 @@ async function editConfig(configId) {
     document.getElementById("configId").value = configId;
     document.getElementById("configName").value = config.config_name;
     document.getElementById("termId").value = config.term_id;
-    document.getElementById("classRoomId").value = config.class_room_id || "";
-    document.getElementById("gradeScaleId").value = config.grade_scale_id || ""; // Set grade scale
+    document.getElementById("gradeScaleId").value = config.grade_scale_id || "";
     document.getElementById("resumptionDate").value = config.resumption_date || "";
     document.getElementById("isDefault").checked = config.is_default;
+
+    // Set class checkboxes
+    if (config.class_room_id) {
+      document.getElementById("classAll").checked = false;
+      toggleAllClasses(false);
+      const selectedIds = config.class_room_id.split(",").map(s => s.trim());
+      document.querySelectorAll(".class-cb").forEach(cb => {
+        cb.checked = selectedIds.includes(cb.value);
+      });
+      document.getElementById("classRoomId").value = config.class_room_id;
+    } else {
+      document.getElementById("classAll").checked = true;
+      toggleAllClasses(true);
+      document.getElementById("classRoomId").value = "";
+    }
 
     // Set display settings
     const displaySettings = config.display_settings;
@@ -376,6 +412,12 @@ async function editConfig(configId) {
       displaySettings.show_position;
     document.getElementById("treatTotalAsPercentage").checked =
       displaySettings.treat_total_as_percentage || false;
+
+    // Set school fees
+    const hasFees = !!(config.next_term_fees && config.next_term_fees.trim());
+    document.getElementById("showSchoolFees").checked = hasFees;
+    document.getElementById("nextTermFees").value = config.next_term_fees || "";
+    document.getElementById("nextTermFees").disabled = !hasFees;
 
     // Set active assessments
     document.querySelectorAll(".assessment-checkbox").forEach((cb) => {
@@ -612,12 +654,15 @@ document.getElementById("configForm").addEventListener("submit", async (e) => {
     config_name: configName,
     term_id: termId,
     class_room_id: classRoomId || null,
-    grade_scale_id: gradeScaleId || null, // Include grade scale
+    grade_scale_id: gradeScaleId || null,
     resumption_date: document.getElementById("resumptionDate").value || null,
     is_default: isDefault,
     display_settings: displaySettings,
     active_assessments: activeAssessments,
     merge_config: { merged_exams: mergedExams },
+    next_term_fees: document.getElementById("showSchoolFees").checked
+      ? document.getElementById("nextTermFees").value.trim()
+      : "",
   };
 
   // Disable submit button
