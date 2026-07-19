@@ -47,10 +47,11 @@ class GradeScale(db.Model):
         # Return default scale if none configured
         return [
             {"grade": "A", "min_score": 70, "max_score": 100, "remark": "Excellent"},
-            {"grade": "B", "min_score": 59, "max_score": 69, "remark": "Very Good"},
-            {"grade": "C", "min_score": 49, "max_score": 58, "remark": "Good"},
-            {"grade": "D", "min_score": 40, "max_score": 48, "remark": "Pass"},
-            {"grade": "F", "min_score": 0, "max_score": 39, "remark": "Fail"}
+            {"grade": "B", "min_score": 60, "max_score": 69.99, "remark": "Very Good"},
+            {"grade": "C", "min_score": 50, "max_score": 59.99, "remark": "Good"},
+            {"grade": "D", "min_score": 45, "max_score": 49.99, "remark": "Fair"},
+            {"grade": "E", "min_score": 40, "max_score": 44.99, "remark": "Pass"},
+            {"grade": "F", "min_score": 0, "max_score": 39.99, "remark": "Fail"}
         ]
     
     def set_grade_ranges(self, ranges_list):
