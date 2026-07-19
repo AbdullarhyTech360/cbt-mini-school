@@ -21,28 +21,10 @@
 
   {% set overall_total = report_data.overall_total|default(0) %}
   {% set overall_max = report_data.overall_max|default(100) %}
-  {% set overall_percentage = (overall_total / overall_max * 100)|round(1) if overall_max > 0 else 0 %}
-  {% set num_subjects = scores|length %}
-  {% set average = (overall_total / num_subjects)|round(1) if num_subjects > 0 else 0 %}
-
-  {% set overall_grade_ns = namespace(grade='F', matched=false) %}
-  {% if grade_scale and grade_scale.grade_ranges %}
-    {% for r in grade_scale.grade_ranges %}
-      {% if r.min_score <= overall_percentage <= r.max_score %}
-        {% set overall_grade_ns.grade = r.grade %}
-        {% set overall_grade_ns.matched = true %}
-      {% endif %}
-    {% endfor %}
-  {% endif %}
-  {% if not overall_grade_ns.matched %}
-    {% if overall_percentage >= 70 %}{% set overall_grade_ns.grade = 'A' %}
-    {% elif overall_percentage >= 60 %}{% set overall_grade_ns.grade = 'B' %}
-    {% elif overall_percentage >= 50 %}{% set overall_grade_ns.grade = 'C' %}
-    {% elif overall_percentage >= 45 %}{% set overall_grade_ns.grade = 'D' %}
-    {% elif overall_percentage >= 40 %}{% set overall_grade_ns.grade = 'E' %}
-    {% endif %}
-  {% endif %}
-  {% set overall_grade = overall_grade_ns.grade %}
+  {% set overall_percentage = report_data.overall_percentage|default((overall_total / overall_max * 100)|round(1) if overall_max > 0 else 0) %}
+  {% set num_subjects = report_data.num_subjects|default(scores|length) %}
+  {% set average = report_data.average|default((overall_total / num_subjects)|round(1) if num_subjects > 0 else 0) %}
+  {% set overall_grade = report_data.overall_grade|default('F') %}
 
   {% set typography = report_data.typography|default(4)|int %}
   {% if typography == 1 %}{% set scale = 0.65 %}
@@ -54,7 +36,11 @@
   {% else %}{% set scale = 1.0 %}
   {% endif %}
 
-  {{ font_css }}
+  @font-face { font-family:'Inter'; src:url('/static/fonts/Inter/Inter-VariableFont_opsz,wght.ttf') format('truetype'); font-weight:100 900; font-style:normal; }
+  @font-face { font-family:'Inter'; src:url('/static/fonts/Inter/Inter-Italic-VariableFont_opsz,wght.ttf') format('truetype'); font-weight:100 900; font-style:italic; }
+  @font-face { font-family:'Space Grotesk'; src:url('/static/fonts/Space_Grotesk/SpaceGrotesk-VariableFont_wght.ttf') format('truetype'); font-weight:300 700; font-style:normal; }
+  @font-face { font-family:'JetBrains Mono'; src:url('/static/fonts/JetBrains_Mono/JetBrainsMono-VariableFont_wght.ttf') format('truetype'); font-weight:100 800; font-style:normal; }
+  @font-face { font-family:'JetBrains Mono'; src:url('/static/fonts/JetBrains_Mono/JetBrainsMono-Italic-VariableFont_wght.ttf') format('truetype'); font-weight:100 800; font-style:italic; }
 
   :root{
     --navy:#0B2E4A;
@@ -496,7 +482,7 @@
             <tr>
               <td><div class="field"><label>Student Name</label><div class="val">{{ student.name }}</div></div></td>
               <td><div class="field"><label>Total Score</label><div class="val">{{ overall_total|round(0)|int }}</div></div></td>
-              <td><div class="field"><label>No. in Class</label><div class="val">{{ position }}{{ 'st' if position == 1 else ('nd' if position == 2 else ('rd' if position == 3 else 'th')) }} of {{ total_students }}</div></div></td>
+              <td><div class="field"><label>No. in Class</label><div class="val">{{ total_students }}</div></div></td>
             </tr>
             <tr>
               <td><div class="field"><label>Reg. No.</label><div class="val">{{ student.admission_number|default('') }}</div></div></td>
@@ -552,25 +538,7 @@
         </thead>
         <tbody>
           {% for subject_id, subject_data in scores.items() %}
-          {% set subj_pct = (subject_data.total / subject_data.max_total * 100) if subject_data.max_total > 0 else 0 %}
-          {% set ns = namespace(subj_grade='F', matched=false) %}
-          {% if grade_scale and grade_scale.grade_ranges %}
-            {% for r in grade_scale.grade_ranges %}
-              {% if r.min_score <= subj_pct <= r.max_score %}
-                {% set ns.subj_grade = r.grade %}
-                {% set ns.matched = true %}
-              {% endif %}
-            {% endfor %}
-          {% endif %}
-          {% if not ns.matched %}
-            {% if subj_pct >= 70 %}{% set ns.subj_grade = 'A' %}
-            {% elif subj_pct >= 60 %}{% set ns.subj_grade = 'B' %}
-            {% elif subj_pct >= 50 %}{% set ns.subj_grade = 'C' %}
-            {% elif subj_pct >= 45 %}{% set ns.subj_grade = 'D' %}
-            {% elif subj_pct >= 40 %}{% set ns.subj_grade = 'E' %}
-            {% endif %}
-          {% endif %}
-          {% set subj_grade = ns.subj_grade %}
+          {% set subj_grade = subject_data.grade|default('F') %}
           <tr>
             <td class="subject-name">{{ subject_data.subject_name }}</td>
             {% for at in assessment_types %}

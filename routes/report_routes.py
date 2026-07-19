@@ -267,18 +267,29 @@ def _generate_class_pdf_worker(job_id, class_room_id, term_id, config_id,
             for pdf_bytes in pdf_results:
                 if pdf_bytes:
                     reader = PdfReader(io.BytesIO(pdf_bytes))
-                    for page in reader.pages:
-                        writer.add_page(page)
+                    writer.append(reader)
+
+            writer.add_metadata({
+                '/Title': filename,
+                '/Creator': 'School Management System',
+            })
 
             merged_buffer = io.BytesIO()
             writer.write(merged_buffer)
             merged_buffer.seek(0)
 
-            # Store result in memory (for download)
+            # Write to temp file instead of holding entire PDF in _JOBS memory
+            _pdf_tmp_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'temp')
+            os.makedirs(_pdf_tmp_dir, exist_ok=True)
+            _pdf_tmp_path = os.path.join(_pdf_tmp_dir, f'{job_id}.pdf')
+            with open(_pdf_tmp_path, 'wb') as f:
+                f.write(merged_buffer.getvalue())
+
+            # Store file path instead of full PDF bytes
             with _JOBS_LOCK:
                 job["state"] = "done"
                 job["phase"] = "done"
-                job["pdf_data"] = merged_buffer.getvalue()
+                job["pdf_path"] = _pdf_tmp_path
                 job["filename"] = filename
                 job["message"] = f"Complete — {total} reports ready"
                 job["completed_at"] = time.time()
@@ -949,9 +960,12 @@ def download_single_pdf():
         filename = f"Report_{student_name}_{term_name}.pdf"
         # print(f"DEBUG: Generated filename: {filename}")
 
-        # Get report data with performance optimization
-        # print("DEBUG: Calling ReportGenerator.get_student_scores")
+        # Get report data — use shared context (bulk queries) even for single student
+        # to avoid N+1 position/average queries in get_student_scores()
+        _shared = ReportGenerator._build_shared_context(class_room_id, term_id, config_id)
         report_data = ReportGenerator.get_student_scores(
+            student_id, term_id, class_room_id, config_id, _shared=_shared
+        ) if _shared else ReportGenerator.get_student_scores(
             student_id, term_id, class_room_id, config_id
         )
         # print(f"DEBUG: Received data from client: {data}")
@@ -1217,7 +1231,7 @@ def download_class_pdf():
                 "total": 0,
                 "message": "Starting...",
                 "error": None,
-                "pdf_data": None,
+                "pdf_path": None,
                 "filename": filename,
                 "created_at": time.time(),
                 "completed_at": None,
@@ -1257,8 +1271,8 @@ def download_class_pdf_status(job_id):
     if not job:
         return jsonify({"success": False, "error": "Job not found or expired"}), 404
 
-    # Don't send pdf_data in status response
-    progress = {k: v for k, v in job.items() if k != "pdf_data"}
+    # Don't send pdf_path in status response
+    progress = {k: v for k, v in job.items() if k != "pdf_path"}
     return jsonify(progress)
 
 
@@ -1275,22 +1289,33 @@ def download_class_pdf_result(job_id):
     if job["state"] != "done":
         return jsonify({"success": False, "error": "Job not yet complete"}), 409
 
-    pdf_data = job.get("pdf_data")
+    pdf_path = job.get("pdf_path")
     filename = job.get("filename", "reports.pdf")
 
-    if not pdf_data:
+    if not pdf_path or not os.path.exists(pdf_path):
         return jsonify({"success": False, "error": "No PDF data found"}), 500
 
     # Clean up job after download
     with _JOBS_LOCK:
         _JOBS.pop(job_id, None)
 
-    return send_file(
-        io.BytesIO(pdf_data),
+    response = send_file(
+        pdf_path,
         mimetype="application/pdf",
         as_attachment=True,
         download_name=filename,
     )
+
+    # Schedule temp file cleanup after response is sent
+    @response.call_on_close
+    def _cleanup_temp():
+        try:
+            if os.path.exists(pdf_path):
+                os.remove(pdf_path)
+        except OSError:
+            pass
+
+    return response
 
 
 @report_bp.route("/api/grade-scales", methods=["GET"])

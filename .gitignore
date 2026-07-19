@@ -16,7 +16,8 @@ __pycache__/
 /designs
 /dist
 /build
-# /sketch
+/sketch
+/temp
 
 # Uploaded files (keep directory structure but ignore uploaded content)
 static/uploads/*

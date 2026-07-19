@@ -70,7 +70,7 @@ def _is_expected_error(error):
 def _record_migration(db, filename):
     """Record a migration as applied in the tracking table."""
     db.session.execute(
-        text("INSERT INTO _migrations (filename, applied_at) VALUES (:fn, :at)"),
+        text("INSERT OR IGNORE INTO _migrations (filename, applied_at) VALUES (:fn, :at)"),
         {"fn": filename, "at": datetime.now(timezone.utc).isoformat()},
     )
     db.session.commit()
