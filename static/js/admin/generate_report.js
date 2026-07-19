@@ -599,7 +599,17 @@ function showNotification(message, type = "info") {
 }
 
 // Global loading indicator functions
-function showGlobalLoading(message = "Processing...", progress = null) {
+let _loadingTimerInterval = null;
+let _loadingTimerStart = 0;
+
+function _formatElapsed(ms) {
+  const totalSec = Math.floor(ms / 1000);
+  const m = Math.floor(totalSec / 60);
+  const s = totalSec % 60;
+  return m > 0 ? `${m}m ${s}s` : `${s}s`;
+}
+
+function showGlobalLoading(message = "Processing...", progress = null, startTimer = false) {
   let overlay = document.getElementById("global-loading-overlay");
   if (!overlay) {
     overlay = document.createElement("div");
@@ -608,6 +618,19 @@ function showGlobalLoading(message = "Processing...", progress = null) {
       "fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50";
     document.body.appendChild(overlay);
   }
+
+  if (startTimer && !_loadingTimerInterval) {
+    _loadingTimerStart = Date.now();
+    _loadingTimerInterval = setInterval(() => {
+      const timerEl = document.getElementById("global-loading-timer");
+      if (timerEl) timerEl.textContent = `Elapsed: ${_formatElapsed(Date.now() - _loadingTimerStart)}`;
+    }, 1000);
+  }
+
+  const elapsed = _loadingTimerInterval
+    ? Math.floor((Date.now() - _loadingTimerStart) / 1000)
+    : null;
+  const timerText = elapsed !== null ? ` <span class="text-xs text-gray-400 ml-1">(Elapsed: ${_formatElapsed(Date.now() - _loadingTimerStart)})</span>` : '';
 
   const pct = progress !== null ? Math.round(progress) : null;
   const progressBar = pct !== null
@@ -620,8 +643,9 @@ function showGlobalLoading(message = "Processing...", progress = null) {
   overlay.innerHTML = `
     <div class="bg-white dark:bg-gray-800 rounded-xl p-6 flex flex-col items-center shadow-2xl">
         <div class="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-4"></div>
-        <p class="text-gray-700 dark:text-gray-300 font-medium">${message}</p>
+        <p class="text-gray-700 dark:text-gray-300 font-medium">${message}${timerText}</p>
         ${progressBar}
+        ${elapsed !== null ? '<p id="global-loading-timer" class="text-xs text-gray-400 mt-1"></p>' : ''}
     </div>
   `;
   overlay.classList.remove("hidden");
@@ -629,6 +653,10 @@ function showGlobalLoading(message = "Processing...", progress = null) {
 }
 
 function hideGlobalLoading() {
+  if (_loadingTimerInterval) {
+    clearInterval(_loadingTimerInterval);
+    _loadingTimerInterval = null;
+  }
   const overlay = document.getElementById("global-loading-overlay");
   if (overlay) {
     overlay.classList.add("hidden");
@@ -1117,7 +1145,7 @@ async function downloadFromPreview() {
       previewContent.appendChild(overlay);
     }
 
-    showGlobalLoading("Generating PDF...", 20);
+    showGlobalLoading("Generating PDF...", 20, true);
 
     if (window.currentPreviewData.fields && typeof printClassList === 'function') {
       await printClassList();
@@ -1259,13 +1287,13 @@ async function downloadReport(studentId) {
 
   try {
     if (isServerSideLayout()) {
-      showGlobalLoading("Generating PDF...", 30);
+      showGlobalLoading("Generating PDF...", 30, true);
       await generateServerSidePDF(studentId);
     } else if (currentReportData && currentReportData.student.id === studentId) {
-      showGlobalLoading("Generating PDF...", 30);
+      showGlobalLoading("Generating PDF...", 30, true);
       await generateClientSidePDF(currentReportData);
     } else {
-      showGlobalLoading("Loading report data...", 10);
+      showGlobalLoading("Loading report data...", 10, true);
       const params = new URLSearchParams({
         term_id: currentFilters.term_id,
         class_room_id: currentFilters.class_room_id,
@@ -1329,7 +1357,7 @@ async function downloadCurrentReport() {
         `;
   }
 
-  showGlobalLoading("Generating PDF...", 30);
+  showGlobalLoading("Generating PDF...", 30, true);
 
   try {
     await generateClientSidePDF(currentReportData);
@@ -1453,6 +1481,8 @@ async function downloadAllReports() {
 
         const { job_id } = await startResp.json();
 
+        showGlobalLoading("Starting...", 2, true);
+
         // Step 2: Poll for progress
         const PHASE_LABELS = {
           starting: "Starting...",
@@ -1505,31 +1535,15 @@ async function downloadAllReports() {
           }
         }
 
-        // Step 3: Download the PDF
+        // Step 3: Download the PDF via direct link (avoids fetch buffer overflow)
         showGlobalLoading("Downloading PDF...", 100);
-        const downloadResp = await fetch(`/reports/api/download-class-pdf-result/${job_id}`);
-        if (!downloadResp.ok) {
-          throw new Error("Failed to download the generated PDF");
-        }
 
-        const blob = await downloadResp.blob();
-        let filename = `Reports_${currentStudents.length}_students.pdf`;
-        const disposition = downloadResp.headers.get("Content-Disposition");
-        if (disposition) {
-          const match = disposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
-          if (match && match[1]) {
-            filename = match[1].replace(/['"]/g, "");
-          }
-        }
-
-        const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
-        a.href = url;
-        a.download = filename;
+        a.href = `/reports/api/download-class-pdf-result/${job_id}`;
+        a.download = "";
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
-        URL.revokeObjectURL(url);
 
         hideGlobalLoading();
         showAlert({

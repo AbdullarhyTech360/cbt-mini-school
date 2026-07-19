@@ -32,6 +32,29 @@ _FONT_CSS = (
 )
 
 
+def _get_grade_for_percentage(percentage, grade_ranges):
+    """Resolve a letter grade from a percentage and a list of grade range dicts.
+
+    This moves the per-subject grade lookup from Jinja2 (O(n) per subject per
+    student) into Python where it can be computed once per subject in advance.
+    """
+    if grade_ranges:
+        for r in grade_ranges:
+            if r['min_score'] <= percentage <= r['max_score']:
+                return r['grade']
+    if percentage >= 70:
+        return 'A'
+    if percentage >= 60:
+        return 'B'
+    if percentage >= 50:
+        return 'C'
+    if percentage >= 45:
+        return 'D'
+    if percentage >= 40:
+        return 'E'
+    return 'F'
+
+
 class ReportGenerator:
     """Generate student performance reports with flexible exam merging"""
 
@@ -166,7 +189,7 @@ class ReportGenerator:
     @staticmethod
     def _build_shared_context(class_room_id, term_id, config_id=None):
         """Pre-compute all class-invariant data once for batch report generation.
-        
+
         Returns a dict of shared data to pass as _shared to get_student_scores,
         or None if required lookups fail.
         """
@@ -421,7 +444,7 @@ class ReportGenerator:
     @staticmethod
     def get_student_scores(student_id, term_id, class_room_id, config_id=None, _shared=None):
         """Get all scores for a student in a specific term and class.
-        
+
         Args:
             _shared: Optional pre-computed class-invariant data dict (from _build_shared_context).
                      When provided, skips redundant DB queries for class/school/term data.
@@ -1236,9 +1259,9 @@ class ReportGenerator:
     def generate_report_html(report_data):
         """Generate HTML for a student report card using dynamic layout system or fallback"""
         from flask import current_app
-        
+
         config = report_data.get('config')
-        
+
         # Check if config has layout_config
         if config and config.get('layout_config'):
             template_name = config['layout_config'].get('template', 'unknown')
@@ -1261,7 +1284,6 @@ class ReportGenerator:
     def generate_report_with_layout(report_data, layout_config):
         """Generate HTML using dynamic layout configuration and template engine"""
         from flask import render_template, request
-        import copy
 
         template_name = layout_config.get('template', 'modern_portrait')
         page_settings = layout_config.get('page_settings', {
@@ -1275,37 +1297,68 @@ class ReportGenerator:
         # Sort sections by order
         sections = sorted(sections, key=lambda x: x.get('order', 0))
 
-        # Make a shallow copy so we can resolve image URLs for template rendering
-        template_data = copy.copy(report_data)
-
-        # Deep-copy the nested dicts we'll mutate (student, school)
+        # Build mutable copies of student/school (only these are mutated)
         student = dict(report_data.get('student', {}))
         school = dict(report_data.get('school', {}))
 
-        # Build base URL for absolute image URLs (WeasyPrint needs absolute URLs)
-        try:
-            base_url = request.host_url.rstrip('/')
-        except RuntimeError:
-            base_url = ''
-
-        # Embed images as base64 data URIs so WeasyPrint doesn't need HTTP fetches
-        if student.get('image'):
-            student['image'] = ReportGenerator._embed_image(student['image'])
-        else:
-            # Default avatar based on gender
-            gender = student.get('gender', '')
-            if gender and gender.lower() == 'male':
-                default_avatar = os.path.join('static', 'images', 'student', 'default', 'st_male.png')
+        # Embed student image (skip if already embedded by shared context)
+        if not student.get('image') or not student['image'].startswith('data:'):
+            if student.get('image'):
+                student['image'] = ReportGenerator._embed_image(student['image'])
             else:
-                default_avatar = os.path.join('static', 'images', 'student', 'default', 'st_neutral_femal.png')
-            student['image'] = ReportGenerator._embed_image(default_avatar)
+                gender = student.get('gender', '')
+                if gender and gender.lower() == 'male':
+                    default_avatar = os.path.join('static', 'images', 'student', 'default', 'st_male.png')
+                else:
+                    default_avatar = os.path.join('static', 'images', 'student', 'default', 'st_neutral_femal.png')
+                student['image'] = ReportGenerator._embed_image(default_avatar)
 
-        if school.get('logo'):
+        # Embed school logo (skip if already embedded by shared context)
+        if school.get('logo') and not school['logo'].startswith('data:'):
             school['logo'] = ReportGenerator._embed_image(school['logo'])
 
-        template_data = dict(report_data)
-        template_data['student'] = student
-        template_data['school'] = school
+        # --- Precompute grades for all subjects + overall ---
+        grade_scale_obj = report_data.get('grade_scale')
+        grade_ranges = grade_scale_obj.get('grade_ranges', []) if grade_scale_obj else []
+        grade_ranges_dicts = grade_ranges
+
+        overall_total = report_data.get('overall_total', 0)
+        overall_max = report_data.get('overall_max', 100)
+        overall_percentage = (overall_total / overall_max * 100) if overall_max > 0 else 0
+        overall_grade = _get_grade_for_percentage(overall_percentage, grade_ranges_dicts)
+
+        scores = report_data.get('scores', {})
+        for subj_key, subj in scores.items():
+            total = subj.get('total', 0)
+            max_total = subj.get('max_total', 100)
+            pct = (total / max_total * 100) if max_total > 0 else 0
+            subj['percentage'] = round(pct, 1)
+            subj['grade'] = _get_grade_for_percentage(pct, grade_ranges_dicts)
+
+        # --- Build template data dict directly (no copy.copy overhead) ---
+        template_data = {
+            'student': student,
+            'school': school,
+            'term': report_data.get('term', {}),
+            'scores': scores,
+            'assessment_types': report_data.get('assessment_types', []),
+            'grade_scale': grade_scale_obj,
+            'grade_ranges': grade_ranges_dicts,
+            'trait_scores': report_data.get('trait_scores', {}),
+            'trait_definitions': report_data.get('trait_definitions', []),
+            'position': report_data.get('position'),
+            'total_students': report_data.get('total_students'),
+            'class_average': report_data.get('class_average', 0),
+            'overall_total': overall_total,
+            'overall_max': overall_max,
+            'overall_percentage': round(overall_percentage, 1),
+            'overall_grade': overall_grade,
+            'num_subjects': len(scores),
+            'average': round((overall_total / len(scores)), 1) if scores else 0,
+            'config': report_data.get('config', {}),
+            'attendance_stats': report_data.get('attendance_stats', {}),
+            'typography': report_data.get('typography', 4),
+        }
 
         # Render using template
         try:
@@ -1316,14 +1369,12 @@ class ReportGenerator:
                 page_settings=page_settings,
                 sections=sections,
                 custom_css=custom_css,
-                font_css=_FONT_CSS,
             )
             return html
         except Exception as e:
             print(f"Template rendering error: {str(e)}")
             import traceback
             traceback.print_exc()
-            # Fallback to base template with manual rendering
             return ReportGenerator._render_with_base_template(
                 template_data, layout_config, page_settings, sections, custom_css
             )
@@ -1404,7 +1455,7 @@ class ReportGenerator:
     def _render_with_base_template(report_data, layout_config, page_settings, sections, custom_css):
         """Fallback rendering using base template manually"""
         from flask import render_template
-        
+
         return render_template(
             'report_layouts/base.html',
             report_data=report_data,
@@ -1467,7 +1518,7 @@ class ReportGenerator:
     <style>
         @page {{ size: A4 landscape; margin: 8mm; }}
         * {{ box-sizing: border-box; margin: 0; padding: 0; }}
-        body {{ 
+        body {{
             font-family: Arial, sans-serif;
             background: white;
             font-size: 7.5pt;
@@ -1482,7 +1533,7 @@ class ReportGenerator:
         .content-wrapper {{
             padding: 0 15px;
         }}
-        
+
         /* Purple Gradient Header */
         .header-banner {{
             background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #a855f7 100%);
@@ -1537,7 +1588,7 @@ class ReportGenerator:
             opacity: 0.9;
             margin-top: 1px;
         }}
-        
+
         /* Student Info Card */
         .student-card {{
             background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
@@ -1627,7 +1678,7 @@ class ReportGenerator:
         .grade-D {{ background: #f97316; }}
         .grade-E {{ background: #ef4444; }}
         .grade-F {{ background: #6b7280; }}
-        
+
         /* Academic Performance Section */
         .section-title {{
             font-size: 9pt;
@@ -1636,7 +1687,7 @@ class ReportGenerator:
             padding: 6px 0 4px 0;
             border-bottom: 1px solid #e0e7ff;
         }}
-        
+
         /* Beautiful Table */
         .performance-table {{
             width: 100%;
@@ -1706,7 +1757,7 @@ class ReportGenerator:
         .remark-average {{ color: #d97706; font-weight: 600; font-style: italic; }}
         .remark-poor {{ color: #dc2626; font-weight: 600; font-style: italic; }}
         .remark-fail {{ color: #4b5563; font-weight: 600; font-style: italic; }}
-        
+
         /* Comments Section */
         .comments-container {{
             display: table;
@@ -1744,7 +1795,7 @@ class ReportGenerator:
             border-top: 1px solid #cbd5e1;
             margin-top: 3px;
         }}
-        
+
         /* Grading Scale */
         .grading-scale {{
             text-align: center;
@@ -1763,7 +1814,7 @@ class ReportGenerator:
             font-weight: 600;
             color: white;
         }}
-        
+
         /* Footer */
         .footer-notice {{
             background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
@@ -1778,7 +1829,7 @@ class ReportGenerator:
         .footer-notice strong {{
             font-weight: 700;
         }}
-        
+
         /* Enhanced Student Info Table */
         .enhanced-student-table {{
             width: 100%;
@@ -1833,7 +1884,7 @@ class ReportGenerator:
             </div>
         </div>
         <div class="report-title" style="text-align: center; margin: 10px 0;">STUDENT PERFORMANCE REPORT</div>
-        
+
         <div class="content-wrapper">
         <!-- Enhanced Student Information Table -->
         <table class="enhanced-student-table">
@@ -1874,10 +1925,10 @@ class ReportGenerator:
                 </tr>
             </tbody>
         </table>
-        
+
         <!-- Academic Performance Section -->
         <div class="section-title">Academic Performance</div>
-        
+
         <table class="performance-table">
             <thead>
                 <tr>
@@ -1929,7 +1980,7 @@ class ReportGenerator:
                 </tr>
             </tbody>
         </table>
-        
+
         <!-- Comments Section -->
         <table class="comments-container">
             <tr>
@@ -1945,13 +1996,13 @@ class ReportGenerator:
                 </td>
             </tr>
         </table>
-        
+
         <!-- Grading Scale -->
         <div class="grading-scale">
             <strong>Grading Legend:</strong>
             {' '.join(f'<span class="grade-item grade-{r["grade"]}">{r["grade"]} ({r["min_score"]}-{r["max_score"]}%) {r.get("remark", "")}</span>' for r in grade_scale["grade_ranges"])}
         </div>
-        
+
         <!-- Footer Notice -->
         <div class="footer-notice">
             <strong>⚠ OFFICIAL DOCUMENT:</strong> This is an official report card issued by {school['name']}. Any alteration or modification will render this document invalid.
@@ -2016,8 +2067,8 @@ class ReportGenerator:
     <meta charset="UTF-8">
     <style>
         @page {{ size: A4; margin: 1cm; }}
-        body {{ 
-            font-family: Helvetica, Arial, sans-serif; 
+        body {{
+            font-family: Helvetica, Arial, sans-serif;
             font-size: 10pt;
         }}
         .header-table {{ width: 100%; border-bottom: 2px solid #3b82f6; padding-bottom: 10px; margin-bottom: 20px; }}
@@ -2025,23 +2076,23 @@ class ReportGenerator:
         .school-info {{ font-size: 10pt; color: #4b5563; }}
         .section-badge {{ font-size: 9pt; background-color: #8b5cf6; color: white; padding: 2px 6px; border-radius: 12px; margin: 0 2px; display: inline-block; }}
         .report-title {{ font-size: 18pt; font-weight: bold; color: #2563eb; margin-top: 10px; text-align: center; }}
-        
+
         .student-info-table {{ width: 100%; border-collapse: collapse; margin: 15px 0; }}
         .student-info-table th {{ background-color: #3b82f6; color: white; padding: 8px; text-align: center; font-size: 12pt; }}
         .student-info-table td {{ padding: 6px 8px; border: 1px solid #d1d5db; }}
         .student-info-table tr:nth-child(even) {{ background-color: #f9fafb; }}
         .label {{ font-weight: bold; color: #374151; }}
-        
+
         .score-table {{ width: 100%; border-collapse: collapse; margin-bottom: 20px; }}
         .score-table th {{ background-color: #3b82f6; color: white; padding: 5px; border: 1px solid #9ca3af; font-size: 9pt; }}
         .score-table td {{ padding: 5px; border: 1px solid #d1d5db; text-align: center; font-size: 9pt; }}
         .score-table td.subject {{ text-align: left; font-weight: bold; background-color: #f0f9ff; }}
-        
+
         .total-row td {{ background-color: #dbeafe; font-weight: bold; }}
-        
+
         .comments-table {{ width: 100%; margin-top: 20px; }}
         .comment-box {{ border: 1px solid #d1d5db; padding: 10px; height: 80px; background-color: #fafafa; }}
-        
+
         .grading-table {{ width: 100%; margin-top: 20px; border: 1px solid #e5e7eb; }}
         .grading-table td {{ padding: 5px; text-align: center; font-size: 8pt; }}
     </style>
@@ -2057,7 +2108,7 @@ class ReportGenerator:
                 <div class="school-name">{school['name'].upper()}</div>
                 <!-- Sections display -->
                 <div style="margin: 5px 0;">
-                    (lambda formatted=report_data.get('formatted_sections', ''): 
+                    (lambda formatted=report_data.get('formatted_sections', ''):
                         # Create badges for each section name in the formatted string
                         import re
                         parts = re.split(r'(, | and )', formatted)
@@ -2176,7 +2227,7 @@ class ReportGenerator:
             {''.join(f'<td>{r["grade"]} ({r["min_score"]}-{r["max_score"]}%) {r.get("remark", "")}</td>' for r in grade_scale["grade_ranges"])}
         </tr>
     </table>
-    
+
     <div style="text-align: center; margin-top: 20px; font-size: 8pt; color: #6b7280;">
         This is an official document issued by {school['name']}. Any alteration makes it invalid.
     </div>
