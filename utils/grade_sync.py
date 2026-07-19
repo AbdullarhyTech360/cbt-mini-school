@@ -174,3 +174,51 @@ def sync_student_exam_records(student_id, subject_id=None, class_id=None, term_i
         "updated": updated_count,
         "errors": error_count
     }
+
+
+def sync_class_exam_records(student_ids, class_id=None, term_id=None):
+    """
+    Sync exam records to grades for ALL students in one query (bulk).
+    
+    Args:
+        student_ids: list of student user IDs
+        class_id: optional class_room_id filter
+        term_id: optional term_id filter
+    
+    Returns:
+        dict with sync statistics
+    """
+    if not student_ids:
+        return {"total_records": 0, "synced": 0, "updated": 0, "errors": 0}
+
+    query = ExamRecord.query.filter(ExamRecord.student_id.in_(student_ids))
+
+    if class_id:
+        query = query.filter_by(class_room_id=class_id)
+    if term_id:
+        query = query.filter_by(school_term_id=term_id)
+
+    exam_records = query.all()
+
+    synced_count = 0
+    updated_count = 0
+    error_count = 0
+
+    for record in exam_records:
+        try:
+            grade = sync_exam_record_to_grade(record)
+            if grade.created_at == grade.updated_at:
+                synced_count += 1
+            else:
+                updated_count += 1
+        except Exception:
+            error_count += 1
+
+    db.session.commit()
+
+    return {
+        "total_records": len(exam_records),
+        "synced": synced_count,
+        "updated": updated_count,
+        "errors": error_count
+    }

@@ -423,16 +423,19 @@
                             <td>{{ subject_data.total|round(1) }}</td>
                             {% set subj_pct = (subject_data.total / subject_data.max_total * 100) if subject_data.max_total > 0 else 0 %}
                             <td>
+                                {% set ns = namespace(subj_grade='F', matched=false) %}
                                 {% if grade_scale and grade_scale.grade_ranges %}
-                                    {% set subj_grade = 'F' %}
                                     {% for r in grade_scale.grade_ranges %}
                                         {% if r.min_score <= subj_pct <= r.max_score %}
-                                            {% set subj_grade = r.grade %}
+                                            {% set ns.subj_grade = r.grade %}
+                                            {% set ns.matched = true %}
                                         {% endif %}
                                     {% endfor %}
-                                    {{ subj_grade }}
-                                {% else %}
+                                {% endif %}
+                                {% if not ns.matched %}
                                     {% if subj_pct >= 70 %}A{% elif subj_pct >= 60 %}B{% elif subj_pct >= 50 %}C{% elif subj_pct >= 45 %}D{% elif subj_pct >= 40 %}E{% else %}F{% endif %}
+                                {% else %}
+                                    {{ ns.subj_grade }}
                                 {% endif %}
                             </td>
                             <td></td>

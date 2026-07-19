@@ -38,16 +38,16 @@
     overall_max = report_data.overall_max|default(100) %} {% set
     overall_percentage = (overall_total / overall_max * 100) if overall_max > 0
     else 0 %} {% set grade_scale = report_data.grade_scale %} {% set
-    overall_grade = 'F' %} {% if grade_scale and grade_scale.grade_ranges %} {%
+    overall_grade_ns = namespace(grade='F', matched=false) %} {% if grade_scale and grade_scale.grade_ranges %} {%
     for range_item in grade_scale.grade_ranges %} {% if range_item.min_score <=
     overall_percentage <=range_item.max_score %} {% set
-    overall_grade=range_item.grade %} {% endif %} {% endfor %} {% else %} {% if
-    overall_percentage>= 70 %}{% set overall_grade = 'A' %} {% elif
-    overall_percentage >= 60 %}{% set overall_grade = 'B' %} {% elif
-    overall_percentage >= 50 %}{% set overall_grade = 'C' %} {% elif
-    overall_percentage >= 45 %}{% set overall_grade = 'D' %} {% elif
-    overall_percentage >= 40 %}{% set overall_grade = 'E' %} {% else %}{% set
-    overall_grade = 'F' %}{% endif %} {% endif %}
+    overall_grade_ns.grade=range_item.grade %} {% set overall_grade_ns.matched = true %} {% endif %} {% endfor %} {% endif %} {% if not overall_grade_ns.matched %} {% if
+    overall_percentage>= 70 %}{% set overall_grade_ns.grade = 'A' %} {% elif
+    overall_percentage >= 60 %}{% set overall_grade_ns.grade = 'B' %} {% elif
+    overall_percentage >= 50 %}{% set overall_grade_ns.grade = 'C' %} {% elif
+    overall_percentage >= 45 %}{% set overall_grade_ns.grade = 'D' %} {% elif
+    overall_percentage >= 40 %}{% set overall_grade_ns.grade = 'E' %} {% else %}{% set
+    overall_grade_ns.grade = 'F' %}{% endif %}{% endif %}{% set overall_grade = overall_grade_ns.grade %}
     <div
         style="
             display: table;

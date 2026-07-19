@@ -22,8 +22,21 @@ from models.attendance import Attendance
 from sqlalchemy import func
 
 
+# --- Font CSS using /static/ paths (rewritten to file:/// by _rewrite_static_urls for WeasyPrint) ---
+_FONT_CSS = (
+    "@font-face { font-family:'Inter'; src:url('/static/fonts/Inter/Inter-VariableFont_opsz,wght.ttf') format('truetype'); font-weight:100 900; font-style:normal; }\n"
+    "@font-face { font-family:'Inter'; src:url('/static/fonts/Inter/Inter-Italic-VariableFont_opsz,wght.ttf') format('truetype'); font-weight:100 900; font-style:italic; }\n"
+    "@font-face { font-family:'Space Grotesk'; src:url('/static/fonts/Space_Grotesk/SpaceGrotesk-VariableFont_wght.ttf') format('truetype'); font-weight:300 700; font-style:normal; }\n"
+    "@font-face { font-family:'JetBrains Mono'; src:url('/static/fonts/JetBrains_Mono/JetBrainsMono-VariableFont_wght.ttf') format('truetype'); font-weight:100 800; font-style:normal; }\n"
+    "@font-face { font-family:'JetBrains Mono'; src:url('/static/fonts/JetBrains_Mono/JetBrainsMono-Italic-VariableFont_wght.ttf') format('truetype'); font-weight:100 800; font-style:italic; }\n"
+)
+
+
 class ReportGenerator:
     """Generate student performance reports with flexible exam merging"""
+
+    # Cache for embedded images: resolved_path -> data_uri
+    _image_cache = {}
 
     @staticmethod
     def _embed_image(path_or_url):
@@ -39,6 +52,12 @@ class ReportGenerator:
         lower = path_or_url.lower()
         if lower.startswith('data:') or lower.startswith('http://') or lower.startswith('https://'):
             return path_or_url
+
+        # Check cache first
+        cache_key = path_or_url.replace('\\', '/').rstrip('/')
+        cached = ReportGenerator._image_cache.get(cache_key)
+        if cached is not None:
+            return cached
 
         # Normalize custom prefixes
         if lower.startswith('#file:'):
@@ -72,7 +91,9 @@ class ReportGenerator:
                     with open(p, 'rb') as f:
                         data = f.read()
                     b64 = base64.b64encode(data).decode('ascii')
-                    return f'data:{mime};base64,{b64}'
+                    result = f'data:{mime};base64,{b64}'
+                    ReportGenerator._image_cache[cache_key] = result
+                    return result
                 except Exception:
                     # If embedding fails for this candidate, continue to next
                     continue
@@ -107,17 +128,48 @@ class ReportGenerator:
         return result
 
     @staticmethod
-    def get_student_scores(student_id, term_id, class_room_id, config_id=None):
-        """Get all scores for a student in a specific term and class"""
-        # Get user and related info
-        user = User.query.get(student_id)
-        if not user:
-            return None
+    def _sections_to_dict(sections):
+        """Convert sections (ORM or CombinedSection) to a list of dicts."""
+        result = []
+        for section in sections:
+            if hasattr(section, 'to_dict'):
+                result.append(section.to_dict())
+            else:
+                result.append({
+                    "section_id": getattr(section, 'section_id', f"combined_{section.name.lower()}"),
+                    "name": section.name,
+                    "abbreviation": section.abbreviation,
+                    "level": section.level,
+                    "description": getattr(section, 'description', 'Combined secondary section'),
+                    "is_active": getattr(section, 'is_active', True),
+                    "school_id": getattr(section, 'school_id', None),
+                    "classrooms_count": getattr(section, 'get_classrooms_count', lambda: 0)(),
+                    "created_at": None,
+                    "updated_at": None
+                })
+        return result
 
-        student = user.student
-        if not student:
-            return None
+    @staticmethod
+    def _format_sections_for_display(sections_list):
+        """Format sections with commas and 'and' for display."""
+        if not sections_list:
+            return ''
+        if len(sections_list) == 1:
+            return sections_list[0]['name']
+        elif len(sections_list) == 2:
+            return f"{sections_list[0]['name']} and {sections_list[1]['name']}"
+        else:
+            names = [s['name'] for s in sections_list]
+            last = names.pop()
+            return f"{', '.join(names)}, and {last}"
 
+    @staticmethod
+    def _build_shared_context(class_room_id, term_id, config_id=None):
+        """Pre-compute all class-invariant data once for batch report generation.
+        
+        Returns a dict of shared data to pass as _shared to get_student_scores,
+        or None if required lookups fail.
+        """
         class_room = ClassRoom.query.get(class_room_id)
         if not class_room:
             return None
@@ -130,60 +182,37 @@ class ReportGenerator:
         if not school:
             return None
 
-        # --- Resolve grade scale with section-aware fallback chain ---
-        # Priority:
-        # 1. Report config explicit grade_scale_id
-        # 2. Section-specific grade scale (scale assigned to the student's section)
-        # 3. School default grade scale (is_default=True)
-        # 4. Any active grade scale for the school
-        # 5. Hardcoded fallback (handled by model methods)
-
-        # Get report configuration if provided
         config = ReportConfig.query.get(config_id) if config_id else None
 
+        # Resolve grade scale
         grade_scale = None
-
-        # Priority 1: Explicit grade_scale_id from report config
         if config and config.grade_scale_id:
             grade_scale = GradeScale.query.get(config.grade_scale_id)
-
-        # Priority 2: Section-specific grade scale
         if not grade_scale and class_room.section_id:
             section_scales = GradeScale.query.filter(
                 GradeScale.school_id == school.school_id,
                 GradeScale.is_active == True,
                 GradeScale.sections.any(section_id=class_room.section_id)
             ).order_by(GradeScale.is_default.desc(), GradeScale.created_at.desc()).all()
-
             if section_scales:
                 grade_scale = section_scales[0]
-
-        # Priority 3: School default grade scale
         if not grade_scale:
             grade_scale = GradeScale.query.filter_by(
                 school_id=school.school_id, is_default=True, is_active=True).first()
-
-        # Priority 4: Any active grade scale for the school
         if not grade_scale:
             grade_scale = GradeScale.query.filter_by(
                 school_id=school.school_id, is_active=True).first()
 
-        # Get sections for this school
+        # Sections
         all_sections = Section.query.filter_by(
-            school_id=school.school_id,
-            is_active=True
+            school_id=school.school_id, is_active=True
         ).order_by(Section.level).all()
-        
-        # Group similar sections (e.g., combine Junior Secondary and Senior Secondary as Secondary)
+
         sections = []
-        seen_levels = set()
         grouped_secondary_added = False
-        
         for section in all_sections:
-            # Group secondary levels together (level 3 and 4 - Junior Secondary and Senior Secondary)
             if section.level == 3 or section.level == 4:
                 if not grouped_secondary_added:
-                    # Create a combined secondary section
                     class CombinedSection:
                         def __init__(self, name, abbreviation, level, description="Combined secondary section"):
                             self.name = name
@@ -192,52 +221,26 @@ class ReportGenerator:
                             self.description = description
                             self.is_active = True
                             self.school_id = section.school_id
-                            
-                    combined_section = CombinedSection("Secondary", "Secondary", 3)
-                    sections.append(combined_section)
+                    sections.append(CombinedSection("Secondary", "Secondary", 3))
                     grouped_secondary_added = True
-                # Skip individual junior/senior secondary sections
                 continue
             else:
                 sections.append(section)
-                seen_levels.add(section.level)
-        
-        # For the simple report, we need to convert to dict format
-        sections_for_simple_report = []
-        for section in sections:
-            if hasattr(section, 'to_dict'):
-                sections_for_simple_report.append(section.to_dict())
-            else:
-                # For CombinedSection objects
-                sections_for_simple_report.append({
-                    "name": section.name,
-                    "abbreviation": section.abbreviation,
-                    "level": section.level,
-                    "description": getattr(section, 'description', 'Combined secondary section'),
-                    "is_active": getattr(section, 'is_active', True),
-                    "school_id": getattr(section, 'school_id', None)
-                })
 
-        # Get assessment types for this school
+        sections_data = ReportGenerator._sections_to_dict(sections)
+
+        # Assessment types
         all_assessment_types = AssessmentType.query.filter_by(
-            school_id=school.school_id,
-            is_active=True
+            school_id=school.school_id, is_active=True
         ).order_by(AssessmentType.order).all()
 
-        # Filter assessment types based on configuration
         if config:
             active_assessments = config.get_active_assessments()
-            if active_assessments:
-                assessment_types = [
-                    at for at in all_assessment_types
-                    if at.code in active_assessments
-                ]
-            else:
-                assessment_types = all_assessment_types
+            assessment_types = [at for at in all_assessment_types if at.code in active_assessments] if active_assessments else all_assessment_types
         else:
             assessment_types = all_assessment_types
 
-        # Get all subjects for this class, sorted by display_order then name
+        # Class subjects
         from models import class_subject, Subject
         class_subjects = db.session.query(Subject).join(
             class_subject, class_subject.c.subject_id == Subject.subject_id
@@ -248,35 +251,416 @@ class ReportGenerator:
             Subject.subject_name.asc()
         ).all()
 
-        # Initialize subject scores structure
-        subject_scores = {
-            s.subject_id: {
-                'subject_name': s.subject_name,
-                'assessments': {},
-                'total': 0,
-                'max_total': 0
-            } for s in class_subjects
+        # All student IDs in this class (also gives total_students)
+        all_student_ids = [
+            sid for (sid,) in db.session.query(User.id).filter(
+                User.class_room_id == class_room_id,
+                User.role == 'student'
+            ).all()
+        ]
+        total_students = len(all_student_ids)
+
+        # Class position & average (computed once, shared across all students)
+        # Single GROUP BY query replaces N individual queries
+        student_totals_rows = db.session.query(
+            Grade.student_id,
+            func.sum(Grade.score).label('total_score'),
+            func.sum(Grade.max_score).label('total_max')
+        ).filter(
+            Grade.student_id.in_(all_student_ids),
+            Grade.term_id == term_id,
+            Grade.class_room_id == class_room_id,
+            db.or_(Grade.is_published == True, Grade.is_from_cbt == True)
+        ).group_by(Grade.student_id).all()
+
+        student_score_map = {row.student_id: (row.total_score or 0, row.total_max or 0) for row in student_totals_rows}
+
+        # Position map: sort by total score descending
+        class_position_results = [(sid, student_score_map.get(sid, (0, 0))[0]) for sid in all_student_ids]
+        class_position_results.sort(key=lambda x: x[1], reverse=True)
+        position_map = {}
+        for pos, (sid, _) in enumerate(class_position_results, start=1):
+            position_map[sid] = pos
+
+        # Class average from pre-computed per-student totals
+        percentages = []
+        for sid in all_student_ids:
+            total_score, total_max = student_score_map.get(sid, (0, 0))
+            if total_max > 0:
+                percentages.append((total_score / total_max) * 100)
+        class_average = round(sum(percentages) / len(percentages), 1) if percentages else 0
+
+        # Bulk-fetch all class grades for subject positions
+        all_class_grades = db.session.query(
+            Grade.subject_id, Grade.student_id, Grade.score
+        ).filter(
+            Grade.class_room_id == class_room_id,
+            Grade.term_id == term_id,
+            Grade.student_id.in_(all_student_ids),
+            db.or_(Grade.is_published == True, Grade.is_from_cbt == True)
+        ).all()
+        subject_student_totals = {}
+        for subj_id, stu_id, score in all_class_grades:
+            subject_student_totals.setdefault(subj_id, {})
+            subject_student_totals[subj_id][stu_id] = (
+                subject_student_totals[subj_id].get(stu_id, 0) + score
+            )
+
+        # Grade ranges
+        grade_ranges = grade_scale.get_grade_ranges() if grade_scale else []
+
+        # Returned assessment types (with merged exams)
+        returned_assessment_types = [a.to_dict() for a in assessment_types]
+        if config:
+            merge_config = config.get_merge_config()
+            merged_exams = merge_config.get('merged_exams', [])
+            active_assessments = config.get_active_assessments()
+            if merged_exams:
+                for merge_rule in merged_exams:
+                    display_as = merge_rule.get('display_as', merge_rule['name'])
+                    components = merge_rule['components']
+                    component_max_total = 0
+                    for comp in components:
+                        comp_type = next((at for at in all_assessment_types if at.code == comp), None)
+                        if comp_type:
+                            component_max_total += comp_type.max_score
+                    max_score = component_max_total if component_max_total > 0 else 100
+                    if not any(at['code'] == display_as for at in returned_assessment_types):
+                        returned_assessment_types.append({
+                            'code': display_as, 'name': display_as, 'max_score': max_score,
+                            'order': 100 + len(returned_assessment_types),
+                            'school_id': school.school_id, 'is_active': True
+                        })
+            merged_component_codes = set()
+            for merge_rule in merged_exams:
+                merged_component_codes.update(merge_rule['components'])
+            merged_display_names = [rule.get('display_as', rule['name']) for rule in merged_exams]
+            if active_assessments:
+                returned_assessment_types = [at for at in returned_assessment_types
+                    if (at['code'] in active_assessments or at['code'] in merged_display_names)
+                    and at['code'] not in merged_component_codes]
+            else:
+                returned_assessment_types = [at for at in returned_assessment_types
+                    if at['code'] not in merged_component_codes]
+
+        # FORCE 100 max total and scale assessment type maxes
+        total_at_max = sum(at['max_score'] for at in returned_assessment_types)
+        if total_at_max > 0:
+            header_scale = 100.0 / total_at_max
+            for at in returned_assessment_types:
+                if 'max_score' in at:
+                    at['max_score'] = at['max_score'] * header_scale
+        returned_assessment_types.sort(key=lambda x: x.get('order', 0))
+
+        # --- Bulk-fetch per-student data to avoid N+1 queries ---
+        # All grades for the class, keyed by student_id
+        all_grades_rows = db.session.query(Grade).filter(
+            Grade.class_room_id == class_room_id,
+            Grade.term_id == term_id,
+            Grade.student_id.in_(all_student_ids),
+            db.or_(Grade.is_published == True, Grade.is_from_cbt == True)
+        ).all()
+        grades_by_student = {}
+        for g in all_grades_rows:
+            grades_by_student.setdefault(g.student_id, []).append(g)
+
+        # All attendance records for the class, keyed by student_id
+        from models.attendance import Attendance
+        all_attendance = Attendance.query.filter(
+            Attendance.student_id.in_(all_student_ids),
+            Attendance.term_id == term_id
+        ).all()
+        attendance_by_student = {}
+        for att in all_attendance:
+            attendance_by_student.setdefault(att.student_id, []).append(att)
+
+        # All student traits for the class, keyed by student_id
+        all_traits = StudentTrait.query.filter(
+            StudentTrait.student_id.in_(all_student_ids),
+            StudentTrait.term_id == term_id
+        ).all()
+        traits_by_student = {}
+        for st in all_traits:
+            traits_by_student.setdefault(st.student_id, []).append(st)
+
+        # Trait definitions (once for the whole school)
+        trait_definitions = [
+            {'name': t.name, 'max_score': t.max_score}
+            for t in TraitDefinition.query.filter_by(
+                school_id=school.school_id, is_active=True
+            ).order_by(TraitDefinition.sort_order).all()
+        ]
+
+        # Embed school logo once for WeasyPrint (avoids re-reading per student)
+        embedded_logo = ReportGenerator._embed_image(school.logo) if school.logo else ''
+
+        return {
+            'class_room': class_room,
+            'term': term,
+            'school': school,
+            'config': config,
+            'grade_scale': grade_scale,
+            'all_assessment_types': all_assessment_types,
+            'sections': sections,
+            'sections_data': sections_data,
+            'format_sections_for_display': ReportGenerator._format_sections_for_display,
+            'class_subjects': class_subjects,
+            'total_students': total_students,
+            'student_positions': position_map,
+            'class_average': class_average,
+            'subject_student_totals': subject_student_totals,
+            'grade_ranges': grade_ranges,
+            'returned_assessment_types': returned_assessment_types,
+            'grades_by_student': grades_by_student,
+            'attendance_by_student': attendance_by_student,
+            'traits_by_student': traits_by_student,
+            'trait_definitions': trait_definitions,
+            'embedded_logo': embedded_logo,
         }
 
-        # NEW: Auto-sync CBT scores before generating report
-        # This ensures that any CBT exam records are synced to the grades table
-        from utils.grade_sync import sync_student_exam_records
-        try:
-            sync_result = sync_student_exam_records(
-                student_id=student_id, class_id=class_room_id, term_id=term_id)
-            # Only show detailed sync results if there were actual changes
-            if sync_result['synced'] > 0 or sync_result['updated'] > 0:
-                print(f"Auto-synced CBT scores for student {student_id[:8]}: {sync_result['synced']} new, {sync_result['updated']} updated")
-        except Exception as e:
-            print(f"Warning: Error during auto-sync: {str(e)}")
-            # Continue with report generation even if sync fails
+    @staticmethod
+    def get_student_scores(student_id, term_id, class_room_id, config_id=None, _shared=None):
+        """Get all scores for a student in a specific term and class.
+        
+        Args:
+            _shared: Optional pre-computed class-invariant data dict (from _build_shared_context).
+                     When provided, skips redundant DB queries for class/school/term data.
+        """
+        # Get user and related info
+        user = User.query.get(student_id)
+        if not user:
+            return None
 
-        # Get all grades for this student in this term (including unpublished to show CBT)
-        grades = Grade.query.filter_by(
-            student_id=student_id,
-            term_id=term_id,
-            class_room_id=class_room_id
-        ).all()
+        student = user.student
+        if not student:
+            return None
+
+        # --- Use pre-computed shared data when available (batch mode) ---
+        if _shared is not None:
+            class_room = _shared['class_room']
+            term = _shared['term']
+            school = _shared['school']
+            config = _shared['config']
+            grade_scale = _shared['grade_scale']
+            all_assessment_types = _shared['all_assessment_types']
+            sections = _shared['sections']
+            sections_data = _shared['sections_data']
+            format_sections_for_display = _shared['format_sections_for_display']
+            position = _shared['student_positions'].get(student_id)
+            class_average = _shared['class_average']
+            total_students = _shared['total_students']
+            returned_assessment_types = _shared['returned_assessment_types']
+            grade_ranges = _shared['grade_ranges']
+            subject_student_totals = _shared['subject_student_totals']
+
+            # Initialize subject scores from pre-fetched class subjects (deep copy per student)
+            from models import class_subject, Subject
+            class_subjects = _shared['class_subjects']
+            subject_scores = {
+                s.subject_id: {
+                    'subject_name': s.subject_name,
+                    'assessments': {},
+                    'total': 0,
+                    'max_total': 0
+                } for s in class_subjects
+            }
+
+            # CBT sync already done in bulk by get_class_report_data — skip per-student
+
+            # Use pre-fetched grades from _shared (avoids per-student query)
+            grades = _shared['grades_by_student'].get(student_id, [])
+
+        else:
+            # --- Original path: query everything (single student mode) ---
+            class_room = ClassRoom.query.get(class_room_id)
+            if not class_room:
+                return None
+
+            term = SchoolTerm.query.get(term_id)
+            if not term:
+                return None
+
+            school = School.query.first()
+            if not school:
+                return None
+
+            config = ReportConfig.query.get(config_id) if config_id else None
+
+            grade_scale = None
+            if config and config.grade_scale_id:
+                grade_scale = GradeScale.query.get(config.grade_scale_id)
+            if not grade_scale and class_room.section_id:
+                section_scales = GradeScale.query.filter(
+                    GradeScale.school_id == school.school_id,
+                    GradeScale.is_active == True,
+                    GradeScale.sections.any(section_id=class_room.section_id)
+                ).order_by(GradeScale.is_default.desc(), GradeScale.created_at.desc()).all()
+                if section_scales:
+                    grade_scale = section_scales[0]
+            if not grade_scale:
+                grade_scale = GradeScale.query.filter_by(
+                    school_id=school.school_id, is_default=True, is_active=True).first()
+            if not grade_scale:
+                grade_scale = GradeScale.query.filter_by(
+                    school_id=school.school_id, is_active=True).first()
+
+            all_sections = Section.query.filter_by(
+                school_id=school.school_id, is_active=True
+            ).order_by(Section.level).all()
+
+            sections = []
+            grouped_secondary_added = False
+            for section in all_sections:
+                if section.level == 3 or section.level == 4:
+                    if not grouped_secondary_added:
+                        class CombinedSection:
+                            def __init__(self, name, abbreviation, level, description="Combined secondary section"):
+                                self.name = name
+                                self.abbreviation = abbreviation
+                                self.level = level
+                                self.description = description
+                                self.is_active = True
+                                self.school_id = section.school_id
+                        combined_section = CombinedSection("Secondary", "Secondary", 3)
+                        sections.append(combined_section)
+                        grouped_secondary_added = True
+                    continue
+                else:
+                    sections.append(section)
+
+            all_assessment_types = AssessmentType.query.filter_by(
+                school_id=school.school_id, is_active=True
+            ).order_by(AssessmentType.order).all()
+
+            if config:
+                active_assessments = config.get_active_assessments()
+                assessment_types = [at for at in all_assessment_types if at.code in active_assessments] if active_assessments else all_assessment_types
+            else:
+                assessment_types = all_assessment_types
+
+            from models import class_subject, Subject
+            class_subjects = db.session.query(Subject).join(
+                class_subject, class_subject.c.subject_id == Subject.subject_id
+            ).filter(
+                class_subject.c.class_room_id == class_room_id
+            ).order_by(
+                class_subject.c.display_order.asc(),
+                Subject.subject_name.asc()
+            ).all()
+
+            subject_scores = {
+                s.subject_id: {
+                    'subject_name': s.subject_name,
+                    'assessments': {},
+                    'total': 0,
+                    'max_total': 0
+                } for s in class_subjects
+            }
+
+            from utils.grade_sync import sync_student_exam_records
+            try:
+                sync_result = sync_student_exam_records(
+                    student_id=student_id, class_id=class_room_id, term_id=term_id)
+                if sync_result['synced'] > 0 or sync_result['updated'] > 0:
+                    print(f"Auto-synced CBT scores for student {student_id[:8]}: {sync_result['synced']} new, {sync_result['updated']} updated")
+            except Exception as e:
+                print(f"Warning: Error during auto-sync: {str(e)}")
+
+            grades = Grade.query.filter_by(
+                student_id=student_id,
+                term_id=term_id,
+                class_room_id=class_room_id
+            ).all()
+
+            # Calculate class position and average (only when not shared)
+            position = ReportGenerator.calculate_class_position(
+                student_id, term_id, class_room_id
+            )
+            class_average = ReportGenerator.calculate_class_average(
+                term_id, class_room_id
+            )
+            total_students = db.session.query(func.count(User.id)).join(
+                Student, Student.user_id == User.id
+            ).filter(
+                User.class_room_id == class_room_id,
+                User.role == 'student'
+            ).scalar()
+
+            grade_ranges = grade_scale.get_grade_ranges() if grade_scale else []
+
+            # Prepare returned assessment types
+            returned_assessment_types = [a.to_dict() for a in assessment_types]
+            if config:
+                merge_config = config.get_merge_config()
+                merged_exams = merge_config.get('merged_exams', [])
+                active_assessments = config.get_active_assessments()
+                if merged_exams:
+                    for merge_rule in merged_exams:
+                        display_as = merge_rule.get('display_as', merge_rule['name'])
+                        components = merge_rule['components']
+                        component_max_total = 0
+                        for comp in components:
+                            comp_type = next((at for at in all_assessment_types if at.code == comp), None)
+                            if comp_type:
+                                component_max_total += comp_type.max_score
+                        max_score = component_max_total if component_max_total > 0 else 100
+                        if not any(at['code'] == display_as for at in returned_assessment_types):
+                            returned_assessment_types.append({
+                                'code': display_as, 'name': display_as, 'max_score': max_score,
+                                'order': 100 + len(returned_assessment_types),
+                                'school_id': school.school_id, 'is_active': True
+                            })
+                merged_component_codes = set()
+                for merge_rule in merged_exams:
+                    merged_component_codes.update(merge_rule['components'])
+                merged_display_names = [rule.get('display_as', rule['name']) for rule in merged_exams]
+                if active_assessments:
+                    returned_assessment_types = [at for at in returned_assessment_types
+                        if (at['code'] in active_assessments or at['code'] in merged_display_names)
+                        and at['code'] not in merged_component_codes]
+                else:
+                    returned_assessment_types = [at for at in returned_assessment_types
+                        if at['code'] not in merged_component_codes]
+
+            for subject_id, subject_data in subject_scores.items():
+                subject_data['max_total'] = 100.0
+            total_at_max = sum(at['max_score'] for at in returned_assessment_types)
+            if total_at_max > 0:
+                header_scale = 100.0 / total_at_max
+                for at in returned_assessment_types:
+                    if 'max_score' in at:
+                        at['max_score'] = at['max_score'] * header_scale
+            returned_assessment_types.sort(key=lambda x: x.get('order', 0))
+
+            sections_data = ReportGenerator._sections_to_dict(sections)
+
+            def format_sections_for_display(sections_list):
+                if not sections_list:
+                    return ''
+                if len(sections_list) == 1:
+                    return sections_list[0]['name']
+                elif len(sections_list) == 2:
+                    return f"{sections_list[0]['name']} and {sections_list[1]['name']}"
+                else:
+                    names = [s['name'] for s in sections_list]
+                    last = names.pop()
+                    return f"{', '.join(names)}, and {last}"
+
+            # Build subject_student_totals for subject positions
+            all_class_student_ids = [sid for (sid,) in db.session.query(User.id).filter(
+                User.class_room_id == class_room_id, User.role == 'student').all()]
+            all_class_grades = db.session.query(
+                Grade.subject_id, Grade.student_id, Grade.score
+            ).filter(
+                Grade.class_room_id == class_room_id, Grade.term_id == term_id,
+                Grade.student_id.in_(all_class_student_ids),
+                db.or_(Grade.is_published == True, Grade.is_from_cbt == True)
+            ).all()
+            subject_student_totals = {}
+            for subj_id, stu_id, score in all_class_grades:
+                subject_student_totals.setdefault(subj_id, {})
+                subject_student_totals[subj_id][stu_id] = (
+                    subject_student_totals[subj_id].get(stu_id, 0) + score)
 
         # Organize grades by subject and assessment type
         for grade in grades:
@@ -415,189 +799,7 @@ class ReportGenerator:
                     a['max_score'] for a in subject_data['assessments'].values()
                 )
 
-        # Calculate class position
-        position = ReportGenerator.calculate_class_position(
-            student_id, term_id, class_room_id
-        )
-
-        # Calculate class average
-        class_average = ReportGenerator.calculate_class_average(
-            term_id, class_room_id
-        )
-
-        # Get total students in class
-        total_students = db.session.query(func.count(User.id)).join(
-            Student, Student.user_id == User.id
-        ).filter(
-            User.class_room_id == class_room_id,
-            User.role == 'student'
-        ).scalar()
-
-        # Prepare assessment types for response, ensuring merged exams are included
-        returned_assessment_types = [a.to_dict() for a in assessment_types]
-
-        if config:
-            merge_config = config.get_merge_config()
-            merged_exams = merge_config.get('merged_exams', [])
-            active_assessments = config.get_active_assessments()
-
-            if merged_exams:
-                # Add merged exams definition to the list
-                for merge_rule in merged_exams:
-                    display_as = merge_rule.get(
-                        'display_as', merge_rule['name'])
-                    components = merge_rule['components']
-
-                    # Merged exams are always displayed if they exist
-                    if True:
-                        # Calculate max score from components (using first found subject as reference)
-                        max_score = 100  # Default
-
-                        # Try to find max score from existing types
-                        component_max_total = 0
-                        for comp in components:
-                            comp_type = next(
-                                (at for at in all_assessment_types if at.code == comp), None)
-                            if comp_type:
-                                component_max_total += comp_type.max_score
-
-                        if component_max_total > 0:
-                            max_score = component_max_total
-
-                        # Check if already exists to avoid duplicates
-                        if not any(at['code'] == display_as for at in returned_assessment_types):
-                            returned_assessment_types.append({
-                                'code': display_as,
-                                'name': display_as,
-                                'max_score': max_score,
-                                # Append at end
-                                'order': 100 + len(returned_assessment_types),
-                                'school_id': school.school_id,
-                                'is_active': True
-                            })
-
-            # Identify all components that were merged to remove them from headers
-            merged_component_codes = set()
-            for merge_rule in merged_exams:
-                merged_component_codes.update(merge_rule['components'])
-
-            # Identify all merged display names to protect them from filtering
-            merged_display_names = [
-                rule.get('display_as', rule['name']) for rule in merged_exams]
-
-            # Filter returned assessment types if active list is configured
-            if active_assessments:
-                returned_assessment_types = [
-                    at for at in returned_assessment_types
-                    if (at['code'] in active_assessments or at['code'] in merged_display_names)
-                    and at['code'] not in merged_component_codes
-                ]
-            else:
-                returned_assessment_types = [
-                    at for at in returned_assessment_types
-                    if at['code'] not in merged_component_codes
-                ]
-
-        # FORCE 100 Max Total as requested by user
-        for subject_id, subject_data in subject_scores.items():
-            subject_data['max_total'] = 100.0
-
-        # Update header maxes for consistency with the 100% total
-        # We'll set the assessment type maxes to match their contribution to 100
-        total_at_max = sum(at['max_score'] for at in returned_assessment_types)
-        if total_at_max > 0:
-            header_scale = 100.0 / total_at_max
-            for at in returned_assessment_types:
-                if 'max_score' in at:
-                    at['max_score'] = at['max_score'] * header_scale
-
-        # Sort by order
-        returned_assessment_types.sort(key=lambda x: x.get('order', 0))
-
-        # Convert sections to dictionary format for JSON serialization
-        sections_data = []
-        for section in sections:
-            if hasattr(section, 'to_dict'):
-                sections_data.append(section.to_dict())
-            else:
-                # For CombinedSection objects
-                sections_data.append({
-                    "section_id": getattr(section, 'section_id', f"combined_{section.name.lower()}") ,
-                    "name": section.name,
-                    "abbreviation": section.abbreviation,
-                    "level": section.level,
-                    "description": getattr(section, 'description', 'Combined secondary section'),
-                    "is_active": getattr(section, 'is_active', True),
-                    "school_id": getattr(section, 'school_id', None),
-                    "classrooms_count": getattr(section, 'get_classrooms_count', lambda: 0)(),
-                    "created_at": None,
-                    "updated_at": None
-                })
-        
-        # Format sections with commas and 'and' for display
-        def format_sections_for_display(sections_list):
-            if not sections_list:
-                return ''
-            if len(sections_list) == 1:
-                return sections_list[0]['name']
-            elif len(sections_list) == 2:
-                return f"{sections_list[0]['name']} and {sections_list[1]['name']}"
-            else:
-                names = [s['name'] for s in sections_list]
-                last = names.pop()
-                # Use Oxford comma for clarity
-                return f"{', '.join(names)}, and {last}"
-        
-        # Convert sections to dictionary format for JSON serialization
-        sections_data = []
-        for section in sections:
-            if hasattr(section, 'to_dict'):
-                sections_data.append(section.to_dict())
-            else:
-                # For CombinedSection objects
-                sections_data.append({
-                    "section_id": getattr(section, 'section_id', f"combined_{section.name.lower()}") ,
-                    "name": section.name,
-                    "abbreviation": section.abbreviation,
-                    "level": section.level,
-                    "description": getattr(section, 'description', 'Combined secondary section'),
-                    "is_active": getattr(section, 'is_active', True),
-                    "school_id": getattr(section, 'school_id', None),
-                    "classrooms_count": getattr(section, 'get_classrooms_count', lambda: 0)(),
-                    "created_at": None,
-                    "updated_at": None
-                })
-
         # --- Subject positions & teacher remarks ---
-        all_class_student_ids = [
-            sid for (sid,) in db.session.query(User.id).filter(
-                User.class_room_id == class_room_id,
-                User.role == 'student'
-            ).all()
-        ]
-
-        # Bulk-fetch all published/CBT grades for the entire class this term
-        all_class_grades = db.session.query(
-            Grade.subject_id,
-            Grade.student_id,
-            Grade.score
-        ).filter(
-            Grade.class_room_id == class_room_id,
-            Grade.term_id == term_id,
-            Grade.student_id.in_(all_class_student_ids),
-            db.or_(Grade.is_published == True, Grade.is_from_cbt == True)
-        ).all()
-
-        # Build per-subject totals per student: {subject_id: {student_id: total}}
-        subject_student_totals = {}
-        for subj_id, stu_id, score in all_class_grades:
-            subject_student_totals.setdefault(subj_id, {})
-            subject_student_totals[subj_id][stu_id] = (
-                subject_student_totals[subj_id].get(stu_id, 0) + score
-            )
-
-        grade_ranges = grade_scale.get_grade_ranges() if grade_scale else []
-
         for subject_id, subject_data in subject_scores.items():
             totals = subject_student_totals.get(subject_id, {})
             ranked = sorted(totals.items(), key=lambda x: x[1], reverse=True)
@@ -610,18 +812,18 @@ class ReportGenerator:
 
             max_total = subject_data.get('max_total', 0)
             subj_pct = (subject_data['total'] / max_total * 100) if max_total > 0 else 0
-            teacher_remark = ''
-            for r in grade_ranges:
-                if r['min_score'] <= subj_pct <= r['max_score']:
-                    teacher_remark = r.get('remark', '')
-                    break
-            subject_data['teacher_remark'] = teacher_remark
+            subject_data['teacher_remark'] = ReportGenerator.get_remark(
+                subj_pct, {'grade_ranges': grade_ranges} if grade_ranges else None
+            )
 
         # --- Attendance stats ---
-        attendance_records = Attendance.query.filter_by(
-            student_id=student_id,
-            term_id=term_id
-        ).all()
+        if _shared is not None:
+            attendance_records = _shared['attendance_by_student'].get(student_id, [])
+        else:
+            attendance_records = Attendance.query.filter_by(
+                student_id=student_id,
+                term_id=term_id
+            ).all()
         present_count = sum(
             1 for a in attendance_records if a.status in ('present', 'late', 'excused')
         )
@@ -662,7 +864,7 @@ class ReportGenerator:
             },
             'school': {
                 'name': school.school_name,
-                'logo': school.logo,
+                'logo': _shared['embedded_logo'] if _shared is not None else school.logo,
                 'address': school.address,
                 'phone': school.phone,
                 'motto': school.motto
@@ -690,10 +892,10 @@ class ReportGenerator:
             'custom_variables': config.get_layout_config().get('custom_variables', {}) if config and config.get_layout_config() else {},
             'trait_scores': {
                 st.trait_definition.name: st.score
-                for st in StudentTrait.query.filter_by(student_id=user.id, term_id=term_id).all()
+                for st in (_shared['traits_by_student'].get(user.id, []) if _shared is not None else StudentTrait.query.filter_by(student_id=user.id, term_id=term_id).all())
                 if st.trait_definition
             },
-            'trait_definitions': [
+            'trait_definitions': _shared['trait_definitions'] if _shared is not None else [
                 {'name': t.name, 'max_score': t.max_score}
                 for t in TraitDefinition.query.filter_by(school_id=school.school_id, is_active=True).order_by(TraitDefinition.sort_order).all()
             ],
@@ -779,14 +981,6 @@ class ReportGenerator:
                 f'{first_name}\'s performance this term is below expectation. '
                 f'A complete turnaround in study habits is urgently needed. '
                 f'Parental guidance and extra lessons are highly recommended.'
-            )
-
-        # Attendance modifier
-        att_rate = _attendance_rate()
-        if days_open > 0 and att_rate < 0.8:
-            teacher_remarks += (
-                f' Note: Attendance has been poor ({present} of {days_open} days). '
-                f'Regular attendance is critical for academic progress.'
             )
 
         # --- House Master's Comment ---
@@ -912,16 +1106,33 @@ class ReportGenerator:
 
     @staticmethod
     def get_class_report_data(class_room_id, term_id, config_id=None):
-        """Get report data for all students in a class"""
+        """Get report data for all students in a class (optimized with shared context)"""
+        # Pre-compute all class-invariant data once
+        _shared = ReportGenerator._build_shared_context(class_room_id, term_id, config_id)
+        if _shared is None:
+            return []
+
         students = User.query.filter_by(
             class_room_id=class_room_id,
             role='student'
         ).all()
 
+        student_ids = [s.id for s in students]
+
+        # Bulk sync CBT exam records once for all students (instead of per-student)
+        from utils.grade_sync import sync_class_exam_records
+        try:
+            sync_result = sync_class_exam_records(
+                student_ids, class_id=class_room_id, term_id=term_id)
+            if sync_result['synced'] > 0 or sync_result['updated'] > 0:
+                print(f"Bulk-synced CBT scores: {sync_result['synced']} new, {sync_result['updated']} updated")
+        except Exception as e:
+            print(f"Warning: Error during bulk CBT sync: {str(e)}")
+
         reports = []
         for student in students:
             report_data = ReportGenerator.get_student_scores(
-                student.id, term_id, class_room_id, config_id
+                student.id, term_id, class_room_id, config_id, _shared=_shared
             )
             if report_data:
                 reports.append(report_data)
@@ -1030,14 +1241,20 @@ class ReportGenerator:
         
         # Check if config has layout_config
         if config and config.get('layout_config'):
+            template_name = config['layout_config'].get('template', 'unknown')
             try:
+                print(f"[REPORT] Using layout template: {template_name}")
                 return ReportGenerator.generate_report_with_layout(report_data, config['layout_config'])
             except Exception as e:
-                print(f"Error generating report with layout: {str(e)}")
+                print(f"[REPORT] ERROR: Template '{template_name}' failed: {str(e)}")
+                import traceback
+                traceback.print_exc()
                 # Fallback to default HTML generation
+                print(f"[REPORT] Falling back to _generate_default_html")
                 return ReportGenerator._generate_default_html(report_data)
         else:
             # Use default hardcoded layout
+            print(f"[REPORT] No layout_config found in config, using _generate_default_html")
             return ReportGenerator._generate_default_html(report_data)
 
     @staticmethod
@@ -1074,6 +1291,15 @@ class ReportGenerator:
         # Embed images as base64 data URIs so WeasyPrint doesn't need HTTP fetches
         if student.get('image'):
             student['image'] = ReportGenerator._embed_image(student['image'])
+        else:
+            # Default avatar based on gender
+            gender = student.get('gender', '')
+            if gender and gender.lower() == 'male':
+                default_avatar = os.path.join('static', 'images', 'student', 'default', 'st_male.png')
+            else:
+                default_avatar = os.path.join('static', 'images', 'student', 'default', 'st_neutral_femal.png')
+            student['image'] = ReportGenerator._embed_image(default_avatar)
+
         if school.get('logo'):
             school['logo'] = ReportGenerator._embed_image(school['logo'])
 
@@ -1090,6 +1316,7 @@ class ReportGenerator:
                 page_settings=page_settings,
                 sections=sections,
                 custom_css=custom_css,
+                font_css=_FONT_CSS,
             )
             return html
         except Exception as e:
@@ -1153,11 +1380,11 @@ class ReportGenerator:
             'grade_scale': {
                 'grade_ranges': [
                     {'grade': 'A', 'min_score': 70, 'max_score': 100, 'remark': 'Excellent'},
-                    {'grade': 'B', 'min_score': 60, 'max_score': 69, 'remark': 'Very Good'},
-                    {'grade': 'C', 'min_score': 50, 'max_score': 59, 'remark': 'Good'},
-                    {'grade': 'D', 'min_score': 45, 'max_score': 49, 'remark': 'Fair'},
-                    {'grade': 'E', 'min_score': 40, 'max_score': 44, 'remark': 'Pass'},
-                    {'grade': 'F', 'min_score': 0, 'max_score': 39, 'remark': 'Fail'},
+                    {'grade': 'B', 'min_score': 60, 'max_score': 69.99, 'remark': 'Very Good'},
+                    {'grade': 'C', 'min_score': 50, 'max_score': 59.99, 'remark': 'Good'},
+                    {'grade': 'D', 'min_score': 45, 'max_score': 49.99, 'remark': 'Fair'},
+                    {'grade': 'E', 'min_score': 40, 'max_score': 44.99, 'remark': 'Pass'},
+                    {'grade': 'F', 'min_score': 0, 'max_score': 39.99, 'remark': 'Fail'},
                 ]
             },
             'trait_scores': {
@@ -1206,15 +1433,15 @@ class ReportGenerator:
                     {'grade': 'A', 'min_score': 70,
                         'max_score': 100, 'remark': 'Excellent'},
                     {'grade': 'B', 'min_score': 60,
-                        'max_score': 69, 'remark': 'Very Good'},
+                        'max_score': 69.99, 'remark': 'Very Good'},
                     {'grade': 'C', 'min_score': 50,
-                        'max_score': 59, 'remark': 'Good'},
+                        'max_score': 59.99, 'remark': 'Good'},
                     {'grade': 'D', 'min_score': 45,
-                        'max_score': 49, 'remark': 'Fair'},
+                        'max_score': 49.99, 'remark': 'Fair'},
                     {'grade': 'E', 'min_score': 40,
-                        'max_score': 44, 'remark': 'Pass'},
+                        'max_score': 44.99, 'remark': 'Pass'},
                     {'grade': 'F', 'min_score': 0,
-                        'max_score': 39, 'remark': 'Fail'},
+                        'max_score': 39.99, 'remark': 'Fail'},
                 ]
             }
 
@@ -1328,7 +1555,7 @@ class ReportGenerator:
             vertical-align: middle;
             text-align: center;
         }}
-        .student-icon {
+        .student-icon {{
             width: 70px;
             height: 70px;
             border-radius: 10px;
@@ -1337,14 +1564,14 @@ class ReportGenerator:
             justify-content: center;
             border: 3px solid white;
             box-shadow: 0 2px 5px rgba(99, 102, 241, 0.3);
-        }
-        .student-icon img {
+        }}
+        .student-icon img {{
             width: 64px;
             height: 64px;
             border-radius: 7px;
             object-fit: cover;
-        }
-        .student-default {
+        }}
+        .student-default {{
             width: 64px;
             height: 64px;
             background: linear-gradient(135deg, #6366f1, #8b5cf6);
@@ -1355,12 +1582,12 @@ class ReportGenerator:
             color: white;
             font-weight: bold;
             font-size: 24px;
-        }
-        .student-details {
+        }}
+        .student-details {{
             display: table-cell;
             vertical-align: middle;
             padding-left: 15px;
-        }
+        }}
         .student-info-table {{
             width: 100%;
             border-collapse: collapse;
@@ -1756,15 +1983,15 @@ class ReportGenerator:
                     {'grade': 'A', 'min_score': 70,
                         'max_score': 100, 'remark': 'Excellent'},
                     {'grade': 'B', 'min_score': 60,
-                        'max_score': 69, 'remark': 'Very Good'},
+                        'max_score': 69.99, 'remark': 'Very Good'},
                     {'grade': 'C', 'min_score': 50,
-                        'max_score': 59, 'remark': 'Good'},
+                        'max_score': 59.99, 'remark': 'Good'},
                     {'grade': 'D', 'min_score': 45,
-                        'max_score': 49, 'remark': 'Fair'},
+                        'max_score': 49.99, 'remark': 'Fair'},
                     {'grade': 'E', 'min_score': 40,
-                        'max_score': 44, 'remark': 'Pass'},
+                        'max_score': 44.99, 'remark': 'Pass'},
                     {'grade': 'F', 'min_score': 0,
-                        'max_score': 39, 'remark': 'Fail'},
+                        'max_score': 39.99, 'remark': 'Fail'},
                 ]
             }
 

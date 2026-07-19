@@ -3,6 +3,10 @@
 import importlib
 import io
 import os
+import re
+import threading
+import time
+import uuid
 from datetime import date, datetime
 from functools import wraps
 
@@ -94,20 +98,199 @@ def admin_or_staff_required(f):
     return decorated_function
 
 
+# Pre-compute static folder path and compile regex for _rewrite_static_urls
+_STATIC_FOLDER = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "static"
+).replace("\\", "/")
+_REWRITE_REGEX = re.compile(r'(url\(["\']?)/static/')
+
+
 def _rewrite_static_urls(html_string):
     """Rewrite /static/ paths to file:/// URLs for WeasyPrint local font loading."""
-    import re
+    return _REWRITE_REGEX.sub(rf'\1file:///{_STATIC_FOLDER}/', html_string)
 
-    # Resolve static folder from project root (no Flask context needed)
-    _project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    static_folder = os.path.join(_project_root, "static").replace("\\", "/")
-    # Replace /static/... with file:///absolute/path/static/...
-    html_string = re.sub(
-        r'(url\(["\']?)/static/',
-        rf'\1file:///{static_folder}/',
-        html_string,
-    )
-    return html_string
+
+# --- Async job store for batch PDF generation ---
+_JOBS = {}
+_JOBS_LOCK = threading.Lock()
+_JOB_MAX_AGE = 600  # 10 minutes
+
+
+def _apply_layout_config(report_data, layout_config_id):
+    """Inject layout_config into report_data based on layout_config_id."""
+    if not layout_config_id:
+        return
+    if layout_config_id == "default2":
+        if not report_data.get("config"):
+            report_data["config"] = {}
+        report_data["config"]["layout_config"] = {"template": "default2"}
+    elif layout_config_id == "default3":
+        if not report_data.get("config"):
+            report_data["config"] = {}
+        report_data["config"]["layout_config"] = {"template": "default3"}
+    else:
+        lc_model = ReportConfig.query.get(layout_config_id)
+        if lc_model:
+            lc = lc_model.get_layout_config()
+            if lc:
+                if not report_data.get("config"):
+                    report_data["config"] = {}
+                report_data["config"]["layout_config"] = lc
+
+
+def _generate_class_pdf_worker(job_id, class_room_id, term_id, config_id,
+                                layout_config_id, typography, filename):
+    """Background thread that generates the batch PDF and updates job progress."""
+    from app import app
+
+    job = _JOBS.get(job_id)
+    if not job:
+        return
+
+    with app.app_context():
+        try:
+            from weasyprint import HTML
+            from pypdf import PdfWriter, PdfReader
+            from concurrent.futures import ThreadPoolExecutor, as_completed
+            import multiprocessing
+
+            # Phase 1: Fetch report data
+            with _JOBS_LOCK:
+                job["phase"] = "fetch"
+                job["message"] = "Loading student data..."
+
+            reports = ReportGenerator.get_class_report_data(class_room_id, term_id, config_id)
+
+            if not reports:
+                with _JOBS_LOCK:
+                    job["state"] = "failed"
+                    job["error"] = "No reports found for this class"
+                return
+
+            total = len(reports)
+
+            with _JOBS_LOCK:
+                job["total"] = total
+                job["phase"] = "html"
+                job["message"] = f"Generating HTML for {total} students..."
+
+            # Phase 2: Generate HTML for each student (parallelized)
+            html_parts = [None] * total
+            html_done = 0
+            html_lock = threading.Lock()
+
+            def _generate_html_with_progress(idx, rd):
+                with app.app_context():
+                    nonlocal html_done
+                    rd["typography"] = typography
+                    _apply_layout_config(rd, layout_config_id)
+                    html_content = ReportGenerator.generate_report_html(rd)
+                    with html_lock:
+                        html_done += 1
+                        with _JOBS_LOCK:
+                            job["current"] = html_done
+                            job["message"] = f"HTML: {html_done}/{total}"
+                    return idx, html_content
+
+            html_workers = min(total, multiprocessing.cpu_count(), 4)
+            with ThreadPoolExecutor(max_workers=html_workers) as executor:
+                futures = {
+                    executor.submit(_generate_html_with_progress, i, rd): i
+                    for i, rd in enumerate(reports)
+                }
+                for future in as_completed(futures, timeout=120):
+                    idx, html_content = future.result()
+                    html_parts[idx] = html_content
+                    if hasattr(ReportGenerator, "_image_cache") and len(ReportGenerator._image_cache) > 100:
+                        ReportGenerator._image_cache.clear()
+
+            html_parts = list(html_parts)
+
+            # Phase 3: Parallel PDF rendering
+            with _JOBS_LOCK:
+                job["phase"] = "pdf"
+                job["current"] = 0
+                job["message"] = f"Rendering PDFs (0/{total})..."
+
+            _base_cls = os.path.join(
+                os.path.dirname(os.path.dirname(os.path.abspath(__file__))), ""
+            ).replace("\\", "/")
+
+            def _render_single_pdf(idx, html_string):
+                rewritten = _rewrite_static_urls(html_string)
+                return idx, HTML(string=rewritten, base_url=_base_cls).write_pdf(
+                    optimize_size=("fonts", "images"),
+                    presentational_hints=False,
+                    uncompressed_pdf=False,
+                    javascript=False,
+                    resolution=60,
+                    embed_fonts=True,
+                    smart_quotes=False,
+                    attachments=False,
+                    pdfua=False,
+                    tagged=False,
+                    forms=False,
+                    outline=False,
+                )
+
+            max_workers = min(total, multiprocessing.cpu_count(), 6)
+            pdf_results = [None] * total
+            pdf_done = 0
+            pdf_lock = threading.Lock()
+
+            def _render_with_progress(idx, html_string):
+                nonlocal pdf_done
+                result = _render_single_pdf(idx, html_string)
+                with pdf_lock:
+                    pdf_done += 1
+                    with _JOBS_LOCK:
+                        job["current"] = pdf_done
+                        job["message"] = f"PDF: {pdf_done}/{total}"
+                return result
+
+            with ThreadPoolExecutor(max_workers=max_workers) as executor:
+                futures = {
+                    executor.submit(_render_with_progress, i, html): i
+                    for i, html in enumerate(html_parts)
+                }
+                for future in as_completed(futures, timeout=300):
+                    idx, pdf_bytes = future.result()
+                    pdf_results[idx] = pdf_bytes
+
+            # Phase 4: Merge
+            with _JOBS_LOCK:
+                job["phase"] = "merge"
+                job["current"] = total
+                job["message"] = "Merging PDFs..."
+
+            writer = PdfWriter()
+            for pdf_bytes in pdf_results:
+                if pdf_bytes:
+                    reader = PdfReader(io.BytesIO(pdf_bytes))
+                    for page in reader.pages:
+                        writer.add_page(page)
+
+            merged_buffer = io.BytesIO()
+            writer.write(merged_buffer)
+            merged_buffer.seek(0)
+
+            # Store result in memory (for download)
+            with _JOBS_LOCK:
+                job["state"] = "done"
+                job["phase"] = "done"
+                job["pdf_data"] = merged_buffer.getvalue()
+                job["filename"] = filename
+                job["message"] = f"Complete — {total} reports ready"
+                job["completed_at"] = time.time()
+
+            del writer, merged_buffer, pdf_results
+
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            with _JOBS_LOCK:
+                job["state"] = "failed"
+                job["error"] = str(e)
 
 
 @report_bp.route("/config")
@@ -849,7 +1032,7 @@ def download_single_pdf():
                     html_string = _rewrite_static_urls(html_string)
                     pdf_bytes = HTML(string=html_string, base_url=_base).write_pdf(
                         optimize_size=("fonts", "images"),  # Compress fonts & images
-                        presentational_hints=True,  # Use CSS efficiently
+                        presentational_hints=False,  # Template is pure CSS, no HTML hints needed
                         uncompressed_pdf=False,  # Compress PDF output
                         # Disable JavaScript for faster rendering (not needed for static reports)
                         javascript=False,
@@ -998,269 +1181,116 @@ def download_single_pdf():
 @report_bp.route("/api/download-class-pdf", methods=["POST"])
 @admin_or_staff_required
 def download_class_pdf():
-    """Download all student reports for a class as a single PDF with performance optimizations"""
+    """Start async batch PDF generation and return a job_id for polling."""
     try:
         data = request.get_json()
         class_room_id = data.get("class_room_id")
         term_id = data.get("term_id")
         config_id = data.get("config_id")
+        layout_config_id = data.get("layout_config_id")
 
-        # Parse typography level (1-7, default 4)
         try:
             typography = max(1, min(7, int(data.get("typography", 4))))
         except (TypeError, ValueError):
             typography = 4
 
         if not all([class_room_id, term_id]):
-            return jsonify(
-                {"success": False, "error": "Missing required parameters"}
-            ), 400
+            return jsonify({"success": False, "error": "Missing required parameters"}), 400
 
-        # Batch process reports with optimizations
-        if WEASYPRINT_AVAILABLE:
-            # For WeasyPrint, generate all HTML first, then combine for better performance
-            import time
+        if not WEASYPRINT_AVAILABLE:
+            return jsonify({"success": False, "error": "PDF generation not available. Install WeasyPrint."}), 500
 
-            start_time = time.time()
+        # Build filename
+        class_room = ClassRoom.query.get(class_room_id)
+        term = SchoolTerm.query.get(term_id)
+        class_name = class_room.class_room_name.replace(" ", "_") if class_room else "Class"
+        term_name = term.term_name.replace(" ", "_") if term else "Term"
+        filename = f"Reports_{class_name}_{term_name}.pdf"
 
-            # Get all reports for the class with batch optimization
-            reports = ReportGenerator.get_class_report_data(
-                class_room_id, term_id, config_id
-            )
+        # Create job
+        job_id = uuid.uuid4().hex[:16]
+        with _JOBS_LOCK:
+            _JOBS[job_id] = {
+                "state": "running",
+                "phase": "starting",
+                "current": 0,
+                "total": 0,
+                "message": "Starting...",
+                "error": None,
+                "pdf_data": None,
+                "filename": filename,
+                "created_at": time.time(),
+                "completed_at": None,
+            }
 
-            if not reports:
-                return jsonify(
-                    {"success": False, "error": "No reports found for this class"}
-                ), 404
+        # Launch background thread
+        t = threading.Thread(
+            target=_generate_class_pdf_worker,
+            args=(job_id, class_room_id, term_id, config_id,
+                  layout_config_id, typography, filename),
+            daemon=True,
+        )
+        t.start()
 
-            # Create filename
-            class_room = ClassRoom.query.get(class_room_id)
-            term = SchoolTerm.query.get(term_id)
-            class_name = (
-                class_room.class_room_name.replace(" ", "_") if class_room else "Class"
-            )
-            term_name = term.term_name.replace(" ", "_") if term else "Term"
-            filename = f"Reports_{class_name}_{term_name}.pdf"
+        # Cleanup old jobs (best-effort)
+        now = time.time()
+        with _JOBS_LOCK:
+            stale = [k for k, v in _JOBS.items() if now - v.get("created_at", 0) > _JOB_MAX_AGE]
+            for k in stale:
+                _JOBS.pop(k, None)
 
-            # Generate all HTML content first (batch processing)
-            html_parts = []
-            for i, report_data in enumerate(reports):
-                student_name = report_data["student"]["name"]
-                report_data['typography'] = typography
-                html_content = ReportGenerator.generate_report_html(report_data)
-                html_parts.append(html_content)
-
-                # Clear image cache periodically during bulk operations
-                if (
-                    hasattr(ReportGenerator, "_image_cache")
-                    and len(ReportGenerator._image_cache) > 100
-                ):
-                    ReportGenerator._image_cache.clear()
-
-                # Clear HTML cache periodically during bulk operations
-                if (
-                    hasattr(ReportGenerator, "_html_cache")
-                    and len(ReportGenerator._html_cache) > 50
-                ):
-                    ReportGenerator._html_cache.clear()
-
-            # print(f"All HTML generated in {time.time() - start_time:.2f}s")
-
-            # Combine with page breaks for single PDF generation
-            combined_html = '<div style="page-break-after: always;"></div>'.join(
-                html_parts
-            )
-
-            # Convert to PDF with optimized settings
-            pdf_start = time.time()
-            import queue
-
-            # Add timeout to prevent infinite waits (cross-platform approach)
-            import threading
-
-            from weasyprint import HTML
-
-            def generate_pdf(q, html_string):
-                try:
-                    try:
-                        _base_cls = request.host_url
-                    except RuntimeError:
-                        _base_cls = ''
-                    html_string = _rewrite_static_urls(html_string)
-                    pdf_bytes = HTML(string=html_string, base_url=_base_cls).write_pdf(
-                        optimize_size=("fonts", "images"),  # Compress fonts & images
-                        presentational_hints=True,  # Use CSS efficiently
-                        uncompressed_pdf=False,  # Compress PDF output
-                        # Disable JavaScript for faster rendering (not needed for static reports)
-                        javascript=False,
-                        # Reduce DPI for faster rendering
-                        resolution=60,  # Even lower DPI for faster rendering
-                        # Enable font embedding so custom fonts appear in PDF
-                        embed_fonts=True,
-                        # Disable smart anchors for faster processing
-                        smart_quotes=False,
-                        # Disable attachments for faster processing
-                        attachments=False,
-                        # Disable PDF/UA for faster processing
-                        pdfua=False,
-                        # Disable tagged PDF for faster processing
-                        tagged=False,
-                        # Disable PDF forms for faster processing
-                        forms=False,
-                        # Disable PDF outlines for faster processing
-                        outline=False,
-                    )
-                    q.put(("success", pdf_bytes))
-                except Exception as e:
-                    q.put(("error", e))
-
-            # Create a queue and thread for PDF generation
-            q = queue.Queue()
-            t = threading.Thread(target=generate_pdf, args=(q, combined_html))
-            t.daemon = True
-            t.start()
-
-            try:
-                # Wait for the result with a timeout of 90 seconds (increased for bulk PDFs)
-                result_type, pdf_bytes_or_error = q.get(timeout=90)
-                if result_type == "error":
-                    raise pdf_bytes_or_error
-                pdf_bytes = pdf_bytes_or_error
-            except queue.Empty:
-                # print("ERROR: Bulk PDF generation timed out after 90 seconds")
-                return jsonify(
-                    {
-                        "success": False,
-                        "error": "Bulk PDF generation timed out. Please try generating fewer reports at once.",
-                    }
-                ), 500
-            pdf_time = time.time() - pdf_start
-            total_time = time.time() - start_time
-            # print(f"PDF conversion took {pdf_time:.2f}s")
-            # print(f"Total processing time: {total_time:.2f}s")
-
-            # Log performance metrics for monitoring
-            if (
-                pdf_time > 30
-            ):  # If PDF generation takes more than 30 seconds, log details
-                # print(f"  WARNING: Slow PDF generation detected for class report")
-                # print(f"    HTML size: {len(combined_html)} characters")
-                # Count images in HTML
-                import re
-
-                img_count = len(re.findall(r"<img[^>]+>", combined_html))
-                # print(f"    Images embedded: {img_count}")
-                # print(f"    Number of students: {len(reports)}")
-
-            return send_file(
-                io.BytesIO(pdf_bytes),
-                mimetype="application/pdf",
-                as_attachment=True,
-                download_name=filename,
-            )
-        elif XHTML2PDF_AVAILABLE:
-            # Get all reports for the class
-            reports = ReportGenerator.get_class_report_data(
-                class_room_id, term_id, config_id
-            )
-
-            if not reports:
-                return jsonify(
-                    {"success": False, "error": "No reports found for this class"}
-                ), 404
-
-            # Create filename
-            class_room = ClassRoom.query.get(class_room_id)
-            term = SchoolTerm.query.get(term_id)
-            class_name = (
-                class_room.class_room_name.replace(" ", "_") if class_room else "Class"
-            )
-            term_name = term.term_name.replace(" ", "_") if term else "Term"
-            filename = f"Reports_{class_name}_{term_name}.pdf"
-
-            # Generate combined HTML using simplified template with optimizations
-            html_parts = []
-            for i, report_data in enumerate(reports):
-                student_name = report_data["student"]["name"]
-                # print(f"DEBUG: Generating simple HTML for student {i+1}/{len(reports)}: {student_name}")
-                html_content = ReportGenerator.generate_simple_report_html(report_data)
-                html_parts.append(html_content)
-
-            # Combine with page breaks (xhtml2pdf uses <pdf:nextpage /> or CSS page-break)
-            # xhtml2pdf supports standard CSS page-break-after: always
-            combined_html = '<div style="page-break-after: always;"></div>'.join(
-                html_parts
-            )
-
-            # Convert to PDF using xhtml2pdf with optimized settings
-            pdf_buffer = io.BytesIO()
-            import queue
-
-            # Add timeout to prevent infinite waits (cross-platform approach)
-            import threading
-
-            from xhtml2pdf import pisa
-
-            def generate_pdf(q, html_string, buffer):
-                try:
-                    pisa_status = pisa.CreatePDF(
-                        html_string, dest=buffer, show_error_as_pdf=True
-                    )
-                    q.put(("success", pisa_status))
-                except Exception as e:
-                    q.put(("error", e))
-
-            # Create a queue and thread for PDF generation
-            q = queue.Queue()
-            t = threading.Thread(
-                target=generate_pdf, args=(q, combined_html, pdf_buffer)
-            )
-            t.daemon = True
-            t.start()
-
-            try:
-                # Wait for the result with a timeout of 60 seconds
-                result_type, pisa_status_or_error = q.get(timeout=60)
-                if result_type == "error":
-                    raise pisa_status_or_error
-                pisa_status = pisa_status_or_error
-            except queue.Empty:
-                # print("ERROR: Bulk PDF generation timed out after 60 seconds")
-                return jsonify(
-                    {
-                        "success": False,
-                        "error": "Bulk PDF generation timed out. Please try generating fewer reports at once.",
-                    }
-                ), 500
-
-            if pisa_status.err:
-                return jsonify(
-                    {"success": False, "error": "PDF generation failed"}
-                ), 500
-
-            pdf_buffer.seek(0)
-            return send_file(
-                pdf_buffer,
-                mimetype="application/pdf",
-                as_attachment=True,
-                download_name=filename,
-            )
-        else:
-            return jsonify(
-                {
-                    "success": False,
-                    "error": "PDF generation not available. Install WeasyPrint or xhtml2pdf.",
-                }
-            ), 500
+        return jsonify({"success": True, "job_id": job_id})
 
     except Exception as e:
-        # Log the full error for debugging
         import traceback
-
-        error_msg = f"Error in download_class_pdf: {str(e)}"
-        # print(error_msg)
         traceback.print_exc()
-        return jsonify({"success": False, "error": error_msg}), 500
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@report_bp.route("/api/download-class-pdf-status/<job_id>", methods=["GET"])
+@admin_or_staff_required
+def download_class_pdf_status(job_id):
+    """Return current progress for a batch PDF job."""
+    with _JOBS_LOCK:
+        job = _JOBS.get(job_id)
+
+    if not job:
+        return jsonify({"success": False, "error": "Job not found or expired"}), 404
+
+    # Don't send pdf_data in status response
+    progress = {k: v for k, v in job.items() if k != "pdf_data"}
+    return jsonify(progress)
+
+
+@report_bp.route("/api/download-class-pdf-result/<job_id>", methods=["GET"])
+@admin_or_staff_required
+def download_class_pdf_result(job_id):
+    """Download the completed batch PDF."""
+    with _JOBS_LOCK:
+        job = _JOBS.get(job_id)
+
+    if not job:
+        return jsonify({"success": False, "error": "Job not found or expired"}), 404
+
+    if job["state"] != "done":
+        return jsonify({"success": False, "error": "Job not yet complete"}), 409
+
+    pdf_data = job.get("pdf_data")
+    filename = job.get("filename", "reports.pdf")
+
+    if not pdf_data:
+        return jsonify({"success": False, "error": "No PDF data found"}), 500
+
+    # Clean up job after download
+    with _JOBS_LOCK:
+        _JOBS.pop(job_id, None)
+
+    return send_file(
+        io.BytesIO(pdf_data),
+        mimetype="application/pdf",
+        as_attachment=True,
+        download_name=filename,
+    )
 
 
 @report_bp.route("/api/grade-scales", methods=["GET"])
@@ -2417,7 +2447,7 @@ def export_broad_sheet_pdf(
         html_content = _rewrite_static_urls(html_content)
         pdf_bytes = HTML(string=html_content, base_url=request.host_url).write_pdf(
             embed_fonts=True,
-            presentational_hints=True,
+            presentational_hints=False,
         )
 
         # Create filename
@@ -3396,7 +3426,7 @@ def download_recording_sheet_pdf():
         html = _rewrite_static_urls(html)
         pdf_bytes = HTML(string=html, base_url=request.host_url).write_pdf(
             optimize_size=("fonts", "images"),
-            presentational_hints=True,
+            presentational_hints=False,
             javascript=False,
             uncompressed_pdf=False,
             embed_fonts=True,

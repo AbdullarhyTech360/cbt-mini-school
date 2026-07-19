@@ -4,6 +4,48 @@ let currentReportData = null;
 let subjectOrderSortable = null;
 let availableConfigs = [];
 
+// --- Global generation lock: prevents simultaneous PDF operations ---
+window._isGenerating = false;
+
+function setAllActionButtonsDisabled(disabled) {
+  window._isGenerating = disabled;
+
+  // Collect all actionable buttons across every tab
+  const selectors = [
+    '#studentsList button',
+    'button[onclick*="downloadReport"]',
+    'button[onclick*="previewReport"]',
+    'button[onclick*="downloadAllReports"]',
+    'button[onclick*="loadStudents"]',
+    'button[onclick*="saveSubjectOrder"]',
+    'button[onclick*="generateClassList"]',
+    'button[onclick*="printClassList"]',
+    'button[onclick*="previewClassList"]',
+    'button[onclick*="generateRecordingSheet"]',
+    'button[onclick*="printRecordingSheet"]',
+    'button[onclick*="previewRecording"]',
+    'button[onclick*="checkAll"]',
+    'button[onclick*="uncheckAll"]',
+    '#preview-broad-sheet',
+    '#export-broad-sheet-pdf',
+    '#export-broad-sheet-excel',
+    '#downloadPdfBtn',
+    'button[onclick="downloadCurrentReport()"]',
+    'button[onclick="downloadFromPreview()"]',
+  ];
+
+  const buttons = document.querySelectorAll(selectors.join(', '));
+  buttons.forEach((btn) => {
+    if (disabled) {
+      btn.disabled = true;
+      btn.classList.add('opacity-50', 'cursor-not-allowed', 'pointer-events-none');
+    } else {
+      btn.disabled = false;
+      btn.classList.remove('opacity-50', 'cursor-not-allowed', 'pointer-events-none');
+    }
+  });
+}
+
 document.addEventListener("DOMContentLoaded", () => {
   loadTerms();
   loadClasses();
@@ -557,31 +599,32 @@ function showNotification(message, type = "info") {
 }
 
 // Global loading indicator functions
-function showGlobalLoading(message = "Processing...") {
-  // Create loading overlay if it doesn't exist
+function showGlobalLoading(message = "Processing...", progress = null) {
   let overlay = document.getElementById("global-loading-overlay");
   if (!overlay) {
     overlay = document.createElement("div");
     overlay.id = "global-loading-overlay";
     overlay.className =
       "fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50";
-    overlay.innerHTML = `
-            <div class="bg-white dark:bg-gray-800 rounded-xl p-6 flex flex-col items-center shadow-2xl">
-                <div class="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-4"></div>
-                <p class="text-gray-700 dark:text-gray-300 font-medium">${message}</p>
-            </div>
-        `;
     document.body.appendChild(overlay);
-  } else {
-    // Update message if overlay already exists
-    const messageElement = overlay.querySelector("p");
-    if (messageElement) {
-      messageElement.textContent = message;
-    }
-    overlay.classList.remove("hidden");
   }
 
-  // Prevent body scrolling
+  const pct = progress !== null ? Math.round(progress) : null;
+  const progressBar = pct !== null
+    ? `<div class="w-64 h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden mt-3">
+         <div class="h-full bg-blue-500 rounded-full transition-all duration-300" style="width: ${pct}%"></div>
+       </div>
+       <p class="text-xs text-gray-500 dark:text-gray-400 mt-1.5">${pct}%</p>`
+    : '';
+
+  overlay.innerHTML = `
+    <div class="bg-white dark:bg-gray-800 rounded-xl p-6 flex flex-col items-center shadow-2xl">
+        <div class="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-4"></div>
+        <p class="text-gray-700 dark:text-gray-300 font-medium">${message}</p>
+        ${progressBar}
+    </div>
+  `;
+  overlay.classList.remove("hidden");
   document.body.classList.add("overflow-hidden");
 }
 
@@ -590,8 +633,6 @@ function hideGlobalLoading() {
   if (overlay) {
     overlay.classList.add("hidden");
   }
-
-  // Restore body scrolling
   document.body.classList.remove("overflow-hidden");
 }
 
@@ -615,6 +656,7 @@ async function loadStudents() {
 
   // Show global loading indicator
   showGlobalLoading("Loading students...");
+  setAllActionButtonsDisabled(true);
 
   currentFilters = {
     term_id: termId,
@@ -650,6 +692,7 @@ async function loadStudents() {
   } finally {
     // Hide global loading indicator
     hideGlobalLoading();
+    setAllActionButtonsDisabled(false);
   }
 }
 
@@ -1051,6 +1094,7 @@ async function refreshCanvasPreview() {
 
 // Download from preview
 async function downloadFromPreview() {
+  if (window._isGenerating) return;
   if (!window.currentPreviewData) return;
 
   const btn = document.getElementById("downloadPdfBtn");
@@ -1058,15 +1102,13 @@ async function downloadFromPreview() {
   const previewContent = document.getElementById("canvasPreviewContent");
   let overlay = null;
 
+  setAllActionButtonsDisabled(true);
+
   try {
-    // Show loading state on button
     if (btn) {
-      btn.disabled = true;
-      btn.classList.add("opacity-50", "cursor-not-allowed");
       btn.innerHTML = '<span class="material-symbols-outlined text-sm animate-spin">progress_activity</span><span>Downloading...</span>';
     }
 
-    // Show overlay on preview area
     if (previewContent) {
       overlay = document.createElement("div");
       overlay.className = "absolute inset-0 bg-black bg-opacity-60 flex items-center justify-center z-10 rounded-lg";
@@ -1075,19 +1117,21 @@ async function downloadFromPreview() {
       previewContent.appendChild(overlay);
     }
 
-    // Class list data has `fields` array - use class list download
+    showGlobalLoading("Generating PDF...", 20);
+
     if (window.currentPreviewData.fields && typeof printClassList === 'function') {
       await printClassList();
       return;
     }
-    // Recording sheet data has `metadata` property - use recording download
     if (window.currentPreviewData.metadata && typeof printRecordingSheet === 'function') {
       await printRecordingSheet();
       return;
     }
     if (isServerSideLayout()) {
+      showGlobalLoading("Generating PDF...", 40);
       await generateServerSidePDF(window.currentPreviewData.student.id);
     } else {
+      showGlobalLoading("Generating PDF...", 40);
       await generateClientSidePDF(window.currentPreviewData);
     }
   } catch (error) {
@@ -1098,16 +1142,14 @@ async function downloadFromPreview() {
       type: "error",
     });
   } finally {
-    // Restore button state
+    hideGlobalLoading();
     if (btn) {
-      btn.disabled = false;
-      btn.classList.remove("opacity-50", "cursor-not-allowed");
       btn.innerHTML = origHTML;
     }
-    // Remove overlay
     if (overlay && overlay.parentNode) {
       overlay.parentNode.removeChild(overlay);
     }
+    setAllActionButtonsDisabled(false);
   }
 }
 // renderReportPreview function removed - using full page preview instead
@@ -1195,13 +1237,16 @@ function calculateResumptionDate(endDateStr, configResumptionDate = null) {
 // Modal functions removed - using full page preview instead
 
 async function downloadReport(studentId) {
-  // Show loading spinner
+  if (window._isGenerating) return;
+
+  // Disable all action buttons across the page
+  setAllActionButtonsDisabled(true);
+
+  // Show spinner on this specific student's download button
   const originalButtons = document.querySelectorAll(
     `button[onclick*="downloadReport('${studentId}')"]`
   );
   const originalButtonHtml = [];
-
-  // Store original HTML and show loading state
   originalButtons.forEach((button) => {
     originalButtonHtml.push(button.innerHTML);
     button.innerHTML = `
@@ -1210,23 +1255,22 @@ async function downloadReport(studentId) {
                 <span class="text-xs font-medium">Processing...</span>
             </div>
         `;
-    button.disabled = true;
-    button.classList.add("opacity-75", "cursor-not-allowed");
   });
 
   try {
     if (isServerSideLayout()) {
+      showGlobalLoading("Generating PDF...", 30);
       await generateServerSidePDF(studentId);
     } else if (currentReportData && currentReportData.student.id === studentId) {
+      showGlobalLoading("Generating PDF...", 30);
       await generateClientSidePDF(currentReportData);
     } else {
-      // Fetch report data from new API endpoint and then generate PDF
-      // Build query parameters (include HTML for canvas blocks rendering)
+      showGlobalLoading("Loading report data...", 10);
       const params = new URLSearchParams({
         term_id: currentFilters.term_id,
         class_room_id: currentFilters.class_room_id,
         config_id: currentFilters.config_id || "",
-        layout_config_id: currentFilters.layout_config_id || "",
+        layout_config_id: getSelectedLayoutConfigId(),
         include_html: "true",
       });
 
@@ -1236,8 +1280,8 @@ async function downloadReport(studentId) {
 
       const data = await response.json();
 
-      // Check if the response has the expected structure
       if (data && data.success && data.report) {
+        showGlobalLoading("Generating PDF...", 50);
         await generateClientSidePDF(data.report);
       } else if (data && !data.success) {
         throw new Error(
@@ -1255,50 +1299,53 @@ async function downloadReport(studentId) {
       type: "error",
     });
   } finally {
-    // Restore original button states
+    hideGlobalLoading();
     originalButtons.forEach((button, index) => {
       if (index < originalButtonHtml.length) {
         button.innerHTML = originalButtonHtml[index];
-        button.disabled = false;
-        button.classList.remove("opacity-75", "cursor-not-allowed");
       }
     });
+    setAllActionButtonsDisabled(false);
   }
 }
 
 async function downloadCurrentReport() {
-  if (currentReportData) {
-    // Show loading spinner on download button in preview modal
-    const downloadButton = document.querySelector(
-      'button[onclick="downloadCurrentReport()"]'
-    );
-    const originalHtml = downloadButton.innerHTML;
+  if (window._isGenerating) return;
+  if (!currentReportData) return;
 
+  setAllActionButtonsDisabled(true);
+
+  const downloadButton = document.querySelector(
+    'button[onclick="downloadCurrentReport()"]'
+  );
+  const originalHtml = downloadButton ? downloadButton.innerHTML : "";
+
+  if (downloadButton) {
     downloadButton.innerHTML = `
             <div class="flex items-center gap-2">
                 <div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
                 <span class="text-sm font-bold">Downloading...</span>
             </div>
         `;
-    downloadButton.disabled = true;
-    downloadButton.classList.add("opacity-75", "cursor-not-allowed");
+  }
 
-    try {
-      // Use client-side PDF generation
-      await generateClientSidePDF(currentReportData);
-    } catch (error) {
-      console.error("Error downloading report:", error);
-      showAlert({
-        title: "Error",
-        message: "Error generating PDF: " + error.message,
-        type: "error",
-      });
-    } finally {
-      // Restore original button state
+  showGlobalLoading("Generating PDF...", 30);
+
+  try {
+    await generateClientSidePDF(currentReportData);
+  } catch (error) {
+    console.error("Error downloading report:", error);
+    showAlert({
+      title: "Error",
+      message: "Error generating PDF: " + error.message,
+      type: "error",
+    });
+  } finally {
+    hideGlobalLoading();
+    if (downloadButton) {
       downloadButton.innerHTML = originalHtml;
-      downloadButton.disabled = false;
-      downloadButton.classList.remove("opacity-75", "cursor-not-allowed");
     }
+    setAllActionButtonsDisabled(false);
   }
 }
 
@@ -1348,24 +1395,20 @@ async function previewAllReports() {
 }
 
 async function downloadAllReports() {
+  if (window._isGenerating) return;
+
   if (currentStudents.length === 0) {
-    showAlert({
-      title: "Warning",
-      message: "No students loaded",
-      type: "warning",
-    });
+    showAlert({ title: "Warning", message: "No students loaded", type: "warning" });
     return;
   }
 
-  // Ensure we have required parameters
   const termId = currentFilters.term_id;
-  const classId = currentFilters.class_room_id; // This was the issue - it's class_room_id in filters but class_id in backend
+  const classId = currentFilters.class_room_id;
 
   if (!termId || !classId) {
     showAlert({
       title: "Error",
-      message:
-        "Missing required parameters for PDF generation. Please ensure term and class are selected.",
+      message: "Missing required parameters for PDF generation. Please ensure term and class are selected.",
       type: "error",
     });
     return;
@@ -1373,198 +1416,141 @@ async function downloadAllReports() {
 
   showConfirmModal({
     title: "Download All Reports",
-    message: `This will download individual PDF reports for all ${currentStudents.length} students. Continue?`,
+    message: `This will generate a single combined PDF for all ${currentStudents.length} students. Continue?`,
     confirmText: "Download",
     onConfirm: async () => {
-      // Show loading state for download all button
-      const downloadAllButton = document.querySelector(
-        'button[onclick="downloadAllReports()"]'
-      );
-      const originalHtml = downloadAllButton.innerHTML;
+      setAllActionButtonsDisabled(true);
 
+      const downloadAllButton = document.querySelector('button[onclick="downloadAllReports()"]');
+      const originalHtml = downloadAllButton.innerHTML;
       downloadAllButton.innerHTML = `
-                <div class="flex items-center gap-2">
-                    <div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                    <span class="text-sm font-bold">Processing...</span>
-                </div>
-            `;
-      downloadAllButton.disabled = true;
-      downloadAllButton.classList.add("opacity-75", "cursor-not-allowed");
+        <div class="flex items-center gap-2">
+          <div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+          <span class="text-sm font-bold">Starting...</span>
+        </div>`;
 
       try {
-        // Track successful downloads
-        let successCount = 0;
-        let errorCount = 0;
+        const typographyEl = document.getElementById("typographyLevel");
+        const typography = typographyEl ? parseInt(typographyEl.value, 10) : 4;
 
-        // Generate PDF for each student
-        for (let i = 0; i < currentStudents.length; i++) {
-          const student = currentStudents[i];
+        // Step 1: Start the async job
+        const startResp = await fetch("/reports/api/download-class-pdf", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            class_room_id: classId,
+            term_id: termId,
+            config_id: currentFilters.config_id || "",
+            layout_config_id: getSelectedLayoutConfigId(),
+            typography: typography,
+          }),
+        });
 
-          try {
-            // Update button text to show progress
-            downloadAllButton.innerHTML = `
-                            <div class="flex items-center gap-2">
-                                <div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                                <span class="text-sm font-bold">Processing ${i + 1
-              }/${currentStudents.length}...</span>
-                            </div>
-                        `;
+        if (!startResp.ok) {
+          const err = await startResp.json().catch(() => ({}));
+          throw new Error(err.error || `Server returned ${startResp.status}`);
+        }
 
-            // Fetch report data for this student
-            const reportResponse = await fetch(
-              `/reports/api/student-report/${student.id
-              }?term_id=${termId}&class_room_id=${classId}&config_id=${currentFilters.config_id || ""
-              }&layout_config_id=${currentFilters.layout_config_id || ""}&include_html=true`
-            );
+        const { job_id } = await startResp.json();
 
-            if (!reportResponse.ok) {
-              throw new Error(
-                `Failed to fetch report data for ${student.name}`
-              );
-            }
+        // Step 2: Poll for progress
+        const PHASE_LABELS = {
+          starting: "Starting...",
+          fetch: "Loading student data...",
+          html: "Generating HTML...",
+          pdf: "Rendering PDFs...",
+          merge: "Merging PDFs...",
+          done: "Finalizing...",
+        };
 
-            const reportData = await reportResponse.json();
-            console.log(reportData);
-            // Check if the response has the expected structure
-            if (reportData && reportData.success && reportData.report) {
-              if (isServerSideLayout()) {
-                await generateServerSidePDF(student.id);
-              } else {
-                await generateClientSidePDF(reportData.report);
-              }
-            } else if (reportData && !reportData.success) {
-              throw new Error(
-                `Failed to fetch report data for ${student.name}: ${reportData.message || "Server error"
-                }`
-              );
-            } else {
-              throw new Error(`Invalid response format for ${student.name}`);
-            }
+        let done = false;
+        let lastMessage = "";
+        while (!done) {
+          await new Promise((r) => setTimeout(r, 1500));
 
-            successCount++;
-          } catch (studentError) {
-            console.error(
-              `Error generating PDF for student ${student.name}:`,
-              studentError
-            );
-            errorCount++;
+          const statusResp = await fetch(`/reports/api/download-class-pdf-status/${job_id}`);
+          if (!statusResp.ok) {
+            throw new Error("Lost connection to server");
+          }
+
+          const status = await statusResp.json();
+
+          if (status.state === "failed") {
+            throw new Error(status.error || "PDF generation failed");
+          }
+
+          const total = status.total || 0;
+          const current = status.current || 0;
+          const phase = status.phase || "starting";
+          const message = status.message || PHASE_LABELS[phase] || "Processing...";
+
+          let pct = 0;
+          if (phase === "html" && total > 0) {
+            pct = Math.round((current / total) * 50);
+          } else if (phase === "pdf" && total > 0) {
+            pct = 50 + Math.round((current / total) * 45);
+          } else if (phase === "merge") {
+            pct = 96;
+          } else if (phase === "done") {
+            pct = 100;
+          } else if (phase === "fetch") {
+            pct = 2;
+          }
+
+          lastMessage = message;
+          showGlobalLoading(`${message}`, pct);
+
+          if (status.state === "done") {
+            done = true;
           }
         }
 
-        // Show completion message
-        if (errorCount === 0) {
-          showAlert({
-            title: "Success",
-            message: `Successfully downloaded ${successCount} PDF reports.`,
-            type: "success",
-          });
-        } else {
-          showAlert({
-            title: "Partial Success",
-            message: `Downloaded ${successCount} PDF reports. ${errorCount} reports failed to download.`,
-            type: "warning",
-          });
+        // Step 3: Download the PDF
+        showGlobalLoading("Downloading PDF...", 100);
+        const downloadResp = await fetch(`/reports/api/download-class-pdf-result/${job_id}`);
+        if (!downloadResp.ok) {
+          throw new Error("Failed to download the generated PDF");
         }
+
+        const blob = await downloadResp.blob();
+        let filename = `Reports_${currentStudents.length}_students.pdf`;
+        const disposition = downloadResp.headers.get("Content-Disposition");
+        if (disposition) {
+          const match = disposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
+          if (match && match[1]) {
+            filename = match[1].replace(/['"]/g, "");
+          }
+        }
+
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+
+        hideGlobalLoading();
+        showAlert({
+          title: "Success",
+          message: `Successfully generated combined PDF for ${currentStudents.length} students.`,
+          type: "success",
+        });
       } catch (error) {
         console.error("Error downloading reports:", error);
+        hideGlobalLoading();
         showAlert({
           title: "Error",
           message: "Error generating reports: " + error.message,
           type: "error",
         });
       } finally {
-        // Restore original button state
         downloadAllButton.innerHTML = originalHtml;
-        downloadAllButton.disabled = false;
-        downloadAllButton.classList.remove("opacity-75", "cursor-not-allowed");
+        setAllActionButtonsDisabled(false);
       }
     },
   });
-}
-async function pollForCompletion(jobId) {
-  const maxAttempts = 60; // 5 minutes with 5-second intervals
-  let attempts = 0;
-
-  showGlobalLoading("Generating PDF...");
-
-  while (attempts < maxAttempts) {
-    try {
-      const response = await fetch(`/reports/api/status/${jobId}`);
-      const data = await response.json();
-
-      if (data.state === "SUCCESS") {
-        hideGlobalLoading();
-        await downloadGeneratedFile(jobId);
-        return;
-      } else if (data.state === "FAILURE") {
-        hideGlobalLoading();
-        showAlert({
-          title: "Error",
-          message: "PDF generation failed: " + (data.error || "Unknown error"),
-          type: "error",
-        });
-        return;
-      }
-
-      // Still processing, update progress if available
-      if (data.progress) {
-        showGlobalLoading(`Generating PDF... ${data.progress}%`);
-      }
-
-      // Wait 5 seconds before checking again
-      await new Promise((resolve) => setTimeout(resolve, 5000));
-      attempts++;
-    } catch (error) {
-      console.error("Error polling for completion:", error);
-      hideGlobalLoading();
-      showAlert({
-        title: "Error",
-        message: "Error checking PDF generation status",
-        type: "error",
-      });
-      return;
-    }
-  }
-
-  // Timeout
-  hideGlobalLoading();
-  showAlert({
-    title: "Timeout",
-    message: "PDF generation is taking longer than expected. Please try again.",
-    type: "warning",
-  });
-}
-
-async function downloadGeneratedFile(jobId) {
-  try {
-    const response = await fetch(`/reports/api/download/${jobId}`);
-
-    if (response.ok) {
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `report_${jobId}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
-    } else {
-      const data = await response.json();
-      showAlert({
-        title: "Error",
-        message: "Error downloading file: " + (data.error || "Unknown error"),
-        type: "error",
-      });
-    }
-  } catch (error) {
-    console.error("Error downloading file:", error);
-    showAlert({
-      title: "Error",
-      message: "Error downloading generated file",
-      type: "error",
-    });
-  }
 }
 
 function generateGradingLegend(gradeScale = null) {
@@ -2554,7 +2540,7 @@ async function generateServerSidePDF(studentId) {
       term_id: currentFilters.term_id,
       class_room_id: currentFilters.class_room_id,
       config_id: currentFilters.config_id || "",
-      layout_config_id: currentFilters.layout_config_id || "",
+      layout_config_id: getSelectedLayoutConfigId(),
       typography: typography,
     }),
   });
@@ -2586,8 +2572,13 @@ async function generateServerSidePDF(studentId) {
   URL.revokeObjectURL(url);
 }
 
+function getSelectedLayoutConfigId() {
+  return document.getElementById("layoutStyleFilter")?.value || "";
+}
+
 function isServerSideLayout() {
-  return currentFilters.layout_config_id === "default3" || currentFilters.layout_config_id === "default2";
+  const id = getSelectedLayoutConfigId();
+  return id === "default3" || id === "default2";
 }
 
 async function generateClientSidePDF(reportData, previewMode = false) {
