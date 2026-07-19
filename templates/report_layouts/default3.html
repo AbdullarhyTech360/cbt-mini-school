@@ -45,11 +45,11 @@
   :root{
     --navy:#0B2E4A;
     --navy-deep:#081F33;
-    --sky:#1B87C9;
-    --sky-deep:#1367A1;
-    --gold:#F2AE2E;
-    --gold-deep:#D6900F;
-    --gold-text:#9A6B00;
+    --sky:#1A7FBD;
+    --sky-deep:#115C94;
+    --gold:#F0A828;
+    --gold-deep:#CC8808;
+    --gold-text:#B87A08;
     --paper:#FBFAF6;
     --paper-tint:#EEF6FC;
     --line:#D8E4EC;
@@ -67,7 +67,7 @@
     text-align:center;
   }
 
-  @page{ size:A4; margin:8mm; }
+  @page{ size:A4; margin:5mm; }
 
   .sheet{
     position:relative;
@@ -112,15 +112,15 @@
   }
   .header-table td{
     vertical-align:middle;
-    padding:calc(14px * var(--scale)) calc(22px * var(--scale));
+    padding:calc(9px * var(--scale)) calc(14px * var(--scale));
   }
   .crest-cell{
     width:56px;
     text-align:center;
-    padding:calc(14px * var(--scale)) calc(4px * var(--scale)) calc(14px * var(--scale)) calc(14px * var(--scale));
+    padding:calc(9px * var(--scale)) calc(4px * var(--scale)) calc(9px * var(--scale)) calc(14px * var(--scale));
   }
   .crest{
-    width:50px; height:50px;
+    width:56px; height:56px;
     border-radius:50%;
     background:#fff;
     padding:3px;
@@ -143,7 +143,7 @@
   .school-name{
     font-family:'Space Grotesk', sans-serif;
     font-weight:700;
-    font-size:calc(15px * var(--scale));
+    font-size:calc(16px * var(--scale));
     line-height:1.2;
     margin:0 0 calc(2px * var(--scale));
   }
@@ -162,7 +162,7 @@
   .stamp-cell{ width:64px; text-align:center; vertical-align:middle; }
   .stamp{
     display:inline-block;
-    width:58px; height:58px;
+    width:64px; height:64px;
     border:2px dashed #F2AE2E;
     border-radius:50%;
     text-align:center;
@@ -184,17 +184,17 @@
     background:#EEF6FC;
     border-bottom:1px solid #D8E4EC;
   }
-  .meta-strip td{ padding:calc(8px * var(--scale)) calc(10px * var(--scale)); vertical-align:top; }
+  .meta-strip td{ padding:calc(5px * var(--scale)) calc(7px * var(--scale)); vertical-align:top; }
 
   .meta-main{
     width:100%;
     border-collapse:collapse;
   }
-  .meta-main td{ padding:0 calc(10px * var(--scale)) calc(8px * var(--scale)) 0; vertical-align:top; }
+  .meta-main td{ padding:0 calc(7px * var(--scale)) calc(5px * var(--scale)) 0; vertical-align:top; }
   .meta-main tr:last-child td{ padding-bottom:0; }
 
   .field{
-    padding-bottom:calc(5px * var(--scale));
+    padding-bottom:calc(3px * var(--scale));
     border-bottom:1px solid #D8E4EC;
   }
   .field label{
@@ -211,7 +211,7 @@
     font-size:calc(11.5px * var(--scale));
     font-weight:600;
     color:#081F33;
-    padding:0 0 calc(2px * var(--scale));
+    padding:0 0 calc(1px * var(--scale));
   }
   .field .val.grade-pill{
     font-size:calc(10.5px * var(--scale));
@@ -244,11 +244,11 @@
   }
 
   /* ---------- body ---------- */
-  .body-content{ position:relative; z-index:1; padding:calc(8px * var(--scale)) calc(10px * var(--scale)) calc(3px * var(--scale)); }
+  .body-content{ position:relative; z-index:1; padding:calc(5px * var(--scale)) calc(6px * var(--scale)) calc(3px * var(--scale)); }
 
-  .section-title{
+    .section-title{
     overflow:hidden;
-    margin:0 0 calc(4px * var(--scale));
+    margin:0 0 calc(3px * var(--scale));
     white-space:nowrap;
   }
   .section-title .num{
@@ -338,7 +338,7 @@
   .grade-F{ background:#FADADA; color:#B01818; }
 
   .foot-note{
-    font-size:calc(9.5px * var(--scale)); color:var(--ink); font-weight:600; margin:calc(5px * var(--scale)) calc(2px * var(--scale)) 0;
+    font-size:calc(9.5px * var(--scale)); color:var(--ink); font-weight:600; margin:calc(3px * var(--scale)) calc(2px * var(--scale)) 0;
     font-family:'JetBrains Mono',monospace;
   }
 
@@ -367,14 +367,14 @@
   .b-name{ color:#081F33; font-weight:500; line-height:1.15; }
   .dots{ white-space:nowrap; }
   .dot{
-    font-size:calc(11px * var(--scale));
+    font-size:calc(13px * var(--scale));
     line-height:1;
     color:var(--ink);
   }
   .dot.on{ color:var(--gold-text); }
 
   .side-cards{ }
-  .side-cards .key-card + .key-card{ margin-top:calc(10px * var(--scale)); }
+  .side-cards .key-card + .key-card{ margin-top:calc(6px * var(--scale)); }
   .key-card{
     background:#fff;
     border:1px solid #D8E4EC;
@@ -399,7 +399,7 @@
     .observance-grid td.obs-val{ color:#0B2E4A; font-family:'JetBrains Mono',monospace; font-weight:700; text-align:right; }
     .observance-grid td:nth-child(3){ padding-left:calc(14px * var(--scale)); }
 
-  .comment-block{ margin-top:calc(4px * var(--scale)); }
+  .comment-block{ margin-top:calc(2px * var(--scale)); }
   .comment-line{
     overflow:hidden;
     padding:calc(5px * var(--scale)) 0;
@@ -417,7 +417,7 @@
     margin-right:calc(8px * var(--scale));
   }
   .comment-line .c-fill{ overflow:hidden; color:#12232F; }
-  .principal-row{ background:#EEF6FC; margin:calc(6px * var(--scale)) calc(-10px * var(--scale)) calc(-4px * var(--scale)); padding:calc(8px * var(--scale)) calc(10px * var(--scale)) calc(12px * var(--scale)); }
+  .principal-row{ background:#EEF6FC; margin:calc(4px * var(--scale)) calc(-6px * var(--scale)) calc(-3px * var(--scale)); padding:calc(5px * var(--scale)) calc(6px * var(--scale)) calc(8px * var(--scale)); }
   .principal-row .c-label{ color:var(--gold-text); }
 
   .footer-table{
@@ -425,7 +425,7 @@
     border-collapse:collapse;
     position:relative;
     z-index:1;
-    padding:calc(8px * var(--scale)) calc(22px * var(--scale)) calc(12px * var(--scale));
+    padding:calc(4px * var(--scale)) calc(14px * var(--scale)) calc(8px * var(--scale));
     font-size:calc(8px * var(--scale));
     color:var(--ink-soft);
     font-family:'JetBrains Mono', monospace;
@@ -566,7 +566,7 @@
         {% endif %}
       </p>
 
-      <div style="height:calc(12px * var(--scale));"></div>
+      <div style="height:calc(6px * var(--scale));"></div>
 
       <div class="section-title section-title-emphasis">
         <span class="num">B</span><h2>Psychomotive Domain &amp; Term Summary</h2><span class="rule"></span>
@@ -627,7 +627,7 @@
         </tr>
       </table>
 
-      <div class="section-title" style="margin-top:calc(12px * var(--scale));">
+      <div class="section-title" style="margin-top:calc(6px * var(--scale));">
         <span class="num">C</span><h2>Remarks</h2><span class="rule"></span>
       </div>
 
