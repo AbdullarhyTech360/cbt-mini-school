@@ -79,7 +79,7 @@
                         <p class="text-gray-500 dark:text-gray-400 text-xs truncate">{{ current_user.role.title() if current_user else 'Teacher' }}</p>
                     </div>
                 </div>
-                <nav class="flex-1 overflow-y-auto px-4 mt-6">
+                <nav class="flex-1 overflow-y-auto overflow-x-hidden px-4 mt-6">
                     <ul class="flex flex-col gap-1">
                         {% block sidebar_nav %}
                         <li><a class="flex h-11 items-center gap-3 rounded-lg px-4 {% if request.endpoint == 'staff_dashboard' %}bg-gradient-to-r from-primary to-blue-600 text-white shadow-md{% else %}text-gray-600 dark:text-gray-400 hover:bg-gradient-to-r hover:from-primary/10 hover:to-primary/5 hover:text-primary dark:hover:text-primary{% endif %} transition-all group" href="/staff/dashboard/{{ current_user.id }}">
@@ -221,6 +221,18 @@
                         el.style.width = "0";
                         el.style.overflow = "hidden";
                     });
+                    const navLinks = sidebar.querySelectorAll("nav ul li a");
+                    const sidebarNav = sidebar.querySelector("nav");
+                    navLinks.forEach(el => {
+                        el.style.justifyContent = "center";
+                        el.style.paddingLeft = "0.75rem";
+                        el.style.paddingRight = "0.75rem";
+                        el.style.gap = "0";
+                    });
+                    if (sidebarNav) {
+                        sidebarNav.style.paddingLeft = "0";
+                        sidebarNav.style.paddingRight = "0";
+                    }
                     // Staff card compaction
                     if (staffCard) {
                         staffCard.style.marginLeft = "0.5rem";
@@ -246,6 +258,18 @@
                         el.style.width = "auto";
                         el.style.overflow = "visible";
                     });
+                    const navLinks = sidebar.querySelectorAll("nav ul li a");
+                    const sidebarNav = sidebar.querySelector("nav");
+                    navLinks.forEach(el => {
+                        el.style.justifyContent = "";
+                        el.style.paddingLeft = "";
+                        el.style.paddingRight = "";
+                        el.style.gap = "";
+                    });
+                    if (sidebarNav) {
+                        sidebarNav.style.paddingLeft = "";
+                        sidebarNav.style.paddingRight = "";
+                    }
                     if (staffCard) {
                         staffCard.style.marginLeft = "1rem";
                         staffCard.style.marginRight = "1rem";
@@ -373,6 +397,30 @@
             }
         }
 
+    </script>
+    <div id="toastContainer" class="fixed top-6 right-4 z-[9999] flex flex-col gap-2 pointer-events-none"></div>
+    <script>
+        (function() {
+            var params = new URLSearchParams(window.location.search);
+            var denied = params.get('denied');
+            if (denied) {
+                var container = document.getElementById('toastContainer');
+                if (container) {
+                    var toast = document.createElement('div');
+                    toast.className = 'flex items-center gap-3 px-5 py-3.5 rounded-xl border-2 border-red-300 bg-red-600 shadow-2xl text-white text-sm font-semibold transform transition-all duration-300 translate-x-full opacity-0 pointer-events-auto';
+                    toast.innerHTML = '<span class="material-symbols-outlined text-lg">block</span><span>' + denied + '</span>';
+                    container.appendChild(toast);
+                    requestAnimationFrame(function() { toast.classList.remove('translate-x-full', 'opacity-0'); });
+                    setTimeout(function() {
+                        toast.classList.add('translate-x-full', 'opacity-0');
+                        setTimeout(function() { toast.remove(); }, 300);
+                    }, 5000);
+                }
+                if (window.history.replaceState) {
+                    window.history.replaceState({}, document.title, window.location.pathname);
+                }
+            }
+        })();
     </script>
 </body>
 </html>

@@ -3,7 +3,10 @@ document.addEventListener('DOMContentLoaded', function() {
     let questions = [];
     let currentQuestionIndex = 0;
     let studentAnswers = {};
-    let timeLeft = 5 * 60; // 5 minutes in seconds
+    let timeLeft = 0; // Will be computed based on question count
+    const MINUTES_PER_QUESTION = 1;
+    const MIN_TIMER_MINUTES = 5;
+    const MAX_TIMER_MINUTES = 15;
     let timerInterval = null;
     
     // DOM elements
@@ -26,7 +29,6 @@ document.addEventListener('DOMContentLoaded', function() {
     // Initialize the test
     function initTest() {
         fetchQuestions();
-        startTimer();
         
         // Add event listeners
         prevBtn.addEventListener('click', function(e) {
@@ -51,6 +53,14 @@ document.addEventListener('DOMContentLoaded', function() {
             if (data.success) {
                 questions = data.questions;
                 totalQuestionsSpan.textContent = questions.length;
+                
+                // Compute timer based on question count
+                const timerMinutes = Math.min(
+                    MAX_TIMER_MINUTES,
+                    Math.max(MIN_TIMER_MINUTES, questions.length * MINUTES_PER_QUESTION)
+                );
+                timeLeft = timerMinutes * 60;
+                startTimer();
                 
                 // Initialize student answers array
                 studentAnswers = {};

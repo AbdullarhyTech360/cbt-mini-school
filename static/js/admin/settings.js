@@ -531,8 +531,7 @@ document.addEventListener("DOMContentLoaded", function () {
             }
             case "students_can_write_exam": {
               const el = document.getElementById("student-write-exam");
-              // Always set to false (off by default)
-              if (el) el.checked = false;
+              if (el) el.checked = !!p.is_active;
               break;
             }
             case "admins_can_upload_questions": {
@@ -542,6 +541,21 @@ document.addEventListener("DOMContentLoaded", function () {
             }
             case "teachers_can_upload_questions": {
               const el = document.getElementById("teacher-upload-questions");
+              if (el) el.checked = !!p.is_active;
+              break;
+            }
+            case "students_can_view_dashboard": {
+              const el = document.getElementById("student-view-dashboard");
+              if (el) el.checked = !!p.is_active;
+              break;
+            }
+            case "teachers_can_view_dashboard": {
+              const el = document.getElementById("teacher-view-dashboard");
+              if (el) el.checked = !!p.is_active;
+              break;
+            }
+            case "staff_can_view_dashboard": {
+              const el = document.getElementById("staff-view-dashboard");
               if (el) el.checked = !!p.is_active;
               break;
             }
@@ -1690,5 +1704,71 @@ document.addEventListener("DOMContentLoaded", function () {
         document.body.removeChild(modal);
       }
     });
+  }
+
+  // ===========================
+  // CBT Configuration Management
+  // ===========================
+  const saveCbtConfigBtn = document.getElementById("save-cbt-config-btn");
+
+  if (saveCbtConfigBtn) {
+    saveCbtConfigBtn.addEventListener("click", saveCbtConfig);
+  }
+
+  // Load CBT config on page load
+  loadCbtConfig();
+
+  async function loadCbtConfig() {
+    try {
+      const response = await fetch("/admin/settings/cbt-config");
+      const data = await response.json();
+
+      if (data.success && data.config) {
+        const config = data.config;
+
+        // Populate form fields
+        const calcToggle = document.getElementById("cbt-calculator-enabled");
+        if (calcToggle) calcToggle.checked = !!config.calculator_enabled;
+
+        const onTheGoToggle = document.getElementById("cbt-on-the-go");
+        if (onTheGoToggle) onTheGoToggle.checked = !!config.on_the_go_enabled;
+
+        const feedbackSelect = document.getElementById("cbt-default-feedback");
+        if (feedbackSelect) feedbackSelect.value = config.default_feedback_mode || "detailed";
+
+        const timerInput = document.getElementById("cbt-timer-warning");
+        if (timerInput) timerInput.value = config.timer_warning_minutes || 5;
+      }
+    } catch (error) {
+      console.error("Error loading CBT config:", error);
+    }
+  }
+
+  async function saveCbtConfig() {
+    const config = {
+      calculator_enabled: document.getElementById("cbt-calculator-enabled")?.checked || false,
+      on_the_go_enabled: document.getElementById("cbt-on-the-go")?.checked || false,
+      default_feedback_mode: document.getElementById("cbt-default-feedback")?.value || "detailed",
+      timer_warning_minutes: parseInt(document.getElementById("cbt-timer-warning")?.value) || 5,
+    };
+
+    try {
+      const response = await fetch("/admin/settings/cbt-config", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(config),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        showNotification("CBT configuration saved successfully", "success");
+      } else {
+        showNotification(data.message || "Failed to save CBT configuration", "error");
+      }
+    } catch (error) {
+      console.error("Error saving CBT config:", error);
+      showNotification("Failed to save CBT configuration", "error");
+    }
   }
 });

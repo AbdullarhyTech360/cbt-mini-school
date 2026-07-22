@@ -146,6 +146,10 @@ if report_bp:
 with app.app_context():
     db.create_all()
 
+    # Seed default permissions
+    from routes.admin_action_routes import initialize_default_permissions
+    initialize_default_permissions()
+
     # Run pending migrations automatically
     from utils.migration_runner import run_pending_migrations
     run_pending_migrations(app)

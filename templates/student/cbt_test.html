@@ -32,6 +32,7 @@
     </script>
     <!-- Local MathJax -->
     <script src="{{ url_for('static', filename='dist/mathjax/tex-mml-chtml.js') }}" id="MathJax-script"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.1.6/purify.min.js"></script>
     
     <script>
         // Dark mode management
@@ -63,12 +64,23 @@
         * { font-family: 'Inter', sans-serif; }
         
         body { 
-            background: #f1f5f9;
+            background: radial-gradient(circle at 12% 0%, #e0f2fe 0, transparent 28%), #f8fafc;
+            color: #0f172a;
             transition: background-color 0.3s ease;
         }
         
         .dark body { 
-            background: #0f172a;
+            background: radial-gradient(circle at 12% 0%, #172554 0, transparent 30%), #020617;
+        }
+
+        .material-symbols-outlined,
+        .material-symbols-rounded,
+        .material-symbols-sharp {
+            font-variation-settings:
+                'FILL' 0,
+                'wght' 400,
+                'GRAD' 0,
+                'opsz' 24
         }
         
         .question-nav-btn {
@@ -107,21 +119,38 @@
             border-color: #334155;
             color: #94a3b8;
         }
+
+        .question-nav-btn.flagged {
+            background: #f59e0b;
+            color: white;
+            position: relative;
+        }
         
         .option-label {
             transition: all 0.2s ease;
             cursor: pointer;
             background: white;
+            min-height: 48px;
+            border-radius: 15px !important;
+            padding: 15px !important;
+            box-shadow: 0 2px 8px rgba(15,23,42,.03);
+            color: #0f172a;
         }
         
         .dark .option-label {
             background: #1e293b;
+            color: #f8fafc;
         }
+        
+        .option-label span, .option-label p { color: #0f172a; }
+        .dark .option-label span, .dark .option-label p { color: #f8fafc; }
+        .option-label.selected span, .option-label.selected p { color: #fff !important; }
         
         .option-label:hover {
             border-color: #3b82f6;
             background: #dbeafe;
-            transform: translateX(2px);
+            transform: translateY(-2px) translateX(0);
+            box-shadow: 0 8px 18px rgba(37,99,235,.12);
         }
         
         .dark .option-label:hover {
@@ -141,93 +170,208 @@
         }
         
         /* Ensure good contrast in both modes */
-        .text-gray-900 {
-            color: #111827;
+        .text-gray-900 { color: #111827; }
+        .dark .text-gray-900 { color: #f9fafb; }
+        .text-gray-700 { color: #374151; }
+        .dark .text-gray-700 { color: #d1d5db; }
+        .text-gray-600 { color: #4b5563; }
+        .dark .text-gray-600 { color: #9ca3af; }
+
+        /* ── Modern Exam Header ── */
+        .exam-header { position:relative; overflow:hidden; background:rgba(255,255,255,.94); border-bottom:1px solid #e2e8f0; box-shadow:0 8px 25px rgba(15,23,42,.06); backdrop-filter:blur(16px); }
+        .dark .exam-header { background:rgba(15,23,42,.94); border-color:#1e293b; box-shadow:0 8px 25px rgba(0,0,0,.2); }
+        .header-glow { position:absolute; width:260px; height:120px; top:-80px; left:28%; background:#60a5fa; filter:blur(65px); opacity:.18; pointer-events:none; }
+        .header-main, .header-details { position:relative; display:flex; align-items:center; justify-content:space-between; }
+        .header-main { min-height:78px; }
+        .brand-lockup, .student-profile, .header-actions, .exam-meta, .brand-title-row { display:flex; align-items:center; }
+        .brand-lockup { gap:12px; }
+        .brand-mark { width:62px; height:62px; border-radius:14px; position:relative; display:flex; align-items:center; justify-content:center; color:white; font-weight:800; background:linear-gradient(135deg,#2563eb,#4f46e5); box-shadow:0 8px 16px rgba(37,99,235,.25); overflow:hidden; }
+        .brand-mark img { width:100%; height:100%; object-fit:cover; border-radius:14px; }
+        .brand-mark span { font-size:17px; letter-spacing:-.04em; }
+        .brand-mark i { position:absolute; right:-6px; bottom:-6px; width:23px; height:23px; border:2px solid white; border-radius:50%; background:#10b981; font-size:12px; display:flex; align-items:center; justify-content:center; }
+        .brand-title-row { gap:8px; }
+        .brand-title { margin:0; color:#0f172a; font-size:18px; font-weight:800; }
+        .dark .brand-title { color:#f8fafc; }
+        .brand-badge { padding:4px 7px; border-radius:6px; color:#2563eb; background:#dbeafe; font-size:9px; font-weight:800; letter-spacing:.12em; }
+        .dark .brand-badge { color:#bfdbfe; background:#1e3a8a; }
+        .brand-subtitle, .student-meta { margin:3px 0 0; color:#64748b; font-size:12px; }
+        .brand-subtitle span, .student-meta span { color:#cbd5e1; margin:0 3px; }
+        .header-actions { gap:9px; }
+        .exam-timer { display:flex; align-items:center; gap:9px; padding:8px 12px; border:1px solid #bfdbfe; border-radius:12px; background:#eff6ff; transition: border-color .3s, background .3s; }
+        .dark .exam-timer { border-color:#1e40af; background:#172554; }
+        .timer-icon { color:#2563eb; font-size:21px; }
+        .dark .timer-icon { color:#93c5fd; }
+        .timer-label { display:block; color:#64748b; font-size:10px; font-weight:800; letter-spacing:.1em; }
+        .dark .timer-label { color:#93c5fd; }
+        .exam-timer p { margin:1px 0 0; color:#1d4ed8; font-size:20px; line-height:1; font-weight:800; font-variant-numeric:tabular-nums; }
+        .dark .exam-timer p { color:#bfdbfe; }
+        .action-divider { width:1px; height:25px; background:#e2e8f0; margin:0 2px; }
+        .dark .action-divider { background:#334155; }
+        .header-icon-btn { width:42px; height:42px; display:flex; align-items:center; justify-content:center; border:1px solid #e2e8f0; border-radius:11px; color:#475569; background:#f8fafc; transition:.2s; cursor:pointer; }
+        .header-icon-btn:hover { color:#2563eb; border-color:#93c5fd; transform:translateY(-1px); }
+        .dark .header-icon-btn { color:#cbd5e1; background:#1e293b; border-color:#334155; }
+        .header-details { min-height:54px; border-top:1px solid #f1f5f9; }
+        .dark .header-details { border-color:#1e293b; }
+        .student-profile { gap:10px; }
+        .student-avatar { width:32px; height:32px; display:flex; align-items:center; justify-content:center; border-radius:10px; color:white; background:linear-gradient(135deg,#0ea5e9,#2563eb); font-size:10px; font-weight:800; overflow:hidden; }
+        .student-avatar img { width:100%; height:100%; object-fit:cover; }
+        .student-name { margin:0; color:#1e293b; font-size:14px; font-weight:700; }
+        .dark .student-name { color:#f8fafc; }
+        .exam-meta { gap:20px; color:#64748b; font-size:12px; }
+        .exam-meta span { display:flex; align-items:center; gap:5px; }
+        .exam-meta .material-symbols-outlined { font-size:15px; color:#94a3b8; }
+        .exam-meta b { color:#cbd5e1; font-weight:400; }
+        .meta-chip { padding-left:18px; border-left:1px solid #e2e8f0; }
+        .dark .meta-chip { border-color:#334155; }
+        .header-context { display:flex; align-items:center; gap:7px; color:#64748b; font-size:10px; letter-spacing:.02em; }
+        .dark .header-context { color:#94a3b8; }
+        .context-dot { width:7px; height:7px; border-radius:50%; background:#10b981; box-shadow:0 0 0 4px rgba(16,185,129,.13); }
+        .header-context b { color:#cbd5e1; font-weight:400; }
+
+        @media (max-width:640px) {
+            .header-main { min-height:68px; }
+            .brand-mark { width:48px; height:48px; border-radius:13px; }
+            .brand-subtitle { display:none; }
+            .brand-title { font-size:14px; }
+            .header-actions { gap:5px; }
+            .exam-timer { padding:7px 8px; }
+            .timer-label { display:none; }
+            .exam-timer p { font-size:15px; }
+            .header-icon-btn { width:34px; height:34px; }
+            .action-divider { display:none; }
+            .header-details { min-height:48px; }
+            .exam-meta { display:none; }
+            .header-context { display:none; }
+            .student-name { font-size:11px; }
+            .student-meta { font-size:10px; }
         }
-        
-        .dark .text-gray-900 {
-            color: #f9fafb;
+
+        /* ── Full-page visual refinement ── */
+        .max-w-7xl.mx-auto.px-4.py-6 { padding-top:28px; }
+        .bg-white.dark\:bg-slate-800.rounded-lg.shadow-sm { border:1px solid #e5e7eb; box-shadow:0 12px 30px rgba(15,23,42,.06); }
+        .dark .bg-white.dark\:bg-slate-800.rounded-lg.shadow-sm { border-color:#1e293b; box-shadow:0 12px 30px rgba(0,0,0,.18); }
+        #question-container { border-radius:20px; overflow:hidden; }
+        #question-container:before { content:none; }
+        #question-content { padding-top:0; }
+        #question-content > .flex.items-center.gap-3.mb-2 { padding-bottom:14px; margin-bottom:18px; border-bottom:1px solid #e5e7eb; }
+        .dark #question-content > .flex.items-center.gap-3.mb-2 { border-color:#334155; }
+        #question-text { font-size:clamp(1.1rem,2vw,1.4rem); line-height:1.7; font-weight:600; }
+        #progress-bar { background:linear-gradient(90deg,#2563eb,#7c3aed); }
+        #prev-question-btn, #next-question-btn, #submit-quiz-btn { border-radius:12px; min-height:46px; }
+        #question-navigation { grid-template-columns:repeat(5,minmax(0,1fr)); }
+        .question-nav-btn { width:100% !important; height:42px !important; border-radius:11px !important; }
+        @media(max-width:640px) {
+            #question-container:before { padding:11px 16px }
+            .option-label { padding:12px !important }
+            #prev-question-btn, #next-question-btn, #submit-quiz-btn { padding-left:13px!important; padding-right:13px!important; font-size:12px }
         }
-        
-        .text-gray-700 {
-            color: #374151;
-        }
-        
-        .dark .text-gray-700 {
-            color: #d1d5db;
-        }
-        
-        .text-gray-600 {
-            color: #4b5563;
-        }
-        
-        .dark .text-gray-600 {
-            color: #9ca3af;
-        }
+
+        /* ── Exam summary & instructions ── */
+        .exam-summary { display:flex; align-items:center; justify-content:space-between; gap:16px; padding-bottom:14px; margin-bottom:14px; border-bottom:1px solid #e5e7eb; }
+        .dark .exam-summary { border-color:#334155; }
+        .summary-kicker { margin:0; color:#2563eb; font-size:10px; font-weight:800; letter-spacing:.14em; }
+        .exam-summary h2, .instructions-head h2 { margin:4px 0 0; color:#0f172a; font-size:18px; font-weight:800; }
+        .dark .exam-summary h2, .dark .instructions-head h2 { color:#f8fafc; }
+        .summary-stats { display:flex; gap:8px; flex-wrap:wrap; }
+        .summary-stats span { padding:8px 10px; border-radius:9px; background:#f1f5f9; color:#64748b; font-size:10px; }
+        .dark .summary-stats span { background:#1e293b; color:#94a3b8; }
+        .summary-stats b { color:#1e293b; }
+        .dark .summary-stats b { color:#e2e8f0; }
+
+        /* ── Instructions modal ── */
+        .instructions-card { padding:24px; max-width:480px; }
+        .instructions-head { display:flex; align-items:center; justify-content:space-between; padding-bottom:18px; border-bottom:1px solid #e5e7eb; }
+        .dark .instructions-head { border-color:#334155; }
+        .instructions-body { padding:18px 0; }
+        .instruction-item { display:flex; gap:12px; align-items:flex-start; margin-bottom:16px; }
+        .instruction-item .material-symbols-outlined { color:#2563eb; background:#dbeafe; border-radius:10px; padding:8px; font-size:19px; }
+        .instruction-item p { margin:3px 0 0; color:#475569; font-size:13px; line-height:1.5; }
+        .dark .instruction-item p { color:#cbd5e1; }
+
+        /* ── Timer warning states ── */
+        .timer-warning { color:#d97706 !important; }
+        .timer-danger { color:#ef4444 !important; animation:timerPulse 1s infinite; }
+        .timer-danger-wrap { border-color:#fca5a5 !important; background:#fef2f2 !important; }
+        .dark .timer-danger-wrap { border-color:#991b1b !important; background:#450a0a !important; }
+        @keyframes timerPulse { 50% { opacity:.55; } }
+
+        /* ── Calculator polish ── */
+        #cbt-calculator { width:360px !important; border-radius:20px !important; box-shadow:0 24px 60px rgba(15,23,42,.25) !important; }
+        #cbt-calculator #calc-drag-handle { padding:13px 14px; background:linear-gradient(135deg,#1d4ed8,#4f46e5); }
+        #cbt-calculator .calc-btn { min-height:42px; border-radius:10px; font-size:14px; font-weight:700; transition:transform .15s, filter .15s, box-shadow .15s; }
+        #cbt-calculator .calc-btn:hover { filter:brightness(1.06); box-shadow:0 4px 10px rgba(37,99,235,.14); }
+        #cbt-calculator .calc-btn:active { transform:scale(.94); }
+        #cbt-calculator #calc-display { min-height:42px; font-size:30px; letter-spacing:.02em; }
+        #cbt-calculator [data-sci] { gap:5px; }
+        @media(max-width:640px) { #cbt-calculator { width:calc(100vw - 24px) !important; right:12px !important; bottom:72px !important; } #cbt-calculator .calc-btn { min-height:38px; } }
+        .calculator-off .calc-btn:not(#calc-power-btn):not(#calc-power-sci-btn), .calculator-off #calc-display, .calculator-off #calc-expression { opacity:.35; pointer-events:none; }
+        .calculator-off #calc-power-btn, .calculator-off #calc-power-sci-btn { opacity:1 !important; pointer-events:auto !important; }
+
+        /* ── Modal backdrop ── */
+        .modal-backdrop { position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:50; display:flex; align-items:center; justify-content:center; padding:1rem; }
+        .modal-backdrop.hidden { display:none; }
+        .modal-content { background:white; border-radius:1rem; box-shadow:0 25px 50px -12px rgba(0,0,0,.25); width:100%; max-width:28rem; }
+        .dark .modal-content { background:#1e293b; }
     </style>
 </head>
 <body class="min-h-screen">
-    <!-- Top Header -->
-    <div class="bg-white dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700 shadow-sm sticky top-0 z-50 transition-colors">
-        <div class="max-w-7xl mx-auto px-4 py-3">
-            <!-- Top Row -->
-            <div class="flex items-center justify-between mb-2">
-                <!-- Left: Student -->
-                <div class="flex items-center gap-3">
-                    {% if current_user.image %}
-                    <img src="{{ current_user.image }}" alt="{{ current_user.full_name() }}" class="w-10 h-10 rounded-full border-2 border-blue-500">
+    <!-- Modern Exam Header -->
+    <header class="exam-header sticky top-0 z-50">
+        <div class="header-glow"></div>
+        <div class="max-w-7xl mx-auto px-4 sm:px-6">
+            <div class="header-main">
+                <div class="brand-lockup">
+                    {% if school_info.logo_url %}
+                    <div class="brand-mark"><img src="{{ school_info.logo_url }}" alt="{{ school_info.name }}"></div>
                     {% else %}
-                    <div class="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center text-white font-bold shadow">
-                        {{ current_user.first_name[0].upper() }}{{ current_user.last_name[0].upper() }}
-                    </div>
+                    <div class="brand-mark"><span>{{ (school_info.name[:2] if school_info and school_info.name else 'SC')|upper }}</span><i class="material-symbols-outlined">school</i></div>
                     {% endif %}
-                    <div>
-                        <p class="text-sm font-semibold text-gray-900 dark:text-white">{{ current_user.full_name() }}</p>
-                        <p class="text-xs text-gray-500 dark:text-gray-400">{% if current_user.class_room %}{{ current_user.class_room.class_room_name }}{% endif %}</p>
-                    </div>
-                </div>
-                
-                <!-- Center: Exam -->
-                <div class="hidden md:block text-center">
-                    <p class="text-base font-bold text-gray-900 dark:text-white">{{ exam.subject.subject_name }}</p>
-                    <p class="text-xs text-gray-500 dark:text-gray-400">{{ exam.exam_type }} • {% if exam.invigilator %}{{ exam.invigilator.full_name() }}{% else %}System Monitored{% endif %}</p>
-                </div>
-                
-                <!-- Right: Timer & Dark Mode -->
-                <div class="flex items-center gap-3">
-                    <div class="flex items-center gap-2 px-4 py-2 bg-blue-50 dark:bg-blue-900/30 rounded-lg border border-blue-200 dark:border-blue-800">
-                        <span class="material-symbols-outlined text-blue-600 dark:text-blue-400">timer</span>
-                        <div>
-                            <p class="text-xs text-gray-600 dark:text-gray-400">Time Left</p>
-                            <p id="timer" class="text-lg font-bold text-blue-600 dark:text-blue-400">--:--</p>
+                    <div class="brand-copy">
+                        <div class="brand-title-row">
+                            <p class="brand-title">{{ school_info.name if school_info and school_info.name else 'School' }}</p>
+                            <span class="brand-badge">CBT</span>
                         </div>
+                        <p class="brand-subtitle">{{ exam.subject.subject_name }} <span>&middot;</span> {{ exam.exam_type }}</p>
                     </div>
-                    
-                    <!-- Dark Mode Toggle -->
-                    <button onclick="toggleDarkMode()" class="w-10 h-10 rounded-lg bg-gray-100 dark:bg-slate-700 hover:bg-gray-200 dark:hover:bg-slate-600 flex items-center justify-center transition-colors" title="Toggle dark mode">
-                        <span id="dark-mode-icon" class="material-symbols-outlined text-gray-700 dark:text-gray-200">light_mode</span>
-                    </button>
+                </div>
+
+                <div class="header-actions">
+                    <div class="exam-timer" id="exam-timer-wrap" aria-label="Time remaining">
+                        <span class="timer-icon material-symbols-outlined">timer</span>
+                        <div><span class="timer-label">TIME LEFT</span><p id="timer">--:--</p></div>
+                    </div>
+                    <div class="action-divider"></div>
+                    {% if exam.calculator_enabled %}
+                    <button onclick="CBTCalculator.toggle()" class="header-icon-btn" title="Toggle calculator" aria-label="Toggle calculator"><span class="material-symbols-outlined">calculate</span></button>
+                    {% endif %}
+                    <button onclick="showInstructions()" class="header-icon-btn" title="Exam instructions" aria-label="Exam instructions"><span class="material-symbols-outlined">help</span></button>
+                    <button onclick="toggleDarkMode()" class="header-icon-btn" title="Toggle dark mode" aria-label="Toggle dark mode"><span id="dark-mode-icon" class="material-symbols-outlined">light_mode</span></button>
                 </div>
             </div>
-            
-            <!-- Bottom Row: School Info -->
-            <div class="flex items-center justify-between text-xs text-gray-600 dark:text-gray-400 pt-2 border-t border-gray-100 dark:border-slate-700">
-                <div class="flex items-center gap-4">
-                    <span class="flex items-center gap-1">
-                        <span class="material-symbols-outlined text-sm">school</span>
-                        {% if exam.class_room and exam.class_room.school %}{{ exam.class_room.school.school_name }}{% else %}Greenwood High School{% endif %}
-                    </span>
-                    {% if exam.school_term %}
-                    <span>{{ exam.school_term.academic_session }} • {{ exam.school_term.term_name }}</span>
+
+            <div class="header-details">
+                <div class="header-context"><span class="context-dot"></span><span>Secure Examination Portal</span><b>&middot;</b><span>Candidate Session Active</span></div>
+                <div class="student-profile">
+                    {% if current_user.image %}
+                    <div class="student-avatar"><img src="{{ current_user.image }}" alt="{{ current_user.full_name() }}"></div>
+                    {% else %}
+                    <div class="student-avatar">{{ current_user.first_name[0].upper() }}{{ current_user.last_name[0].upper() }}</div>
                     {% endif %}
+                    <div>
+                        <p class="student-name">{{ current_user.full_name() }}</p>
+                        <p class="student-meta">{% if current_user.class_room %}{{ current_user.class_room.class_room_name }}{% endif %}{% if exam.invigilator %} <span>&middot;</span> {{ exam.invigilator.full_name() }}{% else %} <span>&middot;</span> System Monitored{% endif %}</p>
+                    </div>
                 </div>
-                <div class="hidden md:flex items-center gap-4">
-                    <span>Duration: {{ (exam.duration.seconds // 60) if exam.duration else 30 }} min</span>
-                    <span>Max Score: {{ exam.max_score }}</span>
+                <div class="exam-meta">
+                    {% if exam.school_term %}
+                    <span><span class="material-symbols-outlined">calendar_today</span> {{ exam.school_term.academic_session }} <b>&middot;</b> {{ exam.school_term.term_name }}</span>
+                    {% endif %}
+                    <span class="meta-chip"><span class="material-symbols-outlined">schedule</span> {{ (exam.duration.seconds // 60) if exam.duration else 30 }} min</span>
+                    <span class="meta-chip"><span class="material-symbols-outlined">assignment</span> Max: {{ exam.max_score }}</span>
                 </div>
             </div>
         </div>
-    </div>
+    </header>
     
     <!-- Main Content -->
     <div class="max-w-7xl mx-auto px-4 py-6">
@@ -236,9 +380,20 @@
             <div class="lg:col-span-2">
                 <!-- Progress -->
                 <div class="bg-white dark:bg-slate-800 rounded-lg shadow-sm p-4 mb-4 transition-colors">
+                    <div class="exam-summary">
+                        <div>
+                            <p class="summary-kicker">{{ exam.subject.subject_name }} CBT EXAMINATION</p>
+                            <h2>{{ exam.exam_type }}</h2>
+                        </div>
+                        <div class="summary-stats">
+                            <span><b>{{ (exam.duration.seconds // 60) if exam.duration else 30 }}</b> Minutes</span>
+                            <span><b>{{ exam.max_score }}</b> Max Score</span>
+                        </div>
+                    </div>
                     <div class="flex items-center justify-between mb-2">
                         <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Question <span id="current-question">1</span> of <span id="total-questions">0</span></span>
                         <span class="text-sm text-gray-600 dark:text-gray-400"><span id="answered-count">0</span> answered</span>
+                        <span class="text-sm text-amber-600 dark:text-amber-400"><span id="flagged-count">0</span> flagged</span>
                     </div>
                     <div class="h-2 bg-gray-200 dark:bg-slate-700 rounded-full">
                         <div id="progress-bar" class="h-full bg-blue-500 rounded-full transition-all" style="width: 0%;"></div>
@@ -260,23 +415,28 @@
                     </div>
                     
                     <div id="question-content" class="hidden">
-                        <div class="mb-6">
+                        <div class="flex items-center gap-3 mb-2">
                             <span class="px-3 py-1 bg-blue-500 text-white text-sm font-semibold rounded-full shadow">
                                 Question <span id="question-number">1</span>
                             </span>
-                            <div id="question-text" class="text-lg text-gray-900 dark:text-white mt-4 mb-6"></div>
+                            <button id="flag-question-btn" aria-label="Flag question for review" aria-pressed="false" class="px-2 py-1 rounded-lg border-2 border-gray-200 dark:border-slate-600 text-gray-400 hover:text-amber-500 hover:border-amber-400 dark:hover:text-amber-400 dark:hover:border-amber-500 transition-colors flex items-center gap-1 text-sm" title="Flag for review (F)">
+                                <span class="material-symbols-outlined text-base">flag</span>
+                                <span id="flag-label" class="hidden md:inline text-xs">Flag</span>
+                            </button>
                         </div>
+                        <!-- aria-live: screen readers announce when question changes -->
+                        <div id="question-text" class="text-lg text-gray-900 dark:text-white mt-2 mb-6" aria-live="polite"></div>
                         
                         <div id="answer-options" class="space-y-3 mb-6"></div>
                         
                         <div class="flex items-center justify-between pt-6 border-t border-gray-200 dark:border-slate-700">
-                            <button id="prev-question-btn" class="px-6 py-3 bg-gray-100 dark:bg-slate-700 hover:bg-gray-200 dark:hover:bg-slate-600 text-gray-700 dark:text-gray-200 font-semibold rounded-lg transition-colors">
+                            <button id="prev-question-btn" aria-label="Previous question" class="px-6 py-3 bg-gray-100 dark:bg-slate-700 hover:bg-gray-200 dark:hover:bg-slate-600 text-gray-700 dark:text-gray-200 font-semibold rounded-lg transition-colors">
                                 ← Previous (P)
                             </button>
-                            <button id="submit-quiz-btn" class="px-6 py-3 bg-green-600 hover:bg-green-700 text-white font-bold rounded-lg transition-colors shadow">
+                            <button id="submit-quiz-btn" aria-label="Submit exam" class="px-6 py-3 bg-green-600 hover:bg-green-700 text-white font-bold rounded-lg transition-colors shadow">
                                 Submit Exam
                             </button>
-                            <button id="next-question-btn" class="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-colors shadow">
+                            <button id="next-question-btn" aria-label="Next question" class="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-colors shadow">
                                 Next (N) →
                             </button>
                         </div>
@@ -291,31 +451,36 @@
                     <p class="text-xs text-gray-500 dark:text-gray-400 mb-4">Click any number to jump to that question</p>
                     
                     <!-- GRID OF QUESTION BUTTONS -->
-                    <div id="question-navigation" class="grid grid-cols-5 gap-2 mb-4">
+                    <div id="question-navigation" class="grid grid-cols-5 gap-2 mb-4" role="group" aria-label="Question navigator">
                         <!-- Buttons will be inserted here by JavaScript -->
-                        <!-- Example: 5 columns, multiple rows -->
                     </div>
                     
                     <!-- Legend -->
-                    <div class="pt-4 border-t border-gray-200 dark:border-slate-700 space-y-2 text-xs">
+                    <div class="pt-4 border-t border-gray-200 dark:border-slate-700 space-y-2 text-xs" role="group" aria-label="Question status legend">
                         <div class="flex items-center gap-2">
-                            <div class="w-8 h-8 rounded bg-blue-500 flex items-center justify-center text-white font-bold shadow">1</div>
+                            <div class="w-8 h-8 rounded bg-blue-500 flex items-center justify-center text-white font-bold shadow" aria-hidden="true">1</div>
                             <span class="text-gray-600 dark:text-gray-400">Current</span>
                         </div>
                         <div class="flex items-center gap-2">
-                            <div class="w-8 h-8 rounded bg-green-500 flex items-center justify-center text-white font-bold shadow">2</div>
+                            <div class="w-8 h-8 rounded bg-green-500 flex items-center justify-center text-white font-bold shadow" aria-hidden="true">2</div>
                             <span class="text-gray-600 dark:text-gray-400">Answered</span>
                         </div>
                         <div class="flex items-center gap-2">
-                            <div class="w-8 h-8 rounded border-2 border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 flex items-center justify-center text-gray-600 dark:text-gray-400 font-bold">3</div>
+                            <div class="w-8 h-8 rounded border-2 border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 flex items-center justify-center text-gray-600 dark:text-gray-400 font-bold" aria-hidden="true">3</div>
                             <span class="text-gray-600 dark:text-gray-400">Not Answered</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <div class="w-8 h-8 rounded bg-amber-500 flex items-center justify-center text-white font-bold shadow" aria-hidden="true">
+                                <span class="material-symbols-outlined text-sm">flag</span>
+                            </div>
+                            <span class="text-gray-600 dark:text-gray-400">Flagged</span>
                         </div>
                     </div>
                     
                     <!-- Keyboard Shortcuts -->
                     <div class="mt-4 pt-4 border-t border-gray-200 dark:border-slate-700">
                         <p class="text-xs font-bold text-gray-900 dark:text-white mb-2">Keyboard Shortcuts</p>
-                        <div class="space-y-1 text-xs text-gray-600 dark:text-gray-400">
+                        <div class="space-y-1 text-xs text-gray-600 dark:text-gray-400" role="group" aria-label="Keyboard shortcuts">
                             <div class="flex justify-between">
                                 <span>Next:</span>
                                 <kbd class="px-2 py-1 bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-200 rounded border border-gray-300 dark:border-slate-600 font-semibold">N</kbd>
@@ -341,33 +506,177 @@
     </div>
     
     <!-- Mobile Question Navigator -->
-    <button id="mobile-nav-toggle" class="lg:hidden fixed bottom-6 right-6 w-14 h-14 bg-blue-600 text-white rounded-full shadow-2xl flex items-center justify-center z-50">
+    <button id="mobile-nav-toggle" class="lg:hidden fixed bottom-6 right-6 w-14 h-14 bg-blue-600 text-white rounded-full shadow-2xl flex items-center justify-center z-50 active:scale-95 transition-transform" title="Open question navigator">
         <span class="material-symbols-outlined">grid_view</span>
     </button>
     
     <div id="mobile-nav-modal" class="lg:hidden fixed inset-0 bg-black/50 z-50 hidden">
         <div class="absolute bottom-0 left-0 right-0 bg-white dark:bg-slate-800 rounded-t-3xl max-h-[70vh] overflow-hidden transition-colors">
-            <div class="p-4 border-b border-gray-200 dark:border-slate-700 flex items-center justify-between">
+            <!-- Drag handle -->
+            <div class="flex justify-center pt-3 pb-1">
+                <div class="w-10 h-1 rounded-full bg-gray-300 dark:bg-slate-600"></div>
+            </div>
+            <div class="px-4 pb-3 border-b border-gray-200 dark:border-slate-700 flex items-center justify-between">
                 <h3 class="text-lg font-bold text-gray-900 dark:text-white">Question Navigator</h3>
-                <button id="close-mobile-nav" class="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200">
+                <button id="close-mobile-nav" class="w-9 h-9 flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 text-gray-500 dark:text-gray-400 transition-colors" title="Close navigator">
                     <span class="material-symbols-outlined">close</span>
                 </button>
             </div>
-            <div class="p-4 overflow-y-auto max-h-[calc(70vh-80px)]">
+            <div class="p-4 overflow-y-auto max-h-[calc(70vh-100px)]">
                 <div id="mobile-question-navigation" class="grid grid-cols-5 gap-2"></div>
             </div>
         </div>
     </div>
+    
+    <!-- Exam Instructions Modal -->
+    <div id="instructionsModal" class="modal-backdrop hidden">
+        <div class="modal-content instructions-card">
+            <div class="instructions-head">
+                <div>
+                    <p class="summary-kicker">{{ school_info.name if school_info and school_info.name else 'SCHOOL' }}</p>
+                    <h2>Exam Instructions</h2>
+                </div>
+                <button onclick="closeInstructions()" class="header-icon-btn" aria-label="Close instructions"><span class="material-symbols-outlined">close</span></button>
+            </div>
+            <div class="instructions-body">
+                <div class="instruction-item"><span class="material-symbols-outlined">touch_app</span><p>Select one answer for each question. Your selected option will be highlighted.</p></div>
+                <div class="instruction-item"><span class="material-symbols-outlined">flag</span><p>Use the flag button to mark questions you want to review later.</p></div>
+                <div class="instruction-item"><span class="material-symbols-outlined">keyboard</span><p>Use N for next, P for previous, F to flag, and A-D to choose options.</p></div>
+                <div class="instruction-item"><span class="material-symbols-outlined">send</span><p>Review your answers before selecting Submit Exam. Submission cannot be undone.</p></div>
+            </div>
+            <button onclick="closeInstructions()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-xl">Got it</button>
+        </div>
+    </div>
+
+    <!-- Calculator Panel (hidden by default) -->
+    {% if exam.calculator_enabled %}
+    <div id="cbt-calculator" class="hidden fixed z-50 flex-col rounded-2xl shadow-2xl border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-800 overflow-hidden" style="width:360px; right:20px; bottom:80px; display:none;">
+        <!-- Drag Handle / Header -->
+        <div id="calc-drag-handle" class="flex items-center justify-between px-3 py-2 bg-gradient-to-r from-blue-600 to-blue-500 rounded-t-2xl cursor-move select-none">
+            <div class="flex items-center gap-2">
+                <span class="material-symbols-outlined text-white text-lg">calculate</span>
+                <span class="text-white font-semibold text-sm">Calculator</span>
+            </div>
+            <div class="flex items-center gap-1">
+                <button id="calc-mode-toggle" class="px-2 py-0.5 text-xs font-bold bg-slate-600 hover:bg-slate-700 text-white rounded transition-colors" title="Switch to scientific mode">Basic</button>
+                <button data-action="power_toggle" id="calc-power-btn" class="px-2.5 py-0.5 text-xs font-bold bg-emerald-500 hover:bg-emerald-600 text-white rounded transition-colors" title="Turn calculator on or off">ON</button>
+                <button id="calc-angle-mode" class="px-2.5 py-0.5 text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white rounded transition-colors min-w-[36px]" title="Toggle angle mode: DEG - RAD - GRD">DEG</button>
+                <button id="calc-close-btn" class="w-7 h-7 flex items-center justify-center rounded hover:bg-white/20 text-white transition-colors" title="Close calculator">
+                    <span class="material-symbols-outlined text-lg">close</span>
+                </button>
+            </div>
+        </div>
+        <!-- Display -->
+        <div class="px-3 pt-2 pb-1 bg-white dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700">
+            <div id="calc-expression" class="text-xs text-gray-400 dark:text-gray-500 text-right h-4 overflow-hidden truncate"></div>
+            <div id="calc-display" class="text-2xl font-bold text-gray-900 dark:text-white text-right py-1 overflow-hidden truncate">0</div>
+        </div>
+        <!-- Buttons -->
+        <div class="flex flex-col gap-1 p-2 bg-gray-50 dark:bg-slate-800 rounded-b-2xl">
+            <!-- Scientific Row 1: Memory + Power (hidden in basic mode) -->
+            <div data-sci class="grid grid-cols-5 gap-1" style="display:none;">
+                <button data-action="mem_clear" class="calc-btn text-xs font-semibold py-2 rounded-lg bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-slate-600 active:scale-95 transition-all">MC</button>
+                <button data-action="mem_recall" class="calc-btn text-xs font-semibold py-2 rounded-lg bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-slate-600 active:scale-95 transition-all">MR</button>
+                <button data-action="mem_add" class="calc-btn text-xs font-semibold py-2 rounded-lg bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-slate-600 active:scale-95 transition-all">M+</button>
+                <button data-action="mem_subtract" class="calc-btn text-xs font-semibold py-2 rounded-lg bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-slate-600 active:scale-95 transition-all">M&minus;</button>
+                <button data-action="power_toggle" id="calc-power-sci-btn" class="calc-btn text-xs font-bold py-2 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white active:scale-95 transition-all" style="display:none;">ON</button>
+            </div>
+            <!-- Scientific Row 2: Trig & Log (hidden in basic mode) -->
+            <div data-sci class="grid grid-cols-5 gap-1" style="display:none;">
+                <button data-action="trig" data-value="sin" class="calc-btn text-xs font-semibold py-2 rounded-lg bg-indigo-50 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100 dark:hover:bg-indigo-900 active:scale-95 transition-all">sin</button>
+                <button data-action="trig" data-value="cos" class="calc-btn text-xs font-semibold py-2 rounded-lg bg-indigo-50 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100 dark:hover:bg-indigo-900 active:scale-95 transition-all">cos</button>
+                <button data-action="trig" data-value="tan" class="calc-btn text-xs font-semibold py-2 rounded-lg bg-indigo-50 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100 dark:hover:bg-indigo-900 active:scale-95 transition-all">tan</button>
+                <button data-action="log" data-value="log10" class="calc-btn text-xs font-semibold py-2 rounded-lg bg-indigo-50 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100 dark:hover:bg-indigo-900 active:scale-95 transition-all">log</button>
+                <button data-action="log" data-value="ln" class="calc-btn text-xs font-semibold py-2 rounded-lg bg-indigo-50 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100 dark:hover:bg-indigo-900 active:scale-95 transition-all">ln</button>
+            </div>
+            <!-- Scientific Row 3: Functions (hidden in basic mode) -->
+            <div data-sci class="grid grid-cols-5 gap-1" style="display:none;">
+                <button data-action="square" class="calc-btn text-sm font-semibold py-2 rounded-lg bg-indigo-50 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100 dark:hover:bg-indigo-900 active:scale-95 transition-all">x&sup2;</button>
+                <button data-action="paren" data-value="(" class="calc-btn text-sm font-bold py-2 rounded-lg bg-gray-200 dark:bg-slate-700 text-gray-800 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-slate-600 active:scale-95 transition-all">(</button>
+                <button data-action="sqrt" class="calc-btn text-sm font-semibold py-2 rounded-lg bg-indigo-50 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100 dark:hover:bg-indigo-900 active:scale-95 transition-all">&radic;</button>
+                <button data-action="paren" data-value=")" class="calc-btn text-sm font-bold py-2 rounded-lg bg-gray-200 dark:bg-slate-700 text-gray-800 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-slate-600 active:scale-95 transition-all">)</button>
+                <button data-action="reciprocal" class="calc-btn text-sm font-semibold py-2 rounded-lg bg-indigo-50 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100 dark:hover:bg-indigo-900 active:scale-95 transition-all">1/x</button>
+            </div>
+            <!-- Scientific Row 4: Power & Constants (hidden in basic mode) -->
+            <div data-sci class="grid grid-cols-5 gap-1" style="display:none;">
+                <button data-action="power" class="calc-btn text-sm font-semibold py-2 rounded-lg bg-indigo-50 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100 dark:hover:bg-indigo-900 active:scale-95 transition-all">x<sup>y</sup></button>
+                <button data-action="factorial" class="calc-btn text-sm font-semibold py-2 rounded-lg bg-indigo-50 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100 dark:hover:bg-indigo-900 active:scale-95 transition-all">!</button>
+                <button data-action="negate" class="calc-btn text-sm font-semibold py-2 rounded-lg bg-indigo-50 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100 dark:hover:bg-indigo-900 active:scale-95 transition-all">&plusmn;</button>
+                <button data-action="pi" class="calc-btn text-sm font-semibold py-2 rounded-lg bg-amber-50 dark:bg-amber-950 text-amber-700 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900 active:scale-95 transition-all">&pi;</button>
+                <button data-action="euler" class="calc-btn text-sm font-semibold py-2 rounded-lg bg-amber-50 dark:bg-amber-950 text-amber-700 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900 active:scale-95 transition-all">e</button>
+            </div>
+            <!-- Row 5: Utility (always visible) -->
+            <div class="grid grid-cols-5 gap-1">
+                <button data-action="clear" class="calc-btn text-xs font-bold py-2 rounded-lg bg-red-500 hover:bg-red-600 text-white active:scale-95 transition-all">AC</button>
+                <button data-action="percent" class="calc-btn text-sm font-semibold py-2 rounded-lg bg-gray-200 dark:bg-slate-700 text-gray-800 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-slate-600 active:scale-95 transition-all">%</button>
+                <button data-action="clear_entry" class="calc-btn text-sm font-bold py-2 rounded-lg bg-gray-200 dark:bg-slate-700 text-gray-800 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-slate-600 active:scale-95 transition-all">CE</button>
+                <button data-action="backspace" class="calc-btn py-2 rounded-lg bg-gray-200 dark:bg-slate-700 text-gray-800 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-slate-600 active:scale-95 transition-all" title="Backspace">
+                    <span class="material-symbols-outlined text-lg">backspace</span>
+                </button>
+                <button data-action="ans" class="calc-btn text-sm font-bold py-2 rounded-lg bg-teal-500 hover:bg-teal-600 text-white active:scale-95 transition-all">Ans</button>
+            </div>
+            <!-- Row 6: 7 8 9 / x -->
+            <div class="grid grid-cols-5 gap-1">
+                <button data-action="digit" data-value="7" class="calc-btn text-lg font-bold py-2 rounded-lg bg-white dark:bg-slate-700 text-gray-900 dark:text-white hover:bg-blue-50 dark:hover:bg-slate-600 active:scale-95 transition-all shadow-sm">7</button>
+                <button data-action="digit" data-value="8" class="calc-btn text-lg font-bold py-2 rounded-lg bg-white dark:bg-slate-700 text-gray-900 dark:text-white hover:bg-blue-50 dark:hover:bg-slate-600 active:scale-95 transition-all shadow-sm">8</button>
+                <button data-action="digit" data-value="9" class="calc-btn text-lg font-bold py-2 rounded-lg bg-white dark:bg-slate-700 text-gray-900 dark:text-white hover:bg-blue-50 dark:hover:bg-slate-600 active:scale-95 transition-all shadow-sm">9</button>
+                <button data-action="operator" data-value="/" class="calc-btn text-lg font-bold py-2 rounded-lg bg-blue-500 hover:bg-blue-600 text-white active:scale-95 transition-all shadow-sm">&divide;</button>
+                <button data-action="operator" data-value="*" class="calc-btn text-lg font-bold py-2 rounded-lg bg-blue-500 hover:bg-blue-600 text-white active:scale-95 transition-all shadow-sm">&times;</button>
+            </div>
+            <!-- Row 7: 4 5 6 - + -->
+            <div class="grid grid-cols-5 gap-1">
+                <button data-action="digit" data-value="4" class="calc-btn text-lg font-bold py-2 rounded-lg bg-white dark:bg-slate-700 text-gray-900 dark:text-white hover:bg-blue-50 dark:hover:bg-slate-600 active:scale-95 transition-all shadow-sm">4</button>
+                <button data-action="digit" data-value="5" class="calc-btn text-lg font-bold py-2 rounded-lg bg-white dark:bg-slate-700 text-gray-900 dark:text-white hover:bg-blue-50 dark:hover:bg-slate-600 active:scale-95 transition-all shadow-sm">5</button>
+                <button data-action="digit" data-value="6" class="calc-btn text-lg font-bold py-2 rounded-lg bg-white dark:bg-slate-700 text-gray-900 dark:text-white hover:bg-blue-50 dark:hover:bg-slate-600 active:scale-95 transition-all shadow-sm">6</button>
+                <button data-action="operator" data-value="-" class="calc-btn text-lg font-bold py-2 rounded-lg bg-blue-500 hover:bg-blue-600 text-white active:scale-95 transition-all shadow-sm">&minus;</button>
+                <button data-action="operator" data-value="+" class="calc-btn text-lg font-bold py-2 rounded-lg bg-blue-500 hover:bg-blue-600 text-white active:scale-95 transition-all shadow-sm">+</button>
+            </div>
+            <!-- Row 8: 1 2 3 0 . -->
+            <div class="grid grid-cols-5 gap-1">
+                <button data-action="digit" data-value="1" class="calc-btn text-lg font-bold py-2 rounded-lg bg-white dark:bg-slate-700 text-gray-900 dark:text-white hover:bg-blue-50 dark:hover:bg-slate-600 active:scale-95 transition-all shadow-sm">1</button>
+                <button data-action="digit" data-value="2" class="calc-btn text-lg font-bold py-2 rounded-lg bg-white dark:bg-slate-700 text-gray-900 dark:text-white hover:bg-blue-50 dark:hover:bg-slate-600 active:scale-95 transition-all shadow-sm">2</button>
+                <button data-action="digit" data-value="3" class="calc-btn text-lg font-bold py-2 rounded-lg bg-white dark:bg-slate-700 text-gray-900 dark:text-white hover:bg-blue-50 dark:hover:bg-slate-600 active:scale-95 transition-all shadow-sm">3</button>
+                <button data-action="digit" data-value="0" class="calc-btn text-lg font-bold py-2 rounded-lg bg-white dark:bg-slate-700 text-gray-900 dark:text-white hover:bg-blue-50 dark:hover:bg-slate-600 active:scale-95 transition-all shadow-sm">0</button>
+                <button data-action="decimal" class="calc-btn text-lg font-bold py-2 rounded-lg bg-white dark:bg-slate-700 text-gray-900 dark:text-white hover:bg-blue-50 dark:hover:bg-slate-600 active:scale-95 transition-all shadow-sm">.</button>
+            </div>
+            <!-- Row 9: Equals -->
+            <div class="grid grid-cols-5 gap-1">
+                <button data-action="equals" class="calc-btn text-lg font-bold py-2.5 rounded-lg col-span-5 bg-green-500 hover:bg-green-600 text-white active:scale-95 transition-all shadow-sm">=</button>
+            </div>
+        </div>
+    </div>
+    {% endif %}
     
     <script>
         var examDurationSeconds = {{ (exam.duration.seconds if exam.duration else 0) }};
         var examData = {
             id: "{{ exam.id }}",
             subject: "{{ exam.subject.subject_name }}",
-            examType: "{{ exam.exam_type }}"
+            examType: "{{ exam.exam_type }}",
+            showFeedback: {{ 'true' if exam.show_feedback else 'false' }},
+            calculatorEnabled: {{ 'true' if exam.calculator_enabled else 'false' }}
         };
+
+        function showInstructions() {
+            var m = document.getElementById('instructionsModal');
+            if (m) { m.classList.remove('hidden'); m.classList.add('flex'); }
+        }
+        function closeInstructions() {
+            var m = document.getElementById('instructionsModal');
+            if (m) { m.classList.add('hidden'); m.classList.remove('flex'); }
+        }
     </script>
     
     <script src="{{ url_for('static', filename='js/student/test_with_session.js') }}"></script>
+    {% if exam.calculator_enabled %}
+    <script src="{{ url_for('static', filename='js/components/calculator.js') }}"></script>
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            if (typeof CBTCalculator !== "undefined") {
+                CBTCalculator.init();
+            }
+        });
+    </script>
+    {% endif %}
 </body>
 </html>

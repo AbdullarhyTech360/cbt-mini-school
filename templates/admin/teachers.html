@@ -332,63 +332,82 @@
     </div>
 </div>
 
-<!-- Assign Classes Modal -->
+<!-- Assign Subjects Modal (Matrix) -->
 <div id="assignModal" class="fixed inset-0 bg-black/50 z-50 hidden items-center justify-center p-4">
-    <form id="assignSubjectForm" action="admin/assign_subject_teacher" method="POST">
-    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-        <div class="p-6 border-b border-gray-200 dark:border-gray-700">
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-xl w-full max-w-5xl max-h-[90vh] flex flex-col">
+        <div class="p-6 border-b border-gray-200 dark:border-gray-700 shrink-0">
             <div class="flex items-center justify-between">
-                <h2 class="text-xl font-bold text-gray-900 dark:text-white">Assign Subjects to Teachers</h2>
+                <h2 class="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                    <span class="material-symbols-outlined text-primary">assignment</span>
+                    Assign Subjects to Teacher
+                </h2>
                 <button type="button" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300" onclick="closeModal('assignModal')">
                     <span class="material-symbols-outlined text-2xl">close</span>
                 </button>
             </div>
         </div>
 
-        <div class="p-6 space-y-6">
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <div>
-                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Select Teacher</label>
-                    <select name="teacher" required class="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition">
-                        <option disabled selected>Select a teacher...</option>
-                        {% for teacher in teachers %}
-                            <option value="{{ teacher.id }}">{{ teacher.first_name }} {{ teacher.last_name }} {% if teacher.teacher and teacher.teacher.specialization %} ({{ teacher.teacher.specialization }}) {% else %}-{% endif %}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div>
-                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Select Class</label>
-                    <select name="class" required class="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition">
-                        <option disabled selected>Select class...</option>
-                        {% for class in active_classes %}
-                            <option value="{{ class.class_room_id }}">{{ class.class_room_name.upper() }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
+        <div class="p-6 space-y-4 overflow-y-auto flex-1 min-h-0">
+            <!-- Teacher selector -->
+            <div class="max-w-md">
+                <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Select Teacher</label>
+                <select id="matrixTeacherSelect" class="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition">
+                    <option disabled selected>Select a teacher...</option>
+                    {% for teacher in teachers %}
+                        <option value="{{ teacher.id }}">{{ teacher.first_name }} {{ teacher.last_name }} {% if teacher.teacher and teacher.teacher.specialization %}({{ teacher.teacher.specialization }}){% endif %}</option>
+                    {% endfor %}
+                </select>
             </div>
 
-            <div>
-                <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Select Subject to Assign</label>
-                <div id="subjectsContainer" class="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-64 overflow-y-auto border border-gray-200 dark:border-gray-700 rounded-xl p-4">
-                     <!-- {% if subjects %}
-                        {% for subject in subjects %}
-                            <label class="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
-                                <input name="subjects[]" value="{{ subject.subject_id }}" type="checkbox" class="assigned-subject h-4 w-4 text-primary border-gray-300 dark:border-gray-600 rounded focus:ring-primary">
-                                <span class="text-sm text-gray-700 dark:text-gray-300">{{ subject.subject_name }}</span>
-                            </label>
-                        {% endfor %}
-                    {% else %}
-                        <label class="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
-                            <input name="subjects[]" type="checkbox" class="h-4 w-4 text-primary border-gray-300 dark:border-gray-600 rounded focus:ring-primary">
-                            <span class="text-sm text-gray-700 dark:text-gray-300">No Subject</span>
-                        </label>
-                    {% endif %} -->
-                </div>
+            <!-- Matrix placeholder (shown before teacher is selected) -->
+            <div id="matrixPlaceholder" class="flex flex-col items-center justify-center py-12 text-gray-400 dark:text-gray-500">
+                <span class="material-symbols-outlined text-5xl mb-3">grid_on</span>
+                <p class="text-sm">Select a teacher above to see the assignment matrix</p>
             </div>
 
-            <div class="flex gap-3 pt-4">
-                <button type="submit" id="assignSubjectBtn" class="flex-1 bg-gradient-to-r from-primary to-blue-600 hover:from-primary/90 hover:to-blue-600/90 text-white font-semibold py-3 px-6 rounded-xl shadow-md hover:shadow-lg transition-all duration-200">
-                    Assign Subjects
+            <!-- Loading spinner -->
+            <div id="matrixLoading" class="hidden flex flex-col items-center justify-center py-12">
+                <div class="animate-spin rounded-full h-10 w-10 border-4 border-primary border-t-transparent mb-3"></div>
+                <p class="text-sm text-gray-500 dark:text-gray-400">Loading assignment matrix...</p>
+            </div>
+
+            <!-- Matrix container (hidden until data loads) -->
+            <div id="matrixContainer" class="hidden">
+                <!-- Bulk action bar -->
+                <div class="flex flex-wrap items-center gap-2 mb-3">
+                    <button type="button" id="matrixSelectAll" class="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition-colors">
+                        <span class="material-symbols-outlined text-sm">select_all</span>
+                        Select All
+                    </button>
+                    <button type="button" id="matrixClearAll" class="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
+                        <span class="material-symbols-outlined text-sm">deselect</span>
+                        Clear All
+                    </button>
+                    <div class="flex-1"></div>
+                    <span class="inline-flex items-center gap-1.5 text-[11px] text-amber-600 dark:text-amber-400">
+                        <span class="w-1.5 h-1.5 rounded-full bg-amber-400 dark:bg-amber-500 inline-block"></span>
+                        = assigned to another teacher
+                    </span>
+                    <span id="matrixCounter" class="text-xs font-medium text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 px-3 py-1.5 rounded-lg">
+                        0 assignments selected
+                    </span>
+                </div>
+
+                <!-- The scrollable matrix grid -->
+                <div class="overflow-x-auto border border-gray-200 dark:border-gray-700 rounded-xl">
+                    <table id="matrixTable" class="w-full border-collapse text-sm">
+                        <thead id="matrixHead" class="bg-gray-50 dark:bg-gray-700/50 sticky top-0 z-10"></thead>
+                        <tbody id="matrixBody" class="divide-y divide-gray-200 dark:divide-gray-600"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="p-6 border-t border-gray-200 dark:border-gray-700 shrink-0">
+            <div class="flex gap-3">
+                <button type="button" id="matrixSubmitBtn" disabled class="flex-1 bg-gradient-to-r from-primary to-blue-600 hover:from-primary/90 hover:to-blue-600/90 text-white font-semibold py-3 px-6 rounded-xl shadow-md hover:shadow-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed">
+                    Save Assignments
                 </button>
                 <button type="button" onclick="closeModal('assignModal')" class="flex-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-semibold py-3 px-6 rounded-xl hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
                     Cancel
@@ -396,7 +415,6 @@
             </div>
         </div>
     </div>
-    </form>
 </div>
 
 <script>
@@ -411,6 +429,21 @@ function closeModal(modalId) {
     document.getElementById(modalId).classList.add('hidden');
     document.getElementById(modalId).classList.remove('flex');
     document.body.style.overflow = '';
+    // Reset assignment matrix when closing the assign modal
+    if (modalId === 'assignModal') {
+        const placeholder = document.getElementById('matrixPlaceholder');
+        const loading = document.getElementById('matrixLoading');
+        const container = document.getElementById('matrixContainer');
+        const teacherSelect = document.getElementById('matrixTeacherSelect');
+        const submitBtn = document.getElementById('matrixSubmitBtn');
+        if (placeholder) placeholder.classList.remove('hidden');
+        if (loading) loading.classList.add('hidden');
+        if (container) container.classList.add('hidden');
+        if (teacherSelect) teacherSelect.selectedIndex = 0;
+        if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = 'Save Assignments'; }
+        // Reset JS state
+        if (window._resetAssignMatrix) window._resetAssignMatrix();
+    }
 }
 
 // Event listeners

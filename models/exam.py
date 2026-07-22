@@ -52,6 +52,12 @@ class Exam(db.Model):
     is_active = db.Column(db.Boolean, nullable=False, default=True)  # Controls visibility to students
     is_finished = db.Column(db.Boolean, nullable=False, default=False)  # Marks exam as completed
 
+    # Feature flags
+    calculator_enabled = db.Column(db.Boolean, nullable=False, default=False)  # Allow calculator during exam
+    is_on_the_go = db.Column(db.Boolean, nullable=False, default=False)  # On-The-Go test (ad-hoc, outside schedule)
+    save_after_completion = db.Column(db.Boolean, nullable=False, default=True)  # Save On-The-Go results to DB
+    show_feedback = db.Column(db.Boolean, nullable=False, default=True)  # Show detailed feedback after submission
+
     # Relationships
     subject = db.relationship("Subject", backref=db.backref("exams", lazy=True))
     school_term = db.relationship("SchoolTerm", backref=db.backref("exams", lazy=True))
@@ -65,18 +71,29 @@ class Exam(db.Model):
 
     def to_dict(self):
         """Convert Exam object to a serializable dictionary."""
+        hours = self.duration.seconds // 3600 if self.duration else 0
+        minutes = (self.duration.seconds % 3600) // 60 if self.duration else 0
         return {
             "id": self.id,
             "name": self.name,
             "exam_type": self.exam_type,
             "description": self.description,
-            "date": self.date.strftime("%Y-%m-%d"),
+            "date": self.date.strftime("%Y-%m-%d") if self.date else None,
             "duration": self.duration.seconds,
+            "duration_hours": hours,
+            "duration_minutes": minutes,
             "subject_id": self.subject_id,
             "class_room_id": self.class_room_id,
             "school_term_id": self.school_term_id,
             "invigilator_id": self.invigilator_id,
             "max_score": self.max_score,
+            "number_of_questions": self.number_of_questions,
+            "calculator_enabled": self.calculator_enabled,
+            "is_on_the_go": self.is_on_the_go,
+            "save_after_completion": self.save_after_completion,
+            "show_feedback": self.show_feedback,
+            "is_active": self.is_active,
+            "is_finished": self.is_finished,
             "created_at": self.created_at.strftime("%Y-%m-%d %H:%M:%S"),
             "updated_at": self.updated_at.strftime("%Y-%m-%d %H:%M:%S"),
         }

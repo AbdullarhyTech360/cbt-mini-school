@@ -215,6 +215,26 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
+    // ========================================
+    // ON-THE-GO TEST TOGGLE (CREATE FORM)
+    // ========================================
+    const isOnTheGoCheckbox = document.getElementById('isOnTheGo');
+    const onTheGoOptions = document.getElementById('onTheGoOptions');
+    const createSchoolTerm = document.querySelector('#createExamForm select[name="school_term_id"]');
+    const createExamDate = document.querySelector('#createExamForm input[name="date"]');
+
+    if (isOnTheGoCheckbox) {
+        isOnTheGoCheckbox.addEventListener('change', function () {
+            const isOnTheGo = this.checked;
+            if (onTheGoOptions) {
+                onTheGoOptions.classList.toggle('hidden', !isOnTheGo);
+            }
+            // Make term and date optional for On-The-Go tests
+            if (createSchoolTerm) createSchoolTerm.required = !isOnTheGo;
+            if (createExamDate) createExamDate.required = !isOnTheGo;
+        });
+    }
+
     // Create Exam Form Submission
     const createExamForm = document.getElementById('createExamForm');
     if (createExamForm) {
@@ -235,7 +255,11 @@ document.addEventListener('DOMContentLoaded', function () {
                 max_score: formData.get('max_score'),
                 invigilator_id: formData.get('invigilator_id') || null,
                 description: formData.get('description') || '',
-                number_of_questions: numberOfQuestions || null
+                number_of_questions: numberOfQuestions || null,
+                calculator_enabled: formData.get('calculator_enabled') === 'true',
+                is_on_the_go: formData.get('is_on_the_go') === 'true',
+                save_after_completion: formData.get('save_after_completion') === 'true',
+                show_feedback: formData.get('show_feedback') === 'true'
             };
 
             // Validate required fields
@@ -269,12 +293,12 @@ document.addEventListener('DOMContentLoaded', function () {
                 hasErrors = true;
             }
 
-            if (!data.school_term_id) {
+            if (!data.school_term_id && !data.is_on_the_go) {
                 showAlert('Please select a school term', 'error');
                 hasErrors = true;
             }
 
-            if (!data.date) {
+            if (!data.date && !data.is_on_the_go) {
                 showAlert('Please select an exam date', 'error');
                 hasErrors = true;
             }
@@ -729,6 +753,18 @@ document.addEventListener('DOMContentLoaded', function () {
                     document.getElementById('editInvigilator').value = exam.invigilator_id || '';
                     document.getElementById('editDescription').value = exam.description || '';
 
+                    // Set CBT option toggles
+                    document.getElementById('editCalculatorEnabled').checked = exam.calculator_enabled || false;
+                    document.getElementById('editIsOnTheGo').checked = exam.is_on_the_go || false;
+                    document.getElementById('editShowFeedback').checked = exam.show_feedback !== false;
+                    document.getElementById('editSaveAfterCompletion').checked = exam.save_after_completion !== false;
+
+                    // Show/hide On-The-Go options
+                    const editOnTheGoOptions = document.getElementById('editOnTheGoOptions');
+                    if (editOnTheGoOptions) {
+                        editOnTheGoOptions.classList.toggle('hidden', !exam.is_on_the_go);
+                    }
+
                     // Set subject and class (these need special handling)
                     const subjectSelect = document.getElementById('editSubjectSelect');
                     const classSelect = document.getElementById('editClassSelect');
@@ -870,6 +906,25 @@ document.addEventListener('DOMContentLoaded', function () {
     // Store available question count for edit form
     let editAvailableQuestionCount = 0;
 
+    // ========================================
+    // ON-THE-GO TEST TOGGLE (EDIT FORM)
+    // ========================================
+    const editIsOnTheGoCheckbox = document.getElementById('editIsOnTheGo');
+    const editOnTheGoOptions = document.getElementById('editOnTheGoOptions');
+    const editSchoolTerm = document.getElementById('editSchoolTerm');
+    const editExamDate = document.getElementById('editExamDate');
+
+    if (editIsOnTheGoCheckbox) {
+        editIsOnTheGoCheckbox.addEventListener('change', function () {
+            const isOnTheGo = this.checked;
+            if (editOnTheGoOptions) {
+                editOnTheGoOptions.classList.toggle('hidden', !isOnTheGo);
+            }
+            if (editSchoolTerm) editSchoolTerm.required = !isOnTheGo;
+            if (editExamDate) editExamDate.required = !isOnTheGo;
+        });
+    }
+
     // Load classes when subject is selected in edit form
     let editSubjectId = '';
     if (editSubjectSelect) {
@@ -1009,7 +1064,11 @@ document.addEventListener('DOMContentLoaded', function () {
                 max_score: formData.get('max_score'),
                 invigilator_id: formData.get('invigilator_id') || null,
                 description: formData.get('description') || '',
-                number_of_questions: numberOfQuestions || null
+                number_of_questions: numberOfQuestions || null,
+                calculator_enabled: document.getElementById('editCalculatorEnabled').checked,
+                is_on_the_go: document.getElementById('editIsOnTheGo').checked,
+                save_after_completion: document.getElementById('editSaveAfterCompletion').checked,
+                show_feedback: document.getElementById('editShowFeedback').checked
             };
 
             // Validate number of questions if specified

@@ -1,6 +1,7 @@
 from functools import wraps
 from time import time
 from collections import defaultdict
+import re
 import threading
 import uuid
 
@@ -88,6 +89,16 @@ def auth_routes(app):
 
             if not all(required_fields):
                 return jsonify({"error": "All required fields must be filled"}), 400
+
+            # Validate email format for staff/admin
+            if role in ["staff", "admin"]:
+                email_regex = r'^[^\s@]+@[^\s@]+\.[^\s@]+$'
+                if not re.match(email_regex, email):
+                    return jsonify({"error": "Please enter a valid email address"}), 400
+                # Check duplicate email
+                existing_email = User.query.filter_by(email=email.lower()).first()
+                if existing_email:
+                    return jsonify({"error": "An account with this email already exists"}), 409
 
             # ✅ Validate password strength
             if len(password) < 4:

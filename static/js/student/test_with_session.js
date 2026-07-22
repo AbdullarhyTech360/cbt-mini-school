@@ -9,10 +9,17 @@ document.addEventListener("DOMContentLoaded", function () {
   let questions = [];
   let currentQuestionIndex = 0;
   let studentAnswers = {};
+  let flaggedQuestions = new Set();
   let timeLeft = 0;
   let timerInterval = null;
   let autoSaveInterval = null;
   let hasRestoredSession = false;
+
+  function onBeforeUnload(e) {
+    saveProgress();
+    e.preventDefault();
+    e.returnValue = "";
+  }
 
   // DOM elements
   const loadingMessage = document.getElementById("loading-message");
@@ -30,7 +37,10 @@ document.addEventListener("DOMContentLoaded", function () {
     "mobile-question-navigation"
   );
   const answeredCountSpan = document.getElementById("answered-count");
+  const flaggedCountSpan = document.getElementById("flagged-count");
   const questionNumberSpan = document.getElementById("question-number");
+  const flagQuestionBtn = document.getElementById("flag-question-btn");
+  const flagLabel = document.getElementById("flag-label");
 
   // Mobile navigation
   const mobileNavToggle = document.getElementById("mobile-nav-toggle");
@@ -92,6 +102,12 @@ document.addEventListener("DOMContentLoaded", function () {
       const optionIndex = key.charCodeAt(0) - 97; // Convert a=0, b=1, c=2, d=3
       selectOptionByIndex(optionIndex);
     }
+
+    // F for flagging question
+    if (key === "f") {
+      e.preventDefault();
+      toggleFlag();
+    }
   });
 
   // Initialize the test
@@ -134,10 +150,13 @@ document.addEventListener("DOMContentLoaded", function () {
 
     submitBtn.addEventListener("click", submitQuiz);
 
-    // Save progress before page unload
-    window.addEventListener("beforeunload", function (e) {
-      saveProgress();
-    });
+    // Flag question button
+    if (flagQuestionBtn) {
+      flagQuestionBtn.addEventListener("click", toggleFlag);
+    }
+
+    // Save progress and warn before page unload
+    window.addEventListener("beforeunload", onBeforeUnload);
   }
 
   // Select option by index (for keyboard shortcuts)
@@ -153,6 +172,54 @@ document.addEventListener("DOMContentLoaded", function () {
     // Update UI
     displayQuestion(currentQuestionIndex);
     saveProgress();
+  }
+
+  // Toggle flag on current question
+  function toggleFlag() {
+    const question = questions[currentQuestionIndex];
+    if (!question) return;
+
+    if (flaggedQuestions.has(question.id)) {
+      flaggedQuestions.delete(question.id);
+    } else {
+      flaggedQuestions.add(question.id);
+    }
+
+    updateFlagButton();
+    updateQuestionNavigation();
+    updateFlaggedCount();
+    saveProgress();
+  }
+
+  // Update the flag button appearance
+  function updateFlagButton() {
+    if (!flagQuestionBtn) return;
+    const question = questions[currentQuestionIndex];
+    if (!question) return;
+
+    const isFlagged = flaggedQuestions.has(question.id);
+    flagQuestionBtn.classList.toggle("border-amber-400", isFlagged);
+    flagQuestionBtn.classList.toggle("text-amber-500", isFlagged);
+    flagQuestionBtn.classList.toggle("bg-amber-50", isFlagged);
+    flagQuestionBtn.classList.toggle("dark:bg-amber-900/30", isFlagged);
+    flagQuestionBtn.classList.toggle("dark:border-amber-500", isFlagged);
+    flagQuestionBtn.classList.toggle("dark:text-amber-400", isFlagged);
+    flagQuestionBtn.classList.toggle("border-gray-200", !isFlagged);
+    flagQuestionBtn.classList.toggle("text-gray-400", !isFlagged);
+    flagQuestionBtn.classList.toggle("dark:border-slate-600", !isFlagged);
+    flagQuestionBtn.classList.toggle("dark:text-gray-400", !isFlagged);
+    flagQuestionBtn.setAttribute("aria-pressed", String(isFlagged));
+
+    if (flagLabel) {
+      flagLabel.textContent = isFlagged ? "Flagged" : "Flag";
+    }
+  }
+
+  // Update flagged count display
+  function updateFlaggedCount() {
+    if (flaggedCountSpan) {
+      flaggedCountSpan.textContent = flaggedQuestions.size;
+    }
   }
 
   // Check for existing session
@@ -216,10 +283,12 @@ document.addEventListener("DOMContentLoaded", function () {
       }
 
       studentAnswers = sessionData.answers || {};
+      flaggedQuestions = new Set(sessionData.flagged_questions || []);
       timeLeft = sessionData.time_remaining;
       currentQuestionIndex = sessionData.current_question_index || 0;
 
       displayQuestion(currentQuestionIndex);
+      updateFlaggedCount();
       showToast("Session restored successfully!", "success");
     } catch (error) {
       console.error("Error restoring session:", error);
@@ -284,8 +353,10 @@ document.addEventListener("DOMContentLoaded", function () {
     console.log("Question text:", question.question_text);
     console.log("Options:", question.options);
 
-    // Update question text
-    questionText.innerHTML = question.question_text;
+    // Update question text (sanitize to prevent XSS)
+    questionText.innerHTML = typeof DOMPurify !== "undefined"
+      ? DOMPurify.sanitize(question.question_text, { ADD_TAGS: ["mjx-container"], ADD_ATTR: ["class", "type", "style"] })
+      : question.question_text;
 
     // Update question number
     if (questionNumberSpan) {
@@ -296,7 +367,7 @@ document.addEventListener("DOMContentLoaded", function () {
     if (question.question_image) {
       const imageContainer = document.createElement("div");
       imageContainer.className = "mt-4 mb-4";
-      imageContainer.innerHTML = `<img src="${question.question_image}" alt="Question image" class="max-w-full h-auto rounded-xl shadow-lg">`;
+      imageContainer.innerHTML = `<img src="${typeof DOMPurify !== 'undefined' ? DOMPurify.sanitize(question.question_image) : question.question_image}" alt="Question image" class="max-w-full h-auto rounded-xl shadow-lg">`;
       questionText.appendChild(imageContainer);
     }
 
@@ -311,6 +382,9 @@ document.addEventListener("DOMContentLoaded", function () {
     if (answeredCountSpan) {
       answeredCountSpan.textContent = Object.keys(studentAnswers).length;
     }
+
+    // Update flag button state
+    updateFlagButton();
 
     // Clear previous options
     answerOptions.innerHTML = "";
@@ -358,7 +432,9 @@ document.addEventListener("DOMContentLoaded", function () {
           ? "text-white font-semibold"
           : "text-gray-900 dark:text-gray-100 font-medium"
       }`;
-      textPara.innerHTML = option.text || "";
+      textPara.innerHTML = typeof DOMPurify !== "undefined"
+        ? DOMPurify.sanitize(option.text || "", { ADD_TAGS: ["mjx-container"], ADD_ATTR: ["class", "type", "style"] })
+        : option.text || "";
 
       textContainer.appendChild(textPara);
 
@@ -451,6 +527,7 @@ document.addEventListener("DOMContentLoaded", function () {
         button.textContent = index + 1;
         button.dataset.index = index;
         button.title = `Jump to question ${index + 1}`;
+        button.setAttribute("aria-label", `Question ${index + 1}`);
 
         button.addEventListener("click", function () {
           displayQuestion(parseInt(this.dataset.index));
@@ -479,6 +556,8 @@ document.addEventListener("DOMContentLoaded", function () {
 
         if (index === currentQuestionIndex) {
           button.classList.add("current");
+        } else if (flaggedQuestions.has(question.id)) {
+          button.classList.add("flagged");
         } else if (studentAnswers[question.id]) {
           button.classList.add("answered");
         } else {
@@ -517,6 +596,7 @@ document.addEventListener("DOMContentLoaded", function () {
           time_remaining: timeLeft,
           answers: studentAnswers,
           question_order: questionOrder,
+          flagged_questions: Array.from(flaggedQuestions),
         }),
       });
 
@@ -601,6 +681,7 @@ document.addEventListener("DOMContentLoaded", function () {
   async function sendQuizAnswers() {
     try {
       clearInterval(autoSaveInterval);
+      window.removeEventListener("beforeunload", onBeforeUnload);
 
       submitBtn.disabled = true;
       submitBtn.innerHTML =
@@ -628,17 +709,8 @@ document.addEventListener("DOMContentLoaded", function () {
 
         // Check if results should be shown
         if (result.show_results) {
-          // Show results immediately
-          showAlert({
-            title: "Exam Submitted Successfully!",
-            message: `You scored ${result.correct_answers} out of ${result.total_questions} questions correct (${result.score_percentage}%). Your grade: ${result.letter_grade}`,
-            type: "success",
-            confirmText: "OK",
-            onConfirm: function () {
-              window.location.href =
-                result.redirect_url || "/student/dashboard";
-            },
-          });
+          // Redirect to feedback page for detailed results
+          window.location.href = `/student/exam/${examId}/feedback`;
         } else {
           showAlert({
             title: "Exam Submitted Successfully!",
@@ -706,10 +778,15 @@ document.addEventListener("DOMContentLoaded", function () {
     if (timerElement) {
       timerElement.textContent = timeString;
 
-      // Change color when time is running low (last 5 minutes)
+      const timerBox = timerElement.closest('.exam-timer');
+      timerElement.classList.remove('timer-warning', 'timer-danger');
+      if (timerBox) timerBox.classList.remove('timer-danger-wrap');
+
       if (timeLeft <= 5 * 60) {
-        timerElement.classList.add("text-red-500", "timer-warning");
-        timerElement.classList.remove("text-blue-600");
+        timerElement.classList.add('timer-danger');
+        if (timerBox) timerBox.classList.add('timer-danger-wrap');
+      } else if (timeLeft <= 10 * 60) {
+        timerElement.classList.add('timer-warning');
       }
     }
 
@@ -719,8 +796,11 @@ document.addEventListener("DOMContentLoaded", function () {
       timerMobile.textContent = timeString;
 
       if (timeLeft <= 5 * 60) {
-        timerMobile.classList.add("text-red-500", "timer-warning");
-        timerMobile.classList.remove("text-blue-600");
+        timerMobile.classList.add("text-red-500", "dark:text-red-400", "timer-danger");
+        timerMobile.classList.remove("text-blue-600", "dark:text-blue-400", "timer-warning");
+      } else if (timeLeft <= 10 * 60) {
+        timerMobile.classList.add("timer-warning");
+        timerMobile.classList.remove("text-blue-600", "dark:text-blue-400", "timer-danger");
       }
     }
 
