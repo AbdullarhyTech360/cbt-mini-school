@@ -20,6 +20,91 @@ from typing import List
 import uuid
 
 
+def initialize_default_permissions():
+    """Initialize default permissions for the system. Must be called within an app context."""
+    default_permissions = [
+        {
+            "permission_name": "users_can_register",
+            "permission_description": "Allow users to register for accounts",
+            "is_active": True,
+            "created_for": "system"
+        },
+        {
+            "permission_name": "teachers_create_exams",
+            "permission_description": "Allow teachers to create exams",
+            "is_active": True,
+            "created_for": "system"
+        },
+        {
+            "permission_name": "students_view_results",
+            "permission_description": "Allow students to view their results immediately after exams",
+            "is_active": False,
+            "created_for": "system"
+        },
+        {
+            "permission_name": "students_can_write_exam",
+            "permission_description": "Allow students to write exams",
+            "is_active": False,
+            "created_for": "system"
+        },
+        {
+            "permission_name": "admins_can_upload_questions",
+            "permission_description": "Allow admins to upload questions",
+            "is_active": True,
+            "created_for": "system"
+        },
+        {
+            "permission_name": "teachers_can_upload_questions",
+            "permission_description": "Allow teachers to upload questions",
+            "is_active": True,
+            "created_for": "system"
+        },
+        {
+            "permission_name": "students_can_view_dashboard",
+            "permission_description": "Allow students to view dashboard",
+            "is_active": True,
+            "created_for": "system"
+        },
+        {
+            "permission_name": "teachers_can_view_dashboard",
+            "permission_description": "Allow teachers to view dashboard",
+            "is_active": True,
+            "created_for": "system"
+        },
+        {
+            "permission_name": "staff_can_view_dashboard",
+            "permission_description": "Allow staff to view dashboard",
+            "is_active": True,
+            "created_for": "system"
+        },
+        {
+            "permission_name": "demo_question_bank",
+            "permission_description": "Allow students to take demo tests",
+            "is_active": False,
+            "created_for": "system"
+        }
+    ]
+
+    for perm_data in default_permissions:
+        existing = Permission.query.filter_by(
+            permission_name=perm_data["permission_name"]
+        ).first()
+
+        if not existing:
+            perm = Permission(
+                permission_name=perm_data["permission_name"],
+                permission_description=perm_data["permission_description"],
+                is_active=perm_data["is_active"],
+                created_for=perm_data["created_for"]
+            )
+            db.session.add(perm)
+
+    try:
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+
+
 def admin_action_route(app):
     # Helper function to check allowed file extensions
     def allowed_file(filename):
@@ -114,6 +199,10 @@ def admin_action_route(app):
             elif role in ["staff", "admin"]:
                 if not email:
                     return jsonify({"success": False, "message": "Email is required for staff/admin"}), 400
+
+                import re
+                if not re.match(r'^[^\s@]+@[^\s@]+\.[^\s@]+$', email):
+                    return jsonify({"success": False, "message": "Please enter a valid email address"}), 400
 
                 if not class_room_id:
                     return jsonify({"success": False, "message": "Class is required for staff/admin"}), 400
@@ -320,6 +409,12 @@ def admin_action_route(app):
     @app.route("/admin/upload_questions", methods=["GET", "POST"])
     @admin_required
     def upload_questions():
+        from models import is_permission_active
+        if not is_permission_active("admins_can_upload_questions"):
+            if request.method == "POST":
+                return jsonify({"success": False, "message": "Question upload is disabled by the administrator"}), 403
+            return redirect(url_for("admin_dashboard", denied="Question upload has been disabled by the administrator."))
+
         if request.method == "POST":
             try:
                 data = request.get_json()
@@ -613,6 +708,10 @@ def admin_action_route(app):
     @admin_required
     def admin_extract_questions():
         """Stream extraction milestones and final parsed questions for review."""
+        from models import is_permission_active
+        if not is_permission_active("admins_can_upload_questions"):
+            return jsonify({"success": False, "message": "Question upload is disabled by the administrator"}), 403
+
         try:
             import json
             import os
@@ -812,6 +911,10 @@ def admin_action_route(app):
     @admin_required
     def admin_ai_chat_generate():
         """AI Chat endpoint for generating questions from uploaded documents or text prompts with system prompt."""
+        from models import is_permission_active
+        if not is_permission_active("admins_can_upload_questions"):
+            return jsonify({"success": False, "message": "Question upload is disabled by the administrator"}), 403
+
         try:
             import os
             import tempfile
@@ -934,6 +1037,10 @@ Include context field for tables, diagrams, formulas referenced in questions."""
         """Create questions from a JSON payload (used after AI extraction review in admin).
         Expects JSON: { teacher_id, subject_id, class_room_id, term_id, exam_type_id, questions: [...] }
         """
+        from models import is_permission_active
+        if not is_permission_active("admins_can_upload_questions"):
+            return jsonify({"success": False, "message": "Question upload is disabled by the administrator"}), 403
+
         try:
             data = request.get_json()
             if not data:
@@ -1129,6 +1236,12 @@ Include context field for tables, diagrams, formulas referenced in questions."""
     @app.route("/admin/bulk_upload_questions", methods=["GET", "POST"])
     @admin_required
     def bulk_upload_questions():
+        from models import is_permission_active
+        if not is_permission_active("admins_can_upload_questions"):
+            if request.method == "POST":
+                return jsonify({"success": False, "message": "Question upload is disabled by the administrator"}), 403
+            return redirect(url_for("admin_dashboard", denied="Question upload has been disabled by the administrator."))
+
         if request.method == "POST":
             try:
                 # Check if this is a file upload (Word document)
@@ -1498,6 +1611,7 @@ Include context field for tables, diagrams, formulas referenced in questions."""
         if request.method == "POST":
             try:
                 data = request.get_json()
+                is_on_the_go = data.get("is_on_the_go", False)
 
                 # Validation
                 if not data.get("exam_type"):
@@ -1518,7 +1632,7 @@ Include context field for tables, diagrams, formulas referenced in questions."""
                             {"success": False, "message": "Class is required"}),
                         400,
                     )
-                if not data.get("school_term_id"):
+                if not is_on_the_go and not data.get("school_term_id"):
                     return (
                         jsonify(
                             {"success": False, "message": "School term is required"}
@@ -1539,7 +1653,7 @@ Include context field for tables, diagrams, formulas referenced in questions."""
                         ),
                         400,
                     )
-                if not data.get("date"):
+                if not is_on_the_go and not data.get("date"):
                     return (
                         jsonify(
                             {"success": False, "message": "Exam date is required"}
@@ -1552,8 +1666,11 @@ Include context field for tables, diagrams, formulas referenced in questions."""
                 minutes = int(data.get("duration_minutes", 0))
                 duration = timedelta(hours=hours, minutes=minutes)
 
-                # Parse exam date
-                exam_date = datetime.strptime(data.get("date"), "%Y-%m-%d")
+                # Parse exam date (On-The-Go tests use current date if not specified)
+                if data.get("date"):
+                    exam_date = datetime.strptime(data.get("date"), "%Y-%m-%d")
+                else:
+                    exam_date = datetime.utcnow()
 
                 # Get subject and class to auto-generate name
                 subject = Subject.query.get(data.get("subject_id"))
@@ -1591,19 +1708,20 @@ Include context field for tables, diagrams, formulas referenced in questions."""
                             "message": f"Cannot create exam with {number_of_questions} questions. Only {question_count} questions available for {subject.subject_name} in {class_room.class_room_name}."
                         }), 400
 
-                # Check if exam already exists for this subject, class, term and exam type
-                existing_exam = Exam.query.filter_by(
-                    subject_id=data.get("subject_id"),
-                    class_room_id=data.get("class_room_id"),
-                    school_term_id=data.get("school_term_id"),
-                    exam_type=data.get("exam_type")
-                ).first()
+                # Check if exam already exists for this subject, class, term and exam type (skip for On-The-Go)
+                if not is_on_the_go:
+                    existing_exam = Exam.query.filter_by(
+                        subject_id=data.get("subject_id"),
+                        class_room_id=data.get("class_room_id"),
+                        school_term_id=data.get("school_term_id"),
+                        exam_type=data.get("exam_type")
+                    ).first()
 
-                if existing_exam:
-                    return jsonify({
-                        "success": False,
-                        "message": f"An exam already exists for {subject.subject_name} in {class_room.class_room_name} for this term and exam type."
-                    }), 409
+                    if existing_exam:
+                        return jsonify({
+                            "success": False,
+                            "message": f"An exam already exists for {subject.subject_name} in {class_room.class_room_name} for this term and exam type."
+                        }), 409
 
                 # Create new exam
                 new_exam = Exam()
@@ -1618,6 +1736,10 @@ Include context field for tables, diagrams, formulas referenced in questions."""
                 new_exam.invigilator_id = data.get("invigilator_id")
                 new_exam.max_score = float(data.get("max_score"))
                 new_exam.number_of_questions = number_of_questions
+                new_exam.calculator_enabled = data.get("calculator_enabled", False)
+                new_exam.is_on_the_go = data.get("is_on_the_go", False)
+                new_exam.save_after_completion = data.get("save_after_completion", True)
+                new_exam.show_feedback = data.get("show_feedback", True)
 
                 db.session.add(new_exam)
                 db.session.commit()
@@ -1917,6 +2039,16 @@ Include context field for tables, diagrams, formulas referenced in questions."""
                 else:
                     # If empty string or None, set to None (use all questions)
                     exam.number_of_questions = None
+
+            # Handle feature flag updates
+            if "calculator_enabled" in data:
+                exam.calculator_enabled = data.get("calculator_enabled", False)
+            if "is_on_the_go" in data:
+                exam.is_on_the_go = data.get("is_on_the_go", False)
+            if "save_after_completion" in data:
+                exam.save_after_completion = data.get("save_after_completion", True)
+            if "show_feedback" in data:
+                exam.show_feedback = data.get("show_feedback", True)
 
             db.session.commit()
 
@@ -2294,56 +2426,6 @@ Include context field for tables, diagrams, formulas referenced in questions."""
             return jsonify({"success": True, "students": students_data}), 200
         except Exception as e:
             return jsonify({"success": False, "message": str(e)}), 500
-
-    @app.route("/admin/settings/permissions", methods=["POST"])
-    @admin_required
-    def update_permission():
-        try:
-            data = request.get_json()
-            permission_name = data.get("permission_name")
-            is_active = data.get("is_active", False)
-            permission_id = data.get("permission_id")
-            permission_description = data.get("permission_description", "")
-            created_for = data.get("created_for", "system")
-
-            if not permission_name:
-                return jsonify({"success": False, "message": "Permission name is required"}), 400
-
-            # Try to find existing permission
-            permission = None
-            if permission_id:
-                permission = Permission.query.get(permission_id)
-
-            if not permission:
-                permission = Permission.query.filter_by(
-                    permission_name=permission_name).first()
-
-            # Create new permission if it doesn't exist
-            if not permission:
-                permission = Permission(
-                    permission_name=permission_name,
-                    permission_description=permission_description,
-                    is_active=is_active,
-                    created_for=created_for
-                )
-                db.session.add(permission)
-            else:
-                # Update existing permission
-                permission.is_active = is_active
-                permission.permission_updated_at = datetime.utcnow()
-
-            db.session.commit()
-
-            return jsonify({
-                "success": True,
-                "message": "Permission updated successfully",
-                "permission": permission.to_dict()
-            }), 200
-
-        except Exception as e:
-            db.session.rollback()
-            # print(f"Error updating permission: {str(e)}")
-            return jsonify({"success": False, "message": f"Error updating permission: {str(e)}"}), 500
 
     # New endpoint to get classes that cannot write exams
     @app.route("/admin/settings/exception-classes", methods=["GET"])
@@ -3397,6 +3479,195 @@ Include context field for tables, diagrams, formulas referenced in questions."""
                 500,
             )
 
+    @app.route("/admin/teacher_assignments_matrix", methods=["POST"])
+    @admin_required
+    def teacher_assignments_matrix():
+        try:
+            data = request.get_json()
+            teacher_id = data.get("teacher_id")
+
+            if not teacher_id:
+                return jsonify({"success": False, "message": "Teacher ID is required"}), 400
+
+            teacher = User.query.get(teacher_id)
+            if not teacher or teacher.role != "staff":
+                return jsonify({"success": False, "message": "Teacher not found or invalid"}), 404
+
+            from models.associations import teacher_subject, class_subject
+
+            # Get all active classes
+            active_classes = ClassRoom.query.filter_by(is_active=True).order_by(ClassRoom.class_room_name).all()
+            classes_data = [{"class_room_id": c.class_room_id, "class_room_name": c.class_room_name} for c in active_classes]
+
+            # Get all subjects
+            all_subjects = Subject.query.filter_by(is_active=True).order_by(Subject.subject_name).all()
+            subjects_data = [{"subject_id": s.subject_id, "subject_name": s.subject_name} for s in all_subjects]
+
+            # Get class_subject mapping: which subjects are offered in which classes
+            cs_rows = db.session.execute(db.select(class_subject)).fetchall()
+            class_subject_map = {}
+            for row in cs_rows:
+                cid = row.class_room_id
+                sid = row.subject_id
+                if cid not in class_subject_map:
+                    class_subject_map[cid] = []
+                class_subject_map[cid].append(sid)
+
+            # Get teacher's existing assignments
+            existing_rows = db.session.execute(
+                db.select(teacher_subject).where(teacher_subject.c.teacher_id == teacher_id)
+            ).fetchall()
+            existing_assignments = [
+                {"subject_id": row.subject_id, "class_room_id": row.class_room_id}
+                for row in existing_rows
+            ]
+
+            # Get ALL teacher-subject-class assignments (for cross-teacher warnings)
+            all_teacher_rows = db.session.execute(db.select(teacher_subject)).fetchall()
+            # Batch-load teacher names to avoid N+1 queries
+            teacher_ids = list(set(row.teacher_id for row in all_teacher_rows))
+            teacher_map = {}
+            if teacher_ids:
+                teachers = User.query.filter(User.id.in_(teacher_ids)).all()
+                teacher_map = {t.id: f"{t.first_name} {t.last_name}" for t in teachers}
+
+            all_assignments = [
+                {
+                    "teacher_id": row.teacher_id,
+                    "teacher_name": teacher_map.get(row.teacher_id, "Unknown"),
+                    "subject_id": row.subject_id,
+                    "class_room_id": row.class_room_id,
+                }
+                for row in all_teacher_rows
+            ]
+
+            return jsonify({
+                "success": True,
+                "classes": classes_data,
+                "subjects": subjects_data,
+                "class_subject_map": class_subject_map,
+                "existing_assignments": existing_assignments,
+                "all_assignments": all_assignments,
+            }), 200
+
+        except Exception as e:
+            db.session.rollback()
+            return jsonify({"success": False, "message": f"Error loading assignment matrix: {str(e)}"}), 500
+
+    @app.route("/admin/assign_subjects_batch", methods=["POST"])
+    @admin_required
+    def assign_subjects_batch():
+        try:
+            data = request.get_json()
+            teacher_id = data.get("teacher_id")
+            assignments = data.get("assignments", [])
+
+            if not teacher_id:
+                return jsonify({"success": False, "message": "Teacher ID is required"}), 400
+
+            teacher = User.query.get(teacher_id)
+            if not teacher or teacher.role != "staff":
+                return jsonify({"success": False, "message": "Teacher not found or invalid"}), 404
+
+            from models.associations import teacher_subject
+
+            assigned = []
+            already_exists = []
+            reassigned = []
+            skipped = []
+
+            for item in assignments:
+                subject_id = item.get("subject_id")
+                class_room_id = item.get("class_room_id")
+
+                if not subject_id or not class_room_id:
+                    continue
+
+                subject = Subject.query.get(subject_id)
+                if not subject:
+                    skipped.append(subject_id)
+                    continue
+
+                class_room = ClassRoom.query.get(class_room_id)
+                if not class_room:
+                    skipped.append(class_room_id)
+                    continue
+
+                # Check if THIS teacher already has this assignment
+                existing = db.session.execute(
+                    db.select(teacher_subject).where(
+                        teacher_subject.c.teacher_id == teacher_id,
+                        teacher_subject.c.subject_id == subject_id,
+                        teacher_subject.c.class_room_id == class_room_id,
+                    )
+                ).fetchone()
+
+                if existing:
+                    already_exists.append(f"{subject.subject_name} ({class_room.class_room_name})")
+                    continue
+
+                # Check if ANOTHER teacher has this subject-class assignment
+                conflict = db.session.execute(
+                    db.select(teacher_subject).where(
+                        teacher_subject.c.subject_id == subject_id,
+                        teacher_subject.c.class_room_id == class_room_id,
+                    )
+                ).fetchone()
+
+                if conflict:
+                    # Remove the old assignment (reassign)
+                    conflicting_teacher = User.query.get(conflict.teacher_id)
+                    conflict_name = f"{conflicting_teacher.first_name} {conflicting_teacher.last_name}" if conflicting_teacher else "Unknown"
+                    db.session.execute(
+                        db.delete(teacher_subject).where(
+                            teacher_subject.c.teacher_id == conflict.teacher_id,
+                            teacher_subject.c.subject_id == subject_id,
+                            teacher_subject.c.class_room_id == class_room_id,
+                        )
+                    )
+                    reassigned.append({
+                        "subject": subject.subject_name,
+                        "class": class_room.class_room_name,
+                        "from_teacher": conflict_name,
+                    })
+
+                # Insert the new assignment
+                stmt = teacher_subject.insert().values(
+                    teacher_id=teacher_id,
+                    subject_id=subject_id,
+                    class_room_id=class_room_id,
+                )
+                db.session.execute(stmt)
+                assigned.append(f"{subject.subject_name} ({class_room.class_room_name})")
+
+            db.session.commit()
+
+            parts = []
+            if assigned:
+                parts.append(f"Assigned {len(assigned)}: {', '.join(assigned)}")
+            if reassigned:
+                reassign_msgs = [f"{r['subject']} ({r['class']}) from {r['from_teacher']}" for r in reassigned]
+                parts.append(f"Reassigned {len(reassigned)} from other teachers: {', '.join(reassign_msgs)}")
+            if already_exists:
+                parts.append(f"Already assigned to this teacher ({len(already_exists)}): {', '.join(already_exists)}")
+            if skipped:
+                parts.append(f"Skipped {len(skipped)} invalid entries")
+
+            message = "; ".join(parts) if parts else "No assignments to process"
+            success = len(assigned) > 0
+
+            return jsonify({
+                "success": success,
+                "message": message,
+                "assigned_count": len(assigned),
+                "reassigned_count": len(reassigned),
+                "already_exists_count": len(already_exists),
+            }), 200 if success else 400
+
+        except Exception as e:
+            db.session.rollback()
+            return jsonify({"success": False, "message": f"Error in batch assignment: {str(e)}"}), 500
+
     @app.route("/admin/remove_subject_teacher", methods=["POST"])
     @admin_required
     def remove_subject_teacher():
@@ -4428,77 +4699,125 @@ Include context field for tables, diagrams, formulas referenced in questions."""
                         "message": f"Error retrieving permissions: {str(e)}",
                     }
                 ),
-                500,
-            )
-
-    # Initialize default permissions if they don't exist
-    def initialize_default_permissions():
-        """Initialize default permissions for the system"""
-        default_permissions = [
-            {
-                "permission_name": "users_can_register",
-                "permission_description": "Allow users to register for accounts",
-                "is_active": True,
-                "created_for": "system"
-            },
-            {
-                "permission_name": "teachers_create_exams",
-                "permission_description": "Allow teachers to create exams",
-                "is_active": True,
-                "created_for": "system"
-            },
-            {
-                "permission_name": "students_view_results",
-                "permission_description": "Allow students to view their results immediately after exams",
-                "is_active": False,
-                "created_for": "system"
-            },
-            {
-                "permission_name": "students_can_write_exam",
-                "permission_description": "Allow students to write exams",
-                "is_active": False,
-                "created_for": "system"
-            },
-            {
-                "permission_name": "admins_can_upload_questions",
-                "permission_description": "Allow admins to upload questions",
-                "is_active": True,
-                "created_for": "system"
-            },
-            {
-                "permission_name": "teachers_can_upload_questions",
-                "permission_description": "Allow teachers to upload questions",
-                "is_active": True,
-                "created_for": "system"
-            }
-        ]
-
-        for perm_data in default_permissions:
-            # Check if permission already exists
-            existing = Permission.query.filter_by(
-                permission_name=perm_data["permission_name"]
-            ).first()
-
-            if not existing:
-                # Create new permission
-                perm = Permission(
-                    permission_name=perm_data["permission_name"],
-                    permission_description=perm_data["permission_description"],
-                    is_active=perm_data["is_active"],
-                    created_for=perm_data["created_for"]
+                    500,
                 )
-                db.session.add(perm)
+
+    # CBT Configuration
+    @app.route("/admin/settings/cbt-config", methods=["GET", "POST"])
+    @admin_required
+    def manage_cbt_config():
+        """Get or update CBT configuration settings."""
+        from models import School
 
         try:
-            db.session.commit()
-            # print("Default permissions initialized successfully")
+            school = School.query.first()
+            if not school:
+                school = School(school_name="School")
+                db.session.add(school)
+                db.session.commit()
+
+            if request.method == "POST":
+                data = request.get_json() or {}
+
+                # Store CBT config in school record or a dedicated config
+                # For now we use a simple JSON approach via a school setting
+                # We'll use the existing school fields or add a config_json field
+                # Since we don't have a dedicated config table, we'll use
+                # Permission-based approach for some and direct flags for others
+
+                # Calculator enabled default
+                if "calculator_enabled" in data:
+                    _set_or_create_permission(
+                        "cbt_calculator_enabled", bool(data["calculator_enabled"]),
+                        "Allow calculator in CBT exams by default"
+                    )
+
+                # On-the-go tests allowed
+                if "on_the_go_enabled" in data:
+                    _set_or_create_permission(
+                        "cbt_on_the_go_enabled", bool(data["on_the_go_enabled"]),
+                        "Allow On-The-Go tests in CBT system"
+                    )
+
+                # Default feedback mode
+                feedback_mode = data.get("default_feedback_mode", "detailed")
+                _set_or_create_permission(
+                    "cbt_detailed_feedback", feedback_mode == "detailed",
+                    "Show detailed feedback after CBT exam submission"
+                )
+                _set_or_create_permission(
+                    "cbt_no_feedback", feedback_mode == "none",
+                    "Disable feedback after CBT exam submission"
+                )
+
+                # Timer warning threshold (stored as permission description for now)
+                timer_warning = data.get("timer_warning_minutes", 5)
+                _set_or_create_permission(
+                    "cbt_timer_warning", True,
+                    f"Timer warning threshold: {int(timer_warning)} minutes"
+                )
+
+                db.session.commit()
+
+                return jsonify({
+                    "success": True,
+                    "message": "CBT configuration saved successfully"
+                }), 200
+
+            # GET: return current CBT config
+            perms = {}
+            for p in Permission.query.all():
+                perms[p.permission_name] = p
+
+            timer_warning_value = 5
+            timer_perm = perms.get("cbt_timer_warning")
+            if timer_perm and timer_perm.permission_description:
+                import re
+                match = re.search(r"(\d+)", timer_perm.permission_description)
+                if match:
+                    timer_warning_value = int(match.group(1))
+
+            feedback_mode = "detailed"
+            if perms.get("cbt_no_feedback") and perms["cbt_no_feedback"].is_active:
+                feedback_mode = "none"
+            elif perms.get("cbt_detailed_feedback") and not perms["cbt_detailed_feedback"].is_active:
+                feedback_mode = "summary"
+
+            config = {
+                "calculator_enabled": perms.get("cbt_calculator_enabled") and perms["cbt_calculator_enabled"].is_active,
+                "on_the_go_enabled": perms.get("cbt_on_the_go_enabled") and perms["cbt_on_the_go_enabled"].is_active,
+                "default_feedback_mode": feedback_mode,
+                "timer_warning_minutes": timer_warning_value,
+            }
+
+            return jsonify({
+                "success": True,
+                "config": config
+            }), 200
+
         except Exception as e:
             db.session.rollback()
-            # print(f"Error initializing default permissions: {str(e)}")
+            return jsonify({
+                "success": False,
+                "message": f"Error managing CBT config: {str(e)}"
+            }), 500
 
-    # Call initialize_default_permissions when the app starts
-    # This should be called once during application startup
-    # initialize_default_permissions()
+    def _set_or_create_permission(name, is_active, description=""):
+        """Helper to set or create a permission by name."""
+        perm = Permission.query.filter_by(permission_name=name).first()
+        if perm:
+            perm.is_active = bool(is_active)
+            if description:
+                perm.permission_description = description
+        else:
+            perm = Permission(
+                permission_name=name,
+                is_active=bool(is_active),
+                permission_description=description,
+                created_for="system",
+            )
+            db.session.add(perm)
+        return perm
 
     @app.route("/admin/exam/<exam_id>/toggle-active", methods=["POST"])
     @admin_required

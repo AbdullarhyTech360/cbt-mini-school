@@ -6,7 +6,7 @@ from datetime import datetime
 class Permission(db.Model):
     __tablename__ = "permission"
     permission_id = db.Column(db.String(36), primary_key=True, default=generate_uuid)
-    permission_name = db.Column(db.String(20), nullable=False)
+    permission_name = db.Column(db.String(60), nullable=False)
     permission_description = db.Column(db.String(100), nullable=False)
     is_active = db.Column(db.Boolean, nullable=False, default=True)
     created_for = db.Column(db.String(20), nullable=False)

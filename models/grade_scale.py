@@ -63,8 +63,12 @@ class GradeScale(db.Model):
         """Get letter grade and remark for a given percentage"""
         ranges = self.get_grade_ranges()
         for range_item in ranges:
-            if range_item["min_score"] <= percentage <= range_item["max_score"]:
-                return range_item["grade"], range_item.get("remark", "")
+            min_score = range_item.get("min_score") or range_item.get("min", 0)
+            max_score = range_item.get("max_score") or range_item.get("max", 100)
+            grade = range_item.get("grade") or range_item.get("label", "F")
+            remark = range_item.get("remark") or range_item.get("description", "")
+            if min_score <= percentage <= max_score:
+                return grade, remark
         # Default fallback
         return "F", "Fail"
     

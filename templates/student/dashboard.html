@@ -111,15 +111,41 @@
                 <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
                     <div class="flex items-center">
                         <div class="p-2 bg-orange-500 rounded-lg">
-                            <span class="material-symbols-outlined text-white">quiz</span>
+                            <span class="material-symbols-outlined text-white">emoji_events</span>
                         </div>
                         <div class="ml-4">
-                            <p class="text-sm font-medium text-gray-600 dark:text-gray-400">Available Exams</p>
-                            <p class="text-2xl font-semibold text-gray-900 dark:text-white">{{ total_available_exams }}</p>
+                            <p class="text-sm font-medium text-gray-600 dark:text-gray-400">Best Score</p>
+                            <p class="text-2xl font-semibold text-gray-900 dark:text-white">{{ best_score }}%</p>
                         </div>
                     </div>
                 </div>
             </div>
+
+            <!-- Performance Summary -->
+            {% if exam_history %}
+            <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6 mb-8">
+                <h2 class="text-lg font-bold text-gray-900 dark:text-white mb-4">Performance Summary</h2>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div class="text-center p-4 bg-gray-50 dark:bg-slate-700 rounded-lg">
+                        <p class="text-3xl font-bold text-gray-900 dark:text-white">{{ average_score }}%</p>
+                        <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Average</p>
+                    </div>
+                    <div class="text-center p-4 bg-gray-50 dark:bg-slate-700 rounded-lg">
+                        <p class="text-3xl font-bold text-green-600 dark:text-green-400">{{ best_score }}%</p>
+                        <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Best</p>
+                    </div>
+                    <div class="text-center p-4 bg-gray-50 dark:bg-slate-700 rounded-lg">
+                        {% set a_count = exam_history | selectattr('letter_grade', 'in', ['A', 'B']) | list | length %}
+                        <p class="text-3xl font-bold text-blue-600 dark:text-blue-400">{{ a_count }}</p>
+                        <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">A/B Grades</p>
+                    </div>
+                    <div class="text-center p-4 bg-gray-50 dark:bg-slate-700 rounded-lg">
+                        <p class="text-3xl font-bold text-gray-900 dark:text-white">{{ completed_exams }}</p>
+                        <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Total Exams</p>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
 
             <!-- Demo Question Bank Section -->
             <div class="mb-8">
@@ -248,6 +274,54 @@
                     </div>
                 {% endif %}
             </div>
+
+            <!-- Exam History Section -->
+            {% if exam_history %}
+            <div class="mb-8">
+                <h2 class="text-2xl font-bold text-gray-900 dark:text-white mb-4">Exam History</h2>
+                <div class="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm">
+                            <thead>
+                                <tr class="bg-gray-50 dark:bg-slate-700 text-left">
+                                    <th class="px-6 py-3 font-semibold text-gray-600 dark:text-gray-300">Exam</th>
+                                    <th class="px-6 py-3 font-semibold text-gray-600 dark:text-gray-300">Subject</th>
+                                    <th class="px-6 py-3 font-semibold text-gray-600 dark:text-gray-300 text-center">Score</th>
+                                    <th class="px-6 py-3 font-semibold text-gray-600 dark:text-gray-300 text-center">Grade</th>
+                                    <th class="px-6 py-3 font-semibold text-gray-600 dark:text-gray-300 text-center">Questions</th>
+                                    <th class="px-6 py-3 font-semibold text-gray-600 dark:text-gray-300">Submitted</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-100 dark:divide-slate-600">
+                                {% for record in exam_history[:10] %}
+                                <tr class="hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-colors">
+                                    <td class="px-6 py-4 font-medium text-gray-900 dark:text-white">{{ record.exam_name }}</td>
+                                    <td class="px-6 py-4 text-gray-600 dark:text-gray-400">
+                                        <span class="flex items-center gap-2">
+                                            <span class="material-symbols-outlined text-lg">{{ record.subject_icon }}</span>
+                                            {{ record.subject_name }}
+                                        </span>
+                                    </td>
+                                    <td class="px-6 py-4 text-center">
+                                        <span class="font-semibold {% if record.score_percentage >= 70 %}text-green-600 dark:text-green-400{% elif record.score_percentage >= 50 %}text-yellow-600 dark:text-yellow-400{% else %}text-red-600 dark:text-red-400{% endif %}">
+                                            {{ record.score_percentage }}%
+                                        </span>
+                                    </td>
+                                    <td class="px-6 py-4 text-center">
+                                        <span class="px-2 py-1 text-xs font-bold rounded {% if record.letter_grade in ['A', 'B'] %}bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200{% elif record.letter_grade == 'C' %}bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200{% else %}bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200{% endif %}">
+                                            {{ record.letter_grade }}
+                                        </span>
+                                    </td>
+                                    <td class="px-6 py-4 text-center text-gray-600 dark:text-gray-400">{{ record.correct_answers }}/{{ record.total_questions }}</td>
+                                    <td class="px-6 py-4 text-gray-500 dark:text-gray-400 text-sm">{{ record.submitted_at }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
         </div>
     </main>
 </body>

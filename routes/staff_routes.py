@@ -409,6 +409,13 @@ def staff_routes(app):
     # New function to handle clearing scores
     def clear_scores_for_class_subject_term(teacher_id, subject_id, class_id, term_id):
         try:
+            # Verify session user matches the teacher_id
+            if session.get("user_id") != teacher_id:
+                return (
+                    jsonify({"success": False, "message": "Access denied"}),
+                    403,
+                )
+
             # Verify teacher is assigned to this subject-class combination
             from models.associations import teacher_subject
             from models.grade import Grade
@@ -742,24 +749,17 @@ def staff_routes(app):
             
             # Moderate ExamRecord entries (CBT scores)
             for record in exam_records_to_moderate:
-                # Add bonus but don't exceed max_score
                 new_score = min(
                     record.raw_score + float(bonus_value),
                     record.max_score
                 )
-                # print(f"Moderating ExamRecord (CBT): {record.student_id[:8]} from {record.raw_score} to {new_score}")
                 record.raw_score = new_score
-                # Recalculate percentage and grade
                 record.score_percentage = (new_score / record.max_score) * 100 if record.max_score > 0 else 0
-                # Update letter grade based on percentage using configurable grading system
-                if record.score_percentage >= 70:
-                    record.letter_grade = 'A'
-                elif record.score_percentage >= 59:
-                    record.letter_grade = 'B'
-                elif record.score_percentage >= 49:
-                    record.letter_grade = 'C'
-                elif record.score_percentage >= 40:
-                    record.letter_grade = 'D'
+                # Use configurable grade scale instead of hardcoded boundaries
+                from models.grade_scale import GradeScale
+                default_scale = GradeScale.query.filter_by(school_id=school.school_id, is_default=True).first()
+                if default_scale:
+                    record.letter_grade, _ = default_scale.get_grade_for_percentage(record.score_percentage)
                 else:
                     record.letter_grade = 'F'
                 moderated_count += 1
@@ -1652,6 +1652,10 @@ def staff_routes(app):
     @app.route("/staff/upload_questions/<user_id>")
     @staff_required
     def staff_upload_questions(user_id):
+        from models import is_permission_active
+        if not is_permission_active("teachers_can_upload_questions"):
+            return redirect(url_for("staff_dashboard", denied="Question upload has been disabled by the administrator."))
+
         # Verify the logged-in user matches the user_id in the URL
         if session.get("user_id") != user_id:
             flash("Access denied. You can only access your own pages.", "error")
@@ -1716,6 +1720,10 @@ def staff_routes(app):
     @app.route("/staff/upload_questions", methods=["POST"])
     @staff_required
     def staff_upload_question():
+        from models import is_permission_active
+        if not is_permission_active("teachers_can_upload_questions"):
+            return jsonify({"success": False, "message": "Question upload is disabled by the administrator"}), 403
+
         # print("Uploading Questions")
         try:
             # print("Uploading Questions")
@@ -2128,6 +2136,12 @@ def staff_routes(app):
     @app.route("/staff/bulk_upload_questions/<user_id>", methods=["GET", "POST"])
     @staff_required
     def staff_bulk_upload_questions(user_id):
+        from models import is_permission_active
+        if not is_permission_active("teachers_can_upload_questions"):
+            if request.method == "POST":
+                return jsonify({"success": False, "message": "Question upload is disabled by the administrator"}), 403
+            return redirect(url_for("staff_dashboard", denied="Question upload has been disabled by the administrator."))
+
         # print("Bulk Upload Questions")
         # Verify the logged-in user matches the user_id in the URL
         if session.get("user_id") != user_id:
@@ -2390,6 +2404,10 @@ def staff_routes(app):
     @staff_required
     def staff_extract_questions():
         """Stream extraction milestones and final parsed questions for review."""
+        from models import is_permission_active
+        if not is_permission_active("teachers_can_upload_questions"):
+            return jsonify({"success": False, "message": "Question upload is disabled by the administrator"}), 403
+
         try:
             import json
             import os
@@ -2588,6 +2606,10 @@ def staff_routes(app):
     @staff_required
     def staff_ai_chat_generate():
         """AI Chat endpoint for generating questions from uploaded documents or text prompts with system prompt."""
+        from models import is_permission_active
+        if not is_permission_active("teachers_can_upload_questions"):
+            return jsonify({"success": False, "message": "Question upload is disabled by the administrator"}), 403
+
         try:
             import os
             import tempfile
@@ -2711,6 +2733,10 @@ Include context field for tables, diagrams, formulas referenced in questions."""
         """Create questions from a JSON payload (used after AI extraction review).
         Expects JSON: { subject_id, class_room_id, term_id, exam_type_id, questions: [...] }
         """
+        from models import is_permission_active
+        if not is_permission_active("teachers_can_upload_questions"):
+            return jsonify({"success": False, "message": "Question upload is disabled by the administrator"}), 403
+
         try:
             data = request.get_json()
             if not data:

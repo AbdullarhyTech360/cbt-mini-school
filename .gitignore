@@ -16,8 +16,11 @@ __pycache__/
 /designs
 /dist
 /build
-/sketch
-/temp
+/sketch/
+/temp/
+
+# Redundant static fonts (variable font covers all weights)
+static/fonts/Inter/static/
 
 # Uploaded files (keep directory structure but ignore uploaded content)
 static/uploads/*

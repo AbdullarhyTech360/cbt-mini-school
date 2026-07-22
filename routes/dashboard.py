@@ -7,6 +7,7 @@ from sqlalchemy import and_
 from models import User, db
 from models.associations import student_exam, student_subject
 from models.exam import Exam
+from models.exam_record import ExamRecord
 from models.subject import Subject
 from models.school import School
 from models.section import Section
@@ -93,6 +94,18 @@ def dashboard_route(app):
         # Basic session check - add proper authentication later
         if "user_id" not in session:
             return redirect(url_for("login"))
+        current_user = User.query.get(session["user_id"])
+
+        from models import is_permission_active
+
+        # Check appropriate dashboard permission based on user role
+        if current_user.role == "staff":
+            if not is_permission_active("staff_can_view_dashboard"):
+                return redirect(url_for("login", denied="Staff dashboard access has been disabled by the administrator."))
+        else:
+            # Teachers (and admins accessing staff routes)
+            if not is_permission_active("teachers_can_view_dashboard"):
+                return redirect(url_for("login", denied="Teacher dashboard access has been disabled by the administrator."))
         current_date = datetime.now().strftime("%B %d, %Y")
         current_user = User.query.get(session["user_id"])
         # Fetch users with role 'student'
@@ -113,9 +126,14 @@ def dashboard_route(app):
             return redirect(url_for("login"))
         current_user = User.query.get(session["user_id"])
 
-        # Check if students can write exams permission is active
         from models import is_permission_active
 
+        # Check if students are allowed to view dashboard (bypass for demo users)
+        is_demo_user = "demo" in current_user.username.lower()
+        if not is_demo_user and not is_permission_active("students_can_view_dashboard"):
+            return redirect(url_for("login", denied="Student dashboard access has been disabled by the administrator."))
+
+        # Check if students can write exams permission is active
         can_write_exams = is_permission_active("students_can_write_exam")
 
         # Fetch student's enrolled subjects
@@ -144,9 +162,6 @@ def dashboard_route(app):
                 .all()
             )
             completed_exam_ids = list(completed_result)
-
-        # Check if this is a demo user
-        is_demo_user = "demo" in current_user.username.lower()
 
         # Fetch available exams
         available_exams = []
@@ -236,6 +251,53 @@ def dashboard_route(app):
         completed_exams = len(completed_exam_ids)
         average_score = 0
 
+        # Fetch exam history (completed exams with scores)
+        exam_history = []
+        if current_user and completed_exam_ids:
+            records = (
+                ExamRecord.query.filter(
+                    ExamRecord.student_id == current_user.id,
+                    ExamRecord.exam_id.in_(completed_exam_ids),
+                )
+                .order_by(ExamRecord.submitted_at.desc())
+                .all()
+            )
+            if records:
+                scores = [r.score_percentage for r in records if r.score_percentage is not None]
+                average_score = round(sum(scores) / len(scores), 1) if scores else 0
+                best_score = max(scores) if scores else 0
+                for rec in records:
+                    exam_history.append({
+                        "exam_id": rec.exam_id,
+                        "exam_name": rec.exam.name if rec.exam else "Unknown Exam",
+                        "subject_name": rec.exam.subject.subject_name if rec.exam and rec.exam.subject else "N/A",
+                        "subject_icon": rec.exam.subject.icon_name if rec.exam and rec.exam.subject else "quiz",
+                        "score_percentage": rec.score_percentage,
+                        "letter_grade": rec.letter_grade,
+                        "max_score": rec.max_score,
+                        "submitted_at": rec.submitted_at.strftime("%b %d, %Y %I:%M %p") if rec.submitted_at else "N/A",
+                        "total_questions": rec.total_questions,
+                        "correct_answers": rec.correct_answers,
+                    })
+        else:
+            best_score = 0
+
+        # Upcoming exams (available, not completed, with dates)
+        upcoming_exams = []
+        for exam in available_exams:
+            if exam.date:
+                now = datetime.utcnow()
+                days_until = (exam.date.date() - now.date()).days
+                upcoming_exams.append({
+                    "id": exam.id,
+                    "name": exam.name,
+                    "subject_name": exam.subject.subject_name if exam.subject else "N/A",
+                    "subject_icon": exam.subject.icon_name if exam.subject else "quiz",
+                    "date": exam.date.strftime("%b %d, %Y"),
+                    "days_until": days_until,
+                })
+        upcoming_exams.sort(key=lambda x: x["days_until"])
+
         from datetime import datetime
 
         return render_template(
@@ -247,6 +309,9 @@ def dashboard_route(app):
             total_available_exams=total_available_exams,
             completed_exams=completed_exams,
             average_score=average_score,
+            best_score=best_score,
+            exam_history=exam_history,
+            upcoming_exams=upcoming_exams,
             completed_exam_ids=completed_exam_ids,
             datetime=datetime,
         )

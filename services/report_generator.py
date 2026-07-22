@@ -1308,9 +1308,9 @@ class ReportGenerator:
             else:
                 gender = student.get('gender', '')
                 if gender and gender.lower() == 'male':
-                    default_avatar = os.path.join('static', 'images', 'student', 'default', 'st_male.png')
+                    default_avatar = os.path.join('static', 'js', 'images', 'student', 'default', 'st_male.png')
                 else:
-                    default_avatar = os.path.join('static', 'images', 'student', 'default', 'st_neutral_femal.png')
+                    default_avatar = os.path.join('static', 'js', 'images', 'student', 'default', 'st_neutral_femal.png')
                 student['image'] = ReportGenerator._embed_image(default_avatar)
 
         # Embed school logo (skip if already embedded by shared context)
@@ -1471,6 +1471,22 @@ class ReportGenerator:
         student = report_data['student']
         school = report_data['school']
         term = report_data['term']
+
+        # Embed student image (same fallback as generate_report_with_layout)
+        if not student.get('image') or not student['image'].startswith('data:'):
+            if student.get('image'):
+                student['image'] = ReportGenerator._embed_image(student['image'])
+            else:
+                gender = student.get('gender', '')
+                if gender and gender.lower() == 'male':
+                    default_avatar = os.path.join('static', 'js', 'images', 'student', 'default', 'st_male.png')
+                else:
+                    default_avatar = os.path.join('static', 'js', 'images', 'student', 'default', 'st_neutral_femal.png')
+                student['image'] = ReportGenerator._embed_image(default_avatar)
+
+        # Embed school logo
+        if school.get('logo') and not school['logo'].startswith('data:'):
+            school['logo'] = ReportGenerator._embed_image(school['logo'])
         assessment_types = report_data.get('assessment_types', [])
         scores = report_data['scores']
         position = report_data['position']
@@ -1873,7 +1889,7 @@ class ReportGenerator:
         <!-- Purple Gradient Header -->
         <div class="header-banner">
             <div class="header-left">
-                {(lambda logo_url=ReportGenerator._get_image_url(school.get("logo")): f'<img src="{logo_url}" class="school-logo" onerror="console.error(\'Logo failed to load:\', this.src);" onload="console.log(\'Logo loaded successfully:\', this.src);">' if school.get('logo') else '<div class="school-logo"></div>')()}
+                {(lambda logo_url=school.get("logo", ""): f'<img src="{logo_url}" class="school-logo" onerror="console.error(\'Logo failed to load:\', this.src);" onload="console.log(\'Logo loaded successfully:\', this.src);">' if logo_url else '<div class="school-logo"></div>')()}
             </div>
             <div class="header-center">
                 <div class="school-name">{school['name'].upper()}</div>
@@ -1897,7 +1913,7 @@ class ReportGenerator:
                 <tr>
                     <td class="label-cell">Student Image:</td>
                     <td class="value-cell" style="text-align: center;">
-                        {(lambda student_img_url=ReportGenerator._get_image_url(student.get("image")): f'<img src="{student_img_url}" width="60" height="60" style="border-radius: 50%; border: 2px solid #6366f1;" onerror="console.error(\'Student image failed to load:\', this.src);" onload="console.log(\'Student image loaded successfully:\', this.src);">' if student.get('image') else '<div style="width: 60px; height: 60px; border-radius: 50%; border: 2px solid #6366f1; background: linear-gradient(135deg, #6366f1, #8b5cf6); display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 14px;">{student["name"][0].upper()}</div>')()}
+                        {(lambda student_img_url=student.get("image", ""): f'<img src="{student_img_url}" width="60" height="60" style="border-radius: 50%; border: 2px solid #6366f1;" onerror="console.error(\'Student image failed to load:\', this.src);" onload="console.log(\'Student image loaded successfully:\', this.src);">' if student_img_url else '<div style="width: 60px; height: 60px; border-radius: 50%; border: 2px solid #6366f1; background: linear-gradient(135deg, #6366f1, #8b5cf6); display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 14px;">{student["name"][0].upper()}</div>')()}
                     </td>
                     <td class="label-cell">Student Name:</td>
                     <td class="value-cell">{student['name'].upper()}</td>

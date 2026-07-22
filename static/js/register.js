@@ -343,7 +343,18 @@ document.addEventListener("DOMContentLoaded", function () {
   document.getElementById("step-1-next").addEventListener("click", function () {
     const roleOk = selectFieldChecker(els.role, status.role, "Role");
     if (els.role.value === "staff" || els.role.value === "admin") {
-      if (roleOk) showStep(2);
+      if (!roleOk) return;
+      if (!els.email.value.trim()) {
+        setStatus(status.email, "Email is required", true);
+        markError(els.email);
+        return;
+      }
+      if (!emailRe.test(els.email.value)) {
+        setStatus(status.email, "Must be name@domain.com", true);
+        markError(els.email);
+        return;
+      }
+      showStep(2);
     } else {
       const classOk = selectFieldChecker(els.classRoom, status.classRoom, "Class");
       const regOk = els.registerNumber.value.length >= 1;

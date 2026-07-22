@@ -117,4 +117,24 @@
 
 {% block scripts %}
 <script src="{{ url_for('static', filename='js/login.js') }}"></script>
+<script>
+  (function() {
+    const params = new URLSearchParams(window.location.search);
+    const denied = params.get('denied');
+    if (denied) {
+      const toast = document.getElementById('toast');
+      if (toast) {
+        toast.textContent = denied;
+        toast.style.background = '#ef4444';
+        toast.style.opacity = '1';
+        clearTimeout(toast._t);
+        toast._t = setTimeout(function() { toast.style.opacity = '0'; }, 5000);
+      }
+      // Clean the URL so refreshing won't re-show the toast
+      if (window.history.replaceState) {
+        window.history.replaceState({}, document.title, window.location.pathname);
+      }
+    }
+  })();
+</script>
 {% endblock %}

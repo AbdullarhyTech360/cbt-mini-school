@@ -202,12 +202,12 @@ function openEditUserModal(userId) {
         emailField.required = false;
         emailRequired.classList.add("hidden");
     } else if (role === "staff" || role === "admin") {
-        // Staff/Admin: Show class, hide register number, require email
-        classField.classList.remove("hidden");
+        // Staff/Admin: Hide class and register number, require email
+        classField.classList.add("hidden");
         registerField.classList.add("hidden");
-        classRequired.classList.remove("hidden");
+        classRequired.classList.add("hidden");
         registerRequired.classList.add("hidden");
-        classSelect.required = true;
+        classSelect.required = false;
         registerInput.required = false;
         emailField.required = true;
         emailRequired.classList.remove("hidden");
@@ -252,10 +252,10 @@ function handleRoleChange(formType) {
             emailInput.required = false;
             emailRequired.classList.add("hidden");
         } else if (role === "staff" || role === "admin") {
-            // Staff/Admin: Show class, hide register number, require email
-            classField.classList.remove("hidden");
+            // Staff/Admin: Hide class and register number, require email
+            classField.classList.add("hidden");
             registerField.classList.add("hidden");
-            classSelect.required = true;
+            classSelect.required = false;
             registerInput.required = false;
             emailInput.required = true;
             emailRequired.classList.remove("hidden");

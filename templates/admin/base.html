@@ -94,7 +94,7 @@
                         </p>
                     </div>
                 </div>
-                <nav class="flex-1 overflow-y-auto px-4 mt-6">
+                <nav class="flex-1 overflow-y-auto overflow-x-hidden px-4 mt-6">
                     <ul class="flex flex-col gap-1">
                         {% block sidebar_nav %}
                         <li>
@@ -110,7 +110,7 @@
                         <!-- Academic Management Section -->
                         <li class="mb-2">
                             <div
-                                class="px-4 py-2 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                class="px-4 py-2 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider sidebar-text transition-all duration-300">
                                 Academic Management
                             </div>
                         </li>
@@ -188,7 +188,7 @@
                         <!-- System Management Section -->
                         <li class="mb-2 mt-6">
                             <div
-                                class="px-4 py-2 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                class="px-4 py-2 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider sidebar-text transition-all duration-300">
                                 System Management
                             </div>
                         </li>
@@ -379,6 +379,9 @@
                 const adminCard = document.getElementById("adminCard");
                 const adminAvatar = document.getElementById("adminAvatar");
 
+                const navLinks = sidebar.querySelectorAll("nav ul li a");
+                const sidebarNav = sidebar.querySelector("nav");
+
                 if (isExpanded) {
                     // Collapse
                     sidebar.classList.remove("w-72");
@@ -390,6 +393,16 @@
                         el.style.width = "0";
                         el.style.overflow = "hidden";
                     });
+                    navLinks.forEach((el) => {
+                        el.style.justifyContent = "center";
+                        el.style.paddingLeft = "0.75rem";
+                        el.style.paddingRight = "0.75rem";
+                        el.style.gap = "0";
+                    });
+                    if (sidebarNav) {
+                        sidebarNav.style.paddingLeft = "0";
+                        sidebarNav.style.paddingRight = "0";
+                    }
                     // Admin card compaction
                     if (adminCard) {
                         adminCard.style.marginLeft = "0.5rem"; // mx-2
@@ -415,6 +428,16 @@
                         el.style.width = "auto";
                         el.style.overflow = "visible";
                     });
+                    navLinks.forEach((el) => {
+                        el.style.justifyContent = "";
+                        el.style.paddingLeft = "";
+                        el.style.paddingRight = "";
+                        el.style.gap = "";
+                    });
+                    if (sidebarNav) {
+                        sidebarNav.style.paddingLeft = "";
+                        sidebarNav.style.paddingRight = "";
+                    }
                     if (adminCard) {
                         adminCard.style.marginLeft = "1rem"; // mx-4
                         adminCard.style.marginRight = "1rem";
@@ -468,6 +491,30 @@
         })();
     </script>
     <script src="{{ url_for('static', filename='js/components/modal.js') }}"></script>
+    <div id="toastContainer" class="fixed top-6 right-4 z-[9999] flex flex-col gap-2 pointer-events-none"></div>
+    <script>
+        (function() {
+            var params = new URLSearchParams(window.location.search);
+            var denied = params.get('denied');
+            if (denied) {
+                var container = document.getElementById('toastContainer');
+                if (container) {
+                    var toast = document.createElement('div');
+                    toast.className = 'flex items-center gap-3 px-5 py-3.5 rounded-xl border-2 border-red-300 bg-red-600 shadow-2xl text-white text-sm font-semibold transform transition-all duration-300 translate-x-full opacity-0 pointer-events-auto';
+                    toast.innerHTML = '<span class="material-symbols-outlined text-lg">block</span><span>' + denied + '</span>';
+                    container.appendChild(toast);
+                    requestAnimationFrame(function() { toast.classList.remove('translate-x-full', 'opacity-0'); });
+                    setTimeout(function() {
+                        toast.classList.add('translate-x-full', 'opacity-0');
+                        setTimeout(function() { toast.remove(); }, 300);
+                    }, 5000);
+                }
+                if (window.history.replaceState) {
+                    window.history.replaceState({}, document.title, window.location.pathname);
+                }
+            }
+        })();
+    </script>
 </body>
 
 </html>

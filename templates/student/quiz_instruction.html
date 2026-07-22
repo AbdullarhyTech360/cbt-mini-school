@@ -78,10 +78,14 @@
                     class="flex items-center justify-center w-10 h-10 rounded-lg bg-white/80 hover:bg-white dark:bg-gray-800/80 dark:hover:bg-gray-700 transition-all duration-200 border border-gray-200 dark:border-gray-700 shadow-sm">
                 <span class="material-symbols-outlined text-gray-700 dark:text-gray-200 text-xl">arrow_back</span>
             </button>
-            <div class="text-center absolute left-1/2 transform -translate-x-1/2">
-                <h1 class="text-gray-900 dark:text-white text-xl font-bold whitespace-nowrap">Quiz Instructions</h1>
+            <div class="flex items-center gap-2">
+                {% if school_info.logo_url %}
+                <img src="{{ school_info.logo_url }}" alt="School Logo" class="w-7 h-7 rounded-md object-cover">
+                {% endif %}
+                <h1 class="text-gray-900 dark:text-white text-base font-bold whitespace-nowrap">{{ school_info.name if school_info and school_info.name else 'School' }}</h1>
+                <span class="px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 rounded">CBT</span>
             </div>
-            <div class="w-10"></div> <!-- Spacer for balance -->
+            <div class="w-10"></div>
         </div>
     </div>
 

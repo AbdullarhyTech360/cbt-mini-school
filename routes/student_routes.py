@@ -2,13 +2,100 @@ from flask import render_template, redirect, url_for, session, flash, jsonify, r
 from models import db, User
 from models.exam import Exam
 from models.exam_session import ExamSession
-from models.question import Question
+from models.question import Question, Option
 from models.subject import Subject
 from models.school_term import SchoolTerm
 from models.permissions import Permission
+from models.grade_scale import GradeScale
 from models.associations import student_subject, student_exam, class_subject
 from datetime import datetime
 import random
+
+
+def check_student_exam_access(current_user, exam, exam_id):
+    """
+    Check if a student has access to an exam (enrollment + completion check).
+    Handles auto-enrollment for class subjects.
+    
+    Returns:
+        dict: {
+            'success': bool,
+            'is_demo_user': bool,
+            'enrolled': bool,
+            'already_completed': bool,
+            'error_message': str or None
+        }
+    """
+    is_demo_user = "demo" in current_user.username.lower()
+
+    if is_demo_user:
+        return {
+            'success': True,
+            'is_demo_user': True,
+            'enrolled': True,
+            'already_completed': False,
+            'error_message': None
+        }
+
+    # Check enrollment in the exam's subject
+    enrollment = db.session.execute(
+        db.select(student_subject).where(
+            student_subject.c.student_id == current_user.id,
+            student_subject.c.subject_id == exam.subject_id
+        )
+    ).fetchone()
+
+    if not enrollment:
+        # Check if subject is assigned to student's class
+        is_class_subject = db.session.execute(
+            db.select(class_subject).where(
+                class_subject.c.class_room_id == current_user.class_room_id,
+                class_subject.c.subject_id == exam.subject_id
+            )
+        ).fetchone()
+
+        if is_class_subject:
+            # Auto-enroll student
+            print(f"DEBUG: Auto-enrolling student {current_user.username} in subject {exam.subject_id}")
+            stmt = student_subject.insert().values(
+                student_id=current_user.id,
+                subject_id=exam.subject_id
+            )
+            db.session.execute(stmt)
+            db.session.commit()
+        else:
+            return {
+                'success': False,
+                'is_demo_user': False,
+                'enrolled': False,
+                'already_completed': False,
+                'error_message': 'You are not enrolled in this subject'
+            }
+
+    # Check if student has already completed this exam
+    completion = db.session.execute(
+        db.select(student_exam).where(
+            student_exam.c.student_id == current_user.id,
+            student_exam.c.exam_id == exam_id
+        )
+    ).fetchone()
+
+    if completion:
+        return {
+            'success': False,
+            'is_demo_user': False,
+            'enrolled': True,
+            'already_completed': True,
+            'error_message': 'You have already completed this exam'
+        }
+
+    return {
+        'success': True,
+        'is_demo_user': False,
+        'enrolled': True,
+        'already_completed': False,
+        'error_message': None
+    }
 
 
 def student_route(app):
@@ -37,58 +124,11 @@ def student_route(app):
             flash('Exam not found', 'error')
             return redirect(url_for('student_dashboard'))
 
-        # Check if this is a demo user
-        is_demo_user = "demo" in current_user.username.lower()
-
-        if not is_demo_user:
-            # Regular students - apply normal checks
-            # Check if student is enrolled in the exam's subject
-            enrollment = db.session.execute(
-                db.select(student_subject).where(
-                    student_subject.c.student_id == current_user.id,
-                    student_subject.c.subject_id == exam.subject_id
-                )
-            ).fetchone()
-            # print("Enrollment: ", enrollment)
-
-            if not enrollment:
-                # Check if subject is assigned to student's class
-                is_class_subject = db.session.execute(
-                    db.select(class_subject).where(
-                        class_subject.c.class_room_id == current_user.class_room_id,
-                        class_subject.c.subject_id == exam.subject_id
-                    )
-                ).fetchone()
-
-                if is_class_subject:
-                    # Auto-enroll student
-                    print(
-                        f"DEBUG: Auto-enrolling student {current_user.username} in subject {exam.subject_id}")
-                    stmt = student_subject.insert().values(
-                        student_id=current_user.id,
-                        subject_id=exam.subject_id
-                    )
-                    db.session.execute(stmt)
-                    db.session.commit()
-                else:
-                    flash('You are not enrolled in this subject', 'error')
-                    return redirect(url_for('student_dashboard'))
-
-            # Check if student has already completed this exam
-            completion = db.session.execute(
-                db.select(student_exam).where(
-                    student_exam.c.student_id == current_user.id,
-                    student_exam.c.exam_id == exam_id
-                )
-            ).fetchone()
-
-            if completion:
-                flash('You have already completed this exam', 'error')
-                return redirect(url_for('student_dashboard'))
-        else:
-            # Demo users bypass all checks
-            print(
-                f"DEBUG: Demo user '{current_user.username}' accessing exam details for {exam_id}")
+        # Check student exam access (enrollment + completion)
+        access = check_student_exam_access(current_user, exam, exam_id)
+        if not access['success']:
+            flash(access['error_message'], 'error')
+            return redirect(url_for('student_dashboard'))
 
         # Get question count for this exam
         # Note: Questions are linked to subject and class_room, not directly to exams
@@ -111,6 +151,111 @@ def student_route(app):
             term=term
         )
 
+    @app.route('/student/exam/<exam_id>/feedback')
+    def exam_feedback(exam_id):
+        """Display exam feedback/results after submission."""
+        if 'user_id' not in session:
+            return redirect(url_for('login'))
+
+        current_user = User.query.get(session['user_id'])
+        if not current_user:
+            return redirect(url_for('login'))
+
+        exam = Exam.query.get(exam_id)
+        if not exam:
+            flash('Exam not found', 'error')
+            return redirect(url_for('student_dashboard'))
+
+        # Find the exam record for this student
+        from models.exam_record import ExamRecord
+        exam_record = ExamRecord.query.filter_by(
+            exam_id=exam_id,
+            student_id=current_user.id
+        ).order_by(ExamRecord.submitted_at.desc()).first()
+
+        if not exam_record:
+            flash('No exam record found. Results may not have been saved.', 'error')
+            return redirect(url_for('student_dashboard'))
+
+        # Get the questions and build results
+        questions = Question.query.filter_by(subject_id=exam.subject_id).all()
+        
+        # Parse student answers from exam record
+        try:
+            student_answers = exam_record.get_answers() if exam_record.answers else {}
+        except (ValueError, TypeError):
+            student_answers = {}
+
+        question_results = []
+        correct_count = 0
+        incorrect_count = 0
+        skipped_count = 0
+
+        for question in questions:
+            question_id = question.id
+            student_answer = student_answers.get(question_id)
+            is_correct = False
+            correct_answer_text = ""
+            student_answer_text = ""
+
+            if question.question_type in ['mcq', 'multiple_choice', 'true_false']:
+                for opt in question.options:
+                    if opt.is_correct:
+                        correct_answer_text = opt.text
+                        break
+                if student_answer:
+                    selected_option = Option.query.get(student_answer)
+                    if selected_option:
+                        student_answer_text = selected_option.text
+                        if selected_option.is_correct:
+                            is_correct = True
+            elif question.question_type == 'short_answer':
+                correct_answer_text = question.correct_answer or ""
+                if student_answer:
+                    student_answer_text = student_answer
+                    if student_answer.lower().strip() == (question.correct_answer or "").lower().strip():
+                        is_correct = True
+
+            if not student_answer:
+                skipped_count += 1
+            elif is_correct:
+                correct_count += 1
+            else:
+                incorrect_count += 1
+
+            question_results.append({
+                "question_id": question_id,
+                "question_text": question.question_text,
+                "question_type": question.question_type,
+                "student_answer_id": student_answer,
+                "student_answer_text": student_answer_text,
+                "correct_answer_text": correct_answer_text,
+                "is_correct": is_correct,
+            })
+
+        total_questions = exam_record.total_questions or len(questions)
+
+        # Use scores already computed and stored in the exam record
+        raw_score = exam_record.raw_score
+        max_score = exam_record.max_score if exam_record.max_score else (exam.max_score or 100)
+        score_percentage = exam_record.score_percentage
+        letter_grade = exam_record.letter_grade
+
+        return render_template(
+            'student/exam_feedback.html',
+            exam=exam,
+            question_results=question_results,
+            total_questions=total_questions,
+            correct_count=correct_count,
+            incorrect_count=incorrect_count,
+            skipped_count=skipped_count,
+            raw_score=raw_score,
+            max_score=max_score,
+            score_percentage=score_percentage,
+            letter_grade=letter_grade,
+            current_user=current_user,
+        )
+
     @app.route('/student/exam/<exam_id>/start')
     def start_exam(exam_id):
         """Start taking the exam"""
@@ -130,57 +275,11 @@ def student_route(app):
             flash('Exam not found', 'error')
             return redirect(url_for('student_dashboard'))
 
-        # Check if this is a demo user
-        is_demo_user = "demo" in current_user.username.lower()
-
-        if not is_demo_user:
-            # Regular students - apply normal checks
-            # Check if student is enrolled in the exam's subject
-            enrollment = db.session.execute(
-                db.select(student_subject).where(
-                    student_subject.c.student_id == current_user.id,
-                    student_subject.c.subject_id == exam.subject_id
-                )
-            ).fetchone()
-
-            if not enrollment:
-                # Check if subject is assigned to student's class
-                is_class_subject = db.session.execute(
-                    db.select(class_subject).where(
-                        class_subject.c.class_room_id == current_user.class_room_id,
-                        class_subject.c.subject_id == exam.subject_id
-                    )
-                ).fetchone()
-
-                if is_class_subject:
-                    # Auto-enroll student
-                    print(
-                        f"DEBUG: Auto-enrolling student {current_user.username} in subject {exam.subject_id}")
-                    stmt = student_subject.insert().values(
-                        student_id=current_user.id,
-                        subject_id=exam.subject_id
-                    )
-                    db.session.execute(stmt)
-                    db.session.commit()
-                else:
-                    flash('You are not enrolled in this subject', 'error')
-                    return redirect(url_for('student_dashboard'))
-
-            # Check if student has already completed this exam
-            completion = db.session.execute(
-                db.select(student_exam).where(
-                    student_exam.c.student_id == current_user.id,
-                    student_exam.c.exam_id == exam_id
-                )
-            ).fetchone()
-
-            if completion:
-                flash('You have already completed this exam', 'error')
-                return redirect(url_for('student_dashboard'))
-        else:
-            # Demo users bypass all checks
-            print(
-                f"DEBUG: Demo user '{current_user.username}' starting exam {exam_id}")
+        # Check student exam access (enrollment + completion)
+        access = check_student_exam_access(current_user, exam, exam_id)
+        if not access['success']:
+            flash(access['error_message'], 'error')
+            return redirect(url_for('student_dashboard'))
 
         # Check if exam has ended
         if exam.time_ended and exam.time_ended < datetime.utcnow():
@@ -210,55 +309,10 @@ def student_route(app):
         if not exam:
             return jsonify({"success": False, "message": "Exam not found"}), 404
 
-        # Check if this is a demo user
-        is_demo_user = "demo" in current_user.username.lower()
-
-        if not is_demo_user:
-            # Regular students - apply normal checks
-            # Check if student is enrolled in the exam's subject
-            enrollment = db.session.execute(
-                db.select(student_subject).where(
-                    student_subject.c.student_id == current_user.id,
-                    student_subject.c.subject_id == exam.subject_id
-                )
-            ).fetchone()
-
-            if not enrollment:
-                # Check if subject is assigned to student's class
-                is_class_subject = db.session.execute(
-                    db.select(class_subject).where(
-                        class_subject.c.class_room_id == current_user.class_room_id,
-                        class_subject.c.subject_id == exam.subject_id
-                    )
-                ).fetchone()
-
-                if is_class_subject:
-                    # Auto-enroll student
-                    print(
-                        f"DEBUG: Auto-enrolling student {current_user.username} in subject {exam.subject_id}")
-                    stmt = student_subject.insert().values(
-                        student_id=current_user.id,
-                        subject_id=exam.subject_id
-                    )
-                    db.session.execute(stmt)
-                    db.session.commit()
-                else:
-                    return jsonify({"success": False, "message": "Not enrolled in this subject"}), 403
-
-            # Check if student has already completed this exam
-            completion = db.session.execute(
-                db.select(student_exam).where(
-                    student_exam.c.student_id == current_user.id,
-                    student_exam.c.exam_id == exam_id
-                )
-            ).fetchone()
-
-            if completion:
-                return jsonify({"success": False, "message": "You have already completed this exam"}), 403
-        else:
-            # Demo users bypass all checks
-            print(
-                f"DEBUG: Demo user '{current_user.username}' accessing exam {exam_id} - bypassing enrollment and completion checks")
+        # Check student exam access (enrollment + completion)
+        access = check_student_exam_access(current_user, exam, exam_id)
+        if not access['success']:
+            return jsonify({"success": False, "message": access['error_message']}), 403
 
         # Get questions for this exam (matching subject and class_room)
         questions_query = Question.query.filter_by(
@@ -342,55 +396,11 @@ def student_route(app):
         if not exam:
             return jsonify({"success": False, "message": "Exam not found"}), 404
 
-        # Check if this is a demo user
-        is_demo_user = "demo" in current_user.username.lower()
-
-        if not is_demo_user:
-            # Regular students - apply normal checks
-            # Check if student is enrolled in the exam's subject
-            enrollment = db.session.execute(
-                db.select(student_subject).where(
-                    student_subject.c.student_id == current_user.id,
-                    student_subject.c.subject_id == exam.subject_id
-                )
-            ).fetchone()
-
-            if not enrollment:
-                # Check if subject is assigned to student's class
-                is_class_subject = db.session.execute(
-                    db.select(class_subject).where(
-                        class_subject.c.class_room_id == current_user.class_room_id,
-                        class_subject.c.subject_id == exam.subject_id
-                    )
-                ).fetchone()
-
-                if is_class_subject:
-                    # Auto-enroll student
-                    print(
-                        f"DEBUG: Auto-enrolling student {current_user.username} in subject {exam.subject_id}")
-                    stmt = student_subject.insert().values(
-                        student_id=current_user.id,
-                        subject_id=exam.subject_id
-                    )
-                    db.session.execute(stmt)
-                    db.session.commit()
-                else:
-                    return jsonify({"success": False, "message": "Not enrolled in this subject"}), 403
-
-            # Check if student has already completed this exam
-            completion = db.session.execute(
-                db.select(student_exam).where(
-                    student_exam.c.student_id == current_user.id,
-                    student_exam.c.exam_id == exam_id
-                )
-            ).fetchone()
-
-            if completion:
-                return jsonify({"success": False, "message": "You have already completed this exam"}), 403
-        else:
-            # Demo users bypass checks
-            print(
-                f"DEBUG: Demo user '{current_user.username}' submitting exam {exam_id} - scores will not be recorded")
+        # Check student exam access (enrollment + completion)
+        access = check_student_exam_access(current_user, exam, exam_id)
+        is_demo_user = access['is_demo_user']
+        if not access['success']:
+            return jsonify({"success": False, "message": access['error_message']}), 403
 
         try:
             data = request.get_json()
@@ -425,7 +435,7 @@ def student_route(app):
 
                 if student_answer:
                     # For MCQ and True/False, check if the selected option is correct
-                    if question.question_type in ['mcq', 'true_false']:
+                    if question.question_type in ['mcq', 'multiple_choice', 'true_false']:
                         selected_option = Option.query.get(student_answer)
                         if selected_option and selected_option.is_correct:
                             correct_answers += 1
@@ -440,17 +450,36 @@ def student_route(app):
             raw_score = (correct_answers / total_questions *
                          exam.max_score) if total_questions > 0 else 0
 
-            # Determine letter grade using configurable grading system
-            if score_percentage >= 70:
-                letter_grade = 'A'
-            elif score_percentage >= 59:
-                letter_grade = 'B'
-            elif score_percentage >= 49:
-                letter_grade = 'C'
-            elif score_percentage >= 40:
-                letter_grade = 'D'
-            else:
-                letter_grade = 'F'
+            # Determine letter grade using configurable GradeScale
+            letter_grade = 'F'
+            if exam.school_term and exam.school_term.school:
+                grade_scale = GradeScale.query.filter_by(
+                    school_id=exam.school_term.school.school_id,
+                    is_active=True,
+                    is_default=True
+                ).first()
+                if grade_scale:
+                    letter_grade, _ = grade_scale.get_grade_for_percentage(score_percentage)
+                else:
+                    # Fallback: try any active grade scale for this school
+                    grade_scale = GradeScale.query.filter_by(
+                        school_id=exam.school_term.school.school_id,
+                        is_active=True
+                    ).first()
+                    if grade_scale:
+                        letter_grade, _ = grade_scale.get_grade_for_percentage(score_percentage)
+                    else:
+                        # No grade scale configured — use basic fallback
+                        if score_percentage >= 70:
+                            letter_grade = 'A'
+                        elif score_percentage >= 60:
+                            letter_grade = 'B'
+                        elif score_percentage >= 50:
+                            letter_grade = 'C'
+                        elif score_percentage >= 40:
+                            letter_grade = 'D'
+                        else:
+                            letter_grade = 'F'
 
             # Get exam metadata
             school_term = SchoolTerm.query.get(exam.school_term_id)
@@ -480,8 +509,11 @@ def student_route(app):
             exam_record.submitted_at = datetime.utcnow()
             exam_record.set_answers(answers)  # Store answers as JSON
 
-            # Only save records for non-demo users
-            if not is_demo_user:
+            # Only save records for non-demo users (and respect save_after_completion for On-The-Go)
+            should_save = not is_demo_user
+            if exam.is_on_the_go and not exam.save_after_completion:
+                should_save = False
+            if should_save:
                 db.session.add(exam_record)
 
                 # Mark exam as completed by adding student to student_exam relationship
@@ -557,14 +589,18 @@ def student_route(app):
             # Check if students can see results immediately
             show_results = False
             if not is_demo_user:
-                # Check permission for regular students
-                show_results_permission = Permission.query.filter_by(
-                    permission_name="show_results_immediately",
-                    created_for="student"
-                ).first()
-                show_results = show_results_permission and show_results_permission.is_active
+                # Check exam-level feedback setting first
+                if exam.show_feedback:
+                    show_results = True
+                else:
+                    # Fall back to permission check
+                    show_results_permission = Permission.query.filter_by(
+                        permission_name="students_view_results"
+                    ).first()
+                    show_results = show_results_permission and show_results_permission.is_active
             else:
                 # Demo users always see results
+                show_results = True
                 show_results = True
 
             # Check if students can view dashboard to determine redirect URL
@@ -575,6 +611,52 @@ def student_route(app):
 
             # Return response based on permission
             if show_results:
+                # Build per-question results for feedback
+                question_results = []
+                for question in questions_to_score:
+                    question_id = question.id
+                    student_answer = answers.get(question_id)
+                    is_correct = False
+
+                    if student_answer:
+                        if question.question_type in ['mcq', 'multiple_choice', 'true_false']:
+                            selected_option = Option.query.get(student_answer)
+                            if selected_option and selected_option.is_correct:
+                                is_correct = True
+                        elif question.question_type == 'short_answer':
+                            if student_answer.lower().strip() == question.correct_answer.lower().strip():
+                                is_correct = True
+
+                    # Get correct answer text
+                    correct_answer_text = ""
+                    if question.question_type in ['mcq', 'multiple_choice', 'true_false']:
+                        for opt in question.options:
+                            if opt.is_correct:
+                                correct_answer_text = opt.text
+                                break
+                    elif question.question_type == 'short_answer':
+                        correct_answer_text = question.correct_answer or ""
+
+                    # Get student answer text
+                    student_answer_text = ""
+                    if student_answer:
+                        if question.question_type in ['mcq', 'multiple_choice', 'true_false']:
+                            selected_option = Option.query.get(student_answer)
+                            if selected_option:
+                                student_answer_text = selected_option.text
+                        elif question.question_type == 'short_answer':
+                            student_answer_text = student_answer
+
+                    question_results.append({
+                        "question_id": question_id,
+                        "question_text": question.question_text,
+                        "question_type": question.question_type,
+                        "student_answer_id": student_answer,
+                        "student_answer_text": student_answer_text,
+                        "correct_answer_text": correct_answer_text,
+                        "is_correct": is_correct,
+                    })
+
                 return jsonify({
                     "success": True,
                     "show_results": True,
@@ -584,6 +666,7 @@ def student_route(app):
                     "raw_score": round(raw_score, 2),
                     "max_score": float(exam.max_score),
                     "letter_grade": letter_grade,
+                    "question_results": question_results,
                     "redirect_url": redirect_url
                 })
             else:
@@ -595,7 +678,9 @@ def student_route(app):
                 })
 
         except Exception as e:
-            # print(f"Error submitting exam: {str(e)}")
+            print(f"Error submitting exam: {str(e)}")
+            import traceback
+            traceback.print_exc()
             db.session.rollback()
             return jsonify({"success": False, "message": "Error processing exam submission"}), 500
 
