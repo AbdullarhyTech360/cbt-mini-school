@@ -8,6 +8,7 @@ from models.assessment_type import AssessmentType
 from routes.dashboard import admin_required
 from models.class_room import ClassRoom
 from models.student import Student
+from models.teacher import Teacher
 from datetime import datetime, timedelta, date
 import calendar
 from werkzeug.utils import secure_filename
@@ -2820,9 +2821,8 @@ Include context field for tables, diagrams, formulas referenced in questions."""
                     ext = original.rsplit('.', 1)[1].lower()
                     unique_name = f"{uuid.uuid4().hex}.{ext}"
 
-                    upload_dir = os.path.join(
-                        current_app.root_path, 'static', 'uploads', 'profile_images')
-                    os.makedirs(upload_dir, exist_ok=True)
+                    from utils.paths import get_profile_images_dir
+                    upload_dir = get_profile_images_dir()
 
                     file_path = os.path.join(upload_dir, unique_name)
                     file.save(file_path)
@@ -2904,14 +2904,14 @@ Include context field for tables, diagrams, formulas referenced in questions."""
                     ext = original.rsplit('.', 1)[1].lower()
                     unique_name = f"{uuid.uuid4().hex}.{ext}"
 
-                    upload_dir = os.path.join(
-                        current_app.root_path, 'static', 'uploads', 'profile_images')
-                    os.makedirs(upload_dir, exist_ok=True)
+                    from utils.paths import get_profile_images_dir
+                    upload_dir = get_profile_images_dir()
 
                     # Delete old image file if it exists
                     if user.image and user.image.startswith('/uploads/'):
+                        from utils.paths import get_data_dir
                         old_path = os.path.join(
-                            current_app.root_path, 'static', user.image.lstrip('/'))
+                            get_data_dir(), 'static', user.image.lstrip('/'))
                         if os.path.exists(old_path):
                             os.remove(old_path)
 
@@ -3918,6 +3918,289 @@ Include context field for tables, diagrams, formulas referenced in questions."""
             db.session.rollback()
             return jsonify({"success": False, "message": str(e)}), 500
 
+    @app.route("/admin/settings/toggle-demo-questions", methods=["POST"])
+    @admin_required
+    def toggle_demo_questions():
+        """Toggle demo questions: create on enable, delete on disable."""
+        from models.demo_question import DemoQuestion, DemoOption
+
+        data = request.get_json()
+        enable = data.get("enable", False)
+
+        if enable:
+            try:
+                from initialize_all_data import populate_demo_questions
+                populate_demo_questions()
+                count = DemoQuestion.query.count()
+                perm = Permission.query.filter_by(permission_name="demo_question_bank").first()
+                if perm:
+                    perm.is_active = True
+                    db.session.commit()
+                else:
+                    perm = Permission(
+                        permission_name="demo_question_bank",
+                        permission_description="Enable demo question bank for practice",
+                        is_active=True,
+                        created_for="student",
+                    )
+                    db.session.add(perm)
+                    db.session.commit()
+                return jsonify({"success": True, "message": f"Demo questions created. {count} questions available.", "count": count}), 200
+            except Exception as e:
+                db.session.rollback()
+                return jsonify({"success": False, "message": str(e)}), 500
+        else:
+            try:
+                count = DemoQuestion.query.count()
+                option_count = DemoOption.query.count()
+                DemoOption.query.delete()
+                DemoQuestion.query.delete()
+                perm = Permission.query.filter_by(permission_name="demo_question_bank").first()
+                if perm:
+                    perm.is_active = False
+                db.session.commit()
+                return jsonify({
+                    "success": True,
+                    "message": f"Demo test disabled. {count} questions and {option_count} options deleted.",
+                    "questions_deleted": count,
+                    "options_deleted": option_count,
+                }), 200
+            except Exception as e:
+                db.session.rollback()
+                return jsonify({"success": False, "message": str(e)}), 500
+
+    @app.route("/admin/settings/demo-questions-status", methods=["GET"])
+    @admin_required
+    def demo_questions_status():
+        """Get the current count of demo questions and options."""
+        from models.demo_question import DemoQuestion, DemoOption
+        perm = Permission.query.filter_by(permission_name="demo_question_bank").first()
+        return jsonify({
+            "success": True,
+            "enabled": perm.is_active if perm else False,
+            "question_count": DemoQuestion.query.count(),
+            "option_count": DemoOption.query.count(),
+        }), 200
+
+    @app.route("/admin/settings/data-management/status", methods=["GET"])
+    @admin_required
+    def data_management_status():
+        """Get record counts for all data types to show status badges."""
+        from models.demo_question import DemoQuestion, DemoOption
+        from models.teacher import Teacher
+        from models.associations import class_subject
+
+        school = School.query.first()
+        school_id = school.school_id if school else None
+
+        status = {}
+        if school_id:
+            status["school"] = {"count": School.query.count()}
+            status["terms"] = {"count": SchoolTerm.query.filter_by(school_id=school_id).count()}
+            status["assessments"] = {"count": AssessmentType.query.filter_by(school_id=school_id).count()}
+            status["sections"] = {"count": Section.query.filter_by(school_id=school_id).count()}
+        else:
+            status["school"] = {"count": 0}
+            status["terms"] = {"count": 0}
+            status["assessments"] = {"count": 0}
+            status["sections"] = {"count": 0}
+
+        status["classrooms"] = {"count": ClassRoom.query.count()}
+        status["subjects"] = {"count": Subject.query.count()}
+        status["teachers"] = {"count": User.query.filter_by(role="staff").count()}
+        status["students"] = {"count": User.query.filter_by(role="student").count()}
+        status["demo_questions"] = {"count": DemoQuestion.query.count()}
+        status["permissions"] = {"count": Permission.query.count()}
+        links = db.session.execute(db.select(class_subject)).fetchall()
+        status["class_subjects"] = {"count": len(links)}
+
+        return jsonify({"success": True, "status": status}), 200
+
+    @app.route("/admin/settings/data-management", methods=["POST"])
+    @admin_required
+    def data_management():
+        """Handle individual data init/delete and bulk operations."""
+        from models.demo_question import DemoQuestion, DemoOption
+        from models.teacher import Teacher
+        from models.associations import class_subject
+
+        data = request.get_json()
+        action = data.get("action")
+        data_type = data.get("type")
+
+        try:
+            if action == "init_all":
+                from initialize_all_data import generate_demo_data as run_demo_data
+                run_demo_data()
+                return jsonify({"success": True, "message": "All data initialized successfully!"}), 200
+
+            if action == "delete_all":
+                db.session.execute(db.delete(class_subject))
+                DemoOption.query.delete()
+                DemoQuestion.query.delete()
+                User.query.filter_by(role="staff").delete()
+                User.query.filter_by(role="student").delete()
+                Teacher.query.delete()
+                Student.query.delete()
+                Subject.query.delete()
+                ClassRoom.query.delete()
+                Section.query.delete()
+                AssessmentType.query.delete()
+                SchoolTerm.query.delete()
+                Permission.query.delete()
+                School.query.delete()
+                db.session.commit()
+                return jsonify({"success": True, "message": "All data deleted successfully!"}), 200
+
+            if data_type == "school":
+                if action == "init":
+                    from initialize_all_data import create_school
+                    create_school()
+                    return jsonify({"success": True, "message": "School info initialized."}), 200
+                elif action == "delete":
+                    School.query.delete()
+                    db.session.commit()
+                    return jsonify({"success": True, "message": "School info deleted."}), 200
+
+            elif data_type == "terms":
+                school = School.query.first()
+                if not school:
+                    return jsonify({"success": False, "message": "School must be initialized first."}), 400
+                if action == "init":
+                    from initialize_all_data import create_school_terms
+                    create_school_terms(school)
+                    return jsonify({"success": True, "message": "Terms initialized."}), 200
+                elif action == "delete":
+                    SchoolTerm.query.filter_by(school_id=school.school_id).delete()
+                    db.session.commit()
+                    return jsonify({"success": True, "message": "Terms deleted."}), 200
+
+            elif data_type == "assessments":
+                school = School.query.first()
+                if not school:
+                    return jsonify({"success": False, "message": "School must be initialized first."}), 400
+                if action == "init":
+                    from initialize_all_data import create_assessment_types
+                    create_assessment_types(school)
+                    return jsonify({"success": True, "message": "Assessment types initialized."}), 200
+                elif action == "delete":
+                    AssessmentType.query.filter_by(school_id=school.school_id).delete()
+                    db.session.commit()
+                    return jsonify({"success": True, "message": "Assessment types deleted."}), 200
+
+            elif data_type == "sections":
+                school = School.query.first()
+                if not school:
+                    return jsonify({"success": False, "message": "School must be initialized first."}), 400
+                if action == "init":
+                    from initialize_all_data import create_sections
+                    create_sections(school)
+                    return jsonify({"success": True, "message": "Sections initialized."}), 200
+                elif action == "delete":
+                    Section.query.filter_by(school_id=school.school_id).delete()
+                    db.session.commit()
+                    return jsonify({"success": True, "message": "Sections deleted."}), 200
+
+            elif data_type == "classrooms":
+                if action == "init":
+                    from initialize_all_data import create_sections, create_classrooms
+                    school = School.query.first()
+                    if not school:
+                        return jsonify({"success": False, "message": "School must be initialized first."}), 400
+                    sections = create_sections(school)
+                    create_classrooms(sections)
+                    return jsonify({"success": True, "message": "Classrooms initialized."}), 200
+                elif action == "delete":
+                    ClassRoom.query.delete()
+                    db.session.commit()
+                    return jsonify({"success": True, "message": "Classrooms deleted."}), 200
+
+            elif data_type == "subjects":
+                if action == "init":
+                    from initialize_all_data import create_subjects
+                    create_subjects()
+                    return jsonify({"success": True, "message": "Subjects initialized."}), 200
+                elif action == "delete":
+                    Subject.query.delete()
+                    db.session.commit()
+                    return jsonify({"success": True, "message": "Subjects deleted."}), 200
+
+            elif data_type == "teachers":
+                if action == "init":
+                    from initialize_all_data import create_classrooms, create_sections, create_teachers
+                    school = School.query.first()
+                    if not school:
+                        return jsonify({"success": False, "message": "School must be initialized first."}), 400
+                    sections = create_sections(school)
+                    classrooms = create_classrooms(sections)
+                    create_teachers(classrooms)
+                    return jsonify({"success": True, "message": "Teachers initialized."}), 200
+                elif action == "delete":
+                    User.query.filter_by(role="staff").delete()
+                    Teacher.query.delete()
+                    db.session.commit()
+                    return jsonify({"success": True, "message": "Teachers deleted."}), 200
+
+            elif data_type == "students":
+                if action == "init":
+                    from initialize_all_data import create_classrooms, create_sections, create_students
+                    school = School.query.first()
+                    if not school:
+                        return jsonify({"success": False, "message": "School must be initialized first."}), 400
+                    sections = create_sections(school)
+                    classrooms = create_classrooms(sections)
+                    create_students(classrooms)
+                    return jsonify({"success": True, "message": "Students initialized."}), 200
+                elif action == "delete":
+                    User.query.filter_by(role="student").delete()
+                    Student.query.delete()
+                    db.session.commit()
+                    return jsonify({"success": True, "message": "Students deleted."}), 200
+
+            elif data_type == "demo_questions":
+                if action == "init":
+                    from initialize_all_data import populate_demo_questions
+                    populate_demo_questions()
+                    count = DemoQuestion.query.count()
+                    return jsonify({"success": True, "message": f"Demo questions initialized. {count} questions created."}), 200
+                elif action == "delete":
+                    DemoOption.query.delete()
+                    DemoQuestion.query.delete()
+                    db.session.commit()
+                    return jsonify({"success": True, "message": "Demo questions deleted."}), 200
+
+            elif data_type == "permissions":
+                if action == "init":
+                    from initialize_all_data import create_permissions
+                    create_permissions()
+                    return jsonify({"success": True, "message": "Permissions initialized."}), 200
+                elif action == "delete":
+                    Permission.query.delete()
+                    db.session.commit()
+                    return jsonify({"success": True, "message": "Permissions deleted."}), 200
+
+            elif data_type == "class_subjects":
+                if action == "init":
+                    from initialize_all_data import create_subjects, create_sections, create_classrooms, link_subjects_to_classes
+                    school = School.query.first()
+                    if not school:
+                        return jsonify({"success": False, "message": "School must be initialized first."}), 400
+                    sections = create_sections(school)
+                    classrooms = create_classrooms(sections)
+                    subjects = create_subjects()
+                    link_subjects_to_classes(subjects, classrooms)
+                    return jsonify({"success": True, "message": "Class-subject links initialized."}), 200
+                elif action == "delete":
+                    db.session.execute(db.delete(class_subject))
+                    db.session.commit()
+                    return jsonify({"success": True, "message": "Class-subject links deleted."}), 200
+
+            return jsonify({"success": False, "message": f"Unknown data type: {data_type}"}), 400
+
+        except Exception as e:
+            db.session.rollback()
+            return jsonify({"success": False, "message": str(e)}), 500
+
     @app.route("/admin/settings/skip-setup", methods=["POST"])
     @admin_required
     def skip_setup():
@@ -4069,8 +4352,9 @@ Include context field for tables, diagrams, formulas referenced in questions."""
                 if logo_path:
                     # Delete old logo if exists
                     if school.logo:
+                        from utils.paths import get_data_dir
                         old_logo_path = os.path.join(
-                            current_app.config["BASE_DIR"], "static", school.logo
+                            get_data_dir(), "static", school.logo
                         )
                         if os.path.exists(old_logo_path):
                             os.remove(old_logo_path)

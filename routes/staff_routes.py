@@ -113,6 +113,7 @@ def staff_routes(app):
                 # Validate subject, class, and term exist
                 from models.grade import Grade
                 from models.school_term import SchoolTerm
+                from models.grade_scale import GradeScale
 
                 subject = Subject.query.get(subject_id)
                 class_room = ClassRoom.query.get(class_id)
@@ -141,6 +142,23 @@ def staff_routes(app):
                         ),
                         400,
                     )
+
+                # Resolve grade scale for this class (same fallback chain as report generation)
+                grade_scale = None
+                if class_room.section_id:
+                    section_scales = GradeScale.query.filter(
+                        GradeScale.school_id == school.school_id,
+                        GradeScale.is_active == True,
+                        GradeScale.sections.any(section_id=class_room.section_id)
+                    ).order_by(GradeScale.is_default.desc(), GradeScale.created_at.desc()).all()
+                    if section_scales:
+                        grade_scale = section_scales[0]
+                if not grade_scale:
+                    grade_scale = GradeScale.query.filter_by(
+                        school_id=school.school_id, is_default=True, is_active=True).first()
+                if not grade_scale:
+                    grade_scale = GradeScale.query.filter_by(
+                        school_id=school.school_id, is_active=True).first()
                 
                 assessment_types_list = AssessmentType.query.filter_by(
                     school_id=school.school_id,
@@ -210,7 +228,7 @@ def staff_routes(app):
                             existing_grade.teacher_id = user_id
                             existing_grade.is_published = True
                             existing_grade.calculate_percentage()
-                            existing_grade.assign_grade_letter()
+                            existing_grade.assign_grade_letter(grade_scale)
                         else:
                             # Create new grade
                             new_grade = Grade()
@@ -226,7 +244,7 @@ def staff_routes(app):
                             new_grade.academic_session = academic_session
                             new_grade.is_published = True
                             new_grade.calculate_percentage()
-                            new_grade.assign_grade_letter()
+                            new_grade.assign_grade_letter(grade_scale)
                             db.session.add(new_grade)
 
                         saved_count += 1
@@ -315,12 +333,31 @@ def staff_routes(app):
                 # Get assessment types for this school
                 from models.assessment_type import AssessmentType
                 from models.school import School
+                from models.grade_scale import GradeScale
                 school = School.query.first()
                 if school:
                     assessment_types = AssessmentType.query.filter_by(
                         school_id=school.school_id,
                         is_active=True
                     ).order_by(AssessmentType.order).all()
+
+                # Resolve grade scale for this class (same fallback chain as report generation)
+                grade_scale = None
+                if school:
+                    if selected_class and selected_class.section_id:
+                        section_scales = GradeScale.query.filter(
+                            GradeScale.school_id == school.school_id,
+                            GradeScale.is_active == True,
+                            GradeScale.sections.any(section_id=selected_class.section_id)
+                        ).order_by(GradeScale.is_default.desc(), GradeScale.created_at.desc()).all()
+                        if section_scales:
+                            grade_scale = section_scales[0]
+                    if not grade_scale:
+                        grade_scale = GradeScale.query.filter_by(
+                            school_id=school.school_id, is_default=True, is_active=True).first()
+                    if not grade_scale:
+                        grade_scale = GradeScale.query.filter_by(
+                            school_id=school.school_id, is_active=True).first()
 
                 # Get students in this class (ordered by name)
                 students = (
@@ -385,6 +422,19 @@ def staff_routes(app):
                         # Mark if it's from CBT (but still editable)
                         if grade.is_from_cbt:
                             cbt_grades[key] = True
+
+                    # Correct stale grade_letter values using the resolved class scale
+                    if grade_scale:
+                        corrected = False
+                        for grade in grades:
+                            if grade.score is not None and grade.percentage is not None:
+                                grade.assign_grade_letter(grade_scale)
+                                corrected = True
+                        if corrected:
+                            try:
+                                db.session.commit()
+                            except Exception:
+                                db.session.rollback()
             else:
                 # Teacher is not assigned to this combination
                 flash(
@@ -404,6 +454,7 @@ def staff_routes(app):
             existing_grades=existing_grades,
             cbt_grades=cbt_grades,
             assessment_types=assessment_types,
+            grade_scale=grade_scale,
         )
 
     # New function to handle clearing scores

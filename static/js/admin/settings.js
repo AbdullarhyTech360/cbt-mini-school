@@ -611,7 +611,6 @@ document.addEventListener("DOMContentLoaded", function () {
       { id: "student-view-dashboard", name: "students_can_view_dashboard" },
       { id: "teacher-view-dashboard", name: "teachers_can_view_dashboard" },
       { id: "staff-view-dashboard", name: "staff_can_view_dashboard" },
-      { id: "demo-test-toggle", name: "demo_question_bank" },
     ];
 
     mapping.forEach((m) => {
@@ -635,8 +634,99 @@ document.addEventListener("DOMContentLoaded", function () {
       });
     });
 
+    // Special handling for demo test toggle with confirmation
+    setupDemoTestToggle();
+
     // Ensure permissions are loaded to populate initial states
     loadPermissions();
+  }
+
+  // Setup the demo test toggle with confirmation dialogs
+  function setupDemoTestToggle() {
+    const demoToggle = document.getElementById("demo-test-toggle");
+    if (!demoToggle) return;
+
+    demoToggle.addEventListener("change", async function () {
+      const enabling = this.checked;
+      const checkbox = this;
+
+      if (enabling) {
+        // Toggle ON: confirm creation of demo questions
+        window.showConfirmModal({
+          title: "Enable Demo Test",
+          message: "Enabling this will create demo practice questions in the database. Students will be able to take practice tests. Proceed?",
+          confirmText: "Yes, Create Questions",
+          cancelText: "Cancel",
+          confirmClass: "bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700",
+          onConfirm: async () => {
+            try {
+              const resp = await fetch("/admin/settings/toggle-demo-questions", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ enable: true }),
+              });
+              const result = await resp.json();
+              if (result.success) {
+                await updatePermission("demo_question_bank", true);
+                showNotification(result.message, "success");
+              } else {
+                throw new Error(result.message);
+              }
+            } catch (e) {
+              console.error("Failed to enable demo questions:", e);
+              showNotification("Failed to enable demo test: " + e.message, "error");
+              checkbox.checked = false;
+            }
+          },
+          onCancel: function () {
+            checkbox.checked = false;
+          },
+        });
+      } else {
+        // Toggle OFF: confirm deletion of demo questions
+        try {
+          const statusResp = await fetch("/admin/settings/demo-questions-status");
+          const status = await statusResp.json();
+          const qCount = status.question_count || 0;
+          const oCount = status.option_count || 0;
+
+          window.showConfirmModal({
+            title: "Disable Demo Test",
+            message: `This will disable demo test and permanently delete ${qCount} demo question(s) and ${oCount} option(s) from the database. Students will lose access to practice tests. Continue?`,
+            confirmText: "Yes, Delete & Disable",
+            cancelText: "Cancel",
+            confirmClass: "bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700",
+            onConfirm: async () => {
+              try {
+                const resp = await fetch("/admin/settings/toggle-demo-questions", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ enable: false }),
+                });
+                const result = await resp.json();
+                if (result.success) {
+                  await updatePermission("demo_question_bank", false);
+                  showNotification(result.message, "success");
+                } else {
+                  throw new Error(result.message);
+                }
+              } catch (e) {
+                console.error("Failed to disable demo questions:", e);
+                showNotification("Failed to disable demo test: " + e.message, "error");
+                checkbox.checked = true;
+              }
+            },
+            onCancel: function () {
+              checkbox.checked = true;
+            },
+          });
+        } catch (e) {
+          console.error("Failed to check demo status:", e);
+          showNotification("Failed to check demo question status", "error");
+          checkbox.checked = true;
+        }
+      }
+    });
   }
 
   // Attach listeners for question upload permissions

@@ -18,6 +18,7 @@ __pycache__/
 /build
 /sketch/
 /temp/
+/data/
 
 # Redundant static fonts (variable font covers all weights)
 static/fonts/Inter/static/

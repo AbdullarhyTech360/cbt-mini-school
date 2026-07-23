@@ -93,17 +93,21 @@ class ReportGenerator:
             norm_path = os.path.normpath(path_or_url)
 
         # Candidate locations to search for the file
+        from utils.paths import get_data_dir, get_app_root
+        data_dir = get_data_dir()
+        app_root = get_app_root()
         candidates = [
             norm_path,
-            os.path.join(os.getcwd(), norm_path),
-            os.path.join(os.getcwd(), 'static', norm_path),
-            os.path.join(os.getcwd(), 'static', 'uploads', os.path.basename(norm_path)),
-            os.path.join(os.getcwd(), 'uploads', os.path.basename(norm_path)),
-            os.path.join(os.getcwd(), 'uploads', 'school_logos',
+            os.path.join(data_dir, norm_path),
+            os.path.join(app_root, norm_path),
+            os.path.join(data_dir, 'static', norm_path),
+            os.path.join(data_dir, 'static', 'uploads', os.path.basename(norm_path)),
+            os.path.join(data_dir, 'uploads', os.path.basename(norm_path)),
+            os.path.join(data_dir, 'uploads', 'school_logos',
                          os.path.basename(norm_path)),
-            # Add proper subdirectory support for the actual upload structure
-            os.path.join(os.getcwd(), 'static', norm_path),
-            os.path.join(os.getcwd(), 'static', 'uploads', norm_path),
+            os.path.join(app_root, 'static', norm_path),
+            os.path.join(app_root, 'static', 'uploads', norm_path),
+            os.path.join(app_root, 'static', 'uploads', os.path.basename(norm_path)),
         ]
 
         for p in candidates:
