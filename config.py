@@ -1,20 +1,19 @@
 import os
 from datetime import timedelta
 
-BASE_DIR = os.path.abspath(os.path.dirname(__file__))
-INSTANCE_DIR = os.path.join(BASE_DIR, "instance")
-os.makedirs(INSTANCE_DIR, exist_ok=True)
+from utils.paths import get_app_root, get_data_dir, get_db_uri, get_uploads_dir, get_school_logos_dir
 
 
 class Config:
     SECRET_KEY = "dev-secret-key-change-in-production"  # Proper secret key for sessions
-    SQLALCHEMY_DATABASE_URI = "sqlite:///" + os.path.join(
-        INSTANCE_DIR, "users.db"
-    )
+    SQLALCHEMY_DATABASE_URI = get_db_uri()
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
-    # Base Directory
-    BASE_DIR = BASE_DIR
+    # Base Directory (read-only app root for bundled assets)
+    BASE_DIR = get_app_root()
+
+    # Data Directory (writable — for DB, uploads)
+    DATA_DIR = get_data_dir()
 
     # Session Configuration
     SESSION_COOKIE_SECURE = False  # Set to True in production with HTTPS
@@ -24,8 +23,8 @@ class Config:
     SESSION_REFRESH_EACH_REQUEST = True  # Refresh session on each request
 
     # File Upload Configuration
-    UPLOAD_FOLDER = os.path.join(BASE_DIR, "static", "uploads")
-    SCHOOL_LOGO_FOLDER = os.path.join(UPLOAD_FOLDER, "school_logos")
+    UPLOAD_FOLDER = get_uploads_dir()
+    SCHOOL_LOGO_FOLDER = get_school_logos_dir()
     MAX_CONTENT_LENGTH = 2 * 1024 * 1024  # 2MB max file size
     ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "gif", "webp"}
 

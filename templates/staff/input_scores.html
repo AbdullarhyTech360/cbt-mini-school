@@ -542,7 +542,7 @@
         academic_session: "{{ current_term.academic_session if current_term else '' }}"
     };
 
-    let defaultGradeScale = null;
+    let defaultGradeScale = {{ grade_scale.to_dict()|tojson if grade_scale else 'null' }};
     let hasUnsavedChanges = false;
 
     function updateFloatingSave() {
@@ -579,11 +579,19 @@
     }
 
     async function loadDefaultGradeScale() {
+        // Use server-provided grade scale (resolved per class/section) if available
+        if (defaultGradeScale && defaultGradeScale.grade_ranges) {
+            console.log('Using server-provided grade scale:', defaultGradeScale.name);
+            defaultGradeScale = defaultGradeScale.grade_ranges;
+            return;
+        }
+
+        // Fallback: fetch school-wide default via API
         try {
             const response = await fetch('/reports/api/grade-scales/default');
             const data = await response.json();
-            if (data.success) {
-                defaultGradeScale = data.scale;
+            if (data.success && data.scale && data.scale.grade_ranges) {
+                defaultGradeScale = data.scale.grade_ranges;
             } else {
                 defaultGradeScale = null;
             }
@@ -661,8 +669,8 @@
             totalSpan.classList.remove('text-gray-500', 'dark:text-gray-400');
             const percentage = total;
             let grade, colorClass;
-            if (defaultGradeScale && defaultGradeScale.grade_ranges) {
-                const gradeRange = defaultGradeScale.grade_ranges.find(range =>
+            if (defaultGradeScale && Array.isArray(defaultGradeScale)) {
+                const gradeRange = defaultGradeScale.find(range =>
                     percentage >= range.min_score && percentage <= range.max_score
                 );
                 if (gradeRange) {

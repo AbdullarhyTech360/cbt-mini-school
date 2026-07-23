@@ -269,8 +269,9 @@ def handle_500(err):
 # Route to serve uploaded files
 @app.route("/uploads/<path:filepath>")
 def serve_uploads(filepath):
-    """Serve uploaded files"""
-    upload_dir = os.path.join(os.path.dirname(__file__), "static", "uploads")
+    """Serve uploaded files from the data directory"""
+    from utils.paths import get_uploads_dir
+    upload_dir = get_uploads_dir()
     try:
         return send_from_directory(upload_dir, filepath)
     except FileNotFoundError:
@@ -284,17 +285,17 @@ def serve_uploads(filepath):
 # Route to serve node_modules for client-side libraries
 @app.route("/node_modules/<path:filepath>")
 def serve_node_modules(filepath):
-    """Serve node_modules files"""
-    return send_from_directory(
-        os.path.join(os.path.dirname(__file__), "node_modules"), filepath
-    )
+    """Serve node_modules files from the app root"""
+    from utils.paths import get_node_modules_dir
+    return send_from_directory(get_node_modules_dir(), filepath)
 
 
 if __name__ == "__main__":
     # Check if SSL certificate files exist, if not, run without SSL
     ssl_context = None
-    cert_file = os.path.join(os.path.dirname(__file__), "cert.pem")
-    key_file = os.path.join(os.path.dirname(__file__), "key.pem")
+    from utils.paths import get_cert_path, get_key_path
+    cert_file = get_cert_path()
+    key_file = get_key_path()
 
     if os.path.exists(cert_file) and os.path.exists(key_file):
         ssl_context = (cert_file, key_file)

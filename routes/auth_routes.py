@@ -133,9 +133,8 @@ def auth_routes(app):
                     ext = original.rsplit('.', 1)[1].lower()
                     unique_name = f"{uuid.uuid4().hex}.{ext}"
 
-                    upload_folder = os.path.join(
-                        app.static_folder, 'uploads', 'profile_images')
-                    os.makedirs(upload_folder, exist_ok=True)
+                    from utils.paths import get_profile_images_dir
+                    upload_folder = get_profile_images_dir()
 
                     file_path = os.path.join(upload_folder, unique_name)
                     file.save(file_path)

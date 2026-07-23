@@ -545,9 +545,10 @@ def update_classroom_student_counts(classrooms):
 def create_initialization_flag():
     """Create a flag file to indicate that initialization has been completed"""
     try:
-        instance_dir = os.path.join(os.path.dirname(__file__), "instance")
-        os.makedirs(instance_dir, exist_ok=True)
-        flag_file = os.path.join(instance_dir, ".initialized")
+        from utils.paths import get_data_dir
+        data_dir = get_data_dir()
+        os.makedirs(data_dir, exist_ok=True)
+        flag_file = os.path.join(data_dir, ".initialized")
         with open(flag_file, "w") as f:
             f.write(f"Initialized on: {date.today()}\n")
         # print("✓ Initialization flag created")

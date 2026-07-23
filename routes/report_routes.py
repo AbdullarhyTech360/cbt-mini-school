@@ -14,6 +14,7 @@ from flask import Blueprint, jsonify, render_template, request, send_file, sessi
 
 from models import db, TraitDefinition
 from models.assessment_type import AssessmentType
+from utils.paths import get_app_root, get_data_dir
 from models.class_room import ClassRoom
 from models.report_config import ReportConfig
 from models.school_term import SchoolTerm
@@ -99,9 +100,7 @@ def admin_or_staff_required(f):
 
 
 # Pre-compute static folder path and compile regex for _rewrite_static_urls
-_STATIC_FOLDER = os.path.join(
-    os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "static"
-).replace("\\", "/")
+_STATIC_FOLDER = os.path.join(get_app_root(), "static").replace("\\", "/")
 _REWRITE_REGEX = re.compile(r'(url\(["\']?)/static/')
 
 
@@ -212,9 +211,7 @@ def _generate_class_pdf_worker(job_id, class_room_id, term_id, config_id,
                 job["current"] = 0
                 job["message"] = f"Rendering PDFs (0/{total})..."
 
-            _base_cls = os.path.join(
-                os.path.dirname(os.path.dirname(os.path.abspath(__file__))), ""
-            ).replace("\\", "/")
+            _base_cls = get_app_root().replace("\\", "/")
 
             def _render_single_pdf(idx, html_string):
                 rewritten = _rewrite_static_urls(html_string)
@@ -279,7 +276,7 @@ def _generate_class_pdf_worker(job_id, class_room_id, term_id, config_id,
             merged_buffer.seek(0)
 
             # Write to temp file instead of holding entire PDF in _JOBS memory
-            _pdf_tmp_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'temp')
+            _pdf_tmp_dir = os.path.join(get_data_dir(), 'temp')
             os.makedirs(_pdf_tmp_dir, exist_ok=True)
             _pdf_tmp_path = os.path.join(_pdf_tmp_dir, f'{job_id}.pdf')
             with open(_pdf_tmp_path, 'wb') as f:

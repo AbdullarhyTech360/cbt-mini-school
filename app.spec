@@ -6,12 +6,11 @@ Includes all Python packages and static assets needed for a portable bundle.
 
 a = Analysis(
     ['app.py'],
-    pathex=['/home/abdullahi/Desktop/dev/projects/cbt-mini-school'],
+    pathex=[],
     binaries=[],
     datas=[
         ('templates', 'templates'),
         ('static', 'static'),
-        ('instance', 'instance'),
         ('models', 'models'),
         ('routes', 'routes'),
         ('services', 'services'),
@@ -32,6 +31,7 @@ a = Analysis(
         'pypdf',
         'docx',
         'xhtml2pdf',
+        'utils.paths',
     ],
     hookspath=[],
     hooksconfig={},
