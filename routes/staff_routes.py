@@ -249,10 +249,28 @@ def staff_routes(app):
 
                         saved_count += 1
 
+                # Delete Grade records for assessments that were cleared (sent as null)
+                deleted_count = 0
+                for score_entry in scores_data:
+                    student_id = score_entry.get("student_id")
+                    scores = score_entry.get("scores", {})
+                    for assessment_code, score_value in scores.items():
+                        if score_value is None:
+                            deleted = Grade.query.filter_by(
+                                student_id=student_id,
+                                subject_id=subject_id,
+                                class_room_id=class_id,
+                                term_id=term_id,
+                                assessment_type=assessment_code,
+                            ).delete()
+                            deleted_count += deleted
+
                 # Commit all changes
                 db.session.commit()
 
                 response_message = f"Successfully saved {saved_count} scores"
+                if deleted_count > 0:
+                    response_message += f", cleared {deleted_count} score(s)"
                 if errors:
                     response_message += f". {len(errors)} errors occurred."
 

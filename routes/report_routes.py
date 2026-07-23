@@ -138,7 +138,8 @@ def _apply_layout_config(report_data, layout_config_id):
 
 
 def _generate_class_pdf_worker(job_id, class_room_id, term_id, config_id,
-                                layout_config_id, typography, filename):
+                                layout_config_id, typography, filename,
+                                show_inputted_only=False, percentage_basis="all"):
     """Background thread that generates the batch PDF and updates job progress."""
     from app import app
 
@@ -158,7 +159,9 @@ def _generate_class_pdf_worker(job_id, class_room_id, term_id, config_id,
                 job["phase"] = "fetch"
                 job["message"] = "Loading student data..."
 
-            reports = ReportGenerator.get_class_report_data(class_room_id, term_id, config_id)
+            reports = ReportGenerator.get_class_report_data(class_room_id, term_id, config_id,
+                                                            show_inputted_only=show_inputted_only,
+                                                            percentage_basis=percentage_basis)
 
             if not reports:
                 with _JOBS_LOCK:
@@ -685,6 +688,49 @@ def get_classes():
     )
 
 
+@report_bp.route("/api/pass-mark-status/<class_room_id>", methods=["GET"])
+@admin_or_staff_required
+def get_pass_mark_status(class_room_id):
+    """Check if a pass mark (promotion rule) is configured for a class."""
+    from models.promotion_rule import PromotionRule
+
+    class_room = ClassRoom.query.get(class_room_id)
+    if not class_room:
+        return jsonify({"success": False, "error": "Class not found"}), 404
+
+    school = School.query.first()
+    if not school:
+        return jsonify({"success": False, "error": "No school found"}), 404
+
+    rule = None
+    if class_room.section_id and class_room.level is not None:
+        rule = PromotionRule.query.filter_by(
+            source_section_id=class_room.section_id,
+            source_level=class_room.level,
+            school_id=school.school_id,
+            is_active=True,
+        ).first()
+
+    if rule and rule.min_average is not None:
+        return jsonify({
+            "success": True,
+            "configured": True,
+            "pass_mark": rule.min_average,
+            "rule_name": rule.name,
+        })
+    else:
+        return jsonify({
+            "success": True,
+            "configured": False,
+            "pass_mark": 50,
+            "message": (
+                "Pass mark is not configured for this class. "
+                "Default 50% pass mark will be used. "
+                "Please set a promotion rule with a pass mark under Promotion Settings."
+            ),
+        })
+
+
 @report_bp.route("/api/students", methods=["GET"])
 @admin_or_staff_required
 def get_students():
@@ -843,6 +889,8 @@ def get_student_report(student_id):
         config_id = request.args.get("config_id")
         layout_config_id = request.args.get("layout_config_id")
         include_html = request.args.get("include_html")
+        show_inputted_only = request.args.get("show_inputted_only", "false") == "true"
+        percentage_basis = request.args.get("percentage_basis", "all")
 
         # Handle empty string config_id as None
         if config_id == "":
@@ -871,7 +919,8 @@ def get_student_report(student_id):
 
         # Get report data
         report_data = ReportGenerator.get_student_scores(
-            student_id, term_id, class_room_id, config_id
+            student_id, term_id, class_room_id, config_id,
+            show_inputted_only=show_inputted_only, percentage_basis=percentage_basis
         )
 
         if not report_data:
@@ -926,6 +975,8 @@ def download_single_pdf():
         class_room_id = data.get("class_room_id")
         config_id = data.get("config_id")
         layout_config_id = data.get("layout_config_id")
+        show_inputted_only = data.get("show_inputted_only", False)
+        percentage_basis = data.get("percentage_basis", "all")
 
         # print(f"DEBUG: Received data - student_id: {student_id}, term_id: {term_id}, class_room_id: {class_room_id}, config_id: {config_id}")
 
@@ -959,11 +1010,15 @@ def download_single_pdf():
 
         # Get report data — use shared context (bulk queries) even for single student
         # to avoid N+1 position/average queries in get_student_scores()
-        _shared = ReportGenerator._build_shared_context(class_room_id, term_id, config_id)
+        _shared = ReportGenerator._build_shared_context(class_room_id, term_id, config_id,
+                                                        show_inputted_only=show_inputted_only,
+                                                        percentage_basis=percentage_basis)
         report_data = ReportGenerator.get_student_scores(
-            student_id, term_id, class_room_id, config_id, _shared=_shared
+            student_id, term_id, class_room_id, config_id, _shared=_shared,
+            show_inputted_only=show_inputted_only, percentage_basis=percentage_basis
         ) if _shared else ReportGenerator.get_student_scores(
-            student_id, term_id, class_room_id, config_id
+            student_id, term_id, class_room_id, config_id,
+            show_inputted_only=show_inputted_only, percentage_basis=percentage_basis
         )
         # print(f"DEBUG: Received data from client: {data}")
         if not report_data:
@@ -1199,6 +1254,8 @@ def download_class_pdf():
         term_id = data.get("term_id")
         config_id = data.get("config_id")
         layout_config_id = data.get("layout_config_id")
+        show_inputted_only = data.get("show_inputted_only", False)
+        percentage_basis = data.get("percentage_basis", "all")
 
         try:
             typography = max(1, min(7, int(data.get("typography", 4))))
@@ -1238,7 +1295,8 @@ def download_class_pdf():
         t = threading.Thread(
             target=_generate_class_pdf_worker,
             args=(job_id, class_room_id, term_id, config_id,
-                  layout_config_id, typography, filename),
+                  layout_config_id, typography, filename,
+                  show_inputted_only, percentage_basis),
             daemon=True,
         )
         t.start()

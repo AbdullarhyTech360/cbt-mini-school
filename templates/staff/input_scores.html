@@ -747,20 +747,16 @@
             const studentId = row.dataset.studentId;
             const scoreInputs = row.querySelectorAll('.score-input');
             const studentScores = {};
-            let hasAnyScore = false;
             scoreInputs.forEach(input => {
                 const assessmentCode = input.dataset.assessment;
                 const value = input.value;
                 if (value !== '') {
                     studentScores[assessmentCode] = parseFloat(value);
-                    hasAnyScore = true;
                 } else {
                     studentScores[assessmentCode] = null;
                 }
             });
-            if (hasAnyScore) {
-                scoresData.push({ student_id: studentId, scores: studentScores });
-            }
+            scoresData.push({ student_id: studentId, scores: studentScores });
         });
         return scoresData;
     }
@@ -780,7 +776,8 @@
             return;
         }
         const scoresData = collectScoresData();
-        if (scoresData.length === 0) {
+        const hasAnyScore = scoresData.some(s => Object.values(s.scores).some(v => v !== null));
+        if (!hasAnyScore) {
             showValidationMessage('No scores to save. Please enter at least one score.', 'warning');
             return;
         }

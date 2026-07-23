@@ -60,8 +60,10 @@ document.addEventListener("DOMContentLoaded", () => {
       if (classId) {
         loadSubjectOrder(classId);
         autoSelectConfigForClass(classId);
+        checkPassMarkStatus(classId);
       } else {
         document.getElementById("subjectOrderPanel").classList.add("hidden");
+        hidePassMarkStatus();
       }
     });
   }
@@ -82,6 +84,55 @@ document.addEventListener("DOMContentLoaded", () => {
   // Initialize broad sheet controls
   initializeBroadSheetControls();
 });
+
+// --- Pass Mark Status ---
+function checkPassMarkStatus(classId) {
+  const el = document.getElementById("passMarkStatus");
+  if (!el) return;
+
+  el.classList.remove("hidden");
+  el.innerHTML = `
+    <div class="flex items-center gap-2 px-3 py-2 rounded-xl bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600/50">
+      <svg class="animate-spin h-4 w-4 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+      </svg>
+      <span class="text-xs text-gray-500 dark:text-gray-400">Checking pass mark...</span>
+    </div>
+  `;
+
+  fetch(`/reports/api/pass-mark-status/${classId}`)
+    .then((res) => res.json())
+    .then((data) => {
+      if (!data.success) {
+        el.classList.add("hidden");
+        return;
+      }
+      if (data.configured) {
+        el.innerHTML = `
+          <div class="flex items-center gap-2 px-3 py-2 rounded-xl bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/30">
+            <span class="material-symbols-outlined text-sm text-emerald-600 dark:text-emerald-400">check_circle</span>
+            <span class="text-xs font-medium text-emerald-700 dark:text-emerald-300">Pass mark found: ${data.pass_mark}% (${data.rule_name})</span>
+          </div>
+        `;
+      } else {
+        el.innerHTML = `
+          <div class="flex items-center gap-2 px-3 py-2 rounded-xl bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/30">
+            <span class="material-symbols-outlined text-sm text-amber-600 dark:text-amber-400">warning</span>
+            <span class="text-xs font-medium text-amber-700 dark:text-amber-300">${data.message}</span>
+          </div>
+        `;
+      }
+    })
+    .catch(() => {
+      el.classList.add("hidden");
+    });
+}
+
+function hidePassMarkStatus() {
+  const el = document.getElementById("passMarkStatus");
+  if (el) el.classList.add("hidden");
+}
 
 // Initialize tab switching functionality
 function initializeTabSwitching() {
@@ -846,6 +897,8 @@ async function previewReport(studentId) {
       config_id: configId || "",
       layout_config_id: document.getElementById("layoutStyleFilter")?.value || "",
       include_html: "true",
+      show_inputted_only: document.getElementById("showInputtedOnly")?.checked || false,
+      percentage_basis: document.getElementById("percentageBasisInputted")?.checked ? "inputted" : "all",
     });
 
     const response = await fetch(
@@ -1300,6 +1353,8 @@ async function downloadReport(studentId) {
         config_id: currentFilters.config_id || "",
         layout_config_id: getSelectedLayoutConfigId(),
         include_html: "true",
+        show_inputted_only: document.getElementById("showInputtedOnly")?.checked || false,
+        percentage_basis: document.getElementById("percentageBasisInputted")?.checked ? "inputted" : "all",
       });
 
       const response = await fetch(
@@ -1471,6 +1526,8 @@ async function downloadAllReports() {
             config_id: currentFilters.config_id || "",
             layout_config_id: getSelectedLayoutConfigId(),
             typography: typography,
+            show_inputted_only: document.getElementById("showInputtedOnly")?.checked || false,
+            percentage_basis: document.getElementById("percentageBasisInputted")?.checked ? "inputted" : "all",
           }),
         });
 
@@ -2556,6 +2613,8 @@ async function generateServerSidePDF(studentId) {
       config_id: currentFilters.config_id || "",
       layout_config_id: getSelectedLayoutConfigId(),
       typography: typography,
+      show_inputted_only: document.getElementById("showInputtedOnly")?.checked || false,
+      percentage_basis: document.getElementById("percentageBasisInputted")?.checked ? "inputted" : "all",
     }),
   });
 

@@ -83,6 +83,9 @@
                             <p class="text-xs text-gray-500 dark:text-gray-400 mt-1.5">Choose the class</p>
                         </div>
 
+                        <div id="passMarkStatus" class="hidden">
+                        </div>
+
                         <div>
                             <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Report Config</label>
                             <select id="configFilter"
@@ -114,6 +117,21 @@
                                 <option value="7">7 &mdash; Extra Comfortable</option>
                             </select>
                             <p class="text-xs text-gray-500 dark:text-gray-400 mt-1.5">Adjust text size &amp; spacing density</p>
+                        </div>
+
+                        <!-- Subject Display Options -->
+                        <div class="pt-3 border-t border-gray-200 dark:border-gray-600/50">
+                            <p class="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-3">Subject Display</p>
+                            <div class="space-y-2">
+                                <label class="group flex items-center justify-between px-3.5 py-2.5 rounded-xl bg-gray-50 dark:bg-gray-700/50 border border-transparent hover:border-primary/20 transition-all cursor-pointer">
+                                    <span class="text-xs font-semibold text-gray-700 dark:text-gray-300">Show Only Scored Subjects</span>
+                                    <input type="checkbox" id="showInputtedOnly" class="w-4 h-4 rounded text-primary focus:ring-primary/20">
+                                </label>
+                                <label class="group flex items-center justify-between px-3.5 py-2.5 rounded-xl bg-gray-50 dark:bg-gray-700/50 border border-transparent hover:border-primary/20 transition-all cursor-pointer">
+                                    <span class="text-xs font-semibold text-gray-700 dark:text-gray-300">Percentage from Scored Subjects</span>
+                                    <input type="checkbox" id="percentageBasisInputted" class="w-4 h-4 rounded text-primary focus:ring-primary/20">
+                                </label>
+                            </div>
                         </div>
 
                         <button onclick="loadStudents()"

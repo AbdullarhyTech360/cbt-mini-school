@@ -19,6 +19,7 @@ from models.section import Section
 from models.student_trait import StudentTrait
 from models.trait_definition import TraitDefinition
 from models.attendance import Attendance
+from models.promotion_rule import PromotionRule
 from sqlalchemy import func
 
 
@@ -191,7 +192,8 @@ class ReportGenerator:
             return f"{', '.join(names)}, and {last}"
 
     @staticmethod
-    def _build_shared_context(class_room_id, term_id, config_id=None):
+    def _build_shared_context(class_room_id, term_id, config_id=None,
+                               show_inputted_only=False, percentage_basis="all"):
         """Pre-compute all class-invariant data once for batch report generation.
 
         Returns a dict of shared data to pass as _shared to get_student_scores,
@@ -311,10 +313,45 @@ class ReportGenerator:
 
         # Class average from pre-computed per-student totals
         percentages = []
-        for sid in all_student_ids:
-            total_score, total_max = student_score_map.get(sid, (0, 0))
-            if total_max > 0:
-                percentages.append((total_score / total_max) * 100)
+        if percentage_basis == "inputted":
+            # Build per-student, per-subject max_score map for inputted-basis denominator
+            student_subject_max = {}
+            for row in db.session.query(
+                Grade.student_id, Grade.subject_id, func.sum(Grade.max_score).label('subj_max')
+            ).filter(
+                Grade.student_id.in_(all_student_ids),
+                Grade.term_id == term_id,
+                Grade.class_room_id == class_room_id,
+                db.or_(Grade.is_published == True, Grade.is_from_cbt == True)
+            ).group_by(Grade.student_id, Grade.subject_id).all():
+                student_subject_max.setdefault(row.student_id, {})[row.subject_id] = row.subj_max or 0
+
+            # Also need per-student, per-subject score totals
+            student_subject_scores = {}
+            for row in db.session.query(
+                Grade.student_id, Grade.subject_id, func.sum(Grade.score).label('subj_score')
+            ).filter(
+                Grade.student_id.in_(all_student_ids),
+                Grade.term_id == term_id,
+                Grade.class_room_id == class_room_id,
+                db.or_(Grade.is_published == True, Grade.is_from_cbt == True)
+            ).group_by(Grade.student_id, Grade.subject_id).all():
+                student_subject_scores.setdefault(row.student_id, {})[row.subject_id] = row.subj_score or 0
+
+            for sid in all_student_ids:
+                scores_map = student_subject_scores.get(sid, {})
+                maxes_map = student_subject_max.get(sid, {})
+                scored_subjects = [s for s, sc in scores_map.items() if sc > 0]
+                if scored_subjects:
+                    inputted_max = sum(maxes_map.get(s, 0) for s in scored_subjects)
+                    inputted_score = sum(scores_map.get(s, 0) for s in scored_subjects)
+                    if inputted_max > 0:
+                        percentages.append((inputted_score / inputted_max) * 100)
+        else:
+            for sid in all_student_ids:
+                total_score, total_max = student_score_map.get(sid, (0, 0))
+                if total_max > 0:
+                    percentages.append((total_score / total_max) * 100)
         class_average = round(sum(percentages) / len(percentages), 1) if percentages else 0
 
         # Bulk-fetch all class grades for subject positions
@@ -443,10 +480,13 @@ class ReportGenerator:
             'traits_by_student': traits_by_student,
             'trait_definitions': trait_definitions,
             'embedded_logo': embedded_logo,
+            'show_inputted_only': show_inputted_only,
+            'percentage_basis': percentage_basis,
         }
 
     @staticmethod
-    def get_student_scores(student_id, term_id, class_room_id, config_id=None, _shared=None):
+    def get_student_scores(student_id, term_id, class_room_id, config_id=None, _shared=None,
+                           show_inputted_only=False, percentage_basis="all"):
         """Get all scores for a student in a specific term and class.
 
         Args:
@@ -476,6 +516,8 @@ class ReportGenerator:
             position = _shared['student_positions'].get(student_id)
             class_average = _shared['class_average']
             total_students = _shared['total_students']
+            show_inputted_only = _shared.get('show_inputted_only', False)
+            percentage_basis = _shared.get('percentage_basis', 'all')
             returned_assessment_types = _shared['returned_assessment_types']
             grade_ranges = _shared['grade_ranges']
             subject_student_totals = _shared['subject_student_totals']
@@ -912,8 +954,8 @@ class ReportGenerator:
             'position': position,
             'total_students': total_students,
             'class_average': class_average,
-            'overall_total': sum(s['total'] for s in subject_scores.values()),
-            'overall_max': sum(s['max_total'] for s in subject_scores.values()),
+            'overall_total': sum(s['total'] for s in subject_scores.values()) if percentage_basis != "inputted" else sum(s['total'] for sid, s in subject_scores.items() if any(a.get('score', 0) > 0 for a in s['assessments'].values())),
+            'overall_max': sum(s['max_total'] for s in subject_scores.values()) if percentage_basis != "inputted" else sum(s['max_total'] for sid, s in subject_scores.items() if any(a.get('score', 0) > 0 for a in s['assessments'].values())),
             'config': config.to_dict() if config else None,
             'grade_scale': grade_scale.to_dict() if grade_scale else None,
             'custom_variables': config.get_layout_config().get('custom_variables', {}) if config and config.get_layout_config() else {},
@@ -927,7 +969,38 @@ class ReportGenerator:
                 for t in TraitDefinition.query.filter_by(school_id=school.school_id, is_active=True).order_by(TraitDefinition.sort_order).all()
             ],
             'attendance_stats': attendance_stats,
+            'show_inputted_only': show_inputted_only,
+            'percentage_basis': percentage_basis,
         }
+
+        # Look up the promotion rule for this class to determine pass mark
+        _pass_mark = 50  # default fallback
+        _pass_mark_warning = None
+        if class_room.section_id and class_room.level is not None:
+            _promo_rule = PromotionRule.query.filter_by(
+                source_section_id=class_room.section_id,
+                source_level=class_room.level,
+                school_id=school.school_id,
+                is_active=True,
+            ).first()
+            if _promo_rule and _promo_rule.min_average is not None:
+                _pass_mark = _promo_rule.min_average
+            else:
+                _pass_mark_warning = (
+                    'Pass mark is not configured for this class. '
+                    'Default 50% pass mark will be used. '
+                    'Please set a promotion rule with a pass mark under Promotion Settings.'
+                )
+        else:
+            _pass_mark_warning = (
+                'Pass mark is not configured for this class. '
+                'Default 50% pass mark will be used. '
+                'Please set a promotion rule with a pass mark under Promotion Settings.'
+            )
+        if _pass_mark_warning:
+            print(f'[REPORT WARNING] {_pass_mark_warning}')
+        report_data['pass_mark'] = _pass_mark
+        report_data['pass_mark_warning'] = _pass_mark_warning
 
         auto = ReportGenerator.generate_auto_remarks(report_data)
         if not report_data['term']['teacher_remarks']:
@@ -1037,26 +1110,27 @@ class ReportGenerator:
             )
 
         # --- Principal's Comment ---
+        pass_mark = report_data.get('pass_mark', 50)
         principal_remarks = ''
-        if percentage >= 50 and _position_ratio() <= 0.5:
+        if percentage >= pass_mark and _position_ratio() <= 0.5:
             principal_remarks = (
                 f'A commendable result this term. {first_name} is promoted on merit. '
                 f'Well done, keep striving for excellence.'
             )
-        elif percentage >= 50:
+        elif percentage >= pass_mark:
             principal_remarks = (
                 f'Satisfactory performance overall. {first_name} is promoted on trial. '
                 f'Must improve class standing next term through greater effort.'
             )
-        elif percentage >= 40:
+        elif percentage >= (pass_mark - 10):
             principal_remarks = (
                 f'Below expectations this term. {first_name} is promoted on trial. '
                 f'Strict improvement in academics and conduct is required next term.'
             )
         else:
             principal_remarks = (
-                f'Unsatisfactory performance. {first_name} needs significant improvement '
-                f'in all areas. Dedicated effort and parental involvement are expected next term.'
+                f'Unsatisfactory performance. {first_name} is not promoted '
+                f'and must repeat. Dedicated effort and parental involvement are expected next term.'
             )
 
         return {
@@ -1132,10 +1206,13 @@ class ReportGenerator:
         return round(sum(percentages) / len(percentages), 1)
 
     @staticmethod
-    def get_class_report_data(class_room_id, term_id, config_id=None):
+    def get_class_report_data(class_room_id, term_id, config_id=None,
+                               show_inputted_only=False, percentage_basis="all"):
         """Get report data for all students in a class (optimized with shared context)"""
         # Pre-compute all class-invariant data once
-        _shared = ReportGenerator._build_shared_context(class_room_id, term_id, config_id)
+        _shared = ReportGenerator._build_shared_context(class_room_id, term_id, config_id,
+                                                         show_inputted_only=show_inputted_only,
+                                                         percentage_basis=percentage_basis)
         if _shared is None:
             return []
 
@@ -1332,6 +1409,15 @@ class ReportGenerator:
         overall_grade = _get_grade_for_percentage(overall_percentage, grade_ranges_dicts)
 
         scores = report_data.get('scores', {})
+
+        # Filter subjects when show_inputted_only is enabled
+        show_inputted_only = report_data.get('show_inputted_only', False)
+        if show_inputted_only:
+            scores = {
+                sid: data for sid, data in scores.items()
+                if any(a.get('score', 0) > 0 for a in data.get('assessments', {}).values())
+            }
+
         for subj_key, subj in scores.items():
             total = subj.get('total', 0)
             max_total = subj.get('max_total', 100)
@@ -1362,6 +1448,8 @@ class ReportGenerator:
             'config': report_data.get('config', {}),
             'attendance_stats': report_data.get('attendance_stats', {}),
             'typography': report_data.get('typography', 4),
+            'show_inputted_only': report_data.get('show_inputted_only', False),
+            'percentage_basis': report_data.get('percentage_basis', 'all'),
         }
 
         # Render using template
@@ -1493,6 +1581,15 @@ class ReportGenerator:
             school['logo'] = ReportGenerator._embed_image(school['logo'])
         assessment_types = report_data.get('assessment_types', [])
         scores = report_data['scores']
+
+        # Filter subjects when show_inputted_only is enabled
+        show_inputted_only = report_data.get('show_inputted_only', False)
+        if show_inputted_only:
+            scores = {
+                sid: data for sid, data in scores.items()
+                if any(a.get('score', 0) > 0 for a in data.get('assessments', {}).values())
+            }
+
         position = report_data['position']
         total_students = report_data['total_students']
         overall_total = report_data['overall_total']
