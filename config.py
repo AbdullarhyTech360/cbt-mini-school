@@ -5,7 +5,7 @@ from utils.paths import get_app_root, get_data_dir, get_db_uri, get_uploads_dir,
 
 
 class Config:
-    SECRET_KEY = "dev-secret-key-change-in-production"  # Proper secret key for sessions
+    SECRET_KEY = "dev-secret-key-change-in-production"  # pragma: allowlist secret  # Proper secret key for sessions
     SQLALCHEMY_DATABASE_URI = get_db_uri()
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 

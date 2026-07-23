@@ -18,7 +18,7 @@ Add your Gemini API key to your environment:
 
 **On Windows (PowerShell):**
 ```powershell
-$env:GEMINI_API_KEY="your_api_key_here"
+$env:GEMINI_API_KEY="your_api_key_here"  # pragma: allowlist secret
 ```
 
 **On Windows (Command Prompt):**
@@ -28,7 +28,7 @@ set GEMINI_API_KEY=your_api_key_here
 
 **On Linux/Mac:**
 ```bash
-export GEMINI_API_KEY="your_api_key_here"
+export GEMINI_API_KEY="your_api_key_here"  # pragma: allowlist secret
 ```
 
 Or add to your `.env` file (if using python-dotenv):

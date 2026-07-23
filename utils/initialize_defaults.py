@@ -234,7 +234,7 @@ def initialize_default_data():
             "last_name": "Smith",
             "email": "john.smith@demoschool.com",
             "gender": "Male",
-            "password": "teacher123"
+            "password": "teacher123"  # pragma: allowlist secret
         },
         {
             "username": "teacher2",
@@ -242,7 +242,7 @@ def initialize_default_data():
             "last_name": "Johnson",
             "email": "sarah.johnson@demoschool.com",
             "gender": "Female",
-            "password": "teacher123"
+            "password": "teacher123"  # pragma: allowlist secret
         },
     ]
 
@@ -301,7 +301,7 @@ def initialize_default_data():
             "email": "michael.williams@student.demoschool.com",
             "gender": "Male",
             "class": "Primary 1",
-            "password": "student123"
+            "password": "student123"  # pragma: allowlist secret
         },
         {
             "username": "student2",
@@ -310,7 +310,7 @@ def initialize_default_data():
             "email": "emily.brown@student.demoschool.com",
             "gender": "Female",
             "class": "Primary 1",
-            "password": "student123"
+            "password": "student123"  # pragma: allowlist secret
         },
         {
             "username": "student3",
@@ -319,7 +319,7 @@ def initialize_default_data():
             "email": "david.davis@student.demoschool.com",
             "gender": "Male",
             "class": "J.S.S 1",
-            "password": "student123"
+            "password": "student123"  # pragma: allowlist secret
         },
     ]
 

@@ -273,7 +273,7 @@ def create_teachers(classrooms):
                 "last_name": "Smith",
                 "email": "john.smith@demoschool.com",
                 "gender": "Male",
-                "password": "teacher123"
+                "password": "teacher123"  # pragma: allowlist secret
             },
             {
                 "username": "teacher2",
@@ -281,7 +281,7 @@ def create_teachers(classrooms):
                 "last_name": "Johnson",
                 "email": "sarah.johnson@demoschool.com",
                 "gender": "Female",
-                "password": "teacher123"
+                "password": "teacher123"  # pragma: allowlist secret
             },
         ]
         
@@ -332,7 +332,7 @@ def create_students(classrooms):
                 "email": "michael.williams@student.demoschool.com",
                 "gender": "Male",
                 "class": "Primary 1",
-                "password": "student123"
+                "password": "student123"  # pragma: allowlist secret
             },
             {
                 "username": "student2",
@@ -341,7 +341,7 @@ def create_students(classrooms):
                 "email": "emily.brown@student.demoschool.com",
                 "gender": "Female",
                 "class": "Primary 1",
-                "password": "student123"
+                "password": "student123"  # pragma: allowlist secret
             },
             {
                 "username": "student3",
@@ -350,7 +350,7 @@ def create_students(classrooms):
                 "email": "david.davis@student.demoschool.com",
                 "gender": "Male",
                 "class": "J.S.S 1",
-                "password": "student123"
+                "password": "student123"  # pragma: allowlist secret
             },
         ]
         
