@@ -319,8 +319,13 @@ def admin_action_route(app):
                 if existing:
                     return jsonify({"success": False, "message": "Email already exists"}), 409
                 user.email = data["email"].lower()
-            if "gender" in data:
-                user.gender = data["gender"]
+            if "gender" in data and data["gender"]:
+                gender_value = data["gender"].strip()
+                normalized_gender = gender_value.title()
+                if normalized_gender.lower() in ["male", "female", "other"]:
+                    user.gender = normalized_gender
+                else:
+                    user.gender = gender_value
             if "dob" in data:
                 try:
                     user.dob = datetime.strptime(

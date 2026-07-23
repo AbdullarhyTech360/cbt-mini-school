@@ -160,9 +160,21 @@ function closeAddUserModal() {
     document.getElementById("addUserModal").classList.add("hidden");
 }
 
+function normalizeGenderValue(value) {
+    if (!value) return "";
+    const normalized = value.toString().trim();
+    if (!normalized) return "";
+
+    const lower = normalized.toLowerCase();
+    if (lower === "male") return "Male";
+    if (lower === "female") return "Female";
+    if (lower === "other") return "Other";
+    return normalized;
+}
+
 function openEditUserModal(userId) {
     // Find the edit button for this user
-    const button = document.querySelector(`button[data-user-id="${userId}"]`);
+    const button = document.querySelector(`button.edit-user-btn[data-user-id="${userId}"]`);
     
     if (!button) {
         console.error('Edit button not found for user ID:', userId);
@@ -175,7 +187,20 @@ function openEditUserModal(userId) {
     document.getElementById("editFirstName").value = button.dataset.firstName || '';
     document.getElementById("editLastName").value = button.dataset.lastName || '';
     document.getElementById("editEmail").value = button.dataset.email || '';
-    document.getElementById("editGender").value = button.dataset.gender || 'Male';
+    const editGender = document.getElementById("editGender");
+    const genderValue = normalizeGenderValue(button.dataset.gender || '');
+    if (genderValue) {
+        const existingOption = Array.from(editGender.options).find(option => option.value === genderValue);
+        if (!existingOption) {
+            const unknownOption = document.createElement("option");
+            unknownOption.value = genderValue;
+            unknownOption.text = genderValue;
+            editGender.appendChild(unknownOption);
+        }
+        editGender.value = genderValue;
+    } else {
+        editGender.value = '';
+    }
     document.getElementById("editDob").value = button.dataset.dob || '';
     document.getElementById("editClassRoom").value = button.dataset.classRoomId || '';
     document.getElementById("editRegisterNumber").value = button.dataset.registerNumber || '';
@@ -347,18 +372,6 @@ document.getElementById("addUserForm").addEventListener("submit", function (e) {
             }
             return;
         }
-        if (!data.class_room_id) {
-            if (typeof window.showAlert !== "undefined") {
-                window.showAlert({
-                    type: "error",
-                    title: "Validation Error!",
-                    message: "Class is required for staff and admin users.",
-                });
-            } else {
-                alert("Class is required for staff and admin users.");
-            }
-            return;
-        }
     }
     
     // Remove confirm_password before sending to server
@@ -464,18 +477,6 @@ document.getElementById("editUserForm").addEventListener("submit", function (e) 
                 });
             } else {
                 alert("Email is required for staff and admin users.");
-            }
-            return;
-        }
-        if (!data.class_room_id) {
-            if (typeof window.showAlert !== "undefined") {
-                window.showAlert({
-                    type: "error",
-                    title: "Validation Error!",
-                    message: "Class is required for staff and admin users.",
-                });
-            } else {
-                alert("Class is required for staff and admin users.");
             }
             return;
         }
