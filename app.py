@@ -1,7 +1,64 @@
 import json
 import logging
 import os
+import sys
 from datetime import timedelta
+
+# ---------------------------------------------------------------------------
+# LICENSE VERIFICATION — runs BEFORE Flask initialization
+# ---------------------------------------------------------------------------
+
+def _run_license_check():
+    """Handle --get-hwid flag and license verification before app starts."""
+    from utils.license_display import (
+        print_banner,
+        print_error,
+        print_hwid_header,
+        print_info,
+        print_ok,
+        pause_and_exit,
+    )
+    from utils.license_manager import get_hwid, verify_license
+
+    # Handle --skip-license flag (dev convenience)
+    if "--skip-license" in sys.argv:
+        return
+
+    # Handle --get-hwid flag
+    if "--get-hwid" in sys.argv:
+        print_hwid_header()
+        print_info("Your Hardware ID is:")
+        print()
+        print(f"    {get_hwid()}")
+        print()
+        print_info("Send this ID to your supplier to receive your license.")
+        pause_and_exit("Press Enter to exit...", exit_code=0)
+
+    # Run license verification
+    print_banner()
+    is_valid, message, school_name = verify_license()
+
+    if is_valid:
+        print_ok(message)
+        print_ok("Starting application...")
+        print()
+    else:
+        print_error(message)
+        print()
+        print_info("To activate this application, please:")
+        print_info("  1. Run: app.exe --get-hwid")
+        print_info("  2. Send the displayed Hardware ID to your supplier")
+        print_info("  3. Place the received 'license.lic' file next to app.exe")
+        print_info("  4. Run app.exe again")
+        print()
+        print_info("For help, contact your software supplier.")
+        pause_and_exit()
+
+
+_run_license_check()
+# ---------------------------------------------------------------------------
+# End license verification
+# ---------------------------------------------------------------------------
 
 from flask import Flask, jsonify, render_template, request, send_from_directory, session
 

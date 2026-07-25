@@ -29,3 +29,7 @@ static/uploads/*
 !static/uploads/school_logos/.gitkeep
 
 /AGENTS.md
+
+# License system — NEVER commit these
+private_key.pem
+license.lic

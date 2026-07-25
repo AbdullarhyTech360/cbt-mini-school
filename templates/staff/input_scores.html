@@ -542,6 +542,12 @@
         academic_session: "{{ current_term.academic_session if current_term else '' }}"
     };
 
+    const ASSESSMENT_NAMES = {
+        {% for assessment in assessment_types %}
+        "{{ assessment.code }}": "{{ assessment.name }} ({{ assessment.max_score|int }})",
+        {% endfor %}
+    };
+
     let defaultGradeScale = {{ grade_scale.to_dict()|tojson if grade_scale else 'null' }};
     let hasUnsavedChanges = false;
 
@@ -639,15 +645,46 @@
         const value = parseFloat(input.value);
         const max = parseFloat(input.dataset.max);
         input.classList.remove('border-red-300', 'dark:border-red-600', 'bg-red-50', 'dark:bg-red-900/20', 'text-red-800', 'dark:text-red-300');
-        if (input.value === '') return true;
-        if (isNaN(value) || value < 0 || value > max) {
+        if (input.value === '') return { valid: true };
+
+        const code = input.dataset.assessment || '';
+        const assessmentLabel = ASSESSMENT_NAMES[code] || code.replace(/_/g, ' ');
+        const row = input.closest('.student-card') || input.closest('.student-row');
+        const studentName = row ? (row.dataset.studentName || 'Student') : 'Student';
+
+        if (isNaN(value)) {
             input.classList.add('border-red-300', 'dark:border-red-600', 'bg-red-50', 'dark:bg-red-900/20', 'text-red-800', 'dark:text-red-300');
-            if (isNaN(value)) showValidationMessage('Please enter a valid number', 'error');
-            else if (value < 0) showValidationMessage('Score cannot be negative', 'error');
-            else if (value > max) showValidationMessage(`Score must be between 0 and ${max}`, 'error');
-            return false;
+            return { valid: false, message: `"${input.value}" is not a valid number for ${assessmentLabel} — ${studentName}`, input };
         }
-        return true;
+        if (value < 0) {
+            input.classList.add('border-red-300', 'dark:border-red-600', 'bg-red-50', 'dark:bg-red-900/20', 'text-red-800', 'dark:text-red-300');
+            return { valid: false, message: `Score cannot be negative for ${assessmentLabel} — ${studentName}`, input };
+        }
+        if (value > max) {
+            input.classList.add('border-red-300', 'dark:border-red-600', 'bg-red-50', 'dark:bg-red-900/20', 'text-red-800', 'dark:text-red-300');
+            return { valid: false, message: `Score ${value} is too much for ${assessmentLabel} (max ${max}) — ${studentName}`, input };
+        }
+        return { valid: true };
+    }
+
+    function parseBackendError(msg) {
+        const m = msg.match(/^(.+?) score for (.+?) must be between/);
+        if (!m) return null;
+        const assessmentName = m[1].trim();
+        const studentName = m[2].trim();
+        const code = Object.entries(ASSESSMENT_NAMES).find(([, label]) => label.startsWith(assessmentName))?.[0];
+        return { studentName, assessmentCode: code || assessmentName.toLowerCase().replace(/\s+/g, '_') };
+    }
+
+    function findScoreInput(studentName, assessmentCode) {
+        const rows = document.querySelectorAll('.student-card[data-student-name], .student-row[data-student-name]');
+        for (const row of rows) {
+            if (row.dataset.studentName.trim().toLowerCase() === studentName.trim().toLowerCase()) {
+                const input = row.querySelector(`.score-input[data-assessment="${assessmentCode}"]`);
+                if (input) return input;
+            }
+        }
+        return null;
     }
 
     function calculateTotal(row) {
@@ -763,12 +800,19 @@
 
     async function saveScores() {
         const inputs = document.querySelectorAll('.score-input');
-        let isValid = true;
+        const validationErrors = [];
         inputs.forEach(input => {
-            if (input.value !== '' && !validateScoreInput(input)) isValid = false;
+            if (input.value !== '') {
+                const result = validateScoreInput(input);
+                if (!result.valid) validationErrors.push(result);
+            }
         });
-        if (!isValid) {
-            showValidationMessage('Please correct invalid scores before saving', 'error');
+        if (validationErrors.length > 0) {
+            const top = validationErrors[0];
+            showValidationMessage(top.message, 'error');
+            showToast(top.message, 'error');
+            top.input.focus();
+            top.input.scrollIntoView({ behavior: 'smooth', block: 'center' });
             return;
         }
         if (!CONFIG.term_id) {
@@ -804,7 +848,21 @@
                 hasUnsavedChanges = false;
                 updateFloatingSave();
                 if (result.errors && result.errors.length > 0) {
-                    setTimeout(() => showToast(`${result.errors.length} errors occurred. Check console.`, 'warning'), 3500);
+                    let scrolled = false;
+                    result.errors.forEach((errMsg, i) => {
+                        setTimeout(() => showToast(errMsg, 'warning'), i * 4000);
+                        if (!scrolled) {
+                            const parsed = parseBackendError(errMsg);
+                            if (parsed) {
+                                const input = findScoreInput(parsed.studentName, parsed.assessmentCode);
+                                if (input) {
+                                    input.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                    input.classList.add('border-red-300', 'dark:border-red-600', 'bg-red-50', 'dark:bg-red-900/20');
+                                    scrolled = true;
+                                }
+                            }
+                        }
+                    });
                 }
             } else {
                 showValidationMessage(result.message || 'Failed to save scores', 'error');

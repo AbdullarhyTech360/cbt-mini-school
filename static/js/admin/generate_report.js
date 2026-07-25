@@ -1058,8 +1058,7 @@ async function showCanvasBasedPreview(reportData) {
 async function loadHtml2Canvas() {
   return new Promise((resolve, reject) => {
     const script = document.createElement("script");
-    script.src =
-      "https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js";
+    script.src = "/static/js/vendor/html2canvas.min.js";
     script.onload = resolve;
     script.onerror = reject;
     document.head.appendChild(script);
@@ -2664,53 +2663,49 @@ async function generateClientSidePDF(reportData, previewMode = false) {
       typeof html2pdf !== "undefined"
     );
     if (typeof html2pdf === "undefined") {
-      // Try loading from CDN first
+      // Try loading from local first (bundled with app), then fall back to CDN
       try {
         await new Promise((resolve, reject) => {
           const script = document.createElement("script");
           script.type = "text/javascript";
-          script.src =
-            "https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js";
-          script.integrity = "sha512-GsLlZN/3F2ErC5ifS5QtgpiJtWd43JWSuIgh7mbzZ8zBps+dvLusV+eNQATqgA/HdeKFVgA5v3S/cIrLF7QnIg==";
-          script.crossOrigin = "anonymous";
+          script.src = "/static/js/vendor/html2pdf.bundle.min.js";
 
           script.onload = () => {
-            console.log("html2pdf.js loaded successfully from CDN");
-            // Verify the library is properly loaded
+            console.log("html2pdf.js loaded successfully from local");
             if (typeof html2pdf !== "undefined") {
-              console.log("html2pdf library verified from CDN");
+              console.log("html2pdf library verified from local");
               resolve();
             } else {
-              console.error("html2pdf library not properly loaded from CDN");
-              reject(new Error("Library not properly loaded from CDN"));
+              console.error("html2pdf library not properly loaded from local");
+              reject(new Error("Library not properly loaded from local"));
             }
           };
 
           script.onerror = (error) => {
-            console.error("html2pdf.js failed to load from CDN:", error);
-            console.log("CDN failed, trying local file");
-            // If CDN fails, try local file as fallback
-            const localScript = document.createElement("script");
-            localScript.type = "text/javascript";
-            localScript.src = "/static/js/html2pdf/html2pdf.bundle.min.js";
+            console.error("html2pdf.js failed to load from local:", error);
+            console.log("Local failed, trying CDN");
+            const cdnScript = document.createElement("script");
+            cdnScript.type = "text/javascript";
+            cdnScript.src = "https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js";
+            cdnScript.integrity = "sha512-GsLlZN/3F2ErC5ifS5QtgpiJtWd43JWSuIgh7mbzZ8zBps+dvLusV+eNQATqgA/HdeKFVgA5v3S/cIrLF7QnIg==";
+            cdnScript.crossOrigin = "anonymous";
 
-            localScript.onload = () => {
-              console.log("Local html2pdf.js loaded successfully");
-              // Verify the library is properly loaded
+            cdnScript.onload = () => {
+              console.log("html2pdf.js loaded successfully from CDN");
               if (typeof html2pdf !== "undefined") {
-                console.log("html2pdf library verified from local");
+                console.log("html2pdf library verified from CDN");
                 resolve();
               } else {
-                console.error("html2pdf library not properly loaded from local");
-                reject(new Error("Library not properly loaded from local"));
+                console.error("html2pdf library not properly loaded from CDN");
+                reject(new Error("Library not properly loaded from CDN"));
               }
             };
 
-            localScript.onerror = (localError) => {
-              console.error("Local html2pdf.js also failed:", localError);
-              reject(new Error("Failed to load library from both CDN and local"));
+            cdnScript.onerror = () => {
+              console.error("html2pdf.js also failed from CDN");
+              reject(new Error("Failed to load library from both local and CDN"));
             };
-            document.head.appendChild(localScript);
+            document.head.appendChild(cdnScript);
           };
           document.head.appendChild(script);
         });
