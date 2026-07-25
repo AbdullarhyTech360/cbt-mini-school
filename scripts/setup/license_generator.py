@@ -25,7 +25,8 @@ from datetime import datetime, timezone
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import padding
 
-PRIVATE_KEY_PATH = os.path.join(os.path.dirname(__file__), "private_key.pem")
+PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+PRIVATE_KEY_PATH = os.path.join(PROJECT_ROOT, "private_key.pem")
 
 
 def load_private_key():

@@ -3915,7 +3915,7 @@ Include context field for tables, diagrams, formulas referenced in questions."""
     @admin_required
     def generate_demo_data():
         try:
-            from initialize_all_data import generate_demo_data as run_demo_data
+            from scripts.setup.initialize_all_data import generate_demo_data as run_demo_data
 
             run_demo_data()
             return jsonify({"success": True, "message": "Demo data generated successfully!"}), 200
@@ -3934,7 +3934,7 @@ Include context field for tables, diagrams, formulas referenced in questions."""
 
         if enable:
             try:
-                from initialize_all_data import populate_demo_questions
+                from scripts.setup.initialize_all_data import populate_demo_questions
                 populate_demo_questions()
                 count = DemoQuestion.query.count()
                 perm = Permission.query.filter_by(permission_name="demo_question_bank").first()
@@ -4035,7 +4035,7 @@ Include context field for tables, diagrams, formulas referenced in questions."""
 
         try:
             if action == "init_all":
-                from initialize_all_data import generate_demo_data as run_demo_data
+                from scripts.setup.initialize_all_data import generate_demo_data as run_demo_data
                 run_demo_data()
                 return jsonify({"success": True, "message": "All data initialized successfully!"}), 200
 
@@ -4059,7 +4059,7 @@ Include context field for tables, diagrams, formulas referenced in questions."""
 
             if data_type == "school":
                 if action == "init":
-                    from initialize_all_data import create_school
+                    from scripts.setup.initialize_all_data import create_school
                     create_school()
                     return jsonify({"success": True, "message": "School info initialized."}), 200
                 elif action == "delete":
@@ -4072,7 +4072,7 @@ Include context field for tables, diagrams, formulas referenced in questions."""
                 if not school:
                     return jsonify({"success": False, "message": "School must be initialized first."}), 400
                 if action == "init":
-                    from initialize_all_data import create_school_terms
+                    from scripts.setup.initialize_all_data import create_school_terms
                     create_school_terms(school)
                     return jsonify({"success": True, "message": "Terms initialized."}), 200
                 elif action == "delete":
@@ -4085,7 +4085,7 @@ Include context field for tables, diagrams, formulas referenced in questions."""
                 if not school:
                     return jsonify({"success": False, "message": "School must be initialized first."}), 400
                 if action == "init":
-                    from initialize_all_data import create_assessment_types
+                    from scripts.setup.initialize_all_data import create_assessment_types
                     create_assessment_types(school)
                     return jsonify({"success": True, "message": "Assessment types initialized."}), 200
                 elif action == "delete":
@@ -4098,7 +4098,7 @@ Include context field for tables, diagrams, formulas referenced in questions."""
                 if not school:
                     return jsonify({"success": False, "message": "School must be initialized first."}), 400
                 if action == "init":
-                    from initialize_all_data import create_sections
+                    from scripts.setup.initialize_all_data import create_sections
                     create_sections(school)
                     return jsonify({"success": True, "message": "Sections initialized."}), 200
                 elif action == "delete":
@@ -4108,7 +4108,7 @@ Include context field for tables, diagrams, formulas referenced in questions."""
 
             elif data_type == "classrooms":
                 if action == "init":
-                    from initialize_all_data import create_sections, create_classrooms
+                    from scripts.setup.initialize_all_data import create_sections, create_classrooms
                     school = School.query.first()
                     if not school:
                         return jsonify({"success": False, "message": "School must be initialized first."}), 400
@@ -4122,7 +4122,7 @@ Include context field for tables, diagrams, formulas referenced in questions."""
 
             elif data_type == "subjects":
                 if action == "init":
-                    from initialize_all_data import create_subjects
+                    from scripts.setup.initialize_all_data import create_subjects
                     create_subjects()
                     return jsonify({"success": True, "message": "Subjects initialized."}), 200
                 elif action == "delete":
@@ -4132,7 +4132,7 @@ Include context field for tables, diagrams, formulas referenced in questions."""
 
             elif data_type == "teachers":
                 if action == "init":
-                    from initialize_all_data import create_classrooms, create_sections, create_teachers
+                    from scripts.setup.initialize_all_data import create_classrooms, create_sections, create_teachers
                     school = School.query.first()
                     if not school:
                         return jsonify({"success": False, "message": "School must be initialized first."}), 400
@@ -4148,7 +4148,7 @@ Include context field for tables, diagrams, formulas referenced in questions."""
 
             elif data_type == "students":
                 if action == "init":
-                    from initialize_all_data import create_classrooms, create_sections, create_students
+                    from scripts.setup.initialize_all_data import create_classrooms, create_sections, create_students
                     school = School.query.first()
                     if not school:
                         return jsonify({"success": False, "message": "School must be initialized first."}), 400
@@ -4164,7 +4164,7 @@ Include context field for tables, diagrams, formulas referenced in questions."""
 
             elif data_type == "demo_questions":
                 if action == "init":
-                    from initialize_all_data import populate_demo_questions
+                    from scripts.setup.initialize_all_data import populate_demo_questions
                     populate_demo_questions()
                     count = DemoQuestion.query.count()
                     return jsonify({"success": True, "message": f"Demo questions initialized. {count} questions created."}), 200
@@ -4176,7 +4176,7 @@ Include context field for tables, diagrams, formulas referenced in questions."""
 
             elif data_type == "permissions":
                 if action == "init":
-                    from initialize_all_data import create_permissions
+                    from scripts.setup.initialize_all_data import create_permissions
                     create_permissions()
                     return jsonify({"success": True, "message": "Permissions initialized."}), 200
                 elif action == "delete":
@@ -4186,7 +4186,7 @@ Include context field for tables, diagrams, formulas referenced in questions."""
 
             elif data_type == "class_subjects":
                 if action == "init":
-                    from initialize_all_data import create_subjects, create_sections, create_classrooms, link_subjects_to_classes
+                    from scripts.setup.initialize_all_data import create_subjects, create_sections, create_classrooms, link_subjects_to_classes
                     school = School.query.first()
                     if not school:
                         return jsonify({"success": False, "message": "School must be initialized first."}), 400

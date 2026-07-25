@@ -220,7 +220,7 @@ with app.app_context():
                 print("=" * 80)
                 print("FIRST TIME STARTUP - INITIALIZING DEFAULT DATA...")
                 print("=" * 80)
-                from initialize_all_data import main as initialize_main
+                from scripts.setup.initialize_all_data import main as initialize_main
 
                 initialize_main()
                 print("=" * 80)
