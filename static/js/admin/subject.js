@@ -1,36 +1,68 @@
 document.addEventListener("DOMContentLoaded", function () {
-  // Check if modal functions are available
-  if (
-    typeof window.showAlert === "undefined" ||
-    typeof window.showConfirmModal === "undefined"
-  ) {
-    console.error(
-      "Modal functions not loaded! Make sure modal.js is included before subject.js"
-    );
-    return;
-  }
+  // Modal functions (openModal, closeModal, showAlert, showConfirmModal)
+  // are provided by modal.js loaded synchronously from base.html
 
-  // Modal functionality
-  window.openModal = function (modalId) {
-    const modal = document.getElementById(modalId);
-    console.log("Box opened");
-    if (modal) {
-      modal.classList.remove("hidden");
-      modal.classList.add("flex");
-      document.body.style.overflow = "hidden";
+  // ──────────────────────────────────────────────
+  // EVENT DELEGATION — registers click handlers
+  // at the container level so they always work
+  // even if initialization code below throws.
+  // ──────────────────────────────────────────────
+
+  // Use document-level delegation so we don't depend on a fragile
+  // grid class selector. Performance impact is negligible since we
+  // match on specific selectors and return fast for non-matches.
+  document.addEventListener("click", function (e) {
+    // Only process clicks within the subjects area (look for a subject-card ancestor)
+    var card = e.target.closest(".subject-card, [data-view-id], .assign-teacher-btn, .assign-subject-teacher-btn, [data-edit-id], [data-delete-id]");
+    if (!card) return;
+
+    // --- View Details ---
+    var viewBtn = e.target.closest("[data-view-id]");
+    if (viewBtn) {
+      e.preventDefault();
+      e.stopPropagation();
+      handleViewDetails(viewBtn);
+      return;
     }
-  };
 
-  window.closeModal = function (modalId) {
-    const modal = document.getElementById(modalId);
-    if (modal) {
-      modal.classList.add("hidden");
-      modal.classList.remove("flex");
-      document.body.style.overflow = "";
+    // --- Subject Head (assign teacher) ---
+    var assignBtn = e.target.closest(".assign-teacher-btn");
+    if (assignBtn) {
+      e.preventDefault();
+      e.stopPropagation();
+      handleAssignTeacher(assignBtn);
+      return;
     }
-  };
 
-  // Event listeners
+    // --- Assign Subject Teacher ---
+    var assignSubjectTeacherBtn = e.target.closest(".assign-subject-teacher-btn");
+    if (assignSubjectTeacherBtn) {
+      e.preventDefault();
+      e.stopPropagation();
+      handleAssignSubjectTeacher(assignSubjectTeacherBtn);
+      return;
+    }
+
+    // --- Edit Subject ---
+    var editBtn = e.target.closest("[data-edit-id]");
+    if (editBtn) {
+      e.preventDefault();
+      e.stopPropagation();
+      handleEditSubject(editBtn);
+      return;
+    }
+
+    // --- Delete Subject ---
+    var deleteBtn = e.target.closest("[data-delete-id]");
+    if (deleteBtn) {
+      e.preventDefault();
+      e.stopPropagation();
+      handleDeleteSubject(deleteBtn);
+      return;
+    }
+  });
+
+  // Event listeners for modal triggers (data-modal-target)
   document.querySelectorAll("[data-modal-target]").forEach((button) => {
     button.addEventListener("click", () => {
       const modalId = button.getAttribute("data-modal-target");
@@ -267,6 +299,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
   // Live preview functionality
   const form = document.getElementById("createSubjectForm");
+  const previewIconContainer = document.getElementById("previewIconContainer");
   if (form) {
     // Handle section selection in create form
     const subjectSectionSelect = form.querySelector('[name="subject_section"]');
@@ -278,9 +311,6 @@ document.addEventListener("DOMContentLoaded", function () {
 
     // Get preview elements
     const previewIcon = document.getElementById("previewIcon");
-    const previewIconContainer = document.getElementById(
-      "previewIconContainer"
-    );
     const previewTitle = document.getElementById("previewTitle");
     const previewDescription = document.getElementById("previewDescription");
     const previewCategory = document.getElementById("previewCategory");
@@ -365,7 +395,6 @@ document.addEventListener("DOMContentLoaded", function () {
 
       const submitButton = form.querySelector('button[type="submit"]');
       const originalButtonText = submitButton.innerHTML;
-      console.log(previewIconContainer);
       try {
         // Disable submit button and show loading state
         submitButton.disabled = true;
@@ -384,8 +413,6 @@ document.addEventListener("DOMContentLoaded", function () {
           subject_head: form.querySelector('[name="subject_head"]').value,
           category_colors: document.getElementById("selectedColor").value,
         };
-
-        console.log("Form data:", formData); // For debugging
 
         // Send data to server
         const response = await fetch("/admin/subjects", {
@@ -428,287 +455,20 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   }
 
-  // Handle delete subject
-  document.querySelectorAll("[data-delete-id]").forEach((button) => {
-    button.addEventListener("click", async function (e) {
-      e.preventDefault();
-      e.stopPropagation();
-
-      const subjectId = this.getAttribute("data-delete-id");
-      const subjectName = this.getAttribute("data-subject-name");
-      console.log(subjectId, subjectName);
-
-      // Use custom confirmation modal
-      window.showConfirmModal({
-        title: "Delete Subject",
-        message: `Are you sure you want to delete "${subjectName}"? This action cannot be undone and will remove all associated data.`,
-        confirmText: "Delete",
-        cancelText: "Cancel",
-        confirmClass:
-          "bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700",
-        onConfirm: async () => {
-          try {
-            const response = await fetch(
-              `/admin/delete/subjects/${subjectId}`,
-              {
-                method: "DELETE",
-                headers: {
-                  "Content-Type": "application/json",
-                  "X-Requested-With": "XMLHttpRequest",
-                },
-              }
-            );
-
-            const result = await response.json();
-
-            if (response.ok) {
-              window.showAlert({
-                type: "success",
-                title: "Success!",
-                message: "Subject deleted successfully!",
-                onConfirm: () => window.location.reload(),
-              });
-            } else {
-              throw new Error(result.message || "Failed to delete subject");
-            }
-          } catch (error) {
-            console.error("Error:", error);
-            window.showAlert({
-              type: "error",
-              title: "Error",
-              message: `Failed to delete subject: ${error.message}`,
-            });
-          }
-        },
-      });
-    });
-  });
-
-  // Handle edit subject
-  document.querySelectorAll("[data-edit-id]").forEach((button) => {
-    button.addEventListener("click", function (e) {
-      e.preventDefault();
-      e.stopPropagation();
-
-      const subjectId = this.getAttribute("data-edit-id");
-
-      // Get subject data from data attributes
-      const subjectName = this.getAttribute("data-subject-name") || "";
-      const description = this.getAttribute("data-description") || "";
-      const category = this.getAttribute("data-category") || "Core Subject";
-      const icon = this.getAttribute("data-icon") || "calculate";
-
-      // Get subject code from data attribute if available, otherwise empty
-      const subjectCode = this.getAttribute("data-subject-code") || "";
-
-      console.log("Edit data:", {
-        subjectId,
-        subjectName,
-        subjectCode,
-        description,
-        category,
-        icon,
-      });
-
-      // Populate edit form
-      const editSubjectId = document.getElementById("editSubjectId");
-      const editSubjectName = document.getElementById("editSubjectName");
-      const editSubjectCode = document.getElementById("editSubjectCode");
-      const editDescription = document.getElementById("editDescription");
-      const editCategory = document.getElementById("editCategory");
-      const editIconSelect = document.getElementById("editIconSelect");
-
-      if (editSubjectId) editSubjectId.value = subjectId;
-      if (editSubjectName) editSubjectName.value = subjectName;
-      if (editSubjectCode) editSubjectCode.value = subjectCode;
-      if (editDescription) editDescription.value = description;
-      if (editCategory) editCategory.value = category;
-      if (editCategory) editCategory.value = category;
-      if (editIconSelect) editIconSelect.value = icon;
-
-      // Handle Subject Head
-      const subjectHeadId = this.getAttribute("data-subject-head-id");
-      const editSubjectHead = document.getElementById("editSubjectHead");
-      if (editSubjectHead) editSubjectHead.value = subjectHeadId || "";
-
-      // Handle Class Levels
-      const classNamesJson = this.getAttribute("data-class-names");
-      let classNames = [];
-      try {
-        classNames = JSON.parse(classNamesJson || "[]");
-      } catch (e) {
-        console.error("Error parsing class names:", e);
-      }
-
-      // Initialize Subject Section and Class Levels
-      const editSubjectSection = document.getElementById("editSubjectSection");
-      if (editSubjectSection) {
-        editSubjectSection.value = "all"; // Default to all to show all possibilities
-        updateClassLevels("all", "editClassLevelsContainer", classNames);
-
-        // Add change listener if not already added (using a flag or just replacing it)
-        // To avoid multiple listeners, we can remove the old one first if we stored it,
-        // but since this is inside the click handler, we should be careful.
-        // Better approach: Attach the listener once outside, or use onchange property.
-        editSubjectSection.onchange = function () {
-          // When section changes, we keep the currently checked values if they exist in the new section?
-          // Or just clear? For now, let's just re-render.
-          // If we want to preserve checks, we need to read them first.
-          const currentChecked = Array.from(
-            document.querySelectorAll("#editClassLevelsContainer input:checked")
-          ).map((cb) => cb.value);
-          // Merge with original classNames if we want to persist initial state, but usually user wants to change.
-          // Let's just pass the currently checked ones.
-          updateClassLevels(
-            this.value,
-            "editClassLevelsContainer",
-            currentChecked
-          );
-        };
-      }
-
-      // Find current color from data attribute
-      const colorJson = this.getAttribute("data-color");
-      if (colorJson) {
-        try {
-          // The JSON might be double encoded or just a string, let's try to parse it
-          // If it comes from tojson in jinja, it might be a string representation of a dict
-          // But wait, tojson outputs a string.
-          // Let's handle both object and string cases if possible, but usually it's a string.
-          let colorData =
-            typeof colorJson === "string" ? JSON.parse(colorJson) : colorJson;
-
-          // If it was a stringified JSON string (double encoded), parse again
-          if (typeof colorData === "string") {
-            try {
-              colorData = JSON.parse(colorData);
-            } catch (e) {}
-          }
-
-          if (colorData && colorData.from && colorData.to) {
-            // Find matching color in palette
-            const matchingColorIndex = colorPalette.findIndex(
-              (c) => c.from === colorData.from && c.to === colorData.to
-            );
-            if (matchingColorIndex !== -1) {
-              renderColorPalette("editColorPalette", matchingColorIndex);
-              document.getElementById("editSelectedColor").value =
-                JSON.stringify(colorPalette[matchingColorIndex]);
-            } else {
-              // If custom color not in palette, maybe just default to first or try to match loosely?
-              // For now default to first
-              renderColorPalette("editColorPalette", 0);
-              document.getElementById("editSelectedColor").value =
-                JSON.stringify(colorPalette[0]);
-            }
-          } else {
-            renderColorPalette("editColorPalette", 0);
-            document.getElementById("editSelectedColor").value = JSON.stringify(
-              colorPalette[0]
-            );
-          }
-        } catch (e) {
-          console.error("Error parsing color data:", e);
-          renderColorPalette("editColorPalette", 0);
-          document.getElementById("editSelectedColor").value = JSON.stringify(
-            colorPalette[0]
-          );
-        }
-      } else {
-        renderColorPalette("editColorPalette", 0);
-        document.getElementById("editSelectedColor").value = JSON.stringify(
-          colorPalette[0]
-        );
-      }
-
-      // Open edit modal
-      openModal("editSubjectModal");
-    });
-  });
-
-  // Handle edit form submission
-  const editForm = document.getElementById("editSubjectForm");
-  if (editForm) {
-    editForm.addEventListener("submit", async function (e) {
-      e.preventDefault();
-
-      const submitButton = editForm.querySelector('button[type="submit"]');
-      const originalButtonText = submitButton.innerHTML;
-      const subjectId = document.getElementById("editSubjectId").value;
-
-      try {
-        // Disable submit button and show loading state
-        submitButton.disabled = true;
-        submitButton.innerHTML = "Updating...";
-
-        // Get form data
-        const formData = {
-          subject_name: editForm.querySelector('[name="subject_name"]').value,
-          subject_code: editForm.querySelector('[name="subject_code"]').value,
-          category: editForm.querySelector('[name="category"]').value,
-          description: editForm.querySelector('[name="description"]').value,
-          icon_name: editForm.querySelector('[name="icon_name"]').value,
-          category_colors: document.getElementById("editSelectedColor").value,
-          subject_head: editForm.querySelector('[name="subject_head"]').value,
-          grade_levels: Array.from(
-            editForm.querySelectorAll('[name="grade_levels"]:checked')
-          ).map((cb) => cb.value),
-          subject_id: subjectId,
-        };
-
-        console.log("Edit form data:", formData);
-
-        // Send data to server
-        const response = await fetch(`/admin/update/subjects/${subjectId}`, {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-            "X-Requested-With": "XMLHttpRequest",
-          },
-          body: JSON.stringify(formData),
-        });
-
-        const result = await response.json();
-
-        if (response.ok) {
-          window.showAlert({
-            type: "success",
-            title: "Success!",
-            message: "Subject updated successfully!",
-            onConfirm: () => {
-              closeModal("editSubjectModal");
-              window.location.reload();
-            },
-          });
-        } else {
-          throw new Error(result.message || "Failed to update subject");
-        }
-      } catch (error) {
-        console.error("Error:", error);
-        window.showAlert({
-          type: "error",
-          title: "Error",
-          message: `Failed to update subject: ${error.message}`,
-        });
-      } finally {
-        submitButton.disabled = false;
-        submitButton.innerHTML = originalButtonText;
-      }
-    });
-  }
+  // ──────────────────────────────────────────────
+  // HANDLER FUNCTIONS (called by event delegation)
+  // ──────────────────────────────────────────────
 
   // Handle view subject details
-  document.querySelectorAll("[data-view-id]").forEach((button) => {
-    button.addEventListener("click", function (e) {
-      e.preventDefault();
-      e.stopPropagation();
-
-      const subjectId = this.getAttribute("data-view-id");
+  function handleViewDetails(button) {
+    try {
+      const subjectId = button.getAttribute("data-view-id");
 
       // Get subject data from the card
-      const card = this.closest(".bg-white, .dark\\:bg-gray-800");
+      const card = button.closest(".subject-card");
       if (!card) {
-        console.error("Card element not found");
+        console.error("[subject.js] Card element not found");
+        openModal("viewSubjectModal");
         return;
       }
 
@@ -768,7 +528,7 @@ document.addEventListener("DOMContentLoaded", function () {
       if (viewCategory) {
         viewCategory.textContent = category;
         // Update category badge color based on category
-        const categoryColors = {
+        const catColors = {
           "Core Subject":
             "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300",
           Science:
@@ -780,7 +540,7 @@ document.addEventListener("DOMContentLoaded", function () {
             "bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300",
         };
         const colorClass =
-          categoryColors[category] || categoryColors["Core Subject"];
+          catColors[category] || catColors["Core Subject"];
         viewCategory.className = `px-3 py-1 text-sm ${colorClass} rounded-full font-semibold`;
       }
       if (viewClasses) viewClasses.textContent = classes;
@@ -811,55 +571,574 @@ document.addEventListener("DOMContentLoaded", function () {
                     <span class="px-3 py-1 text-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-full font-semibold">Grade 12</span>
                 `;
       }
+    } catch (err) {
+      console.error("[subject.js] View Details handler error:", err);
+    }
 
-      // Open view modal
-      openModal("viewSubjectModal");
-    });
-  });
+    // Always open the modal, even if data extraction failed
+    openModal("viewSubjectModal");
+  }
 
-  // Assign Teacher functionality
-  document.querySelectorAll(".assign-teacher-btn").forEach((button) => {
-    button.addEventListener("click", function () {
-      const subjectId = this.getAttribute("data-assign-id");
-      const subjectName = this.getAttribute("data-subject-name");
-      const subjectCode = this.getAttribute("data-subject-code");
+  // Handle Assign Teacher (Subject Head)
+  function handleAssignTeacher(button) {
+    try {
+      const subjectId = button.getAttribute("data-assign-id");
+      const subjectName = button.getAttribute("data-subject-name");
+      const subjectCode = button.getAttribute("data-subject-code");
 
       // Set form values
-      document.getElementById("assignSubjectId").value = subjectId;
-      document.getElementById("assignSubjectName").textContent = subjectName;
-      document.getElementById("assignSubjectCode").textContent =
-        subjectCode || "No code";
+      const assignSubjectId = document.getElementById("assignSubjectId");
+      const assignSubjectName = document.getElementById("assignSubjectName");
+      const assignSubjectCode = document.getElementById("assignSubjectCode");
+      const assignTeacherSelect = document.getElementById("assignTeacherSelect");
 
-      // Reset class and teacher selects
-      document.getElementById("assignClassSelect").value = "";
-      document.getElementById("assignTeacherSelect").value = "";
+      if (assignSubjectId) assignSubjectId.value = subjectId;
+      if (assignSubjectName) assignSubjectName.textContent = subjectName;
+      if (assignSubjectCode) assignSubjectCode.textContent = subjectCode || "No code";
+      if (assignTeacherSelect) assignTeacherSelect.value = "";
+    } catch (err) {
+      console.error("[subject.js] Subject Head handler error:", err);
+    }
 
-      // Open modal
-      openModal("assignTeacherModal");
+    // Always open the modal, even if form population failed
+    openModal("assignTeacherModal");
+  }
+
+  // Handle Assign Subject Teacher (teacher teaches subject in a class)
+  // Stores classes data, opens modal with placeholder. Matrix renders on teacher selection.
+  var _subjectMatrixData = null; // { subjectId, classes, currentTeacherId }
+
+  function handleAssignSubjectTeacher(button) {
+    var subjectId = button.getAttribute("data-assign-teacher-id");
+    var subjectName = button.getAttribute("data-subject-name");
+    var subjectCode = button.getAttribute("data-subject-code");
+    var classesJson = button.getAttribute("data-classes-json");
+
+    // Set hidden subject id
+    var hiddenInput = document.getElementById("assignSubjectTeacherSubjectId");
+    if (hiddenInput) hiddenInput.value = subjectId;
+
+    // Set subject info display
+    var nameEl = document.getElementById("assignSubjectTeacherName");
+    var codeEl = document.getElementById("assignSubjectTeacherCode");
+    if (nameEl) nameEl.textContent = subjectName;
+    if (codeEl) codeEl.textContent = subjectCode || "No code";
+
+    // Parse classes
+    var classes = [];
+    try { classes = JSON.parse(classesJson || "[]"); } catch (e) { /* ignore */ }
+
+    // Store for matrix rendering
+    _subjectMatrixData = { subjectId: subjectId, classes: classes, currentTeacherId: null };
+
+    // Reset UI state
+    var teacherSelect = document.getElementById("assignSubjectTeacherSelect");
+    if (teacherSelect) teacherSelect.value = "";
+
+    var placeholder = document.getElementById("subjectMatrixPlaceholder");
+    var loading = document.getElementById("subjectMatrixLoading");
+    var container = document.getElementById("subjectMatrixContainer");
+    var submitBtn = document.getElementById("subjectMatrixSubmitBtn");
+    if (placeholder) placeholder.classList.remove("hidden");
+    if (loading) loading.classList.add("hidden");
+    if (container) container.classList.add("hidden");
+    if (submitBtn) submitBtn.disabled = true;
+
+    openModal("assignSubjectTeacherModal");
+  }
+
+  // Teacher selector change → load matrix data
+  var _subjectTeacherSelect = document.getElementById("assignSubjectTeacherSelect");
+  if (_subjectTeacherSelect) {
+    _subjectTeacherSelect.addEventListener("change", function () {
+      var teacherId = this.value;
+      if (!teacherId || !_subjectMatrixData) return;
+      _subjectMatrixData.currentTeacherId = teacherId;
+
+      var placeholder = document.getElementById("subjectMatrixPlaceholder");
+      var loading = document.getElementById("subjectMatrixLoading");
+      var container = document.getElementById("subjectMatrixContainer");
+      var submitBtn = document.getElementById("subjectMatrixSubmitBtn");
+
+      if (placeholder) placeholder.classList.add("hidden");
+      if (container) container.classList.add("hidden");
+      if (loading) loading.classList.remove("hidden");
+      if (submitBtn) submitBtn.disabled = true;
+
+      fetch("/admin/subject_class_teachers", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ subject_id: _subjectMatrixData.subjectId })
+      })
+        .then(function (res) { return res.json(); })
+        .then(function (data) {
+          if (loading) loading.classList.add("hidden");
+          if (data.success) {
+            renderSubjectMatrix(data.assignments || []);
+            if (container) container.classList.remove("hidden");
+          } else {
+            window.showAlert({ title: "Error", message: data.message || "Failed to load assignments", type: "error", confirmText: "OK" });
+            if (placeholder) placeholder.classList.remove("hidden");
+          }
+        })
+        .catch(function () {
+          if (loading) loading.classList.add("hidden");
+          window.showAlert({ title: "Network Error", message: "Failed to load class assignments", type: "error", confirmText: "Close" });
+          if (placeholder) placeholder.classList.remove("hidden");
+        });
     });
-  });
+  }
 
-  // Handle assign teacher form submission
+  // Build the single-row matrix: this subject × its classes
+  function renderSubjectMatrix(assignments) {
+    if (!_subjectMatrixData) return;
+    var classes = _subjectMatrixData.classes;
+    var currentTeacherId = _subjectMatrixData.currentTeacherId;
+
+    // Build a map: class_room_id → [{ teacher_id, teacher_name }]
+    var classTeacherMap = {};
+    assignments.forEach(function (a) {
+      if (!classTeacherMap[a.class_room_id]) classTeacherMap[a.class_room_id] = [];
+      if (!classTeacherMap[a.class_room_id].some(function (e) { return e.teacher_id === a.teacher_id; })) {
+        classTeacherMap[a.class_room_id].push({ teacher_id: a.teacher_id, teacher_name: a.teacher_name });
+      }
+    });
+
+    var thead = document.getElementById("subjectMatrixHead");
+    var tbody = document.getElementById("subjectMatrixBody");
+    if (!thead || !tbody) return;
+
+    // Build thead
+    thead.innerHTML = "";
+    var headerRow = document.createElement("tr");
+
+    var thSubject = document.createElement("th");
+    thSubject.className = "px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider";
+    thSubject.textContent = "Subject";
+    headerRow.appendChild(thSubject);
+
+    classes.forEach(function (cls) {
+      var th = document.createElement("th");
+      th.className = "px-3 py-3 text-center text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider";
+      th.textContent = cls.class_room_name;
+      headerRow.appendChild(th);
+    });
+
+    // Row select-all header
+    var thRowAll = document.createElement("th");
+    thRowAll.className = "px-3 py-3 text-center text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider";
+    thRowAll.textContent = "All";
+    headerRow.appendChild(thRowAll);
+
+    thead.appendChild(headerRow);
+
+    // Build tbody — one row for this subject
+    tbody.innerHTML = "";
+    var tr = document.createElement("tr");
+    tr.className = "hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors";
+
+    var subjectName = document.getElementById("assignSubjectTeacherName");
+    var tdName = document.createElement("td");
+    tdName.className = "px-4 py-3 font-medium text-gray-800 dark:text-gray-200 whitespace-nowrap";
+    tdName.textContent = subjectName ? subjectName.textContent : "";
+    tr.appendChild(tdName);
+
+    var rowEnabledCount = 0;
+    var rowNonAmberCount = 0;
+
+    classes.forEach(function (cls) {
+      var td = document.createElement("td");
+      td.className = "px-3 py-3 text-center";
+
+      var teachers = classTeacherMap[cls.class_room_id] || [];
+      var isCurrentTeacher = teachers.some(function (t) { return String(t.teacher_id) === String(currentTeacherId); });
+      var otherTeachers = teachers.filter(function (t) { return String(t.teacher_id) !== String(currentTeacherId); });
+      var hasConflict = otherTeachers.length > 0;
+
+      var cb = document.createElement("input");
+      cb.type = "checkbox";
+      cb.dataset.classId = cls.class_room_id;
+      cb.dataset.className = cls.class_room_name;
+      cb.checked = isCurrentTeacher;
+      if (isCurrentTeacher) rowEnabledCount++;
+
+      if (hasConflict) {
+        var conflictNames = otherTeachers.map(function (t) { return t.teacher_name; }).join(", ");
+        cb.className = "subject-matrix-cb subject-matrix-cb-amber h-4 w-4 rounded border-amber-400 dark:border-amber-500 text-amber-500 focus:ring-amber-400 cursor-pointer";
+        cb.title = "Already assigned to " + conflictNames;
+        cb.dataset.conflictNames = conflictNames;
+
+        var wrapper = document.createElement("div");
+        wrapper.className = "inline-flex items-center justify-center";
+        wrapper.appendChild(cb);
+        var dot = document.createElement("span");
+        dot.className = "block w-1.5 h-1.5 rounded-full bg-amber-400 dark:bg-amber-500 ml-0.5 shrink-0";
+        dot.title = "Assigned to " + conflictNames;
+        wrapper.appendChild(dot);
+        td.appendChild(wrapper);
+      } else {
+        cb.className = "subject-matrix-cb h-4 w-4 rounded border-gray-300 dark:border-gray-600 text-green-500 focus:ring-green-400 cursor-pointer";
+        rowNonAmberCount++;
+        td.appendChild(cb);
+      }
+
+      cb.addEventListener("change", function () {
+        if (this.checked && this.classList.contains("subject-matrix-cb-amber") && this.dataset.conflictNames) {
+          var className = cls.class_room_name;
+          var names = this.dataset.conflictNames;
+          var checkboxRef = this;
+
+          window.showConfirmModal({
+            title: "Reassign Subject?",
+            message: "<strong>" + (subjectName ? subjectName.textContent : "") + "</strong> in <strong>" + className + "</strong> is currently assigned to <strong>" + names + "</strong>.<br><br>Assigning it to this teacher will remove it from " + names + ". Do you want to proceed?",
+            confirmText: "Yes, Reassign",
+            cancelText: "No, Keep Current",
+            onConfirm: function () {
+              updateSubjectMatrixCounter();
+            },
+            onCancel: function () {
+              checkboxRef.checked = false;
+              updateSubjectMatrixCounter();
+            }
+          });
+        } else {
+          updateSubjectMatrixCounter();
+        }
+      });
+
+      tr.appendChild(td);
+    });
+
+    // Row select-all
+    var tdRowAll = document.createElement("td");
+    tdRowAll.className = "px-3 py-3 text-center";
+    var rowCb = document.createElement("input");
+    rowCb.type = "checkbox";
+    rowCb.className = "subject-row-select-all h-4 w-4 rounded border-gray-300 dark:border-gray-600 text-green-500 focus:ring-green-400 cursor-pointer";
+    rowCb.title = "Select all classes for this subject";
+
+    rowCb.checked = rowNonAmberCount > 0 && rowEnabledCount === rowNonAmberCount;
+    rowCb.indeterminate = rowEnabledCount > 0 && rowEnabledCount < rowNonAmberCount;
+
+    rowCb.addEventListener("change", function () {
+      var checked = this.checked;
+      document.querySelectorAll("input.subject-matrix-cb:not(.subject-matrix-cb-amber)").forEach(function (cb) {
+        cb.checked = checked;
+      });
+      updateSubjectMatrixCounter();
+    });
+
+    tdRowAll.appendChild(rowCb);
+    tr.appendChild(tdRowAll);
+    tbody.appendChild(tr);
+
+    updateSubjectMatrixCounter();
+  }
+
+  function updateSubjectMatrixCounter() {
+    var checked = document.querySelectorAll("input.subject-matrix-cb:checked").length;
+    var counter = document.getElementById("subjectMatrixCounter");
+    var submitBtn = document.getElementById("subjectMatrixSubmitBtn");
+    if (counter) counter.textContent = checked + " class" + (checked !== 1 ? "es" : "") + " selected";
+    if (submitBtn) submitBtn.disabled = checked === 0;
+  }
+
+  // Select All / Clear All
+  var _subjectSelectAllBtn = document.getElementById("subjectMatrixSelectAll");
+  var _subjectClearAllBtn = document.getElementById("subjectMatrixClearAll");
+  if (_subjectSelectAllBtn) {
+    _subjectSelectAllBtn.addEventListener("click", function () {
+      document.querySelectorAll("input.subject-matrix-cb:not(.subject-matrix-cb-amber)").forEach(function (cb) { cb.checked = true; });
+      var rowCb = document.querySelector("input.subject-row-select-all");
+      if (rowCb) rowCb.checked = true;
+      updateSubjectMatrixCounter();
+    });
+  }
+  if (_subjectClearAllBtn) {
+    _subjectClearAllBtn.addEventListener("click", function () {
+      document.querySelectorAll("input.subject-matrix-cb").forEach(function (cb) { cb.checked = false; });
+      var rowCb = document.querySelector("input.subject-row-select-all");
+      if (rowCb) { rowCb.checked = false; rowCb.indeterminate = false; }
+      updateSubjectMatrixCounter();
+    });
+  }
+
+  // Save Assignments button
+  var _subjectMatrixSubmitBtn = document.getElementById("subjectMatrixSubmitBtn");
+  if (_subjectMatrixSubmitBtn) {
+    _subjectMatrixSubmitBtn.addEventListener("click", function () {
+      if (!_subjectMatrixData) return;
+      var teacherId = document.getElementById("assignSubjectTeacherSelect").value;
+      if (!teacherId) {
+        window.showAlert({ title: "Validation Error", message: "Please select a teacher", type: "error", confirmText: "OK" });
+        return;
+      }
+
+      var checked = document.querySelectorAll("input.subject-matrix-cb:checked");
+      if (checked.length === 0) {
+        window.showAlert({ title: "Validation Error", message: "Please select at least one class", type: "error", confirmText: "OK" });
+        return;
+      }
+
+      var classRoomIds = Array.from(checked).map(function (cb) { return cb.dataset.classId; });
+
+      var submitBtn = _subjectMatrixSubmitBtn;
+      submitBtn.disabled = true;
+      submitBtn.textContent = "Saving...";
+
+      fetch("/admin/assign_subject_teacher", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          subjects_ids: [_subjectMatrixData.subjectId],
+          teacher_id: teacherId,
+          class_room_ids: classRoomIds
+        })
+      })
+        .then(function (res) { return res.json(); })
+        .then(function (result) {
+          submitBtn.disabled = false;
+          submitBtn.textContent = "Save Assignments";
+          if (result.success) {
+            window.showAlert({
+              title: "Assignment Successful",
+              message: result.message || "Assignments saved successfully.",
+              type: "success",
+              confirmText: "OK",
+              onConfirm: function () {
+                closeModal("assignSubjectTeacherModal");
+                location.reload();
+              }
+            });
+          } else {
+            window.showAlert({ title: "Assignment", message: result.message || "No new assignments were made.", type: "info", confirmText: "OK" });
+          }
+        })
+        .catch(function () {
+          submitBtn.disabled = false;
+          submitBtn.textContent = "Save Assignments";
+          window.showAlert({ title: "Network Error", message: "An error occurred while saving assignments", type: "error", confirmText: "Close" });
+        });
+    });
+  }
+
+  // Handle Edit Subject
+  function handleEditSubject(button) {
+    const subjectId = button.getAttribute("data-edit-id");
+
+    // Get subject data from data attributes
+    const subjectName = button.getAttribute("data-subject-name") || "";
+    const description = button.getAttribute("data-description") || "";
+    const category = button.getAttribute("data-category") || "Core Subject";
+    const icon = button.getAttribute("data-icon") || "calculate";
+    const subjectCode = button.getAttribute("data-subject-code") || "";
+
+    // Populate edit form
+    const editSubjectId = document.getElementById("editSubjectId");
+    const editSubjectName = document.getElementById("editSubjectName");
+    const editSubjectCode = document.getElementById("editSubjectCode");
+    const editDescription = document.getElementById("editDescription");
+    const editCategory = document.getElementById("editCategory");
+    const editIconSelect = document.getElementById("editIconSelect");
+
+    if (editSubjectId) editSubjectId.value = subjectId;
+    if (editSubjectName) editSubjectName.value = subjectName;
+    if (editSubjectCode) editSubjectCode.value = subjectCode;
+    if (editDescription) editDescription.value = description;
+    if (editCategory) editCategory.value = category;
+    if (editIconSelect) editIconSelect.value = icon;
+
+    // Handle Subject Head
+    const subjectHeadId = button.getAttribute("data-subject-head-id");
+    const editSubjectHead = document.getElementById("editSubjectHead");
+    if (editSubjectHead) editSubjectHead.value = subjectHeadId || "";
+
+    // Handle Class Levels
+    const classNamesJson = button.getAttribute("data-class-names");
+    let classNames = [];
+    try {
+      classNames = JSON.parse(classNamesJson || "[]");
+    } catch (e) {
+      console.error("Error parsing class names:", e);
+    }
+
+    // Initialize Subject Section and Class Levels
+    const editSubjectSection = document.getElementById("editSubjectSection");
+    if (editSubjectSection) {
+      editSubjectSection.value = "all";
+      updateClassLevels("all", "editClassLevelsContainer", classNames);
+
+      editSubjectSection.onchange = function () {
+        const currentChecked = Array.from(
+          document.querySelectorAll("#editClassLevelsContainer input:checked")
+        ).map((cb) => cb.value);
+        updateClassLevels(this.value, "editClassLevelsContainer", currentChecked);
+      };
+    }
+
+    // Find current color from data attribute
+    const colorJson = button.getAttribute("data-color");
+    if (colorJson) {
+      try {
+        let colorData = typeof colorJson === "string" ? JSON.parse(colorJson) : colorJson;
+        if (typeof colorData === "string") {
+          try { colorData = JSON.parse(colorData); } catch (e) {}
+        }
+        if (colorData && colorData.from && colorData.to) {
+          const matchingColorIndex = colorPalette.findIndex(
+            (c) => c.from === colorData.from && c.to === colorData.to
+          );
+          if (matchingColorIndex !== -1) {
+            renderColorPalette("editColorPalette", matchingColorIndex);
+            const el = document.getElementById("editSelectedColor");
+            if (el) el.value = JSON.stringify(colorPalette[matchingColorIndex]);
+          } else {
+            renderColorPalette("editColorPalette", 0);
+            const el = document.getElementById("editSelectedColor");
+            if (el) el.value = JSON.stringify(colorPalette[0]);
+          }
+        } else {
+          renderColorPalette("editColorPalette", 0);
+          const el = document.getElementById("editSelectedColor");
+          if (el) el.value = JSON.stringify(colorPalette[0]);
+        }
+      } catch (e) {
+        console.error("Error parsing color data:", e);
+        renderColorPalette("editColorPalette", 0);
+        const el = document.getElementById("editSelectedColor");
+        if (el) el.value = JSON.stringify(colorPalette[0]);
+      }
+    } else {
+      renderColorPalette("editColorPalette", 0);
+      const el = document.getElementById("editSelectedColor");
+      if (el) el.value = JSON.stringify(colorPalette[0]);
+    }
+
+    // Open edit modal
+    openModal("editSubjectModal");
+  }
+
+  // Handle Delete Subject
+  function handleDeleteSubject(button) {
+    const subjectId = button.getAttribute("data-delete-id");
+    const subjectName = button.getAttribute("data-subject-name");
+
+    window.showConfirmModal({
+      title: "Delete Subject",
+      message: `Are you sure you want to delete "${subjectName}"? This action cannot be undone and will remove all associated data.`,
+      confirmText: "Delete",
+      cancelText: "Cancel",
+      confirmClass:
+        "bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700",
+      onConfirm: async () => {
+        try {
+          const response = await fetch(`/admin/delete/subjects/${subjectId}`, {
+            method: "DELETE",
+            headers: {
+              "Content-Type": "application/json",
+              "X-Requested-With": "XMLHttpRequest",
+            },
+          });
+          const result = await response.json();
+          if (response.ok) {
+            window.showAlert({
+              type: "success",
+              title: "Success!",
+              message: "Subject deleted successfully!",
+              onConfirm: () => window.location.reload(),
+            });
+          } else {
+            throw new Error(result.message || "Failed to delete subject");
+          }
+        } catch (error) {
+          console.error("Error:", error);
+          window.showAlert({
+            type: "error",
+            title: "Error",
+            message: `Failed to delete subject: ${error.message}`,
+          });
+        }
+      },
+    });
+  }
+
+  // Handle edit form submission
+  const editForm = document.getElementById("editSubjectForm");
+  if (editForm) {
+    editForm.addEventListener("submit", async function (e) {
+      e.preventDefault();
+
+      const submitButton = editForm.querySelector('button[type="submit"]');
+      const originalButtonText = submitButton.innerHTML;
+      const subjectId = document.getElementById("editSubjectId").value;
+
+      try {
+        // Disable submit button and show loading state
+        submitButton.disabled = true;
+        submitButton.innerHTML = "Updating...";
+
+        // Get form data
+        const formData = {
+          subject_name: editForm.querySelector('[name="subject_name"]').value,
+          subject_code: editForm.querySelector('[name="subject_code"]').value,
+          category: editForm.querySelector('[name="category"]').value,
+          description: editForm.querySelector('[name="description"]').value,
+          icon_name: editForm.querySelector('[name="icon_name"]').value,
+          category_colors: document.getElementById("editSelectedColor").value,
+          subject_head: editForm.querySelector('[name="subject_head"]').value,
+          grade_levels: Array.from(
+            editForm.querySelectorAll('[name="grade_levels"]:checked')
+          ).map((cb) => cb.value),
+          subject_id: subjectId,
+        };
+
+        // Send data to server
+        const response = await fetch(`/admin/update/subjects/${subjectId}`, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            "X-Requested-With": "XMLHttpRequest",
+          },
+          body: JSON.stringify(formData),
+        });
+
+        const result = await response.json();
+
+        if (response.ok) {
+          window.showAlert({
+            type: "success",
+            title: "Success!",
+            message: "Subject updated successfully!",
+            onConfirm: () => {
+              closeModal("editSubjectModal");
+              window.location.reload();
+            },
+          });
+        } else {
+          throw new Error(result.message || "Failed to update subject");
+        }
+      } catch (error) {
+        console.error("Error:", error);
+        window.showAlert({
+          type: "error",
+          title: "Error",
+          message: `Failed to update subject: ${error.message}`,
+        });
+      } finally {
+        submitButton.disabled = false;
+        submitButton.innerHTML = originalButtonText;
+      }
+    });
+  }
+
+  // Handle assign subject head form submission
   const assignTeacherForm = document.getElementById("assignTeacherForm");
   if (assignTeacherForm) {
     assignTeacherForm.addEventListener("submit", async function (e) {
       e.preventDefault();
-      console.log("Form opened just before submission");
       try {
-        // Get form values
         const subjectId = document.getElementById("assignSubjectId").value;
-        const classRoomId = document.getElementById("assignClassSelect").value;
         const teacherId = document.getElementById("assignTeacherSelect").value;
-
-        // Validate required fields
-        if (!classRoomId) {
-          window.showAlert({
-            type: "error",
-            title: "Error",
-            message: "Please select a class",
-          });
-          return;
-        }
 
         if (!teacherId) {
           window.showAlert({
@@ -873,7 +1152,6 @@ document.addEventListener("DOMContentLoaded", function () {
         const data = {
           subject_id: subjectId,
           teacher_id: teacherId,
-          class_room_id: classRoomId,
         };
 
         const response = await fetch("/admin/assign_subject_head", {
@@ -887,44 +1165,29 @@ document.addEventListener("DOMContentLoaded", function () {
         const result = await response.json();
 
         if (result.success) {
-          if (window.showAlert) {
-            window.showAlert({
-              type: "success",
-              title: "Success!",
-              message: result.message,
-              onConfirm: () => {
-                closeModal("assignTeacherModal");
-                // Reload the page to reflect changes
-                location.reload();
-              },
-            });
-          } else {
-            alert(result.message);
-            closeModal("assignTeacherModal");
-            location.reload();
-          }
+          window.showAlert({
+            type: "success",
+            title: "Success!",
+            message: result.message,
+            onConfirm: () => {
+              closeModal("assignTeacherModal");
+              location.reload();
+            },
+          });
         } else {
-          if (window.showAlert) {
-            window.showAlert({
-              type: "error",
-              title: "Error",
-              message: result.message,
-            });
-          } else {
-            alert("Error: " + result.message);
-          }
-        }
-      } catch (error) {
-        console.error("Error:", error);
-        if (window.showAlert) {
           window.showAlert({
             type: "error",
             title: "Error",
-            message: "An error occurred while assigning the teacher.",
+            message: result.message,
           });
-        } else {
-          alert("An error occurred while assigning the teacher.");
         }
+      } catch (error) {
+        console.error("Error:", error);
+        window.showAlert({
+          type: "error",
+          title: "Error",
+          message: "An error occurred while assigning the subject head.",
+        });
       }
     });
   }
@@ -936,13 +1199,6 @@ document.addEventListener("DOMContentLoaded", function () {
     const selectedSection = subjectSectionSelect?.value || "all";
     const selectedCategory =
       subjectCategorySelect?.value.toLowerCase() || "all";
-
-    console.log("Applying filters:", {
-      searchText,
-      selectedClass,
-      selectedSection,
-      selectedCategory,
-    });
 
     const subjectCards = document.querySelectorAll(".subject-card");
     subjectCards.forEach((card) => {

@@ -34,9 +34,14 @@
     <header class="bg-white dark:bg-gray-800 p-4 md:p-6 border-b border-gray-200 dark:border-gray-700">
         <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4">
             <div class="flex items-center space-x-3">
-                <div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-10"
-                    style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuAbO7HAxfFgT4gCYK-cNRKFEIepHt7v69rsG-D8MlFqhuCNTf8nZRsbM3UUc7kpX2qLU7cH9vmrlxUPGxObPM-sMw7903fYoK8984YMifTL9seWAUn2yEuJ9_uZQcVd8QPSi08HNZzSc0tg25R5u3RS_ZNVB-JeRfo8NnAe54nCn-0NciZSbGc9ibyR5FMP0XxRLakCJtrHD1nVmx49f6Dujf6WzKI6lrhq7_oKKg4vSlHvUesYrxGTcsZq25m1oPHUfsq-MRZz31k");'>
+                {% if current_user and current_user.image %}
+                <img class="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-10 object-cover"
+                    src="{{ current_user.image }}" alt="{{ current_user.full_name() }}" />
+                {% else %}
+                <div class="bg-gradient-to-br from-blue-500 to-purple-600 rounded-full size-10 flex items-center justify-center">
+                    <span class="text-white font-bold text-sm">{{ current_user.first_name[0] }}{{ current_user.last_name[0] }}</span>
                 </div>
+                {% endif %}
                 <div>
                     <h2 class="text-lg font-bold leading-tight tracking-[-0.015em] text-gray-900 dark:text-white">Student Portal</h2>
                     <p class="text-sm text-gray-500 dark:text-gray-400">Welcome back!</p>
@@ -47,9 +52,14 @@
                     <p class="text-sm font-semibold text-gray-900 dark:text-white">{{ current_user.full_name() if current_user else 'Student Name' }}</p>
                     <p class="text-xs text-gray-500 dark:text-gray-400">@{{ current_user.username if current_user else 'student' }}</p>
                 </div>
-                <div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-12"
-                    style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuBmIHg46Ly3sffmtHfhrtbIESLdmwar8eq_0OF01cjx9cYWa7-FWfydtOKwhIBN-XamH95kBFBtncwtHy9veWaPFD1WgNSGywJmWmctD3_XV2lJhp5TXJeIof6ZJjf9u1Y25azZmUq70uA3mXO0Fvk7XARwKaw53awpeYONMtXIkUfuU7d-RT8xoQV6UisMPcx9KcEfa2ziwm-ozi-2m9uI46bz3JJ_IwpS9Nu18FY_Tn6PSuUzKRl2UOiYFB-j8C7tKcocNX83GgE");'>
+                {% if current_user and current_user.image %}
+                <img class="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-12 object-cover"
+                    src="{{ current_user.image }}" alt="{{ current_user.full_name() }}" />
+                {% else %}
+                <div class="bg-gradient-to-br from-blue-500 to-purple-600 rounded-full size-12 flex items-center justify-center">
+                    <span class="text-white font-bold text-lg">{{ current_user.first_name[0] }}{{ current_user.last_name[0] }}</span>
                 </div>
+                {% endif %}
                 <!-- Logout Button -->
                 <form action="{{ url_for('logout') }}" method="POST" class="inline">
                     <button type="submit" 
@@ -180,6 +190,19 @@
     </div>
         </div>
     </main>
+    <script>
+    (function() {
+        if (sessionStorage.getItem('session_active')) return;
+        var cookies = document.cookie.split(';');
+        for (var i = 0; i < cookies.length; i++) {
+            var parts = cookies[i].trim().split('=');
+            if (parts[0] === 'session_type' && parts[1] === 'permanent') return;
+        }
+        fetch('/logout', { method: 'POST' }).then(function() {
+            window.location.href = '/login';
+        });
+    })();
+    </script>
 </body>
 
 </html>

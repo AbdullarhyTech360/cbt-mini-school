@@ -294,10 +294,11 @@ content %}
                         }}
                     </td>
                     <td class="px-4 py-4 whitespace-nowrap">
-                        <span
-                            class="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300"
-                            >Active</span
-                        >
+                        {% if class_room.is_active %}
+                        <span class="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300">Active</span>
+                        {% else %}
+                        <span class="px-2 py-1 text-xs font-semibold rounded-full bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300">Inactive</span>
+                        {% endif %}
                     </td>
                     <td class="px-4 py-4 whitespace-nowrap text-sm font-medium">
                         <div class="flex items-center gap-2">
@@ -355,33 +356,7 @@ content %}
             <div
                 class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300"
             >
-                <span>Showing 1-3 of 12 classes</span>
-            </div>
-            <div class="flex items-center gap-2">
-                <button
-                    class="px-3 py-1 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 disabled:opacity-50"
-                    disabled
-                >
-                    Previous
-                </button>
-                <button class="px-3 py-1 text-sm bg-primary text-white rounded">
-                    1
-                </button>
-                <button
-                    class="px-3 py-1 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
-                >
-                    2
-                </button>
-                <button
-                    class="px-3 py-1 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
-                >
-                    3
-                </button>
-                <button
-                    class="px-3 py-1 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
-                >
-                    Next
-                </button>
+                <span>Showing {{ class_rooms|length }} class{{ 'es' if class_rooms|length != 1 else '' }}</span>
             </div>
         </div>
     </div>
@@ -409,6 +384,7 @@ content %}
 
     <div class="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
         <button
+            onclick="openModal('createClassModal')"
             class="flex flex-col items-center gap-2 md:gap-3 p-3 md:p-4 bg-white dark:bg-gray-800 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors border border-gray-100 dark:border-gray-600"
         >
             <div
@@ -426,6 +402,7 @@ content %}
         </button>
 
         <button
+            onclick="location.href='/admin/teachers'"
             class="flex flex-col items-center gap-2 md:gap-3 p-3 md:p-4 bg-white dark:bg-gray-800 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors border border-gray-100 dark:border-gray-600"
         >
             <div
@@ -443,6 +420,7 @@ content %}
         </button>
 
         <button
+            onclick="location.href='/admin/students'"
             class="flex flex-col items-center gap-2 md:gap-3 p-3 md:p-4 bg-white dark:bg-gray-800 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors border border-gray-100 dark:border-gray-600"
         >
             <div
@@ -460,6 +438,7 @@ content %}
         </button>
 
         <button
+            onclick="openModal('importModal')"
             class="flex flex-col items-center gap-2 md:gap-3 p-3 md:p-4 bg-white dark:bg-gray-800 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors border border-gray-100 dark:border-gray-600"
         >
             <div
@@ -722,6 +701,7 @@ content %}
 
             <div class="flex gap-3">
                 <button
+                    onclick="closeModal('importModal')"
                     class="flex-1 bg-gradient-to-r from-primary to-blue-600 hover:from-primary/90 hover:to-blue-600/90 text-white font-semibold py-3 px-6 rounded-xl shadow-md hover:shadow-lg transition-all duration-200"
                 >
                     Import Classes

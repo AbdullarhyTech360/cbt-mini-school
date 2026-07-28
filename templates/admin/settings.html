@@ -674,23 +674,6 @@
                                         required
                                     />
                                 </div>
-                                <div>
-                                    <label
-                                        class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
-                                        for="term-number"
-                                        >Term</label
-                                    >
-                                    <select
-                                        class="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition"
-                                        id="term-number"
-                                        required
-                                    >
-                                        <option value="">Select Term</option>
-                                        <option value="1">First Term</option>
-                                        <option value="2">Second Term</option>
-                                        <option value="3">Third Term</option>
-                                    </select>
-                                </div>
                             </div>
                             <div>
                                 <label
@@ -805,9 +788,11 @@
                             id="terms-list"
                             class="space-y-2 max-h-96 overflow-y-auto"
                         >
-                            <!-- Sample Term Item (to be populated dynamically) -->
+                            {% if school_terms %}
+                            {% for term in school_terms %}
                             <div
                                 class="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg border border-gray-200 dark:border-gray-600 hover:shadow-md transition-all"
+                                data-term-id="{{ term.term_id }}"
                             >
                                 <div class="flex-1">
                                     <div class="flex items-center gap-3">
@@ -818,16 +803,20 @@
                                                 class="material-symbols-outlined text-primary text-lg"
                                                 >event</span
                                             >
-                                            <span>First Term</span>
+                                            <span>{{ term.term_name }}</span>
                                         </div>
+                                        {% if term.is_current %}
                                         <span
                                             class="px-2 py-1 text-xs font-medium bg-primary/20 text-primary dark:bg-primary/30 dark:text-white rounded-full"
                                             >Current</span
                                         >
+                                        {% endif %}
+                                        {% if term.is_active %}
                                         <span
                                             class="px-2 py-1 text-xs font-medium bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 rounded-full"
                                             >Active</span
                                         >
+                                        {% endif %}
                                     </div>
                                     <div
                                         class="mt-2 flex flex-wrap gap-3 text-xs text-gray-600 dark:text-gray-400"
@@ -837,20 +826,27 @@
                                                 class="material-symbols-outlined text-sm"
                                                 >school</span
                                             >
-                                            Session: 2024-2025
+                                            Session: {{ term.academic_session }}
                                         </span>
                                         <span class="flex items-center gap-1">
                                             <span
                                                 class="material-symbols-outlined text-sm"
                                                 >calendar_month</span
                                             >
-                                            Jan 15, 2024 - Apr 20, 2024
+                                            {{ term.start_date.strftime('%b %d, %Y') if term.start_date else 'N/A' }} - {{ term.end_date.strftime('%b %d, %Y') if term.end_date else 'N/A' }}
                                         </span>
                                     </div>
                                 </div>
                                 <div class="flex items-center gap-2">
                                     <button
-                                        class="p-2 text-blue-600 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-900/20 rounded-lg transition-all"
+                                        class="p-2 text-blue-600 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-900/20 rounded-lg transition-all edit-term-btn"
+                                        data-term-id="{{ term.term_id }}"
+                                        data-term-name="{{ term.term_name }}"
+                                        data-academic-session="{{ term.academic_session }}"
+                                        data-start-date="{{ term.start_date.strftime('%Y-%m-%d') if term.start_date else '' }}"
+                                        data-end-date="{{ term.end_date.strftime('%Y-%m-%d') if term.end_date else '' }}"
+                                        data-is-active="{{ term.is_active|lower }}"
+                                        data-is-current="{{ term.is_current|lower }}"
                                         title="Edit Term"
                                     >
                                         <span
@@ -859,7 +855,9 @@
                                         >
                                     </button>
                                     <button
-                                        class="p-2 text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20 rounded-lg transition-all"
+                                        class="p-2 text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20 rounded-lg transition-all delete-term-btn"
+                                        data-term-id="{{ term.term_id }}"
+                                        data-term-name="{{ term.term_name }}"
                                         title="Delete Term"
                                     >
                                         <span
@@ -869,11 +867,12 @@
                                     </button>
                                 </div>
                             </div>
-
+                            {% endfor %}
+                            {% else %}
                             <!-- Empty State (show when no terms exist) -->
                             <div
                                 id="empty-state"
-                                class="hidden text-center py-8"
+                                class="text-center py-8"
                             >
                                 <span
                                     class="material-symbols-outlined text-gray-400 text-5xl mb-3"
@@ -891,6 +890,7 @@
                                     academic term
                                 </p>
                             </div>
+                            {% endif %}
                         </div>
                     </div>
 
@@ -904,7 +904,7 @@
                             <div
                                 class="text-2xl font-bold text-primary dark:text-white"
                             >
-                                3
+                                {{ total_terms }}
                             </div>
                             <div
                                 class="text-xs text-gray-600 dark:text-gray-400"
@@ -918,7 +918,7 @@
                             <div
                                 class="text-2xl font-bold text-green-700 dark:text-green-400"
                             >
-                                1
+                                {{ 1 if active_term else 0 }}
                             </div>
                             <div
                                 class="text-xs text-gray-600 dark:text-gray-400"
@@ -932,7 +932,7 @@
                             <div
                                 class="text-2xl font-bold text-blue-700 dark:text-blue-400"
                             >
-                                2024-2025
+                                {{ active_term.academic_session if active_term else 'N/A' }}
                             </div>
                             <div
                                 class="text-xs text-gray-600 dark:text-gray-400"
@@ -1583,27 +1583,28 @@
                 Recent Changes
             </h3>
             <ul class="space-y-4">
+                {% for change in recent_changes %}
                 <li
                     class="flex items-start gap-4 p-4 rounded-xl bg-gray-50 dark:bg-gray-700/50 hover:shadow-md transition-all border border-gray-100 dark:border-gray-600"
                 >
                     <div
-                        class="h-10 w-10 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center flex-shrink-0"
+                        class="h-10 w-10 rounded-full bg-gradient-to-br from-{{ change.color }}-500 to-{{ change.color }}-600 flex items-center justify-center flex-shrink-0"
                     >
                         <span
                             class="material-symbols-outlined text-white text-sm"
-                            >person</span
+                            >{{ change.icon }}</span
                         >
                     </div>
                     <div class="flex-1 min-w-0">
                         <p
                             class="font-semibold text-gray-800 dark:text-white text-sm mb-1"
                         >
-                            School Information Updated
+                            {{ change.title }}
                         </p>
                         <p
                             class="text-sm text-gray-600 dark:text-gray-400 mb-2"
                         >
-                            Jane Doe updated school contact information
+                            {{ change.description }}
                         </p>
                         <div
                             class="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400"
@@ -1611,74 +1612,16 @@
                             <span class="material-symbols-outlined text-sm"
                                 >schedule</span
                             >
-                            <span>2 hours ago</span>
+                            <span>{{ change.time }}</span>
                         </div>
                     </div>
                 </li>
-                <li
-                    class="flex items-start gap-4 p-4 rounded-xl bg-gray-50 dark:bg-gray-700/50 hover:shadow-md transition-all border border-gray-100 dark:border-gray-600"
-                >
-                    <div
-                        class="h-10 w-10 rounded-full bg-gradient-to-br from-green-500 to-green-600 flex items-center justify-center flex-shrink-0"
-                    >
-                        <span
-                            class="material-symbols-outlined text-white text-sm"
-                            >security</span
-                        >
-                    </div>
-                    <div class="flex-1 min-w-0">
-                        <p
-                            class="font-semibold text-gray-800 dark:text-white text-sm mb-1"
-                        >
-                            2FA Enabled
-                        </p>
-                        <p
-                            class="text-sm text-gray-600 dark:text-gray-400 mb-2"
-                        >
-                            Admin Name enabled Two-Factor Authentication
-                        </p>
-                        <div
-                            class="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400"
-                        >
-                            <span class="material-symbols-outlined text-sm"
-                                >schedule</span
-                            >
-                            <span>1 day ago</span>
-                        </div>
-                    </div>
+                {% endfor %}
+                {% if not recent_changes %}
+                <li class="text-sm text-gray-500 dark:text-gray-400 italic text-center py-4">
+                    No recent changes recorded.
                 </li>
-                <li
-                    class="flex items-start gap-4 p-4 rounded-xl bg-gray-50 dark:bg-gray-700/50 hover:shadow-md transition-all border border-gray-100 dark:border-gray-600"
-                >
-                    <div
-                        class="h-10 w-10 rounded-full bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center flex-shrink-0"
-                    >
-                        <span
-                            class="material-symbols-outlined text-white text-sm"
-                            >calendar_today</span
-                        >
-                    </div>
-                    <div class="flex-1 min-w-0">
-                        <p
-                            class="font-semibold text-gray-800 dark:text-white text-sm mb-1"
-                        >
-                            Active Term Changed
-                        </p>
-                        <p
-                            class="text-sm text-gray-600 dark:text-gray-400 mb-2"
-                        >
-                            Admin Name changed the active academic term
-                        </p>
-                        <div
-                            class="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400"
-                        >
-                            <span class="material-symbols-outlined text-sm"
-                                >schedule</span
-                            >
-                            <span>3 days ago</span>
-                        </div>
-                    </div>
-                </li>
+                {% endif %}
             </ul>
         </div>
     </div>
@@ -1744,6 +1687,37 @@ document.getElementById("publishAllScoresBtn").addEventListener("click", functio
                     message: "An error occurred while publishing scores."
                 });
             });
+        }
+    });
+});
+
+// Save All Changes - triggers all individual save buttons
+document.getElementById("saveAllChangesBtn").addEventListener("click", function() {
+    const btn = this;
+    btn.disabled = true;
+    btn.innerHTML = '<span class="material-symbols-outlined text-sm animate-spin mr-2">progress_activity</span> Saving...';
+
+    const saveSchoolBtn = document.getElementById("save-school-info-btn");
+    if (saveSchoolBtn) saveSchoolBtn.click();
+
+    const saveCbtBtn = document.getElementById("save-cbt-config-btn");
+    if (saveCbtBtn) saveCbtBtn.click();
+
+    setTimeout(function() {
+        btn.disabled = false;
+        btn.innerHTML = 'Save Changes';
+        showAlert({ type: "success", message: "All changes saved successfully" });
+    }, 1500);
+});
+
+// Reset to Default
+document.getElementById("resetToDefaultBtn").addEventListener("click", function() {
+    showConfirmModal({
+        title: "Reset Settings",
+        message: "Are you sure you want to reset all settings to their default values? This action cannot be undone.",
+        confirmText: "Reset",
+        onConfirm: function() {
+            location.reload();
         }
     });
 });

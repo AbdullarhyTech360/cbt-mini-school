@@ -161,5 +161,18 @@
             }
         });
     </script>
+    <script>
+    (function() {
+        if (sessionStorage.getItem('session_active')) return;
+        var cookies = document.cookie.split(';');
+        for (var i = 0; i < cookies.length; i++) {
+            var parts = cookies[i].trim().split('=');
+            if (parts[0] === 'session_type' && parts[1] === 'permanent') return;
+        }
+        fetch('/logout', { method: 'POST' }).then(function() {
+            window.location.href = '/login';
+        });
+    })();
+    </script>
 </body>
 </html>

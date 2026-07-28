@@ -14,7 +14,7 @@ import calendar
 from werkzeug.utils import secure_filename
 import os
 import random
-from models.associations import teacher_classroom
+from models.associations import teacher_classroom, teacher_subject
 from models.grade import Grade
 
 from typing import List
@@ -121,11 +121,62 @@ def admin_action_route(app):
         users = db.session.query(User).all()
         class_rooms = db.session.query(ClassRoom).all()
         current_user = User.query.get(session["user_id"])
+        active_user_count = User.query.filter_by(is_active=True).count()
+
+        recent_user_activity = []
+        now = datetime.utcnow()
+
+        recent_created = User.query.order_by(User.created_at.desc()).limit(5).all()
+        for u in recent_created:
+            recent_user_activity.append({
+                "type": "user_added",
+                "title": "New User Added",
+                "description": f"{u.first_name} {u.last_name} ({u.role.title()}) was added to the system",
+                "time": u.created_at,
+                "icon": "person_add",
+                "color": "blue",
+            })
+
+        recent_updated = User.query.filter(
+            User.updated_at.isnot(None),
+            User.updated_at != User.created_at
+        ).order_by(User.updated_at.desc()).limit(5).all()
+        for u in recent_updated:
+            recent_user_activity.append({
+                "type": "user_updated",
+                "title": "User Updated",
+                "description": f"{u.first_name} {u.last_name}'s account was updated",
+                "time": u.updated_at,
+                "icon": "manage_accounts",
+                "color": "purple",
+            })
+
+        recent_user_activity.sort(key=lambda x: x["time"] if x["time"] else datetime.min, reverse=True)
+        recent_user_activity = recent_user_activity[:5]
+
+        for activity in recent_user_activity:
+            if activity["time"]:
+                diff = now - activity["time"]
+                if diff.days > 0:
+                    activity["time_ago"] = f"{diff.days} day{'s' if diff.days != 1 else ''} ago"
+                elif diff.seconds >= 3600:
+                    hours = diff.seconds // 3600
+                    activity["time_ago"] = f"{hours} hour{'s' if hours != 1 else ''} ago"
+                elif diff.seconds >= 60:
+                    minutes = diff.seconds // 60
+                    activity["time_ago"] = f"{minutes} minute{'s' if minutes != 1 else ''} ago"
+                else:
+                    activity["time_ago"] = "Just now"
+            else:
+                activity["time_ago"] = ""
+
         return render_template(
             "admin/user_management.html",
             users=users,
             class_rooms=class_rooms,
-            current_user=current_user
+            current_user=current_user,
+            active_user_count=active_user_count,
+            recent_user_activity=recent_user_activity,
         )
     
     @app.route("/admin/delete/user/<user_id>", methods=["DELETE"])
@@ -2278,6 +2329,7 @@ Include context field for tables, diagrams, formulas referenced in questions."""
             class_rooms=class_rooms,
             teachers=teachers,
             student_counts=student_counts,
+            total_students=total_students,
             sections=Section.query.all(),
             average_class_size=average_class_size,
         )
@@ -2591,30 +2643,81 @@ Include context field for tables, diagrams, formulas referenced in questions."""
             for class_room in active_classes
             if class_room.form_teacher_id != None
         ]
-        # print(assigned_classes)
+
+        # Build enriched teacher data
+        teacher_data = []
+        total_students_impacted = 0
+
+        for teacher in teachers:
+            # Get assigned classes from both form-master and teacher_subject
+            form_master_classes = [
+                ac for ac in assigned_classes
+                if ac.form_teacher_id == teacher.id
+            ]
+
+            # Get classes from teacher_subject association
+            subject_assignments = db.session.execute(
+                db.select(teacher_subject).where(
+                    teacher_subject.c.teacher_id == teacher.id
+                )
+            ).fetchall()
+
+            # Collect unique class IDs from subject assignments
+            subject_class_ids = set()
+            for row in subject_assignments:
+                subject_class_ids.add(row[2])  # class_room_id is the 3rd column
+
+            # Get ClassRoom objects for subject-assigned classes (not already in form-master)
+            form_master_ids = {c.class_room_id for c in form_master_classes}
+            subject_only_classes = ClassRoom.query.filter(
+                ClassRoom.class_room_id.in_(subject_class_ids - form_master_ids)
+            ).all()
+
+            all_assigned = form_master_classes + subject_only_classes
+
+            # Count students in all assigned classes
+            student_count = 0
+            if all_assigned:
+                class_ids = [c.class_room_id for c in all_assigned]
+                student_count = User.query.filter(
+                    User.class_room_id.in_(class_ids),
+                    User.role == "student",
+                    User.is_active == True
+                ).count()
+
+            total_students_impacted += student_count
+
+            # Get phone and performance from Teacher model
+            teacher_profile = teacher.teacher
+            phone = teacher_profile.phone if teacher_profile and teacher_profile.phone else None
+            performance = teacher_profile.perfmance if teacher_profile else None
+
+            teacher_data.append({
+                "id": teacher.id,
+                "first_name": teacher.first_name,
+                "last_name": teacher.last_name,
+                "email": teacher.email,
+                "phone": phone,
+                "class_room": teacher.class_room,
+                "assigned_classes": all_assigned,
+                "student_count": student_count,
+                "performance": performance,
+                "is_active": teacher.is_active,
+            })
+
+        # Compute average rating from perfmance field (if available)
+        ratings = [t["performance"] for t in teacher_data if t["performance"] is not None]
+        avg_rating = round(sum(ratings) / len(ratings), 1) if ratings else None
+
         return render_template(
             "admin/teachers.html",
             current_user=current_user,
-            teachers=[
-                {
-                    "id": teacher.id,
-                    "first_name": teacher.first_name,
-                    "last_name": teacher.last_name,
-                    "email": teacher.email,
-                    "phone": "+1 (555) 123-4567",
-                    # "subject": teacher.subject,
-                    "class_room": teacher.class_room,
-                    "assigned_classes": [
-                        assigned_class
-                        for assigned_class in assigned_classes
-                        if assigned_class.form_teacher_id == teacher.id
-                    ],
-                }
-                for teacher in teachers
-            ],
+            teachers=teacher_data,
             active_classes=active_classes,
             subjects=subjects,
             classes=classes,
+            avg_rating=avg_rating,
+            total_students_impacted=total_students_impacted,
         )
 
     @app.route("/admin/profile", methods=["GET", "POST"])
@@ -2754,11 +2857,11 @@ Include context field for tables, diagrams, formulas referenced in questions."""
 
         # Format student data for template
         students_data = []
+        all_performances = []
         for student_row in students_result:
             student, user, class_room = student_row if len(student_row) == 3 else (student_row[0], student_row[1], None)
-            # Calculate attendance and performance (placeholders for now)
-            attendance_rate = 95  # Placeholder
             performance_score = student.performance if student.performance else 0
+            all_performances.append(performance_score)
 
             students_data.append({
                 "id": student.id,
@@ -2766,12 +2869,11 @@ Include context field for tables, diagrams, formulas referenced in questions."""
                 "first_name": user.first_name,
                 "last_name": user.last_name,
                 "email": user.email,
-                "phone": student.parent_phone,  # Using parent phone as contact
+                "phone": student.parent_phone,
                 "admission_number": student.admission_number,
                 "class_name": class_room.class_room_name if class_room else "Unassigned",
                 "class_id": user.class_room_id if user.class_room_id else "",
                 "performance": performance_score,
-                "attendance": attendance_rate,
                 "status": "Active" if user.is_active else "Inactive",
                 "image": user.image,
                 "gender": user.gender,
@@ -2781,6 +2883,25 @@ Include context field for tables, diagrams, formulas referenced in questions."""
                 "address": student.address
             })
 
+        avg_performance = round(sum(all_performances) / len(all_performances), 1) if all_performances else 0
+
+        attendance_rate = 0
+        current_term = SchoolTerm.query.filter_by(is_current=True).first()
+        if current_term:
+            try:
+                from models.attendance import Attendance
+                total_att = Attendance.query.filter(
+                    Attendance.term_id == current_term.term_id
+                ).count()
+                present_att = Attendance.query.filter(
+                    Attendance.term_id == current_term.term_id,
+                    Attendance.status == "present"
+                ).count()
+                if total_att > 0:
+                    attendance_rate = round((present_att / total_att) * 100)
+            except Exception:
+                pass
+
         return render_template(
             "admin/students.html",
             current_user=current_user,
@@ -2789,8 +2910,8 @@ Include context field for tables, diagrams, formulas referenced in questions."""
             stats={
                 "total_students": total_students,
                 "active_enrollments": active_enrollments,
-                "avg_performance": 85,  # Placeholder
-                "attendance_rate": 94  # Placeholder
+                "avg_performance": avg_performance,
+                "attendance_rate": attendance_rate,
             }
         )
 
@@ -3153,16 +3274,73 @@ Include context field for tables, diagrams, formulas referenced in questions."""
             {"auto_stories": "Creative Writing"},
         ]
 
+        # Compute subjects stats
+        from models.associations import student_subject
+        active_subjects_count = sum(1 for s in subjects if s.is_active)
+        total_subjects_count = len(subjects)
+        curriculum_coverage = round((active_subjects_count / total_subjects_count * 100), 0) if total_subjects_count > 0 else 0
+
+        # Compute per-subject student count
+        subject_student_counts = {}
+        for subject in subjects:
+            count = db.session.query(student_subject).filter(
+                student_subject.c.subject_id == subject.subject_id
+            ).count()
+            subject_student_counts[subject.subject_id] = count
+
+        # Compute category counts
+        category_counts = {}
+        for subject in subjects:
+            cat = subject.subject_category or "General"
+            category_counts[cat] = category_counts.get(cat, 0) + 1
+
         # Add class information to subjects for the template
+        from models.associations import teacher_subject, class_subject as cs_table
+
+        # Build a lookup of teacher_subject assignments for all subjects
+        all_teacher_subject_rows = db.session.execute(db.select(teacher_subject)).fetchall()
+        ts_map = {}  # subject_id -> [(teacher_id, class_room_id)]
+        for row in all_teacher_subject_rows:
+            ts_map.setdefault(row.subject_id, []).append({
+                "teacher_id": row.teacher_id,
+                "class_room_id": row.class_room_id,
+            })
+
+        # Build a lookup of class names
+        class_name_map = {c.class_room_id: c.class_room_name for c in classes}
+
         subjects_with_classes = []
         for subject in subjects:
+            # Subject head info
+            head_name = None
+            if subject.subject_head_id and subject.subject_head:
+                head_name = f"{subject.subject_head.first_name} {subject.subject_head.last_name}"
+
+            # Subject teachers info (teacher -> class assignments)
+            teacher_assignments = ts_map.get(subject.subject_id, [])
+            subject_teachers = []
+            for assignment in teacher_assignments:
+                teacher = User.query.get(assignment["teacher_id"])
+                if teacher:
+                    subject_teachers.append({
+                        "teacher_id": assignment["teacher_id"],
+                        "teacher_name": f"{teacher.first_name} {teacher.last_name}",
+                        "class_room_id": assignment["class_room_id"],
+                        "class_room_name": class_name_map.get(assignment["class_room_id"], "Unknown"),
+                    })
+
             subject_data = {
                 "subject_id": subject.subject_id,
                 "subject_name": subject.subject_name,
                 "subject_code": subject.subject_code,
                 "description": subject.description,
                 "icon_name": subject.icon_name,
+                "subject_category": subject.subject_category,
+                "category_colors": subject.category_colors,
                 "is_active": subject.is_active,
+                "subject_head_id": subject.subject_head_id,
+                "subject_head_name": head_name,
+                "subject_teachers": subject_teachers,
                 "classes": [
                     {
                         "class_room_id": class_room.class_room_id,
@@ -3182,6 +3360,10 @@ Include context field for tables, diagrams, formulas referenced in questions."""
             icons=icons,
             users=users,
             sections=sections,
+            active_subjects_count=active_subjects_count,
+            curriculum_coverage=int(curriculum_coverage),
+            subject_student_counts=subject_student_counts,
+            category_counts=category_counts,
         )
 
     # Handle editing subject - PUT requests
@@ -3322,16 +3504,18 @@ Include context field for tables, diagrams, formulas referenced in questions."""
             data = request.get_json()
             subjects_ids: List[str] = data.get("subjects_ids")
             teacher_id = data.get("teacher_id")
-            class_room_id = data.get("class_room_id")
-            # print(data)
+            # Support both single class_room_id and multiple class_room_ids
+            class_room_ids = data.get("class_room_ids") or []
+            if not class_room_ids and data.get("class_room_id"):
+                class_room_ids = [data["class_room_id"]]
 
             # Validate inputs
-            if not subjects_ids or not teacher_id or not class_room_id:
+            if not subjects_ids or not teacher_id or not class_room_ids:
                 return (
                     jsonify(
                         {
                             "success": False,
-                            "message": "Subjects, teacher, and class are required",
+                            "message": "Subjects, teacher, and at least one class are required",
                         }
                     ),
                     400,
@@ -3347,46 +3531,48 @@ Include context field for tables, diagrams, formulas referenced in questions."""
                     404,
                 )
 
-            # Check if class exists
-            class_room = ClassRoom.query.get(class_room_id)
-            if not class_room:
-                return jsonify({"success": False, "message": "Class not found"}), 404
+            # Validate all class IDs
+            for cid in class_room_ids:
+                if not ClassRoom.query.get(cid):
+                    return jsonify({"success": False, "message": f"Class {cid} not found"}), 404
 
-            # Track successfully assigned subjects
+            # Track results
             assigned_subjects = []
             already_assigned_subjects = []
 
             # Assign teacher to subject using the teacher_subject association table
             from models.associations import teacher_subject
 
-            # Loop through all subject IDs and assign the same teacher to each
+            # Loop through all subject IDs x class IDs
             for subject_id in subjects_ids:
-                # Check if subject exists
                 subject = Subject.query.get(subject_id)
                 if not subject:
-                    continue  # Skip invalid subjects
-
-                # Check if assignment already exists for teacher-subject-class combination
-                existing_assignment = db.session.execute(
-                    db.select(teacher_subject).where(
-                        teacher_subject.c.teacher_id == teacher_id,
-                        teacher_subject.c.subject_id == subject_id,
-                        teacher_subject.c.class_room_id == class_room_id,
-                    )
-                ).fetchone()
-
-                if existing_assignment:
-                    already_assigned_subjects.append(subject.subject_name)
                     continue
 
-                # Insert the teacher-subject-class assignment
-                stmt = teacher_subject.insert().values(
-                    teacher_id=teacher_id,
-                    subject_id=subject_id,
-                    class_room_id=class_room_id,
-                )
-                db.session.execute(stmt)
-                assigned_subjects.append(subject.subject_name)
+                for class_room_id in class_room_ids:
+                    # Check if assignment already exists
+                    existing_assignment = db.session.execute(
+                        db.select(teacher_subject).where(
+                            teacher_subject.c.teacher_id == teacher_id,
+                            teacher_subject.c.subject_id == subject_id,
+                            teacher_subject.c.class_room_id == class_room_id,
+                        )
+                    ).fetchone()
+
+                    class_room = ClassRoom.query.get(class_room_id)
+                    class_label = f"{subject.subject_name} ({class_room.class_room_name})" if class_room else subject.subject_name
+
+                    if existing_assignment:
+                        already_assigned_subjects.append(class_label)
+                        continue
+
+                    stmt = teacher_subject.insert().values(
+                        teacher_id=teacher_id,
+                        subject_id=subject_id,
+                        class_room_id=class_room_id,
+                    )
+                    db.session.execute(stmt)
+                    assigned_subjects.append(class_label)
 
             # Commit all changes
             db.session.commit()
@@ -3407,7 +3593,7 @@ Include context field for tables, diagrams, formulas referenced in questions."""
                     jsonify(
                         {
                             "success": True,
-                            "message": f"Teacher {teacher.first_name} {teacher.last_name} assigned to: {', '.join(assigned_subjects)}. Already assigned to: {', '.join(already_assigned_subjects)}",
+                            "message": f"Assigned: {', '.join(assigned_subjects)}. Already assigned: {', '.join(already_assigned_subjects)}",
                         }
                     ),
                     200,
@@ -3483,6 +3669,67 @@ Include context field for tables, diagrams, formulas referenced in questions."""
                 ),
                 500,
             )
+
+    @app.route("/admin/subject_class_teachers", methods=["POST"])
+    @admin_required
+    def subject_class_teachers():
+        try:
+            data = request.get_json()
+            subject_id = data.get("subject_id")
+
+            if not subject_id:
+                return jsonify({"success": False, "message": "Subject ID is required"}), 400
+
+            subject = Subject.query.get(subject_id)
+            if not subject:
+                return jsonify({"success": False, "message": "Subject not found"}), 404
+
+            from models.associations import teacher_subject, class_subject
+
+            # Get classes linked to this subject
+            cs_rows = (
+                db.session.execute(
+                    db.select(class_subject).where(class_subject.c.subject_id == subject_id)
+                )
+            ).fetchall()
+            class_ids = [row.class_room_id for row in cs_rows]
+
+            if not class_ids:
+                return jsonify({"success": True, "assignments": []}), 200
+
+            # Get all teacher_subject rows for this subject
+            ts_rows = (
+                db.session.execute(
+                    db.select(teacher_subject).where(teacher_subject.c.subject_id == subject_id)
+                )
+            ).fetchall()
+
+            # Collect teacher IDs for name lookup
+            teacher_ids = list(set(row.teacher_id for row in ts_rows))
+            teacher_map = {}
+            if teacher_ids:
+                teachers = User.query.filter(User.id.in_(teacher_ids)).all()
+                teacher_map = {t.id: f"{t.first_name} {t.last_name}" for t in teachers}
+
+            # Get class names
+            classes = ClassRoom.query.filter(ClassRoom.class_room_id.in_(class_ids)).all()
+            class_map = {c.class_room_id: c.class_room_name for c in classes}
+
+            assignments = [
+                {
+                    "teacher_id": row.teacher_id,
+                    "teacher_name": teacher_map.get(row.teacher_id, "Unknown"),
+                    "class_room_id": row.class_room_id,
+                    "class_room_name": class_map.get(row.class_room_id, "Unknown"),
+                }
+                for row in ts_rows
+            ]
+
+            return jsonify({"success": True, "assignments": assignments}), 200
+
+        except Exception as e:
+            db.session.rollback()
+            return jsonify({"success": False, "message": f"Error loading subject assignments: {str(e)}"}), 500
 
     @app.route("/admin/teacher_assignments_matrix", methods=["POST"])
     @admin_required
@@ -3750,27 +3997,17 @@ Include context field for tables, diagrams, formulas referenced in questions."""
             if not subject:
                 return jsonify({"success": False, "message": "Subject not found"}), 404
 
-            # Check if subject already has a teacher assigned
-            if subject.subject_head_id:
-                return (
-                    jsonify(
-                        {
-                            "success": False,
-                            "message": "Subject already has a teacher assigned",
-                        }
-                    ),
-                    400,
-                )
-
-            # Assign teacher to subject
+            # Assign or reassign teacher to subject
+            is_reassignment = subject.subject_head_id is not None and subject.subject_head_id != teacher_id
             subject.subject_head_id = teacher_id
             db.session.commit()
 
+            action = "reassigned" if is_reassignment else "assigned"
             return (
                 jsonify(
                     {
                         "success": True,
-                        "message": f"Subject {subject.subject_name} assigned to {teacher.first_name} {teacher.last_name} successfully",
+                        "message": f"Subject {subject.subject_name} {action} to {teacher.first_name} {teacher.last_name} successfully",
                     }
                 ),
                 200,
@@ -3905,10 +4142,59 @@ Include context field for tables, diagrams, formulas referenced in questions."""
     @admin_required
     def settings():
         current_user = User.query.get(session["user_id"])
-        # Get school information if it exists
         school = School.query.first()
+        school_terms = SchoolTerm.query.order_by(
+            SchoolTerm.academic_session.desc(), SchoolTerm.term_name
+        ).all()
+        total_terms = SchoolTerm.query.count()
+        active_term = SchoolTerm.query.filter_by(is_current=True).first()
+
+        # Build recent changes from real DB events
+        recent_changes = []
+
+        # Recent school updates
+        if school and school.updated_at:
+            delta = datetime.utcnow() - school.updated_at
+            if delta.days == 0:
+                time_str = f"{delta.seconds // 3600}h ago" if delta.seconds >= 3600 else f"{delta.seconds // 60}m ago"
+            else:
+                time_str = f"{delta.days}d ago"
+            recent_changes.append({
+                "title": "School Information Updated",
+                "description": f"{current_user.full_name()} updated school settings",
+                "time": time_str,
+                "icon": "school",
+                "color": "blue",
+            })
+
+        # Recent term updates
+        recent_terms = SchoolTerm.query.order_by(SchoolTerm.updated_at.desc()).limit(3).all()
+        for term in recent_terms:
+            if term.updated_at:
+                delta = datetime.utcnow() - term.updated_at
+                if delta.days == 0:
+                    time_str = f"{delta.seconds // 3600}h ago" if delta.seconds >= 3600 else f"{delta.seconds // 60}m ago"
+                else:
+                    time_str = f"{delta.days}d ago"
+                recent_changes.append({
+                    "title": f"Term Updated",
+                    "description": f"{term.term_name} ({term.academic_session}) was updated",
+                    "time": time_str,
+                    "icon": "calendar_month",
+                    "color": "purple",
+                })
+
+        # Limit to 5 most recent
+        recent_changes = recent_changes[:5]
+
         return render_template(
-            "admin/settings.html", current_user=current_user, school=school
+            "admin/settings.html",
+            current_user=current_user,
+            school=school,
+            school_terms=school_terms,
+            total_terms=total_terms,
+            active_term=active_term,
+            recent_changes=recent_changes,
         )
 
     @app.route("/admin/settings/generate-demo-data", methods=["POST"])

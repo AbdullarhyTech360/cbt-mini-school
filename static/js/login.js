@@ -156,6 +156,7 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     const selectedExamId = document.getElementById("exam-select").value;
+    const remember = document.getElementById("remember").checked;
 
     if (userRole === "student" && selectedExamId) {
       try {
@@ -186,7 +187,7 @@ document.addEventListener("DOMContentLoaded", function () {
     fetch("/login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ username: username.value.trim(), password: password.value }),
+      body: JSON.stringify({ username: username.value.trim(), password: password.value, remember: remember }),
     })
       .then((r) => r.json())
       .then((data) => {
@@ -194,6 +195,8 @@ document.addEventListener("DOMContentLoaded", function () {
           if (data.available_exams && data.role === "student") {
             sessionStorage.setItem("availableExams", JSON.stringify(data.available_exams));
           }
+          sessionStorage.setItem("session_active", "1");
+          document.cookie = "session_type=" + (remember ? "permanent" : "temporary") + (remember ? "; max-age=" + (24*60*60) : "") + "; path=/";
           if (data.role === "admin") window.location.href = "/admin/dashboard";
           else if (data.role === "staff") window.location.href = "/staff/dashboard";
           else if (data.role === "student" && selectedExamId) window.location.href = `/student/exam/${selectedExamId}`;

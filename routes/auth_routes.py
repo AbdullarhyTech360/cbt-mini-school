@@ -323,8 +323,10 @@ def auth_routes(app):
                 return jsonify({"error": "Invalid username or password"}), 401
 
             # Create session for successful login
-            # Make session permanent (uses PERMANENT_SESSION_LIFETIME from config)
-            session.permanent = True
+            # Prevent session fixation: invalidate any existing session first
+            remember = data.get("remember", False)
+            session.clear()
+            session.permanent = bool(remember)
             session["user_id"] = user.id
             session["username"] = user.username
             session["role"] = user.role
@@ -443,7 +445,9 @@ def auth_routes(app):
     @app.route("/logout", methods=["POST"])
     def logout():
         session.clear()
-        return redirect(url_for("login"))
+        response = redirect(url_for("login"))
+        response.delete_cookie("session_type")
+        return response
 
     # Route check if user exist by reg number or email for staff or admin
     @app.route("/check_user", methods=["POST"])

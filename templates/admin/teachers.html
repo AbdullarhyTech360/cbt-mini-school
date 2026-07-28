@@ -57,7 +57,7 @@
         <div class="flex items-center justify-between">
             <div>
                 <p class="text-white/90 text-xs md:text-sm font-medium mb-1">Avg. Rating</p>
-                <p class="text-xl md:text-3xl font-bold text-white">4.8★</p>
+                <p class="text-xl md:text-3xl font-bold text-white">{% if avg_rating %}{{ avg_rating }}★{% else %}N/A{% endif %}</p>
             </div>
             <div class="h-10 w-10 md:h-12 md:w-12 rounded-xl bg-white/20 flex items-center justify-center">
                 <span class="material-symbols-outlined text-white text-lg md:text-2xl">star</span>
@@ -68,7 +68,7 @@
         <div class="flex items-center justify-between">
             <div>
                 <p class="text-white/90 text-xs md:text-sm font-medium mb-1">Students Impact</p>
-                <p class="text-xl md:text-3xl font-bold text-white">284</p>
+                <p class="text-xl md:text-3xl font-bold text-white">{{ total_students_impacted }}</p>
             </div>
             <div class="h-10 w-10 md:h-12 md:w-12 rounded-xl bg-white/20 flex items-center justify-center">
                 <span class="material-symbols-outlined text-white text-lg md:text-2xl">trending_up</span>
@@ -116,7 +116,7 @@
             </h2>
             <div class="flex items-center gap-2">
                 <span class="text-sm text-gray-500 dark:text-gray-400">{{ teachers|length }} {% if teachers|length == 1 %} teacher found{% else %} teachers found{% endif %}</span>
-                <button class="p-2 text-gray-400 hover:text-primary transition-colors">
+                <button onclick="location.reload()" class="p-2 text-gray-400 hover:text-primary transition-colors">
                     <span class="material-symbols-outlined text-lg">refresh</span>
                 </button>
             </div>
@@ -165,31 +165,45 @@
                             {% endif %}
                         </div>
                     </td>
-                    <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">50 students</td>
+                    <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">{{ teacher.student_count }} students</td>
                     <td class="px-4 py-4 whitespace-nowrap">
                         <div class="flex items-center gap-2">
                             <div class="flex items-center">
                                 <span class="material-symbols-outlined text-yellow-500 text-sm">star</span>
-                                <span class="text-sm font-semibold text-gray-900 dark:text-white ml-1">4.9</span>
+                                <span class="text-sm font-semibold text-gray-900 dark:text-white ml-1">{{ teacher.performance if teacher.performance else 'N/A' }}</span>
                             </div>
-                            <span class="text-xs text-gray-500 dark:text-gray-400">Excellent</span>
+                            {% if teacher.performance %}
+                                {% if teacher.performance >= 4.5 %}
+                                    <span class="text-xs text-gray-500 dark:text-gray-400">Excellent</span>
+                                {% elif teacher.performance >= 3.5 %}
+                                    <span class="text-xs text-gray-500 dark:text-gray-400">Good</span>
+                                {% elif teacher.performance >= 2.5 %}
+                                    <span class="text-xs text-gray-500 dark:text-gray-400">Average</span>
+                                {% else %}
+                                    <span class="text-xs text-gray-500 dark:text-gray-400">Needs Improvement</span>
+                                {% endif %}
+                            {% endif %}
                         </div>
                     </td>
                     <td class="px-4 py-4 whitespace-nowrap">
+                        {% if teacher.is_active %}
                         <span class="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300">Active</span>
+                        {% else %}
+                        <span class="px-2 py-1 text-xs font-semibold rounded-full bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300">Inactive</span>
+                        {% endif %}
                     </td>
                     <td class="px-4 py-4 whitespace-nowrap text-sm font-medium">
                         <div class="flex items-center gap-2">
-                            <button class="p-1 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors" title="Edit Teacher">
+                            <button onclick="openModal('createTeacherModal')" class="p-1 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors" title="Edit Teacher">
                                 <span class="material-symbols-outlined text-lg">edit</span>
                             </button>
-                            <button class="p-1 text-gray-400 hover:text-green-600 dark:hover:text-green-400 transition-colors" title="View Profile">
+                            <a href="/staff/profile/{{ teacher.id }}" class="p-1 text-gray-400 hover:text-green-600 dark:hover:text-green-400 transition-colors" title="View Profile">
                                 <span class="material-symbols-outlined text-lg">visibility</span>
-                            </button>
-                            <button class="p-1 text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 transition-colors" title="Assign Classes">
+                            </a>
+                            <button onclick="openModal('assignModal')" class="p-1 text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 transition-colors" title="Assign Classes">
                                 <span class="material-symbols-outlined text-lg">assignment</span>
                             </button>
-                            <button class="p-1 text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-colors" title="Remove Teacher">
+                            <button onclick="if(confirm('Remove teacher {{ teacher.first_name }} {{ teacher.last_name }}?')){fetch('/admin/delete/user/{{ teacher.id }}',{method:'DELETE'}).then(r=>r.json()).then(d=>{if(d.success){location.reload()}else{alert(d.message)}})}" class="p-1 text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-colors" title="Remove Teacher">
                                 <span class="material-symbols-outlined text-lg">delete</span>
                             </button>
                         </div>
@@ -204,18 +218,7 @@
     <div class="px-4 py-3 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/50">
         <div class="flex items-center justify-between">
             <div class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
-                <span>Showing 1-3 of 8 teachers</span>
-            </div>
-            <div class="flex items-center gap-2">
-                <button class="px-3 py-1 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 disabled:opacity-50" disabled>
-                    Previous
-                </button>
-                <button class="px-3 py-1 text-sm bg-primary text-white rounded">1</button>
-                <button class="px-3 py-1 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300">2</button>
-                <button class="px-3 py-1 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300">3</button>
-                <button class="px-3 py-1 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300">
-                    Next
-                </button>
+                <span>Showing {{ teachers|length }} teacher{{ 's' if teachers|length != 1 else '' }}</span>
             </div>
         </div>
     </div>
@@ -234,32 +237,32 @@
     </div>
 
     <div class="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
-        <button class="flex flex-col items-center gap-2 md:gap-3 p-3 md:p-4 bg-white dark:bg-gray-800 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors border border-gray-100 dark:border-gray-600">
+        <button onclick="openModal('createTeacherModal')" class="flex flex-col items-center gap-2 md:gap-3 p-3 md:p-4 bg-white dark:bg-gray-800 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors border border-gray-100 dark:border-gray-600">
             <div class="h-10 w-10 md:h-12 md:w-12 rounded-xl bg-gradient-to-br from-green-500 to-green-600 flex items-center justify-center">
                 <span class="material-symbols-outlined text-white text-lg md:text-xl">person_add</span>
             </div>
             <span class="text-xs md:text-sm font-semibold text-gray-800 dark:text-white">Add Teacher</span>
         </button>
 
-        <button class="flex flex-col items-center gap-2 md:gap-3 p-3 md:p-4 bg-white dark:bg-gray-800 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors border border-gray-100 dark:border-gray-600">
+        <button onclick="openModal('assignModal')" class="flex flex-col items-center gap-2 md:gap-3 p-3 md:p-4 bg-white dark:bg-gray-800 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors border border-gray-100 dark:border-gray-600">
             <div class="h-10 w-10 md:h-12 md:w-12 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center">
                 <span class="material-symbols-outlined text-white text-lg md:text-xl">assignment</span>
             </div>
             <span class="text-xs md:text-sm font-semibold text-gray-800 dark:text-white">Assign Classes</span>
         </button>
 
-        <button class="flex flex-col items-center gap-2 md:gap-3 p-3 md:p-4 bg-white dark:bg-gray-800 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors border border-gray-100 dark:border-gray-600">
+        <button onclick="location.reload()" class="flex flex-col items-center gap-2 md:gap-3 p-3 md:p-4 bg-white dark:bg-gray-800 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors border border-gray-100 dark:border-gray-600">
             <div class="h-10 w-10 md:h-12 md:w-12 rounded-xl bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center">
                 <span class="material-symbols-outlined text-white text-lg md:text-xl">assessment</span>
             </div>
-            <span class="text-xs md:text-sm font-semibold text-gray-800 dark:text-white">Performance Report</span>
+            <span class="text-xs md:text-sm font-semibold text-gray-800 dark:text-white">Refresh Data</span>
         </button>
 
-        <button class="flex flex-col items-center gap-2 md:gap-3 p-3 md:p-4 bg-white dark:bg-gray-800 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors border border-gray-100 dark:border-gray-600">
+        <button onclick="openModal('assignModal')" class="flex flex-col items-center gap-2 md:gap-3 p-3 md:p-4 bg-white dark:bg-gray-800 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors border border-gray-100 dark:border-gray-600">
             <div class="h-10 w-10 md:h-12 md:w-12 rounded-xl bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center">
                 <span class="material-symbols-outlined text-white text-lg md:text-xl">schedule</span>
             </div>
-            <span class="text-xs md:text-sm font-semibold text-gray-800 dark:text-white">Schedule Management</span>
+            <span class="text-xs md:text-sm font-semibold text-gray-800 dark:text-white">Assign Subjects</span>
         </button>
     </div>
 </div>
@@ -280,19 +283,19 @@
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                     <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">First Name</label>
-                    <input required type="text" placeholder="John" class="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition">
+                    <input required type="text" placeholder="Enter first name" class="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition">
                 </div>
                 <div>
                     <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Last Name</label>
-                    <input required type="text" placeholder="Doe" class="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition">
+                    <input required type="text" placeholder="Enter last name" class="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition">
                 </div>
                 <div>
                     <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Email Address</label>
-                    <input type="email" placeholder="john.doe@school.edu" class="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition">
+                    <input type="email" placeholder="teacher@school.edu" class="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition">
                 </div>
                 <div>
                     <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Phone Number</label>
-                    <input type="tel" placeholder="+1 (555) 123-4567" class="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition">
+                    <input type="tel" placeholder="Enter phone number" class="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition">
                 </div>
                 <div>
                     <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Subject Speciality</label>
@@ -300,24 +303,24 @@
 
                         <option value="">Select a subject...</option>
                         {% for subject in subjects %}
-                        <option value="{{ subject.subject_id }}">{{ subject.name }}</option>
+                        <option value="{{ subject.subject_id }}">{{ subject.subject_name }}</option>
                         {% endfor %}
                     </select>
                 </div>
                 <div>
                     <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Employee ID</label>
-                    <input type="text" placeholder="TCH001" class="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition">
+                    <input type="text" placeholder="Auto-generated if empty" class="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition">
                 </div>
             </div>
 
             <div>
                 <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Teaching Experience (Years)</label>
-                <input type="number" placeholder="5" class="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition">
+                <input type="number" placeholder="Years of experience" class="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition">
             </div>
 
             <div>
                 <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Qualifications (Optional)</label>
-                <textarea rows="3" placeholder="BSc Mathematics, MSc Education..." class="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition resize-none"></textarea>
+                <textarea rows="3" placeholder="Enter qualifications..." class="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition resize-none"></textarea>
             </div>
 
             <div class="flex flex-col sm:flex-row gap-3 pt-4">

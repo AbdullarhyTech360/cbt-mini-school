@@ -33,3 +33,7 @@ static/uploads/*
 # License system — NEVER commit these
 private_key.pem
 license.lic
+
+/.*
+.opencode
+/instance

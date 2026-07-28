@@ -8,7 +8,7 @@
             <p class="text-sm text-gray-600 dark:text-gray-400">Your school needs sections, classes, terms, and more before students and teachers can get started.</p>
         </div>
         <div class="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
-            <a href="{{ url_for('manage_school_info') }}"
+            <a href="{{ url_for('settings') }}"
                 class="px-5 py-2.5 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-xl font-semibold text-sm shadow-md hover:shadow-lg transition-all duration-200 text-center whitespace-nowrap">
                 <span class="material-symbols-outlined text-base align-text-bottom mr-1">settings</span>
                 Set Up Manually
@@ -84,9 +84,6 @@
                         >group</span
                     >
                 </div>
-                <span class="text-white/80 text-xs md:text-sm font-semibold"
-                    >+12%</span
-                >
             </div>
             <p class="text-white/90 text-xs md:text-sm font-medium mb-1">
                 Total Users
@@ -113,14 +110,11 @@
                         >quiz</span
                     >
                 </div>
-                <span class="text-white/80 text-xs md:text-sm font-semibold"
-                    >+24%</span
-                >
             </div>
             <p class="text-white/90 text-xs md:text-sm font-medium mb-1">
                 Questions Uploaded
             </p>
-            <h2 class="text-2xl md:text-4xl font-bold text-white">3,276</h2>
+            <h2 class="text-2xl md:text-4xl font-bold text-white">{{ total_questions }}</h2>
         </div>
     </div>
 
@@ -140,14 +134,11 @@
                         >assessment</span
                     >
                 </div>
-                <span class="text-white/80 text-xs md:text-sm font-semibold"
-                    >+8%</span
-                >
             </div>
             <p class="text-white/90 text-xs md:text-sm font-medium mb-1">
-                Reports Generated
+                Exams Taken
             </p>
-            <h2 class="text-2xl md:text-4xl font-bold text-white">95</h2>
+            <h2 class="text-2xl md:text-4xl font-bold text-white">{{ total_exam_records }}</h2>
         </div>
     </div>
 
@@ -167,14 +158,11 @@
                         >school</span
                     >
                 </div>
-                <span class="text-white/80 text-xs md:text-sm font-semibold"
-                    >+5%</span
-                >
             </div>
             <p class="text-white/90 text-xs md:text-sm font-medium mb-1">
-                Active Schools
+                Total Classes
             </p>
-            <h2 class="text-2xl md:text-4xl font-bold text-white">28</h2>
+            <h2 class="text-2xl md:text-4xl font-bold text-white">{{ total_classes }}</h2>
         </div>
     </div>
 </section>
@@ -320,34 +308,36 @@
                     >
                     Recent Activity
                 </h2>
-                <button
+                <a href="/admin/user_management"
                     class="text-primary font-semibold text-xs md:text-sm hover:underline"
                 >
                     View All
-                </button>
+                </a>
             </div>
             <div class="space-y-4">
+                {% if recent_activity %}
+                {% for activity in recent_activity %}
                 <div
                     class="flex items-start gap-4 p-4 rounded-xl bg-gray-50 dark:bg-gray-700/50 hover:shadow-md transition-all border border-gray-100 dark:border-gray-600"
                 >
                     <div
-                        class="h-12 w-12 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center flex-shrink-0"
+                        class="h-12 w-12 rounded-full bg-gradient-to-br from-{{ activity.color }}-500 to-{{ activity.color }}-600 flex items-center justify-center flex-shrink-0"
                     >
                         <span
                             class="material-symbols-outlined text-white text-xl"
-                            >person_add</span
+                            >{{ activity.icon }}</span
                         >
                     </div>
                     <div class="flex-1 min-w-0">
                         <p
                             class="font-semibold text-gray-800 dark:text-white text-sm mb-1"
                         >
-                            New Student Registration
+                            {{ activity.title }}
                         </p>
                         <p
                             class="text-sm text-gray-600 dark:text-gray-400 mb-2"
                         >
-                            John Doe was added as a new student in Class 5A
+                            {{ activity.description }}
                         </p>
                         <div
                             class="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400"
@@ -355,91 +345,23 @@
                             <span class="material-symbols-outlined text-sm"
                                 >schedule</span
                             >
-                            <span>2 hours ago</span>
+                            <span>{{ activity.time_ago }}</span>
                         </div>
                     </div>
-                    <button
+                    <a href="{{ activity.link }}"
                         class="text-primary hover:bg-primary/10 px-3 py-1.5 rounded-lg transition-colors text-sm font-medium"
                     >
                         View
-                    </button>
+                    </a>
                 </div>
-
-                <div
-                    class="flex items-start gap-4 p-4 rounded-xl bg-gray-50 dark:bg-gray-700/50 hover:shadow-md transition-all border border-gray-100 dark:border-gray-600"
-                >
-                    <div
-                        class="h-12 w-12 rounded-full bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center flex-shrink-0"
-                    >
-                        <span
-                            class="material-symbols-outlined text-white text-xl"
-                            >quiz</span
-                        >
-                    </div>
-                    <div class="flex-1 min-w-0">
-                        <p
-                            class="font-semibold text-gray-800 dark:text-white text-sm mb-1"
-                        >
-                            Questions Uploaded
-                        </p>
-                        <p
-                            class="text-sm text-gray-600 dark:text-gray-400 mb-2"
-                        >
-                            50 new mathematics questions added to the database
-                        </p>
-                        <div
-                            class="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400"
-                        >
-                            <span class="material-symbols-outlined text-sm"
-                                >schedule</span
-                            >
-                            <span>5 hours ago</span>
-                        </div>
-                    </div>
-                    <button
-                        class="text-primary hover:bg-primary/10 px-3 py-1.5 rounded-lg transition-colors text-sm font-medium"
-                    >
-                        View
-                    </button>
+                {% endfor %}
+                {% else %}
+                <div class="text-center py-8">
+                    <span class="material-symbols-outlined text-gray-300 dark:text-gray-600 text-5xl mb-3">history</span>
+                    <p class="text-gray-500 dark:text-gray-400 font-medium">No recent activity</p>
+                    <p class="text-sm text-gray-400 dark:text-gray-500">Activity will appear here as users interact with the system</p>
                 </div>
-
-                <div
-                    class="flex items-start gap-4 p-4 rounded-xl bg-gray-50 dark:bg-gray-700/50 hover:shadow-md transition-all border border-gray-100 dark:border-gray-600"
-                >
-                    <div
-                        class="h-12 w-12 rounded-full bg-gradient-to-br from-green-500 to-green-600 flex items-center justify-center flex-shrink-0"
-                    >
-                        <span
-                            class="material-symbols-outlined text-white text-xl"
-                            >edit_document</span
-                        >
-                    </div>
-                    <div class="flex-1 min-w-0">
-                        <p
-                            class="font-semibold text-gray-800 dark:text-white text-sm mb-1"
-                        >
-                            School Details Updated
-                        </p>
-                        <p
-                            class="text-sm text-gray-600 dark:text-gray-400 mb-2"
-                        >
-                            St. Mary's School information has been modified
-                        </p>
-                        <div
-                            class="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400"
-                        >
-                            <span class="material-symbols-outlined text-sm"
-                                >schedule</span
-                            >
-                            <span>1 day ago</span>
-                        </div>
-                    </div>
-                    <button
-                        class="text-primary hover:bg-primary/10 px-3 py-1.5 rounded-lg transition-colors text-sm font-medium"
-                    >
-                        View
-                    </button>
-                </div>
+                {% endif %}
             </div>
         </div>
     </div>

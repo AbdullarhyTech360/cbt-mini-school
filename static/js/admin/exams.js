@@ -787,58 +787,36 @@ document.addEventListener('DOMContentLoaded', function () {
                             subjectSelect.appendChild(option);
                         });
 
-                        // Trigger subject change to load classes
-                        const event = new Event('change');
-                        subjectSelect.dispatchEvent(event);
+                        // Load classes directly using the extracted function
+                        const classes = await loadClassesForSubject(exam.subject_id);
+                        classSelect.innerHTML = '<option value="">Select a class</option>';
+                        classes.forEach(cls => {
+                            const option = document.createElement('option');
+                            option.value = cls.class_room_id;
+                            option.textContent = cls.class_room_name;
+                            option.dataset.className = cls.class_room_name;
+                            classSelect.appendChild(option);
+                        });
+                        classSelect.disabled = false;
 
-                        // After a short delay, set the class and fetch question count
-                        setTimeout(async () => {
-                            classSelect.value = exam.class_room_id;
+                        // Set the selected class
+                        classSelect.value = exam.class_room_id;
 
-                            // Update exam name preview
-                            updateEditExamNamePreview();
+                        // Update the stored subject/class IDs and names for the change handlers
+                        editSubjectId = exam.subject_id;
+                        const selectedSubjectOption = subjectSelect.options[subjectSelect.selectedIndex];
+                        if (selectedSubjectOption) {
+                            editSelectedSubjectName = selectedSubjectOption.text;
+                        }
+                        const selectedClassOption = classSelect.options[classSelect.selectedIndex];
+                        if (selectedClassOption) {
+                            editSelectedClassName = selectedClassOption.dataset.className || selectedClassOption.text;
+                        }
+                        editSelectedExamType = exam.exam_type;
+                        updateEditExamNamePreview();
 
-                            // Fetch question count for the selected subject and class
-                            if (exam.subject_id && exam.class_room_id) {
-                                try {
-                                    const response = await fetch(`/admin/exams/question-count?subject_id=${exam.subject_id}&class_room_id=${exam.class_room_id}`);
-                                    const result = await response.json();
-
-                                    if (result.success) {
-                                        editAvailableQuestionCount = result.question_count;
-
-                                        // Update UI to show question count
-                                        const questionCountElement = document.getElementById('editQuestionCount');
-                                        if (questionCountElement) {
-                                            questionCountElement.textContent = result.question_count;
-                                            questionCountElement.className = result.question_count > 0
-                                                ? 'text-green-600 dark:text-green-400 font-semibold'
-                                                : 'text-red-600 dark:text-red-400 font-semibold';
-                                        }
-
-                                        // Update hint text
-                                        const questionLimitHint = document.getElementById('editQuestionLimitHint');
-                                        if (questionLimitHint && result.question_count > 0) {
-                                            questionLimitHint.textContent = `Max ${result.question_count} questions available. Questions will be randomly selected if specified.`;
-                                        }
-
-                                        // Show/hide warning message
-                                        const questionWarning = document.getElementById('editQuestionWarning');
-                                        if (questionWarning) {
-                                            questionWarning.style.display = result.question_count > 0 ? 'none' : 'block';
-                                        }
-
-                                        // Update max attribute on number of questions input
-                                        const numberOfQuestionsInput = document.getElementById('editNumberOfQuestions');
-                                        if (numberOfQuestionsInput && result.question_count > 0) {
-                                            numberOfQuestionsInput.max = result.question_count;
-                                        }
-                                    }
-                                } catch (error) {
-                                    console.error('Error fetching question count:', error);
-                                }
-                            }
-                        }, 500);
+                        // Fetch question count for the selected subject and class
+                        await updateEditQuestionCount(exam.subject_id, exam.class_room_id);
                     } else {
                         subjectSelect.innerHTML = '<option value="">Error loading subjects</option>';
                     }
@@ -907,6 +885,63 @@ document.addEventListener('DOMContentLoaded', function () {
     let editAvailableQuestionCount = 0;
 
     // ========================================
+    // REUSABLE CLASS LOADING FUNCTION (EDIT FORM)
+    // ========================================
+    async function loadClassesForSubject(subjectId) {
+        try {
+            const response = await fetch(`/admin/exams/classes-by-subject/${subjectId}`);
+            const result = await response.json();
+            if (result.success && result.classes) {
+                return result.classes;
+            }
+            return [];
+        } catch (error) {
+            console.error('Error loading classes:', error);
+            return [];
+        }
+    }
+
+    // ========================================
+    // REUSABLE QUESTION COUNT FUNCTION (EDIT FORM)
+    // ========================================
+    async function updateEditQuestionCount(subjectId, classRoomId) {
+        if (!subjectId || !classRoomId) return;
+        try {
+            const response = await fetch(`/admin/exams/question-count?subject_id=${subjectId}&class_room_id=${classRoomId}`);
+            const result = await response.json();
+
+            if (result.success) {
+                editAvailableQuestionCount = result.question_count;
+
+                const questionCountElement = document.getElementById('editQuestionCount');
+                if (questionCountElement) {
+                    questionCountElement.textContent = result.question_count;
+                    questionCountElement.className = result.question_count > 0
+                        ? 'text-green-600 dark:text-green-400 font-semibold'
+                        : 'text-red-600 dark:text-red-400 font-semibold';
+                }
+
+                const questionLimitHint = document.getElementById('editQuestionLimitHint');
+                if (questionLimitHint && result.question_count > 0) {
+                    questionLimitHint.textContent = `Max ${result.question_count} questions available. Questions will be randomly selected if specified.`;
+                }
+
+                const questionWarning = document.getElementById('editQuestionWarning');
+                if (questionWarning) {
+                    questionWarning.style.display = result.question_count > 0 ? 'none' : 'block';
+                }
+
+                const numberOfQuestionsInput = document.getElementById('editNumberOfQuestions');
+                if (numberOfQuestionsInput && result.question_count > 0) {
+                    numberOfQuestionsInput.max = result.question_count;
+                }
+            }
+        } catch (error) {
+            console.error('Error fetching question count:', error);
+        }
+    }
+
+    // ========================================
     // ON-THE-GO TEST TOGGLE (EDIT FORM)
     // ========================================
     const editIsOnTheGoCheckbox = document.getElementById('editIsOnTheGo');
@@ -944,40 +979,25 @@ document.addEventListener('DOMContentLoaded', function () {
                 return;
             }
 
-            try {
-                const response = await fetch(`/admin/exams/classes-by-subject/${editSubjectId}`);
-                const result = await response.json();
+            const classes = await loadClassesForSubject(editSubjectId);
 
-                if (result.success && result.classes) {
-                    editClassSelect.innerHTML = '<option value="">Select a class</option>';
-
-                    result.classes.forEach(cls => {
-                        const option = document.createElement('option');
-                        option.value = cls.class_room_id;
-                        option.textContent = cls.class_room_name;
-                        option.dataset.className = cls.class_room_name;
-                        editClassSelect.appendChild(option);
-                    });
-
-                    editClassSelect.disabled = false;
-                } else {
-                    editClassSelect.innerHTML = '<option value="">No classes offer this subject</option>';
-                    if (window.showAlert) {
-                        window.showAlert({
-                            title: 'Info',
-                            message: 'No classes currently offer this subject',
-                            type: 'info'
-                        });
-                    }
-                }
-            } catch (error) {
-                console.error('Error loading classes:', error);
-                editClassSelect.innerHTML = '<option value="">Error loading classes</option>';
+            if (classes.length > 0) {
+                editClassSelect.innerHTML = '<option value="">Select a class</option>';
+                classes.forEach(cls => {
+                    const option = document.createElement('option');
+                    option.value = cls.class_room_id;
+                    option.textContent = cls.class_room_name;
+                    option.dataset.className = cls.class_room_name;
+                    editClassSelect.appendChild(option);
+                });
+                editClassSelect.disabled = false;
+            } else {
+                editClassSelect.innerHTML = '<option value="">No classes offer this subject</option>';
                 if (window.showAlert) {
                     window.showAlert({
-                        title: 'Error',
-                        message: 'Failed to load classes for this subject',
-                        type: 'error'
+                        title: 'Info',
+                        message: 'No classes currently offer this subject',
+                        type: 'info'
                     });
                 }
             }
@@ -990,47 +1010,7 @@ document.addEventListener('DOMContentLoaded', function () {
             const selectedOption = this.options[this.selectedIndex];
             editSelectedClassName = selectedOption.dataset.className || selectedOption.text;
             updateEditExamNamePreview();
-
-            // Fetch question count for the selected subject and class
-            if (editSubjectId && this.value) {
-                try {
-                    const response = await fetch(`/admin/exams/question-count?subject_id=${editSubjectId}&class_room_id=${this.value}`);
-                    const result = await response.json();
-
-                    if (result.success) {
-                        editAvailableQuestionCount = result.question_count;
-
-                        // Update UI to show question count
-                        const questionCountElement = document.getElementById('editQuestionCount');
-                        if (questionCountElement) {
-                            questionCountElement.textContent = result.question_count;
-                            questionCountElement.className = result.question_count > 0
-                                ? 'text-green-600 dark:text-green-400 font-semibold'
-                                : 'text-red-600 dark:text-red-400 font-semibold';
-                        }
-
-                        // Update hint text
-                        const questionLimitHint = document.getElementById('editQuestionLimitHint');
-                        if (questionLimitHint && result.question_count > 0) {
-                            questionLimitHint.textContent = `Max ${result.question_count} questions available. Questions will be randomly selected if specified.`;
-                        }
-
-                        // Show/hide warning message
-                        const questionWarning = document.getElementById('editQuestionWarning');
-                        if (questionWarning) {
-                            questionWarning.style.display = result.question_count > 0 ? 'none' : 'block';
-                        }
-
-                        // Update max attribute on number of questions input
-                        const numberOfQuestionsInput = document.getElementById('editNumberOfQuestions');
-                        if (numberOfQuestionsInput && result.question_count > 0) {
-                            numberOfQuestionsInput.max = result.question_count;
-                        }
-                    }
-                } catch (error) {
-                    console.error('Error fetching question count:', error);
-                }
-            }
+            await updateEditQuestionCount(editSubjectId, this.value);
         });
     }
 

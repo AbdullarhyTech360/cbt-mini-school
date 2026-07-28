@@ -1,31 +1,45 @@
 // Open modal function
 function openModal(modalId) {
-    const modal = document.getElementById(modalId);
-    if (modal) {
-        modal.classList.remove('hidden');
-        modal.classList.add('flex');
-        document.body.style.overflow = 'hidden';
+    var modal = document.getElementById(modalId);
+    if (!modal) {
+        console.error("[openModal] Modal with id '" + modalId + "' NOT found in DOM");
+        return;
+    }
 
-        // Focus management for accessibility
-        const focusableElements = modal.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
-        if (focusableElements.length > 0) {
-            focusableElements[0].focus();
-        }
-        console.log(`Modal ${modalId} opened successfully`);
-    } else {
-        console.error(`Modal with id ${modalId} not found`);
+    // Apply ALL necessary styles via inline cssText — no class toggling.
+    modal.style.cssText =
+        "display: flex !important; " +
+        "position: fixed !important; " +
+        "top: 0 !important; " +
+        "left: 0 !important; " +
+        "width: 100vw !important; " +
+        "height: 100vh !important; " +
+        "z-index: 9999 !important; " +
+        "opacity: 1 !important; " +
+        "visibility: visible !important; " +
+        "pointer-events: auto !important; " +
+        "align-items: center !important; " +
+        "justify-content: center !important; " +
+        "padding: 1rem !important; " +
+        "background: rgba(0,0,0,0.5) !important;";
+
+    document.body.style.overflow = "hidden";
+
+    // Focus management for accessibility
+    var focusableElements = modal.querySelectorAll("button, [href], input, select, textarea, [tabindex]:not([tabindex=\"-1\"])");
+    if (focusableElements.length > 0) {
+        focusableElements[0].focus();
     }
 }
 
 // Close modal function
 function closeModal(modalId) {
-    const modal = document.getElementById(modalId);
+    var modal = document.getElementById(modalId);
     if (modal) {
-        modal.classList.add('hidden');
-        modal.classList.remove('flex');
-        document.body.style.overflow = '';
+        modal.removeAttribute("style");
+        document.body.style.overflow = "";
     } else {
-        console.error(`Modal with id ${modalId} not found`);
+        console.error("[closeModal] Modal with id '" + modalId + "' NOT found");
     }
 }
 
@@ -107,11 +121,6 @@ window.showAlert = function (options) {
 
     const config = typeConfig[type] || typeConfig.info;
 
-    // Debug logging
-    console.log('showAlert called with:', { title, message, type, confirmText });
-    console.log('Message type:', typeof message);
-    console.log('Message value:', message);
-
     // Remove existing alert modal if any
     const existingModal = document.getElementById('alertModal');
     if (existingModal) {
@@ -120,7 +129,7 @@ window.showAlert = function (options) {
 
     // Create modal HTML
     const modalHTML = `
-        <div id="alertModal" class="modal fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+        <div id="alertModal" class="modal items-center justify-center p-4">
             <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-xl w-full max-w-md transform transition-all">
                 <div class="p-6">
                     <div class="flex items-start gap-4 mb-4">
@@ -147,6 +156,20 @@ window.showAlert = function (options) {
 
     const modal = document.getElementById('alertModal');
     const confirmBtn = document.getElementById('alertConfirmBtn');
+
+    // Apply inline styles to guarantee z-index stacking above openModal (9999)
+    modal.style.cssText =
+        "display: flex !important; " +
+        "position: fixed !important; " +
+        "top: 0 !important; " +
+        "left: 0 !important; " +
+        "width: 100vw !important; " +
+        "height: 100vh !important; " +
+        "z-index: 10000 !important; " +
+        "align-items: center !important; " +
+        "justify-content: center !important; " +
+        "padding: 1rem !important; " +
+        "background: rgba(0,0,0,0.5) !important;";
 
     // Handle confirm
     confirmBtn.addEventListener('click', function () {
@@ -188,7 +211,7 @@ window.showConfirmModal = function (options) {
 
     // Create modal HTML
     const modalHTML = `
-        <div id="confirmationModal" class="modal fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+        <div id="confirmationModal" class="modal items-center justify-center p-4">
             <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-xl w-full max-w-md">
                 <div class="p-6 border-b border-gray-200 dark:border-gray-700">
                     <h2 class="text-xl font-bold text-gray-900 dark:text-white">${title}</h2>
@@ -214,6 +237,20 @@ window.showConfirmModal = function (options) {
     const modal = document.getElementById('confirmationModal');
     const confirmBtn = document.getElementById('confirmBtn');
     const cancelBtn = document.getElementById('cancelBtn');
+
+    // Apply inline styles to guarantee z-index stacking above openModal (9999)
+    modal.style.cssText =
+        "display: flex !important; " +
+        "position: fixed !important; " +
+        "top: 0 !important; " +
+        "left: 0 !important; " +
+        "width: 100vw !important; " +
+        "height: 100vh !important; " +
+        "z-index: 10000 !important; " +
+        "align-items: center !important; " +
+        "justify-content: center !important; " +
+        "padding: 1rem !important; " +
+        "background: rgba(0,0,0,0.5) !important;";
 
     // Handle confirm
     confirmBtn.addEventListener('click', function () {

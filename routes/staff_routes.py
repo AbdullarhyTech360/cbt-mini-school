@@ -1,6 +1,7 @@
 from flask import Response, jsonify, render_template, request, session, redirect, stream_with_context, url_for, flash
 from datetime import datetime
 from sqlalchemy import func
+import os
 
 from sqlalchemy.sql.functions import current_user
 from models import db, TraitDefinition, StudentTrait, Grade
@@ -11,6 +12,8 @@ from models.subject import Subject
 from models.class_room import ClassRoom
 from models.school_term import SchoolTerm
 from models.school import School
+from models.question import Question
+from models.associations import teacher_subject, teacher_classroom
 from routes.dashboard import staff_required
 
 
@@ -324,6 +327,7 @@ def staff_routes(app):
         existing_grades = {}
         cbt_grades = {}
         assessment_types = []
+        grade_scale = None
 
         if subject_id and class_id and current_user:
             from models.associations import teacher_subject
@@ -2934,7 +2938,7 @@ Include context field for tables, diagrams, formulas referenced in questions."""
             traceback.print_exc()
             return jsonify({'success': False, 'message': str(e)}), 500
 
-    @app.route("/staff/profile/<user_id>")
+    @app.route("/staff/profile/<user_id>", methods=["GET", "POST"])
     @staff_required
     def staff_profile(user_id):
         # Verify the logged-in user matches the user_id in the URL
@@ -2947,7 +2951,178 @@ Include context field for tables, diagrams, formulas referenced in questions."""
             flash("User not found.", "error")
             return redirect(url_for("login"))
 
-        return render_template("staff/profile.html", current_user=current_user)
+        # Handle POST - update profile
+        if request.method == "POST":
+            try:
+                # Handle image upload (multipart form)
+                if request.content_type and 'multipart/form-data' in request.content_type:
+                    # Image upload
+                    if 'profile_image' in request.files:
+                        file = request.files['profile_image']
+                        if file and file.filename:
+                            from werkzeug.utils import secure_filename
+                            import uuid
+                            original = secure_filename(file.filename)
+                            if original and '.' in original:
+                                ext = original.rsplit('.', 1)[1].lower()
+                                if ext in ('png', 'jpg', 'jpeg', 'gif', 'webp'):
+                                    unique_name = f"{uuid.uuid4().hex}.{ext}"
+                                    from utils.paths import get_profile_images_dir
+                                    upload_dir = get_profile_images_dir()
+                                    file_path = os.path.join(upload_dir, unique_name)
+                                    file.save(file_path)
+                                    # Delete old image if exists
+                                    if current_user.image and current_user.image.startswith('/uploads/'):
+                                        old_path = os.path.join(os.path.dirname(upload_dir), current_user.image.lstrip('/'))
+                                        if os.path.exists(old_path):
+                                            os.remove(old_path)
+                                    current_user.image = f"/uploads/profile_images/{unique_name}"
+                                    db.session.commit()
+                                    return jsonify({"success": True, "message": "Profile image updated", "image_url": current_user.image}), 200
+                        return jsonify({"success": False, "message": "No valid image file provided"}), 400
+
+                # Handle JSON (text fields)
+                data = request.get_json(silent=True) or {}
+
+                # Update User fields
+                if "first_name" in data and data["first_name"]:
+                    current_user.first_name = data["first_name"].strip()
+                if "last_name" in data and data["last_name"]:
+                    current_user.last_name = data["last_name"].strip()
+                if "email" in data:
+                    current_user.email = data["email"].strip() if data["email"] else None
+                if "phone" in data:
+                    # Update phone on Teacher model
+                    if current_user.teacher:
+                        current_user.teacher.phone = data["phone"].strip() if data["phone"] else None
+                    else:
+                        from models.teacher import Teacher
+                        teacher = Teacher(user_id=current_user.id, phone=data["phone"].strip() if data["phone"] else None)
+                        db.session.add(teacher)
+                if "specialization" in data:
+                    if current_user.teacher:
+                        current_user.teacher.specialization = data["specialization"].strip() if data["specialization"] else None
+                if "qualification" in data:
+                    if current_user.teacher:
+                        current_user.teacher.qualification = data["qualification"].strip() if data["qualification"] else None
+                if "experience_years" in data:
+                    if current_user.teacher:
+                        current_user.teacher.experience_years = int(data["experience_years"]) if data["experience_years"] else None
+
+                db.session.commit()
+                return jsonify({"success": True, "message": "Profile updated successfully"}), 200
+
+            except Exception as e:
+                db.session.rollback()
+                return jsonify({"success": False, "message": f"Error updating profile: {str(e)}"}), 500
+
+        # GET - render profile
+        # Get teacher profile
+        teacher_profile = current_user.teacher
+
+        # Get assigned classes (from all sources)
+        assigned_class_ids = set()
+
+        # 1. Form-master classes
+        form_master_classes = ClassRoom.query.filter_by(form_teacher_id=current_user.id, is_active=True).all()
+        for cls in form_master_classes:
+            assigned_class_ids.add(cls.class_room_id)
+
+        # 2. Classes from teacher_subject association
+        subject_assignments = db.session.execute(
+            db.select(teacher_subject).where(teacher_subject.c.teacher_id == current_user.id)
+        ).fetchall()
+        for row in subject_assignments:
+            assigned_class_ids.add(row[2])  # class_room_id
+
+        # 3. Classes from teacher_classroom association
+        classroom_assignments = db.session.execute(
+            db.select(teacher_classroom).where(teacher_classroom.c.teacher_id == current_user.id)
+        ).fetchall()
+        for row in classroom_assignments:
+            assigned_class_ids.add(row[1])  # classroom_id
+
+        # Get assigned class objects with subject names
+        assigned_classes = []
+        if assigned_class_ids:
+            classes = ClassRoom.query.filter(ClassRoom.class_room_id.in_(assigned_class_ids)).all()
+            for cls in classes:
+                cls_subject_ids = [row[1] for row in subject_assignments if row[2] == cls.class_room_id]
+                cls_subjects = Subject.query.filter(Subject.subject_id.in_(cls_subject_ids)).all() if cls_subject_ids else []
+                subject_names = [s.subject_name for s in cls_subjects] if cls_subjects else ["General"]
+                assigned_classes.append({
+                    "class": cls,
+                    "subject_names": subject_names,
+                })
+
+        # Count classes
+        classes_count = len(assigned_classes)
+
+        # Compute attendance rate
+        from models.attendance import Attendance
+        current_term = SchoolTerm.query.filter_by(is_current=True).first()
+        attendance_rate = None
+        if assigned_class_ids and current_term:
+            total_records = Attendance.query.filter(
+                Attendance.class_room_id.in_(assigned_class_ids),
+                Attendance.term_id == current_term.term_id
+            ).count()
+            present_records = Attendance.query.filter(
+                Attendance.class_room_id.in_(assigned_class_ids),
+                Attendance.term_id == current_term.term_id,
+                Attendance.status == "present"
+            ).count()
+            if total_records > 0:
+                attendance_rate = round((present_records / total_records) * 100)
+
+        # Get recent activity
+        from datetime import datetime
+        recent_activity = []
+
+        from models.grade import Grade
+        recent_grades = Grade.query.filter_by(teacher_id=current_user.id).order_by(Grade.updated_at.desc()).limit(2).all()
+        for grade in recent_grades:
+            subj = Subject.query.get(grade.subject_id)
+            cls = ClassRoom.query.get(grade.class_room_id)
+            recent_activity.append({
+                "type": "scores",
+                "title": "Updated student scores",
+                "description": f"{subj.subject_name if subj else 'subject'} {cls.class_room_name if cls else ''}",
+                "icon": "edit_note",
+                "color": "green",
+            })
+
+        recent_att = Attendance.query.filter_by(marked_by_id=current_user.id).order_by(Attendance.created_at.desc()).limit(1).all()
+        for att in recent_att:
+            cls = ClassRoom.query.get(att.class_room_id)
+            recent_activity.append({
+                "type": "attendance",
+                "title": "Marked attendance",
+                "description": f"{cls.class_room_name if cls else 'class'}",
+                "icon": "checklist",
+                "color": "blue",
+            })
+
+        recent_questions = Question.query.filter_by(teacher_id=current_user.id).order_by(Question.created_at.desc()).limit(1).all()
+        for q in recent_questions:
+            subj = Subject.query.get(q.subject_id)
+            recent_activity.append({
+                "type": "questions",
+                "title": "Uploaded new questions",
+                "description": f"{subj.subject_name if subj else ''}",
+                "icon": "upload_file",
+                "color": "purple",
+            })
+
+        return render_template(
+            "staff/profile.html",
+            current_user=current_user,
+            teacher_profile=teacher_profile,
+            assigned_classes=assigned_classes,
+            classes_count=classes_count,
+            attendance_rate=attendance_rate,
+            recent_activity=recent_activity,
+        )
 
     @app.route("/staff/classes/<user_id>")
     @staff_required
@@ -2962,7 +3137,142 @@ Include context field for tables, diagrams, formulas referenced in questions."""
             flash("User not found.", "error")
             return redirect(url_for("login"))
 
-        return render_template("staff/classes.html", current_user=current_user)
+        # Get assigned classes (from all sources)
+        assigned_class_ids = set()
+
+        # 1. Form-master classes
+        form_master_classes = ClassRoom.query.filter_by(form_teacher_id=current_user.id, is_active=True).all()
+        for cls in form_master_classes:
+            assigned_class_ids.add(cls.class_room_id)
+
+        # 2. Classes from teacher_subject association
+        subject_assignments = db.session.execute(
+            db.select(teacher_subject).where(teacher_subject.c.teacher_id == current_user.id)
+        ).fetchall()
+        for row in subject_assignments:
+            assigned_class_ids.add(row[2])  # class_room_id
+
+        # 3. Classes from teacher_classroom association
+        classroom_assignments = db.session.execute(
+            db.select(teacher_classroom).where(teacher_classroom.c.teacher_id == current_user.id)
+        ).fetchall()
+        for row in classroom_assignments:
+            assigned_class_ids.add(row[1])  # classroom_id
+
+        # Build enriched class data
+        classes_data = []
+        total_students = 0
+        assigned_subject_names = set()
+
+        if assigned_class_ids:
+            classes = ClassRoom.query.filter(ClassRoom.class_room_id.in_(assigned_class_ids)).all()
+            for cls in classes:
+                # Count students in this class
+                student_count = User.query.filter_by(
+                    class_room_id=cls.class_room_id, role="student", is_active=True
+                ).count()
+                total_students += student_count
+
+                # Get subjects for this class from teacher_subject
+                cls_subject_ids = [row[1] for row in subject_assignments if row[2] == cls.class_room_id]
+                cls_subjects = Subject.query.filter(Subject.subject_id.in_(cls_subject_ids)).all() if cls_subject_ids else []
+                subject_names = [s.subject_name for s in cls_subjects] if cls_subjects else ["General"]
+                for s in subject_names:
+                    assigned_subject_names.add(s)
+
+                # Compute attendance rate for this class
+                from models.attendance import Attendance
+                current_term = SchoolTerm.query.filter_by(is_current=True).first()
+                class_attendance_rate = None
+                if current_term:
+                    total_att = Attendance.query.filter_by(
+                        class_room_id=cls.class_room_id, term_id=current_term.term_id
+                    ).count()
+                    present_att = Attendance.query.filter_by(
+                        class_room_id=cls.class_room_id, term_id=current_term.term_id, status="present"
+                    ).count()
+                    if total_att > 0:
+                        class_attendance_rate = round((present_att / total_att) * 100)
+
+                # Compute average score for this class
+                from models.grade import Grade
+                avg_score = None
+                grades = Grade.query.filter_by(class_room_id=cls.class_room_id).all()
+                if grades:
+                    scores = [g.percentage for g in grades if g.percentage is not None]
+                    if scores:
+                        avg_score = round(sum(scores) / len(scores))
+
+                classes_data.append({
+                    "class": cls,
+                    "student_count": student_count,
+                    "subject_names": subject_names,
+                    "attendance_rate": class_attendance_rate,
+                    "avg_score": avg_score,
+                })
+
+        # Compute overall attendance rate
+        overall_attendance_rate = None
+        current_term = SchoolTerm.query.filter_by(is_current=True).first()
+        if assigned_class_ids and current_term:
+            total_records = Attendance.query.filter(
+                Attendance.class_room_id.in_(assigned_class_ids),
+                Attendance.term_id == current_term.term_id
+            ).count()
+            present_records = Attendance.query.filter(
+                Attendance.class_room_id.in_(assigned_class_ids),
+                Attendance.term_id == current_term.term_id,
+                Attendance.status == "present"
+            ).count()
+            if total_records > 0:
+                overall_attendance_rate = round((present_records / total_records) * 100)
+
+        # Get recent class activity
+        from datetime import datetime
+        recent_activity = []
+
+        from models.grade import Grade
+        recent_grades = Grade.query.filter(
+            Grade.teacher_id == current_user.id,
+            Grade.class_room_id.in_(assigned_class_ids) if assigned_class_ids else True
+        ).order_by(Grade.updated_at.desc()).limit(2).all() if assigned_class_ids else []
+        for grade in recent_grades:
+            subj = Subject.query.get(grade.subject_id)
+            cls = ClassRoom.query.get(grade.class_room_id)
+            recent_activity.append({
+                "title": f"Updated scores for {subj.subject_name if subj else 'subject'} quiz",
+                "description": f"{cls.class_room_name if cls else ''}",
+                "icon": "edit_note",
+                "color": "blue",
+                "badge": "Updated",
+                "badge_color": "blue",
+            })
+
+        recent_att = Attendance.query.filter(
+            Attendance.marked_by_id == current_user.id,
+            Attendance.class_room_id.in_(assigned_class_ids) if assigned_class_ids else True
+        ).order_by(Attendance.created_at.desc()).limit(1).all() if assigned_class_ids else []
+        for att in recent_att:
+            cls = ClassRoom.query.get(att.class_room_id)
+            recent_activity.append({
+                "title": f"Marked attendance for {cls.class_room_name if cls else 'class'}",
+                "description": f"{cls.class_room_name if cls else ''}",
+                "icon": "checklist",
+                "color": "green",
+                "badge": "Completed",
+                "badge_color": "green",
+            })
+
+        return render_template(
+            "staff/classes.html",
+            current_user=current_user,
+            classes_data=classes_data,
+            total_classes=len(classes_data),
+            total_students=total_students,
+            overall_attendance_rate=overall_attendance_rate,
+            assigned_subject_names=sorted(assigned_subject_names),
+            recent_activity=recent_activity,
+        )
 
     # ── Staff Trait Input ───────────────────────────────────────
     def _seed_default_traits(school):

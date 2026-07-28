@@ -43,22 +43,6 @@ document.addEventListener("DOMContentLoaded", function () {
       schoolLogoInput.addEventListener("change", handleLogoPreview);
     }
 
-    // Term number auto-fills term name
-    const termNumberSelect = document.getElementById("term-number");
-    if (termNumberSelect) {
-      termNumberSelect.addEventListener("change", function () {
-        const termNameInput = document.getElementById("term-name");
-        const termNames = {
-          1: "First Term",
-          2: "Second Term",
-          3: "Third Term",
-        };
-        if (termNameInput && this.value) {
-          termNameInput.value = termNames[this.value] || "";
-        }
-      });
-    }
-
     // Details toggle animation
     const detailsElements = document.querySelectorAll("details");
     detailsElements.forEach((details) => {
@@ -120,7 +104,6 @@ document.addEventListener("DOMContentLoaded", function () {
     const termId = document.getElementById("term-id").value;
     const formData = {
       term_name: document.getElementById("term-name").value,
-      term_number: parseInt(document.getElementById("term-number").value),
       academic_session: document.getElementById("academic-session").value,
       start_date: document.getElementById("start-date").value,
       end_date: document.getElementById("end-date").value,
@@ -240,7 +223,7 @@ document.addEventListener("DOMContentLoaded", function () {
       if (a.academic_session !== b.academic_session) {
         return b.academic_session.localeCompare(a.academic_session);
       }
-      return a.term_number - b.term_number;
+      return a.term_name.localeCompare(b.term_name);
     });
 
     termsList.innerHTML = sortedTerms
@@ -291,7 +274,7 @@ document.addEventListener("DOMContentLoaded", function () {
                     <div class="flex items-center gap-3 flex-wrap">
                         <div class="flex items-center gap-2 text-sm font-semibold text-gray-900 dark:text-white">
                             <span class="material-symbols-outlined text-primary text-lg">event</span>
-                            <span>${term.term_name || termNames[term.term_number]}</span>
+                            <span>${term.term_name}</span>
                         </div>
                         ${term.is_current ? '<span class="px-2 py-1 text-xs font-medium bg-primary/20 text-primary dark:bg-primary/30 dark:text-white rounded-full">Current</span>' : ""}
                         ${term.is_active ? '<span class="px-2 py-1 text-xs font-medium bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 rounded-full">Active</span>' : '<span class="px-2 py-1 text-xs font-medium bg-gray-200 text-gray-600 dark:bg-gray-600 dark:text-gray-300 rounded-full">Inactive</span>'}

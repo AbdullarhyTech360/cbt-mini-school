@@ -19,7 +19,7 @@ class Config:
     SESSION_COOKIE_SECURE = False  # Set to True in production with HTTPS
     SESSION_COOKIE_HTTPONLY = True  # Prevent JavaScript access to session cookie
     SESSION_COOKIE_SAMESITE = 'Lax'  # CSRF protection
-    PERMANENT_SESSION_LIFETIME = timedelta(days=1)  # 24 hours (1 day)
+    PERMANENT_SESSION_LIFETIME = timedelta(days=1)  # 24 hours — only when session.permanent = True
     SESSION_REFRESH_EACH_REQUEST = True  # Refresh session on each request
 
     # File Upload Configuration

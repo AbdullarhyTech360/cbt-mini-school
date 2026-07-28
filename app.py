@@ -60,7 +60,7 @@ _run_license_check()
 # End license verification
 # ---------------------------------------------------------------------------
 
-from flask import Flask, jsonify, render_template, request, send_from_directory, session
+from flask import Flask, jsonify, redirect, render_template, request, send_from_directory, session, url_for
 
 from config import Config
 from models import bcrypt, db

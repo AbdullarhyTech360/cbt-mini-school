@@ -1,4 +1,3 @@
-<!DOCTYPE html>
 {% extends "admin/base.html" %}
 
 {% block title %}Exam Management - Admin Panel{% endblock %}
@@ -391,8 +390,9 @@
                     <select id="filterFinishedExamType"
                         class="w-full sm:w-auto px-4 py-3.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition shadow-sm hover:shadow-md text-sm md:text-base">
                         <option value="">All Exam Types</option>
-                        <option value="CA">CA Tests</option>
-                        <option value="Term Exam">Term Exams</option>
+                        {% for assessment in assessment_types %}
+                        <option value="{{ assessment.name }}">{{ assessment.name }}</option>
+                        {% endfor %}
                     </select>
                     <select id="filterFinishedTerm"
                         class="w-full sm:w-auto px-4 py-3.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition shadow-sm hover:shadow-md text-sm md:text-base">

@@ -77,9 +77,14 @@
                 <div id="adminCard"
                     class="flex items-center gap-3 px-6 py-4 bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-700 mx-4 mt-4 rounded-xl shadow-sm border border-gray-200 dark:border-gray-600 transition-all duration-300">
                     <div class="relative flex-shrink-0">
+                        {% if current_user and current_user.image %}
                         <img id="adminAvatar" class="h-12 w-12 rounded-full object-cover ring-2 ring-primary/20"
-                            data-alt="Admin avatar"
-                            src="https://lh3.googleusercontent.com/aida-public/AB6AXuD47A1V744h8kErGl6cIX6ZGxhIp4eo2JkxLPf0b2C8Em6LEm5cRjxEmXwQvpPrupcySlDAJ0ZPcWzgyxSy6n6GunY49FE9AMeSAguaa14NkHtKQw4dHvCUoUriWfGGzYXGKvWpiLTAdbQpHbLiD_ou-7fOXFrvVX0znvzWYBxW6HsN663YDUseUP08xOl-9wMCaxXZ4RzmesNjV5BBnYnJ3mvTBql9PUkH6arEP07ZZLhxwhacnuEavvwP1nYYkrKUrw-ubIAiL6M" />
+                            src="{{ current_user.image }}" alt="{{ current_user.full_name() }}" />
+                        {% else %}
+                        <div id="adminAvatar" class="h-12 w-12 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center ring-2 ring-primary/20">
+                            <span class="text-white font-bold text-lg">{{ current_user.first_name[0] }}{{ current_user.last_name[0] }}</span>
+                        </div>
+                        {% endif %}
                         <span
                             class="absolute bottom-0 right-0 h-3 w-3 bg-green-500 rounded-full ring-2 ring-white dark:ring-gray-800"></span>
                     </div>
@@ -293,6 +298,7 @@
             </main>
         </div>
     </div>
+    {% block modals %}{% endblock %}
     <script>
         // Dark Mode Toggle
         const html = document.documentElement;
@@ -491,6 +497,7 @@
         })();
     </script>
     <script src="{{ url_for('static', filename='js/components/modal.js') }}"></script>
+    {% block scripts_bottom %}{% endblock %}
     <div id="toastContainer" class="fixed top-6 right-4 z-[9999] flex flex-col gap-2 pointer-events-none"></div>
     <script>
         (function() {
@@ -514,6 +521,19 @@
                 }
             }
         })();
+    </script>
+    <script>
+    (function() {
+        if (sessionStorage.getItem('session_active')) return;
+        var cookies = document.cookie.split(';');
+        for (var i = 0; i < cookies.length; i++) {
+            var parts = cookies[i].trim().split('=');
+            if (parts[0] === 'session_type' && parts[1] === 'permanent') return;
+        }
+        fetch('/logout', { method: 'POST' }).then(function() {
+            window.location.href = '/login';
+        });
+    })();
     </script>
 </body>
 

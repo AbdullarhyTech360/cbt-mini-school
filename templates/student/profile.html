@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>My Profile - Student Portal</title>
+    <link href="{{ url_for('static', filename='dist/output.css') }}" rel="stylesheet">
+    <style>
+        body {
+            min-height: max(884px, 100dvh);
+        }
+        .material-symbols-outlined,
+        .material-symbols-rounded,
+        .material-symbols-sharp {
+            font-variation-settings:
+                'FILL' 0,
+                'wght' 400,
+                'GRAD' 0,
+                'opsz' 24
+        }
+        .scrollbar-thin::-webkit-scrollbar {
+            height: 4px;
+        }
+        .scrollbar-thin::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .scrollbar-thin::-webkit-scrollbar-thumb {
+            background: #d1d5db;
+            border-radius: 2px;
+        }
+        .dark .scrollbar-thin::-webkit-scrollbar-thumb {
+            background: #4b5563;
+        }
+    </style>
+</head>
+
+<body class="bg-gray-50 dark:bg-[#0f1419] font-display">
+    <!-- Header -->
+    <header class="bg-white dark:bg-gray-800 p-4 md:p-6 border-b border-gray-200 dark:border-gray-700">
+        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4">
+            <div class="flex items-center space-x-3">
+                {% if current_user and current_user.image %}
+                <img class="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-10 object-cover"
+                    src="{{ current_user.image }}" alt="{{ current_user.full_name() }}" />
+                {% else %}
+                <div class="bg-gradient-to-br from-blue-500 to-purple-600 rounded-full size-10 flex items-center justify-center">
+                    <span class="text-white font-bold text-sm">{{ current_user.first_name[0] }}{{ current_user.last_name[0] }}</span>
+                </div>
+                {% endif %}
+                <div>
+                    <h2 class="text-lg font-bold leading-tight tracking-[-0.015em] text-gray-900 dark:text-white">Student Portal</h2>
+                    <p class="text-sm text-gray-500 dark:text-gray-400">My Profile</p>
+                </div>
+            </div>
+            <div class="flex items-center space-x-4 w-full sm:w-auto justify-between sm:justify-end">
+                <div class="text-left sm:text-right">
+                    <p class="text-sm font-semibold text-gray-900 dark:text-white">{{ current_user.full_name() }}</p>
+                    <p class="text-xs text-gray-500 dark:text-gray-400">@{{ current_user.username }}</p>
+                </div>
+                {% if current_user and current_user.image %}
+                <img class="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-12 object-cover"
+                    src="{{ current_user.image }}" alt="{{ current_user.full_name() }}" />
+                {% else %}
+                <div class="bg-gradient-to-br from-blue-500 to-purple-600 rounded-full size-12 flex items-center justify-center">
+                    <span class="text-white font-bold text-lg">{{ current_user.first_name[0] }}{{ current_user.last_name[0] }}</span>
+                </div>
+                {% endif %}
+                <a href="{{ url_for('student_dashboard') }}" class="flex items-center gap-2 px-3 py-2 text-sm font-semibold text-primary border border-primary rounded-lg hover:bg-primary/10 transition-colors">
+                    <span class="material-symbols-outlined text-base">dashboard</span>
+                    <span class="hidden sm:inline">Dashboard</span>
+                </a>
+                <form action="{{ url_for('logout') }}" method="POST" class="inline">
+                    <button type="submit"
+                        class="flex items-center gap-2 px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors duration-200"
+                        title="Logout">
+                        <span class="material-symbols-outlined text-lg">logout</span>
+                    </button>
+                </form>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="p-4 md:p-6">
+        <div class="max-w-4xl mx-auto">
+
+            <!-- Profile Header Card -->
+            <div class="mb-6 md:mb-8">
+                <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-100 dark:border-gray-700 overflow-hidden">
+                    <div class="p-4 md:p-6 border-b border-gray-100 dark:border-gray-700">
+                        <div class="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+                            <div class="relative flex-shrink-0 group cursor-pointer" onclick="document.getElementById('imageInput').click()">
+                                {% if current_user.image %}
+                                <img id="profileImage" class="h-16 w-16 md:h-20 md:w-20 rounded-full object-cover ring-4 ring-primary/20"
+                                    src="{{ current_user.image }}" alt="{{ current_user.full_name() }}" />
+                                {% else %}
+                                <div id="profileImage" class="h-16 w-16 md:h-20 md:w-20 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center ring-4 ring-primary/20">
+                                    <span class="text-white font-bold text-2xl">{{ current_user.first_name[0] }}{{ current_user.last_name[0] }}</span>
+                                </div>
+                                {% endif %}
+                                <span class="absolute bottom-1 right-1 h-4 w-4 bg-green-500 rounded-full ring-2 ring-white dark:ring-gray-800"></span>
+                                <div class="absolute inset-0 rounded-full bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity ring-4 ring-primary/20">
+                                    <span class="material-symbols-outlined text-white text-2xl">photo_camera</span>
+                                </div>
+                                <input type="file" id="imageInput" accept="image/png,image/jpeg,image/jpg,image/gif,image/webp" class="hidden" onchange="uploadImage(this)" />
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <h2 class="text-xl md:text-2xl font-bold text-gray-800 dark:text-white mb-1">{{ current_user.full_name() }}</h2>
+                                <p class="text-gray-600 dark:text-gray-400 text-sm md:text-base mb-2">{{ class_info.class_room_name if class_info else 'No class assigned' }}</p>
+                                <div class="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
+                                    <span class="material-symbols-outlined text-base">mail</span>
+                                    <span class="truncate">{{ current_user.email if current_user.email else 'No email provided' }}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="p-4 md:p-6">
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
+                            <div class="bg-gradient-to-r from-blue-500 to-blue-600 text-white px-3 py-3 rounded-xl shadow-md text-center">
+                                <p class="text-lg md:text-2xl font-bold">{{ enrolled_subjects|length }}</p>
+                                <p class="text-xs opacity-90">Subjects</p>
+                            </div>
+                            <div class="bg-gradient-to-r from-green-500 to-green-600 text-white px-3 py-3 rounded-xl shadow-md text-center">
+                                <p class="text-lg md:text-2xl font-bold">{{ completed_exams_count }}</p>
+                                <p class="text-xs opacity-90">Exams Done</p>
+                            </div>
+                            <div class="bg-gradient-to-r from-purple-500 to-purple-600 text-white px-3 py-3 rounded-xl shadow-md text-center">
+                                <p class="text-lg md:text-2xl font-bold">{{ average_score }}%</p>
+                                <p class="text-xs opacity-90">Avg Score</p>
+                            </div>
+                            <div class="bg-gradient-to-r from-orange-500 to-orange-600 text-white px-3 py-3 rounded-xl shadow-md text-center">
+                                <p class="text-lg md:text-2xl font-bold">{{ best_score }}%</p>
+                                <p class="text-xs opacity-90">Best Score</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Profile Information Form -->
+            <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-100 dark:border-gray-700 overflow-hidden">
+                <div class="p-4 md:p-6 border-b border-gray-100 dark:border-gray-700">
+                    <h2 class="text-lg md:text-xl font-bold text-gray-800 dark:text-white">Personal Information</h2>
+                    <p class="text-xs md:text-sm text-gray-600 dark:text-gray-400 mt-1">Update your personal details</p>
+                </div>
+
+                <form id="profileForm" class="p-4 md:p-6 space-y-4 md:space-y-6">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-6">
+                        <!-- First Name -->
+                        <div class="space-y-2">
+                            <label for="first_name" class="text-sm font-semibold text-gray-700 dark:text-gray-300">First Name</label>
+                            <input type="text" id="first_name" name="first_name" value="{{ current_user.first_name }}"
+                                class="w-full px-3 py-2 md:px-4 md:py-3 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition shadow-sm hover:shadow-md text-sm md:text-base" />
+                        </div>
+
+                        <!-- Last Name -->
+                        <div class="space-y-2">
+                            <label for="last_name" class="text-sm font-semibold text-gray-700 dark:text-gray-300">Last Name</label>
+                            <input type="text" id="last_name" name="last_name" value="{{ current_user.last_name }}"
+                                class="w-full px-3 py-2 md:px-4 md:py-3 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition shadow-sm hover:shadow-md text-sm md:text-base" />
+                        </div>
+
+                        <!-- Email Address -->
+                        <div class="space-y-2">
+                            <label for="email" class="text-sm font-semibold text-gray-700 dark:text-gray-300">Email Address</label>
+                            <input type="email" id="email" name="email" value="{{ current_user.email if current_user.email else '' }}"
+                                class="w-full px-3 py-2 md:px-4 md:py-3 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition shadow-sm hover:shadow-md text-sm md:text-base" />
+                        </div>
+
+                        <!-- Phone / Parent Phone -->
+                        <div class="space-y-2">
+                            <label for="phone" class="text-sm font-semibold text-gray-700 dark:text-gray-300">Parent Phone</label>
+                            <input type="tel" id="phone" name="phone" value="{{ student_profile.parent_phone if student_profile and student_profile.parent_phone else '' }}"
+                                class="w-full px-3 py-2 md:px-4 md:py-3 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition shadow-sm hover:shadow-md text-sm md:text-base" />
+                        </div>
+                    </div>
+
+                    <!-- Additional Information -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-6 pt-4 md:pt-6 border-t border-gray-100 dark:border-gray-700">
+                        <!-- Parent Name -->
+                        <div class="space-y-2">
+                            <label for="parent_name" class="text-sm font-semibold text-gray-700 dark:text-gray-300">Parent/Guardian Name</label>
+                            <input type="text" id="parent_name" name="parent_name" value="{{ student_profile.parent_name if student_profile and student_profile.parent_name else '' }}"
+                                class="w-full px-3 py-2 md:px-4 md:py-3 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition shadow-sm hover:shadow-md text-sm md:text-base" />
+                        </div>
+
+                        <!-- Blood Group -->
+                        <div class="space-y-2">
+                            <label for="blood_group" class="text-sm font-semibold text-gray-700 dark:text-gray-300">Blood Group</label>
+                            <select id="blood_group" name="blood_group"
+                                class="w-full px-3 py-2 md:px-4 md:py-3 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition shadow-sm hover:shadow-md text-sm md:text-base">
+                                <option value="">Select blood group</option>
+                                {% set bg = student_profile.blood_group if student_profile and student_profile.blood_group else '' %}
+                                <option value="A+" {% if bg == 'A+' %}selected{% endif %}>A+</option>
+                                <option value="A-" {% if bg == 'A-' %}selected{% endif %}>A-</option>
+                                <option value="B+" {% if bg == 'B+' %}selected{% endif %}>B+</option>
+                                <option value="B-" {% if bg == 'B-' %}selected{% endif %}>B-</option>
+                                <option value="AB+" {% if bg == 'AB+' %}selected{% endif %}>AB+</option>
+                                <option value="AB-" {% if bg == 'AB-' %}selected{% endif %}>AB-</option>
+                                <option value="O+" {% if bg == 'O+' %}selected{% endif %}>O+</option>
+                                <option value="O-" {% if bg == 'O-' %}selected{% endif %}>O-</option>
+                            </select>
+                        </div>
+
+                        <!-- Address -->
+                        <div class="space-y-2 sm:col-span-2">
+                            <label for="address" class="text-sm font-semibold text-gray-700 dark:text-gray-300">Address</label>
+                            <textarea id="address" name="address" rows="2"
+                                class="w-full px-3 py-2 md:px-4 md:py-3 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition shadow-sm hover:shadow-md text-sm md:text-base resize-none">{{ student_profile.address if student_profile and student_profile.address else '' }}</textarea>
+                        </div>
+
+                        <!-- Username (Read-only) -->
+                        <div class="space-y-2">
+                            <label class="text-sm font-semibold text-gray-700 dark:text-gray-300">Username</label>
+                            <input type="text" value="{{ current_user.username }}" readonly
+                                class="w-full px-3 py-2 md:px-4 md:py-3 rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-500 dark:text-gray-400 outline-none cursor-not-allowed text-sm md:text-base" />
+                        </div>
+
+                        <!-- Class (Read-only) -->
+                        <div class="space-y-2">
+                            <label class="text-sm font-semibold text-gray-700 dark:text-gray-300">Class</label>
+                            <input type="text" value="{{ class_info.class_room_name if class_info else 'Not assigned' }}" readonly
+                                class="w-full px-3 py-2 md:px-4 md:py-3 rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-500 dark:text-gray-400 outline-none cursor-not-allowed text-sm md:text-base" />
+                        </div>
+                    </div>
+
+                    <!-- Enrolled Subjects (Read-only) -->
+                    {% if enrolled_subjects %}
+                    <div class="space-y-3 pt-4 md:pt-6 border-t border-gray-100 dark:border-gray-700">
+                        <label class="text-sm font-semibold text-gray-700 dark:text-gray-300">Enrolled Subjects</label>
+                        <div class="flex gap-2 md:gap-3 overflow-x-auto pb-2 -mx-1 px-1 scrollbar-thin">
+                            {% set colors = ['blue', 'purple', 'green', 'orange', 'teal', 'red'] %}
+                            {% for subject in enrolled_subjects %}
+                            {% set color = colors[loop.index0 % colors|length] %}
+                            <span class="flex-shrink-0 flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-{{ color }}-100 to-{{ color }}-200 dark:from-{{ color }}-900/30 dark:to-{{ color }}-800/30 text-{{ color }}-700 dark:text-{{ color }}-300 rounded-full text-xs md:text-sm font-semibold whitespace-nowrap">
+                                <span class="material-symbols-outlined text-sm">book</span>
+                                <span>{{ subject.subject_name }}</span>
+                            </span>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+                </form>
+
+                <!-- Action Buttons -->
+                <div class="p-4 md:p-6 border-t border-gray-100 dark:border-gray-700 flex flex-col sm:flex-row gap-3">
+                    <button type="button" id="saveProfileBtn" onclick="saveProfile()" class="flex-1 flex items-center justify-center gap-2 px-4 py-2 md:px-6 md:py-3 bg-gradient-to-r from-primary to-blue-600 hover:from-primary/90 hover:to-blue-600/90 text-white rounded-xl shadow-md hover:shadow-lg transition-all duration-200 font-semibold text-sm md:text-base">
+                        <span class="material-symbols-outlined text-base md:text-lg">save</span>
+                        Save Changes
+                    </button>
+                    <button type="button" onclick="location.reload()" class="flex-1 flex items-center justify-center gap-2 px-4 py-2 md:px-6 md:py-3 bg-gray-100 dark:bg-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-500 rounded-xl shadow-md hover:shadow-lg transition-all duration-200 font-semibold text-sm md:text-base">
+                        <span class="material-symbols-outlined text-base md:text-lg">cancel</span>
+                        Cancel
+                    </button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Toast Container -->
+    <div id="toastContainer" class="fixed top-6 right-4 z-[9999] flex flex-col gap-2 pointer-events-none"></div>
+
+    <script>
+    function showAlert({ title, message, type, confirmText, onConfirm }) {
+        const container = document.getElementById('toastContainer');
+        const colors = {
+            success: 'border-green-300 bg-green-600',
+            error: 'border-red-300 bg-red-600',
+            info: 'border-blue-300 bg-blue-600',
+        };
+        const icons = {
+            success: 'check_circle',
+            error: 'error',
+            info: 'info',
+        };
+        const toast = document.createElement('div');
+        toast.className = `flex items-center gap-3 px-5 py-3.5 rounded-xl border-2 ${colors[type] || colors.info} shadow-2xl text-white text-sm font-semibold transform transition-all duration-300 translate-x-full opacity-0 pointer-events-auto max-w-sm`;
+        toast.innerHTML = `<span class="material-symbols-outlined text-lg">${icons[type] || 'info'}</span><span>${message}</span>`;
+        container.appendChild(toast);
+        requestAnimationFrame(() => { toast.classList.remove('translate-x-full', 'opacity-0'); });
+        setTimeout(() => {
+            toast.classList.add('translate-x-full', 'opacity-0');
+            setTimeout(() => { toast.remove(); }, 300);
+            if (onConfirm) onConfirm();
+        }, 3000);
+    }
+
+    async function saveProfile() {
+        const btn = document.getElementById('saveProfileBtn');
+        const originalText = btn.innerHTML;
+        btn.innerHTML = '<span class="material-symbols-outlined text-base md:text-lg animate-spin">progress_activity</span> Saving...';
+        btn.disabled = true;
+
+        try {
+            const data = {
+                first_name: document.getElementById('first_name').value.trim(),
+                last_name: document.getElementById('last_name').value.trim(),
+                email: document.getElementById('email').value.trim(),
+                phone: document.getElementById('phone').value.trim(),
+                parent_name: document.getElementById('parent_name').value.trim(),
+                blood_group: document.getElementById('blood_group').value,
+                address: document.getElementById('address').value.trim(),
+            };
+
+            const response = await fetch(window.location.href, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                showAlert({
+                    title: 'Success',
+                    message: result.message || 'Profile updated successfully',
+                    type: 'success',
+                    confirmText: 'OK',
+                    onConfirm: () => location.reload()
+                });
+            } else {
+                showAlert({
+                    title: 'Error',
+                    message: result.message || 'Failed to update profile',
+                    type: 'error',
+                    confirmText: 'OK'
+                });
+            }
+        } catch (error) {
+            showAlert({
+                title: 'Error',
+                message: 'An error occurred while saving',
+                type: 'error',
+                confirmText: 'OK'
+            });
+        } finally {
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+        }
+    }
+
+    async function uploadImage(input) {
+        const file = input.files[0];
+        if (!file) return;
+
+        if (file.size > 5 * 1024 * 1024) {
+            showAlert({ title: 'Error', message: 'Image must be less than 5MB', type: 'error', confirmText: 'OK' });
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append('profile_image', file);
+
+        try {
+            const response = await fetch(window.location.href, {
+                method: 'POST',
+                body: formData
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                const img = document.getElementById('profileImage');
+                if (img.tagName === 'IMG') {
+                    img.src = result.image_url;
+                } else {
+                    const newImg = document.createElement('img');
+                    newImg.id = 'profileImage';
+                    newImg.className = 'h-16 w-16 md:h-20 md:w-20 rounded-full object-cover ring-4 ring-primary/20';
+                    newImg.src = result.image_url;
+                    newImg.alt = 'Profile';
+                    img.parentNode.replaceChild(newImg, img);
+                }
+                showAlert({ title: 'Success', message: 'Profile image updated', type: 'success', confirmText: 'OK' });
+            } else {
+                showAlert({ title: 'Error', message: result.message || 'Failed to upload image', type: 'error', confirmText: 'OK' });
+            }
+        } catch (error) {
+            showAlert({ title: 'Error', message: 'Failed to upload image', type: 'error', confirmText: 'OK' });
+        }
+
+        input.value = '';
+    }
+    </script>
+    <script>
+    (function() {
+        if (sessionStorage.getItem('session_active')) return;
+        var cookies = document.cookie.split(';');
+        for (var i = 0; i < cookies.length; i++) {
+            var parts = cookies[i].trim().split('=');
+            if (parts[0] === 'session_type' && parts[1] === 'permanent') return;
+        }
+        fetch('/logout', { method: 'POST' }).then(function() {
+            window.location.href = '/login';
+        });
+    })();
+    </script>
+</body>
+
+</html>

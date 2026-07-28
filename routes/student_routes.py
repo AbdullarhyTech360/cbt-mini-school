@@ -8,8 +8,11 @@ from models.school_term import SchoolTerm
 from models.permissions import Permission
 from models.grade_scale import GradeScale
 from models.associations import student_subject, student_exam, class_subject
+from models.student import Student
+from models.class_room import ClassRoom
 from datetime import datetime
 import random
+import os
 
 
 def check_student_exam_access(current_user, exam, exam_id):
@@ -99,10 +102,127 @@ def check_student_exam_access(current_user, exam, exam_id):
 
 
 def student_route(app):
-    @app.route('/student/profile')
+    @app.route('/student/profile', methods=['GET', 'POST'])
     def student_profile():
-        # return render_template('student/profile.html')
-        return "Student Profile"
+        if 'user_id' not in session:
+            return redirect(url_for('login'))
+
+        current_user = User.query.get(session['user_id'])
+        if not current_user:
+            flash('User not found.', 'error')
+            return redirect(url_for('login'))
+
+        # Handle POST - update profile
+        if request.method == 'POST':
+            try:
+                # Handle image upload (multipart form)
+                if request.content_type and 'multipart/form-data' in request.content_type:
+                    if 'profile_image' in request.files:
+                        file = request.files['profile_image']
+                        if file and file.filename:
+                            from werkzeug.utils import secure_filename
+                            import uuid
+                            original = secure_filename(file.filename)
+                            if original and '.' in original:
+                                ext = original.rsplit('.', 1)[1].lower()
+                                if ext in ('png', 'jpg', 'jpeg', 'gif', 'webp'):
+                                    unique_name = f"{uuid.uuid4().hex}.{ext}"
+                                    from utils.paths import get_profile_images_dir
+                                    upload_dir = get_profile_images_dir()
+                                    file_path = os.path.join(upload_dir, unique_name)
+                                    file.save(file_path)
+                                    # Delete old image if exists
+                                    if current_user.image and current_user.image.startswith('/uploads/'):
+                                        old_path = os.path.join(os.path.dirname(upload_dir), current_user.image.lstrip('/'))
+                                        if os.path.exists(old_path):
+                                            os.remove(old_path)
+                                    current_user.image = f"/uploads/profile_images/{unique_name}"
+                                    db.session.commit()
+                                    return jsonify({"success": True, "message": "Profile image updated", "image_url": current_user.image}), 200
+                        return jsonify({"success": False, "message": "No valid image file provided"}), 400
+
+                # Handle JSON (text fields)
+                data = request.get_json(silent=True) or {}
+
+                # Update User fields
+                if 'first_name' in data and data['first_name']:
+                    current_user.first_name = data['first_name'].strip()
+                if 'last_name' in data and data['last_name']:
+                    current_user.last_name = data['last_name'].strip()
+                if 'email' in data:
+                    current_user.email = data['email'].strip() if data['email'] else None
+                if 'phone' in data:
+                    # Update phone on Student model
+                    student_profile = current_user.student
+                    if student_profile:
+                        student_profile.parent_phone = data['phone'].strip() if data['phone'] else None
+                    else:
+                        student = Student(user_id=current_user.id, parent_phone=data['phone'].strip() if data['phone'] else None)
+                        db.session.add(student)
+                if 'parent_name' in data:
+                    student_profile = current_user.student
+                    if student_profile:
+                        student_profile.parent_name = data['parent_name'].strip() if data['parent_name'] else None
+                if 'address' in data:
+                    student_profile = current_user.student
+                    if student_profile:
+                        student_profile.address = data['address'].strip() if data['address'] else None
+                if 'blood_group' in data:
+                    student_profile = current_user.student
+                    if student_profile:
+                        student_profile.blood_group = data['blood_group'].strip() if data['blood_group'] else None
+
+                db.session.commit()
+                return jsonify({'success': True, 'message': 'Profile updated successfully'}), 200
+
+            except Exception as e:
+                db.session.rollback()
+                return jsonify({'success': False, 'message': f'Error updating profile: {str(e)}'}), 500
+
+        # GET - render profile
+        student_profile = current_user.student
+
+        # Get enrolled subjects
+        enrolled_subject_ids = list(db.session.execute(
+            db.select(student_subject.c.subject_id).where(student_subject.c.student_id == current_user.id)
+        ).scalars().all())
+        enrolled_subjects = Subject.query.filter(Subject.subject_id.in_(enrolled_subject_ids)).all() if enrolled_subject_ids else []
+
+        # Get class info
+        class_info = None
+        if current_user.class_room_id:
+            class_info = ClassRoom.query.get(current_user.class_room_id)
+
+        # Get exam stats
+        completed_exam_ids = list(db.session.execute(
+            db.select(student_exam.c.exam_id).where(student_exam.c.student_id == current_user.id)
+        ).scalars().all())
+        completed_exams_count = len(completed_exam_ids)
+
+        # Get average score
+        from models.exam_record import ExamRecord
+        average_score = 0
+        best_score = 0
+        if completed_exam_ids:
+            records = ExamRecord.query.filter(
+                ExamRecord.student_id == current_user.id,
+                ExamRecord.exam_id.in_(completed_exam_ids)
+            ).all()
+            scores = [r.score_percentage for r in records if r.score_percentage is not None]
+            if scores:
+                average_score = round(sum(scores) / len(scores), 1)
+                best_score = max(scores)
+
+        return render_template(
+            'student/profile.html',
+            current_user=current_user,
+            student_profile=student_profile,
+            enrolled_subjects=enrolled_subjects,
+            class_info=class_info,
+            completed_exams_count=completed_exams_count,
+            average_score=average_score,
+            best_score=best_score,
+        )
 
     @app.route('/student/quiz_instructions')
     def student_instructions():

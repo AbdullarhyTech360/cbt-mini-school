@@ -27,6 +27,20 @@
         .transition-transform {
             transition: transform 0.2s ease-in-out;
         }
+        /* Thin horizontal scrollbar */
+        .scrollbar-thin::-webkit-scrollbar {
+            height: 4px;
+        }
+        .scrollbar-thin::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .scrollbar-thin::-webkit-scrollbar-thumb {
+            background: #d1d5db;
+            border-radius: 2px;
+        }
+        .dark .scrollbar-thin::-webkit-scrollbar-thumb {
+            background: #4b5563;
+        }
     </style>
 </head>
 <body class="font-display bg-background-light dark:bg-background-dark">
@@ -70,8 +84,14 @@
                 </div>
                 <div id="staffCard" class="flex items-center gap-3 px-6 py-4 bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-700 mx-4 mt-4 rounded-xl shadow-sm border border-gray-200 dark:border-gray-600 transition-all duration-300">
                     <div class="relative flex-shrink-0">
-                        <img id="staffAvatar" class="h-12 w-12 rounded-full object-cover ring-2 ring-primary/20" data-alt="Staff avatar"
-                            src="https://lh3.googleusercontent.com/aida-public/AB6AXuAZx9wH3s7WLF7tI5V03nO7WDimNcyeOP0-ojFyb8k-eSfCqL5TPczJ1S6aPg61FLqenBL6x1wAquVE_gzaC3Uc4fqAWhc_eqnGM0_fQYaSWabREemao-VEkcs1qQ1JruP_ykQGdrgTHou8Ffpk_IqyNIQcKjk62hYlkfL8RNm8FYH2eU0eNTJi5-232xAxzrGyvljODTVj8PE1ceTrs-TdrK1rcmap-1O_MSB8orpHYaorm5wVuzfkkPD55-JWr6mOv_yimZ3Du-o" />
+                        {% if current_user and current_user.image %}
+                        <img id="staffAvatar" class="h-12 w-12 rounded-full object-cover ring-2 ring-primary/20"
+                            src="{{ current_user.image }}" alt="{{ current_user.full_name() }}" />
+                        {% else %}
+                        <div id="staffAvatar" class="h-12 w-12 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center ring-2 ring-primary/20">
+                            <span class="text-white font-bold text-lg">{{ current_user.first_name[0] }}{{ current_user.last_name[0] }}</span>
+                        </div>
+                        {% endif %}
                         <span class="absolute bottom-0 right-0 h-3 w-3 bg-green-500 rounded-full ring-2 ring-white dark:ring-gray-800"></span>
                     </div>
                     <div class="flex-1 min-w-0 sidebar-text transition-all duration-300">
@@ -82,7 +102,7 @@
                 <nav class="flex-1 overflow-y-auto overflow-x-hidden px-4 mt-6">
                     <ul class="flex flex-col gap-1">
                         {% block sidebar_nav %}
-                        <li><a class="flex h-11 items-center gap-3 rounded-lg px-4 {% if request.endpoint == 'staff_dashboard' %}bg-gradient-to-r from-primary to-blue-600 text-white shadow-md{% else %}text-gray-600 dark:text-gray-400 hover:bg-gradient-to-r hover:from-primary/10 hover:to-primary/5 hover:text-primary dark:hover:text-primary{% endif %} transition-all group" href="/staff/dashboard/{{ current_user.id }}">
+                        <li><a class="flex h-11 items-center gap-3 rounded-lg px-4 {% if request.endpoint == 'staff_dashboard' %}bg-gradient-to-r from-primary to-blue-600 text-white shadow-md{% else %}text-gray-600 dark:text-gray-400 hover:bg-gradient-to-r hover:from-primary/10 hover:to-primary/5 hover:text-primary dark:hover:text-primary{% endif %} transition-all group" href="/staff/dashboard">
                             <span class="material-symbols-outlined text-xl flex-shrink-0">dashboard</span>
                             <p class="text-sm font-semibold leading-tight truncate sidebar-text">Dashboard</p>
                         </a></li>
@@ -421,6 +441,19 @@
                 }
             }
         })();
+    </script>
+    <script>
+    (function() {
+        if (sessionStorage.getItem('session_active')) return;
+        var cookies = document.cookie.split(';');
+        for (var i = 0; i < cookies.length; i++) {
+            var parts = cookies[i].trim().split('=');
+            if (parts[0] === 'session_type' && parts[1] === 'permanent') return;
+        }
+        fetch('/logout', { method: 'POST' }).then(function() {
+            window.location.href = '/login';
+        });
+    })();
     </script>
 </body>
 </html>

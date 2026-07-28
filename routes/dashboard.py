@@ -5,13 +5,15 @@ from flask import flash, redirect, render_template, session, url_for
 from sqlalchemy import and_
 
 from models import User, db
-from models.associations import student_exam, student_subject
+from models.associations import student_exam, student_subject, teacher_subject, teacher_classroom
 from models.exam import Exam
 from models.exam_record import ExamRecord
 from models.subject import Subject
 from models.school import School
 from models.section import Section
 from models.school_term import SchoolTerm
+from models.class_room import ClassRoom
+from models.question import Question
 
 
 def admin_required(f):
@@ -74,18 +76,89 @@ def dashboard_route(app):
     @admin_required
     def admin_dashboard(user_id=None):
         total_users = db.session.query(User).count()
+        total_questions = Question.query.count()
+        total_exam_records = ExamRecord.query.count()
+        total_classes = ClassRoom.query.count()
+        total_subjects = Subject.query.count()
         current_date = datetime.now().strftime("%B %d, %Y")
         current_user = User.query.get(session["user_id"])
         school = School.query.first()
         has_sections = Section.query.first() is not None
         has_terms = SchoolTerm.query.first() is not None
+        current_term = SchoolTerm.query.filter_by(is_current=True).first()
         needs_setup = school and not school.setup_skipped and not has_sections and not has_terms
+
+        recent_activity = []
+        now = datetime.utcnow()
+
+        recent_users = User.query.order_by(User.created_at.desc()).limit(5).all()
+        for u in recent_users:
+            recent_activity.append({
+                "type": "user",
+                "title": "New User Registered",
+                "description": f"{u.first_name} {u.last_name} joined as {u.role.title()}",
+                "time": u.created_at,
+                "icon": "person_add",
+                "color": "blue",
+                "link": "/admin/user_management",
+            })
+
+        recent_questions = Question.query.order_by(Question.created_at.desc()).limit(5).all()
+        for q in recent_questions:
+            subj = Subject.query.get(q.subject_id)
+            recent_activity.append({
+                "type": "question",
+                "title": "Questions Uploaded",
+                "description": f"New {subj.subject_name if subj else ''} question added to the database",
+                "time": q.created_at,
+                "icon": "quiz",
+                "color": "purple",
+                "link": "/admin/questions",
+            })
+
+        recent_exams = Exam.query.order_by(Exam.created_at.desc()).limit(5).all()
+        for e in recent_exams:
+            recent_activity.append({
+                "type": "exam",
+                "title": "Exam Created",
+                "description": f"{e.name} scheduled for {e.date.strftime('%b %d, %Y') if e.date else 'TBD'}",
+                "time": e.created_at,
+                "icon": "edit_document",
+                "color": "green",
+                "link": "/admin/exams",
+            })
+
+        recent_activity.sort(key=lambda x: x["time"] if x["time"] else datetime.min, reverse=True)
+        recent_activity = recent_activity[:5]
+
+        for activity in recent_activity:
+            if activity["time"]:
+                diff = now - activity["time"]
+                if diff.days > 0:
+                    activity["time_ago"] = f"{diff.days} day{'s' if diff.days != 1 else ''} ago"
+                elif diff.seconds >= 3600:
+                    hours = diff.seconds // 3600
+                    activity["time_ago"] = f"{hours} hour{'s' if hours != 1 else ''} ago"
+                elif diff.seconds >= 60:
+                    minutes = diff.seconds // 60
+                    activity["time_ago"] = f"{minutes} minute{'s' if minutes != 1 else ''} ago"
+                else:
+                    activity["time_ago"] = "Just now"
+            else:
+                activity["time_ago"] = ""
+
         return render_template(
             "admin/dashboard.html",
             total_users=total_users,
+            total_questions=total_questions,
+            total_exam_records=total_exam_records,
+            total_classes=total_classes,
+            total_subjects=total_subjects,
             current_date=current_date,
             current_user=current_user,
+            current_term=current_term,
             needs_setup=needs_setup,
+            recent_activity=recent_activity,
         )
 
     @app.route("/staff/dashboard")
@@ -108,14 +181,155 @@ def dashboard_route(app):
                 return redirect(url_for("login", denied="Teacher dashboard access has been disabled by the administrator."))
         current_date = datetime.now().strftime("%B %d, %Y")
         current_user = User.query.get(session["user_id"])
-        # Fetch users with role 'student'
-        students = User.query.filter_by(role="student").all()
-        # print(students)
+
+        # Get teacher's assigned classes (from all sources)
+        assigned_class_ids = set()
+
+        # 1. Form-master classes
+        form_master_classes = ClassRoom.query.filter_by(form_teacher_id=current_user.id, is_active=True).all()
+        for cls in form_master_classes:
+            assigned_class_ids.add(cls.class_room_id)
+
+        # 2. Classes from teacher_subject association
+        subject_assignments = db.session.execute(
+            db.select(teacher_subject).where(teacher_subject.c.teacher_id == current_user.id)
+        ).fetchall()
+        for row in subject_assignments:
+            assigned_class_ids.add(row[2])  # class_room_id
+
+        # 3. Classes from teacher_classroom association
+        classroom_assignments = db.session.execute(
+            db.select(teacher_classroom).where(teacher_classroom.c.teacher_id == current_user.id)
+        ).fetchall()
+        for row in classroom_assignments:
+            assigned_class_ids.add(row[1])  # classroom_id
+
+        # Get ClassRoom objects
+        assigned_classes = ClassRoom.query.filter(
+            ClassRoom.class_room_id.in_(assigned_class_ids)
+        ).all() if assigned_class_ids else []
+
+        # Count students across all assigned classes
+        my_students_count = 0
+        if assigned_class_ids:
+            my_students_count = User.query.filter(
+                User.class_room_id.in_(assigned_class_ids),
+                User.role == "student",
+                User.is_active == True
+            ).count()
+
+        # Count questions created by this teacher
+        questions_count = Question.query.filter_by(teacher_id=current_user.id).count()
+
+        # Compute attendance rate for teacher's classes
+        from models.attendance import Attendance
+        current_term = SchoolTerm.query.filter_by(is_current=True).first()
+        attendance_rate = None
+        if assigned_class_ids and current_term:
+            total_records = Attendance.query.filter(
+                Attendance.class_room_id.in_(assigned_class_ids),
+                Attendance.term_id == current_term.term_id
+            ).count()
+            present_records = Attendance.query.filter(
+                Attendance.class_room_id.in_(assigned_class_ids),
+                Attendance.term_id == current_term.term_id,
+                Attendance.status == "present"
+            ).count()
+            if total_records > 0:
+                attendance_rate = round((present_records / total_records) * 100)
+
+        # Build class list with student counts and subject names for "My Classes Today"
+        classes_today = []
+        for cls in assigned_classes:
+            student_count = User.query.filter_by(
+                class_room_id=cls.class_room_id, role="student", is_active=True
+            ).count()
+            # Get subjects for this class from teacher_subject
+            cls_subject_ids = [row[1] for row in subject_assignments if row[2] == cls.class_room_id]
+            cls_subjects = Subject.query.filter(Subject.subject_id.in_(cls_subject_ids)).all() if cls_subject_ids else []
+            subject_names = ", ".join([s.subject_name for s in cls_subjects]) if cls_subjects else "General"
+            classes_today.append({
+                "class": cls,
+                "student_count": student_count,
+                "subject_names": subject_names,
+            })
+
+        # Get recent activity (last 3 actions from this teacher)
+        recent_activity = []
+
+        # Recent grade updates
+        from models.grade import Grade
+        recent_grades = Grade.query.filter_by(teacher_id=current_user.id).order_by(Grade.updated_at.desc()).limit(3).all()
+        for grade in recent_grades:
+            subj = Subject.query.get(grade.subject_id)
+            cls = ClassRoom.query.get(grade.class_room_id)
+            recent_activity.append({
+                "type": "scores",
+                "title": "Scores Updated",
+                "description": f"Updated {subj.subject_name if subj else 'subject'} scores for {cls.class_room_name if cls else 'class'}",
+                "time": grade.updated_at,
+                "icon": "edit_note",
+                "color": "blue",
+            })
+
+        # Recent attendance
+        recent_attendance = Attendance.query.filter_by(marked_by_id=current_user.id).order_by(Attendance.created_at.desc()).limit(3).all()
+        for att in recent_attendance:
+            cls = ClassRoom.query.get(att.class_room_id)
+            recent_activity.append({
+                "type": "attendance",
+                "title": "Attendance Recorded",
+                "description": f"Marked attendance for {cls.class_room_name if cls else 'class'}",
+                "time": att.created_at,
+                "icon": "checklist",
+                "color": "purple",
+            })
+
+        # Recent question uploads
+        recent_questions = Question.query.filter_by(teacher_id=current_user.id).order_by(Question.created_at.desc()).limit(3).all()
+        for q in recent_questions:
+            subj = Subject.query.get(q.subject_id)
+            recent_activity.append({
+                "type": "questions",
+                "title": "Questions Uploaded",
+                "description": f"Added new {subj.subject_name if subj else ''} question",
+                "time": q.created_at,
+                "icon": "upload_file",
+                "color": "green",
+            })
+
+        # Sort by time and take top 3
+        recent_activity.sort(key=lambda x: x["time"] if x["time"] else datetime.min, reverse=True)
+        recent_activity = recent_activity[:3]
+
+        # Compute time ago strings for activity
+        from datetime import timedelta
+        now = datetime.utcnow()
+        for activity in recent_activity:
+            if activity["time"]:
+                diff = now - activity["time"]
+                if diff.days > 0:
+                    activity["time_ago"] = f"{diff.days} day{'s' if diff.days != 1 else ''} ago"
+                elif diff.seconds >= 3600:
+                    hours = diff.seconds // 3600
+                    activity["time_ago"] = f"{hours} hour{'s' if hours != 1 else ''} ago"
+                elif diff.seconds >= 60:
+                    minutes = diff.seconds // 60
+                    activity["time_ago"] = f"{minutes} minute{'s' if minutes != 1 else ''} ago"
+                else:
+                    activity["time_ago"] = "Just now"
+            else:
+                activity["time_ago"] = ""
+
         return render_template(
             "staff/dashboard.html",
             current_date=current_date,
             current_user=current_user,
-            students=students,
+            my_students_count=my_students_count,
+            questions_count=questions_count,
+            attendance_rate=attendance_rate,
+            classes_today=classes_today,
+            recent_activity=recent_activity,
         )
 
     @app.route("/student/dashboard")
