@@ -32,6 +32,7 @@ from .student_class_history import StudentClassHistory
 from .promotion_rule import PromotionRule
 from .promotion_batch import PromotionBatch
 from .student_promotion import StudentPromotion
+from .on_the_go_test import OnTheGoTest, OnTheGoResult, OnTheGoTestSession, student_on_the_go_test
 
 # Helper function to check if a permission is active
 def is_permission_active(permission_name):

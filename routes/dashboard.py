@@ -8,6 +8,7 @@ from models import User, db
 from models.associations import student_exam, student_subject, teacher_subject, teacher_classroom
 from models.exam import Exam
 from models.exam_record import ExamRecord
+from models.on_the_go_test import OnTheGoTest
 from models.subject import Subject
 from models.school import School
 from models.section import Section
@@ -174,11 +175,13 @@ def dashboard_route(app):
         # Check appropriate dashboard permission based on user role
         if current_user.role == "staff":
             if not is_permission_active("staff_can_view_dashboard"):
-                return redirect(url_for("login", denied="Staff dashboard access has been disabled by the administrator."))
+                flash("Staff dashboard access has been disabled by the administrator.", "error")
+                return redirect(url_for("login"))
         else:
             # Teachers (and admins accessing staff routes)
             if not is_permission_active("teachers_can_view_dashboard"):
-                return redirect(url_for("login", denied="Teacher dashboard access has been disabled by the administrator."))
+                flash("Teacher dashboard access has been disabled by the administrator.", "error")
+                return redirect(url_for("login"))
         current_date = datetime.now().strftime("%B %d, %Y")
         current_user = User.query.get(session["user_id"])
 
@@ -345,7 +348,8 @@ def dashboard_route(app):
         # Check if students are allowed to view dashboard (bypass for demo users)
         is_demo_user = "demo" in current_user.username.lower()
         if not is_demo_user and not is_permission_active("students_can_view_dashboard"):
-            return redirect(url_for("login", denied="Student dashboard access has been disabled by the administrator."))
+            flash("Student dashboard access has been disabled by the administrator.", "error")
+            return redirect(url_for("login"))
 
         # Check if students can write exams permission is active
         can_write_exams = is_permission_active("students_can_write_exam")
@@ -409,13 +413,21 @@ def dashboard_route(app):
                         Exam.subject_id.in_(enrolled_subject_ids)
                     )
 
-                # Add time filter
+                # Add time filter - exclude exams that have ended
                 available_exams_query = available_exams_query.filter(
                     and_(
                         db.or_(
                             Exam.time_ended.is_(None),
                             Exam.time_ended > datetime.utcnow(),
                         )
+                    )
+                )
+
+                # Exclude past-date exams (allow On-The-Go which are ad-hoc)
+                available_exams_query = available_exams_query.filter(
+                    db.or_(
+                        Exam.is_on_the_go == True,
+                        Exam.date >= datetime.utcnow().date(),
                     )
                 )
 
@@ -512,12 +524,57 @@ def dashboard_route(app):
                 })
         upcoming_exams.sort(key=lambda x: x["days_until"])
 
+        # Fetch available On-The-Go tests for Quick Tests section
+        available_otg_tests = []
+        try:
+            from models.on_the_go_test import OnTheGoTest, student_on_the_go_test
+            otg_query = OnTheGoTest.query.filter(
+                OnTheGoTest.is_active == True,
+                OnTheGoTest.is_finished == False,
+            )
+
+            if not is_demo_user:
+                # Filter by enrolled subjects
+                if enrolled_subject_ids:
+                    otg_query = otg_query.filter(
+                        OnTheGoTest.subject_id.in_(enrolled_subject_ids)
+                    )
+                # Filter by class (null = all classes)
+                otg_query = otg_query.filter(
+                    db.or_(
+                        OnTheGoTest.class_room_id.is_(None),
+                        OnTheGoTest.class_room_id == current_user.class_room_id,
+                    )
+                )
+            else:
+                # Demo users see all active OTG tests
+                pass
+
+            # Exclude already completed
+            if completed_exam_ids:
+                # Note: completed_exam_ids is for Exam model — use student_on_the_go_test for OTG
+                pass
+
+            otg_completed_ids = list(db.session.execute(
+                db.select(student_on_the_go_test.c.on_the_go_test_id)
+                .where(student_on_the_go_test.c.student_id == current_user.id)
+            ).scalars().all())
+
+            if otg_completed_ids:
+                otg_query = otg_query.filter(~OnTheGoTest.id.in_(otg_completed_ids))
+
+            available_otg_tests = otg_query.order_by(OnTheGoTest.created_at.desc()).all()
+        except Exception as e:
+            print(f"Error fetching On-The-Go tests: {e}")
+            available_otg_tests = []
+
         from datetime import datetime
 
         return render_template(
             "student/dashboard.html",
             current_user=current_user,
             available_exams=exams_data,
+            available_otg_tests=available_otg_tests,
             enrolled_subjects=enrolled_subjects,
             total_subjects=total_subjects,
             total_available_exams=total_available_exams,

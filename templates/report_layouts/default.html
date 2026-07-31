@@ -423,6 +423,12 @@
                     <td class="label-cell">Percentage:</td>
                     <td class="value-cell">{{ overall_percentage }}%</td>
                 </tr>
+                <tr>
+                    <td class="label-cell">Pass Mark:</td>
+                    <td class="value-cell">{{ report_data.pass_mark|default(50) }}%</td>
+                    <td></td>
+                    <td></td>
+                </tr>
             </tbody>
         </table>
 

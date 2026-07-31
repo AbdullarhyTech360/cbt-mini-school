@@ -6,6 +6,7 @@
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
     <title>My Profile - Student Portal</title>
     <link href="{{ url_for('static', filename='dist/output.css') }}" rel="stylesheet">
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
     <style>
         body {
             min-height: max(884px, 100dvh);
@@ -259,6 +260,27 @@
         </div>
     </main>
 
+    <!-- Theme Preference -->
+    <div class="max-w-2xl mx-auto px-4 py-6">
+        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-4 md:p-6 border border-gray-100 dark:border-gray-700">
+            <h2 class="text-lg md:text-xl font-bold text-gray-800 dark:text-white flex items-center gap-2 mb-4">
+                <span class="material-symbols-outlined text-primary">palette</span>
+                Theme Preference
+            </h2>
+            <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">Choose your preferred interface theme.</p>
+            <div class="flex gap-3">
+                <button id="theme-light-btn" onclick="setStudentTheme('light')" class="flex-1 flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all duration-200 cursor-pointer">
+                    <span class="material-symbols-outlined text-3xl text-amber-500">light_mode</span>
+                    <span class="text-sm font-semibold text-gray-700 dark:text-gray-300">Light</span>
+                </button>
+                <button id="theme-dark-btn" onclick="setStudentTheme('dark')" class="flex-1 flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all duration-200 cursor-pointer">
+                    <span class="material-symbols-outlined text-3xl text-indigo-400">dark_mode</span>
+                    <span class="text-sm font-semibold text-gray-700 dark:text-gray-300">Dark</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- Toast Container -->
     <div id="toastContainer" class="fixed top-6 right-4 z-[9999] flex flex-col gap-2 pointer-events-none"></div>
 
@@ -383,19 +405,44 @@
 
         input.value = '';
     }
+
+    // Theme toggle
+    (function() {
+        if (localStorage.theme === "dark") document.documentElement.classList.add("dark");
+        var isDark = document.documentElement.classList.contains("dark");
+        var lightBtn = document.getElementById("theme-light-btn");
+        var darkBtn = document.getElementById("theme-dark-btn");
+        if (lightBtn && darkBtn) {
+            lightBtn.className = isDark
+                ? "flex-1 flex flex-col items-center gap-2 p-4 rounded-xl border-2 border-gray-200 dark:border-gray-600 transition-all duration-200 cursor-pointer bg-white dark:bg-gray-700/50"
+                : "flex-1 flex flex-col items-center gap-2 p-4 rounded-xl border-2 border-primary transition-all duration-200 cursor-pointer bg-primary/5";
+            darkBtn.className = isDark
+                ? "flex-1 flex flex-col items-center gap-2 p-4 rounded-xl border-2 border-primary transition-all duration-200 cursor-pointer bg-primary/5"
+                : "flex-1 flex flex-col items-center gap-2 p-4 rounded-xl border-2 border-gray-200 dark:border-gray-600 transition-all duration-200 cursor-pointer bg-white dark:bg-gray-700/50";
+        }
+    })();
     </script>
     <script>
-    (function() {
-        if (sessionStorage.getItem('session_active')) return;
-        var cookies = document.cookie.split(';');
-        for (var i = 0; i < cookies.length; i++) {
-            var parts = cookies[i].trim().split('=');
-            if (parts[0] === 'session_type' && parts[1] === 'permanent') return;
+    function setStudentTheme(mode) {
+        var html = document.documentElement;
+        if (mode === "dark") {
+            html.classList.add("dark");
+        } else {
+            html.classList.remove("dark");
         }
-        fetch('/logout', { method: 'POST' }).then(function() {
-            window.location.href = '/login';
-        });
-    })();
+        localStorage.theme = mode;
+        var isDark = html.classList.contains("dark");
+        var lightBtn = document.getElementById("theme-light-btn");
+        var darkBtn = document.getElementById("theme-dark-btn");
+        if (lightBtn && darkBtn) {
+            lightBtn.className = isDark
+                ? "flex-1 flex flex-col items-center gap-2 p-4 rounded-xl border-2 border-gray-200 dark:border-gray-600 transition-all duration-200 cursor-pointer bg-white dark:bg-gray-700/50"
+                : "flex-1 flex flex-col items-center gap-2 p-4 rounded-xl border-2 border-primary transition-all duration-200 cursor-pointer bg-primary/5";
+            darkBtn.className = isDark
+                ? "flex-1 flex flex-col items-center gap-2 p-4 rounded-xl border-2 border-primary transition-all duration-200 cursor-pointer bg-primary/5"
+                : "flex-1 flex flex-col items-center gap-2 p-4 rounded-xl border-2 border-gray-200 dark:border-gray-600 transition-all duration-200 cursor-pointer bg-white dark:bg-gray-700/50";
+        }
+    }
     </script>
 </body>
 

@@ -2,12 +2,15 @@
 <html class="light" lang="en">
 
 <head>
+    <script>if(localStorage.theme==="dark"||(!localStorage.theme&&window.matchMedia("(prefers-color-scheme:dark)").matches))document.documentElement.classList.add("dark")</script>
     <meta charset="utf-8" />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
     <title>{% block title %}Admin Panel{% endblock %}</title>
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
     <link href="{{ url_for('static', filename='dist/output.css') }}" rel="stylesheet" />
     <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&amp;display=swap"
         rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet" />
     <style>
         .material-symbols-outlined,
         .material-symbols-rounded,
@@ -39,9 +42,6 @@
                     CBT School
                 </p>
             </div>
-            <button id="mobileThemeToggle" class="text-gray-600 dark:text-gray-300 hover:text-primary transition p-1">
-                <span class="material-symbols-outlined text-2xl">dark_mode</span>
-            </button>
         </div>
     </nav>
 
@@ -180,6 +180,16 @@
                             </a>
                         </li>
                         <li>
+                            <a class="flex h-11 items-center gap-3 rounded-lg px-4 {% if request.endpoint == 'on_the_go_tests_page' %}bg-gradient-to-r from-primary to-blue-600 text-white shadow-md{% else %}text-gray-600 dark:text-gray-400 hover:bg-gradient-to-r hover:from-primary/10 hover:to-primary/5 hover:text-primary dark:hover:text-primary{% endif %} transition-all group"
+                                href="/admin/on-the-go-tests">
+                                <span
+                                    class="material-symbols-outlined text-xl group-hover:scale-110 transition-transform flex-shrink-0">bolt</span>
+                                <p class="text-sm font-semibold leading-tight truncate sidebar-text">
+                                    Quick Tests
+                                </p>
+                            </a>
+                        </li>
+                        <li>
                             <a class="flex h-11 items-center gap-3 rounded-lg px-4 {% if request.endpoint == 'promotion_page' %}bg-gradient-to-r from-primary to-blue-600 text-white shadow-md{% else %}text-gray-600 dark:text-gray-400 hover:bg-gradient-to-r hover:from-primary/10 hover:to-primary/5 hover:text-primary dark:hover:text-primary{% endif %} transition-all group"
                                 href="/admin/promotion">
                                 <span
@@ -269,6 +279,16 @@
                         </li>
 
                         <li>
+                            <a class="flex h-11 items-center gap-3 rounded-lg px-4 {% if request.endpoint == 'admin_profile' %}bg-gradient-to-r from-primary to-blue-600 text-white shadow-md{% else %}text-gray-600 dark:text-gray-400 hover:bg-gradient-to-r hover:from-primary/10 hover:to-primary/5 hover:text-primary dark:hover:text-primary{% endif %} transition-all group"
+                                href="/admin/profile">
+                                <span
+                                    class="material-symbols-outlined text-xl group-hover:scale-110 transition-transform flex-shrink-0">person</span>
+                                <p class="text-sm font-semibold leading-tight truncate sidebar-text">
+                                    My Profile
+                                </p>
+                            </a>
+                        </li>
+                        <li>
                             <a class="flex h-11 items-center gap-3 rounded-lg px-4 {% if request.endpoint == 'settings' %}bg-gradient-to-r from-primary to-blue-600 text-white shadow-md{% else %}text-gray-600 dark:text-gray-400 hover:bg-gradient-to-r hover:from-primary/10 hover:to-primary/5 hover:text-primary dark:hover:text-primary{% endif %} transition-all group"
                                 href="/admin/settings">
                                 <span
@@ -300,59 +320,9 @@
     </div>
     {% block modals %}{% endblock %}
     <script>
-        // Dark Mode Toggle
+        // Apply saved theme
         const html = document.documentElement;
         if (localStorage.theme === "dark") html.classList.add("dark");
-
-        const themeToggle = document.createElement("button");
-        themeToggle.id = "themeToggle";
-        themeToggle.className =
-            "flex items-center justify-center h-10 w-10 rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:shadow-lg transition-all duration-200 text-gray-600 dark:text-gray-300";
-        themeToggle.innerHTML =
-            '<span class="material-symbols-outlined text-xl">dark_mode</span>';
-
-        const main = document.querySelector("main");
-        const existingHeader = main.querySelector("header");
-        if (existingHeader) {
-            existingHeader.appendChild(themeToggle);
-        } else {
-            const header = document.createElement("header");
-            header.className =
-                "flex flex-wrap items-center justify-between gap-4";
-            header.appendChild(themeToggle);
-            main.insertBefore(header, main.firstChild);
-        }
-
-        themeToggle.addEventListener("click", () => {
-            html.classList.toggle("dark");
-            localStorage.theme = html.classList.contains("dark")
-                ? "dark"
-                : "light";
-            updateThemeIcon();
-        });
-
-        const mobileThemeToggle =
-            document.getElementById("mobileThemeToggle");
-        if (mobileThemeToggle) {
-            mobileThemeToggle.addEventListener("click", () => {
-                html.classList.toggle("dark");
-                localStorage.theme = html.classList.contains("dark")
-                    ? "dark"
-                    : "light";
-                updateThemeIcon();
-            });
-        }
-
-        function updateThemeIcon() {
-            const icon = html.classList.contains("dark")
-                ? "light_mode"
-                : "dark_mode";
-            themeToggle.innerHTML = `<span class="material-symbols-outlined text-xl">${icon}</span>`;
-            if (mobileThemeToggle) {
-                mobileThemeToggle.innerHTML = `<span class="material-symbols-outlined text-2xl">${icon}</span>`;
-            }
-        }
-        updateThemeIcon();
 
         // Sidebar Toggle for Mobile
         const sidebar = document.getElementById("sidebar");
@@ -461,79 +431,35 @@
             });
         }
 
-        // Ensure admin profile link exists in the sidebar (persistent)
-        // This adds a "My Profile" entry if it's not already present.
-        (function ensureAdminProfileLink() {
-            try {
-                const navList = document.querySelector("#sidebar nav ul");
-                if (!navList) return;
 
-                // If there's already a link to /admin/profile, do nothing
-                if (navList.querySelector('a[href="/admin/profile"]'))
-                    return;
-
-                // Build the list item
-                const li = document.createElement("li");
-                li.innerHTML =
-                    "" +
-                    '<a class="flex h-11 items-center gap-3 rounded-lg px-4 text-gray-600 dark:text-gray-400 hover:bg-gradient-to-r hover:from-primary/10 hover:to-primary/5 hover:text-primary dark:hover:text-primary transition-all group" href="/admin/profile">' +
-                    '<span class="material-symbols-outlined text-xl flex-shrink-0">person</span>' +
-                    '<p class="text-sm font-semibold leading-tight truncate sidebar-text">My Profile</p>' +
-                    "</a>";
-
-                // Prefer inserting before Settings link for visibility
-                const settingsLi = navList.querySelector(
-                    'a[href="/admin/settings"]',
-                )?.parentElement;
-                if (settingsLi && settingsLi.parentElement) {
-                    settingsLi.parentElement.insertBefore(li, settingsLi);
-                } else {
-                    navList.appendChild(li);
-                }
-            } catch (e) {
-                // don't break the rest of the sidebar functionality
-                console.error("ensureAdminProfileLink error:", e);
-            }
-        })();
     </script>
     <script src="{{ url_for('static', filename='js/components/modal.js') }}"></script>
     {% block scripts_bottom %}{% endblock %}
     <div id="toastContainer" class="fixed top-6 right-4 z-[9999] flex flex-col gap-2 pointer-events-none"></div>
     <script>
         (function() {
-            var params = new URLSearchParams(window.location.search);
-            var denied = params.get('denied');
-            if (denied) {
-                var container = document.getElementById('toastContainer');
-                if (container) {
-                    var toast = document.createElement('div');
-                    toast.className = 'flex items-center gap-3 px-5 py-3.5 rounded-xl border-2 border-red-300 bg-red-600 shadow-2xl text-white text-sm font-semibold transform transition-all duration-300 translate-x-full opacity-0 pointer-events-auto';
-                    toast.innerHTML = '<span class="material-symbols-outlined text-lg">block</span><span>' + denied + '</span>';
-                    container.appendChild(toast);
-                    requestAnimationFrame(function() { toast.classList.remove('translate-x-full', 'opacity-0'); });
-                    setTimeout(function() {
-                        toast.classList.add('translate-x-full', 'opacity-0');
-                        setTimeout(function() { toast.remove(); }, 300);
-                    }, 5000);
-                }
-                if (window.history.replaceState) {
-                    window.history.replaceState({}, document.title, window.location.pathname);
-                }
-            }
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        (function() {
+                            var container = document.getElementById('toastContainer');
+                            if (container) {
+                                var toast = document.createElement('div');
+                                var bgClass = '{{ "bg-red-600 border-red-300" if category == "error" else "bg-primary border-primary/50" }}';
+                                toast.className = 'flex items-center gap-3 px-5 py-3.5 rounded-xl border-2 ' + bgClass + ' shadow-2xl text-white text-sm font-semibold transform transition-all duration-300 translate-x-full opacity-0 pointer-events-auto';
+                                toast.innerHTML = '<span class="material-symbols-outlined text-lg">block</span><span>' + {{ message|tojson|safe }} + '</span>';
+                                container.appendChild(toast);
+                                requestAnimationFrame(function() { toast.classList.remove('translate-x-full', 'opacity-0'); });
+                                setTimeout(function() {
+                                    toast.classList.add('translate-x-full', 'opacity-0');
+                                    setTimeout(function() { toast.remove(); }, 300);
+                                }, 5000);
+                            }
+                        })();
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
         })();
-    </script>
-    <script>
-    (function() {
-        if (sessionStorage.getItem('session_active')) return;
-        var cookies = document.cookie.split(';');
-        for (var i = 0; i < cookies.length; i++) {
-            var parts = cookies[i].trim().split('=');
-            if (parts[0] === 'session_type' && parts[1] === 'permanent') return;
-        }
-        fetch('/logout', { method: 'POST' }).then(function() {
-            window.location.href = '/login';
-        });
-    })();
     </script>
 </body>
 

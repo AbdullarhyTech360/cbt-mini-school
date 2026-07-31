@@ -1,0 +1,16 @@
+<svg width="100%" viewBox="190 30 300 300" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg3" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#123C69"/>
+      <stop offset="100%" stop-color="#0E8C6B"/>
+    </linearGradient>
+    <mask id="text-gap-mask" maskUnits="userSpaceOnUse">
+      <rect x="190" y="30" width="300" height="300" fill="white"/>
+      <rect x="238.76" y="105.8" width="202.7" height="161.2" fill="black" rx="2"/>
+    </mask>
+  </defs>
+  <rect x="190" y="30" width="300" height="300" rx="62" fill="url(#bg3)"/>
+  <path d="M 400 60 L 440 60 L 440 100 Z" fill="#FFFFFF" opacity="0.25"/>
+  <text x="340" y="235" text-anchor="middle" fill="#FFFFFF" font-size="140" font-weight="500" font-family="sans-serif">DA</text>
+  <path d="M 268 250 L 300 282 L 372 190" fill="none" stroke="#F4C430" stroke-width="14" stroke-linecap="round" stroke-linejoin="round" mask="url(#text-gap-mask)"/>
+</svg>

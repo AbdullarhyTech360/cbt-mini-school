@@ -251,10 +251,11 @@ def student_route(app):
             return redirect(url_for('student_dashboard'))
 
         # Get question count for this exam
-        # Note: Questions are linked to subject and class_room, not directly to exams
-        # Count all questions for this subject
-        question_count = Question.query.filter_by(
-            subject_id=exam.subject_id
+        from services.question_service import get_questions_for_exam
+        question_count = get_questions_for_exam(
+            subject_id=exam.subject_id,
+            class_room_id=exam.class_room_id,
+            term_id=exam.school_term_id
         ).count()
 
         # Get additional exam details
@@ -298,7 +299,22 @@ def student_route(app):
             return redirect(url_for('student_dashboard'))
 
         # Get the questions and build results
-        questions = Question.query.filter_by(subject_id=exam.subject_id).all()
+        from services.question_service import get_questions_for_exam
+        questions = get_questions_for_exam(
+            subject_id=exam.subject_id,
+            class_room_id=exam.class_room_id,
+            term_id=exam.school_term_id
+        ).all()
+
+        # Restore question order from exam session so feedback matches quiz order
+        completed_session = ExamSession.query.filter_by(
+            student_id=current_user.id,
+            exam_id=exam_id
+        ).order_by(ExamSession.created_at.desc()).first()
+        question_order = completed_session.get_question_order() if completed_session else []
+        if question_order:
+            ordered = {str(q.id): q for q in questions}
+            questions = [ordered[qid] for qid in question_order if qid in ordered]
         
         # Parse student answers from exam record
         try:
@@ -307,6 +323,16 @@ def student_route(app):
             student_answers = {}
 
         question_results = []
+        # Batch load selected options
+        answer_ids = [
+            v for v in student_answers.values()
+            if v and isinstance(v, str) and len(v) > 0
+        ]
+        batch_options = {}
+        if answer_ids:
+            for opt in Option.query.filter(Option.id.in_(answer_ids)).all():
+                batch_options[opt.id] = opt
+
         correct_count = 0
         incorrect_count = 0
         skipped_count = 0
@@ -324,7 +350,7 @@ def student_route(app):
                         correct_answer_text = opt.text
                         break
                 if student_answer:
-                    selected_option = Option.query.get(student_answer)
+                    selected_option = batch_options.get(student_answer)
                     if selected_option:
                         student_answer_text = selected_option.text
                         if selected_option.is_correct:
@@ -361,6 +387,24 @@ def student_route(app):
         score_percentage = exam_record.score_percentage
         letter_grade = exam_record.letter_grade
 
+        # Look up pass mark
+        from models.promotion_rule import PromotionRule
+        pass_mark = 50
+        class_room = current_user.class_room
+        if class_room and class_room.section_id and class_room.level is not None:
+            from models import School
+            school = School.query.first()
+            if school:
+                rule = PromotionRule.query.filter_by(
+                    source_section_id=class_room.section_id,
+                    source_level=class_room.level,
+                    school_id=school.school_id,
+                    is_active=True,
+                ).first()
+                if rule and rule.min_average is not None:
+                    pass_mark = rule.min_average
+        passed = score_percentage >= pass_mark if score_percentage is not None else False
+
         return render_template(
             'student/exam_feedback.html',
             exam=exam,
@@ -373,6 +417,8 @@ def student_route(app):
             max_score=max_score,
             score_percentage=score_percentage,
             letter_grade=letter_grade,
+            pass_mark=pass_mark,
+            passed=passed,
             current_user=current_user,
         )
 
@@ -390,9 +436,23 @@ def student_route(app):
 
         # Get exam
         exam = Exam.query.get(exam_id)
-        # print("Exam: ", exam.__getattribute__('subject_id'))
         if not exam:
             flash('Exam not found', 'error')
+            return redirect(url_for('student_dashboard'))
+
+        # Check if exam has been finished by admin
+        if exam.is_finished:
+            flash('This exam has been completed and is no longer available', 'error')
+            return redirect(url_for('student_dashboard'))
+
+        # Check if exam date is in the future
+        if exam.date and exam.date.date() > datetime.utcnow().date():
+            flash('This exam is not yet available', 'error')
+            return redirect(url_for('student_dashboard'))
+
+        # Block missed exams whose scheduled date has passed (allow On-The-Go)
+        if not exam.is_on_the_go and exam.date and exam.date.date() < datetime.utcnow().date():
+            flash('This exam was scheduled for ' + exam.date.strftime('%B %d, %Y') + ' and is no longer available. Contact your teacher for assistance.', 'error')
             return redirect(url_for('student_dashboard'))
 
         # Check student exam access (enrollment + completion)
@@ -405,6 +465,21 @@ def student_route(app):
         if exam.time_ended and exam.time_ended < datetime.utcnow():
             flash('This exam has already ended', 'error')
             return redirect(url_for('student_dashboard'))
+
+        # Check for existing active session (prevent multi-session exploit)
+        existing_session = ExamSession.query.filter_by(
+            student_id=current_user.id,
+            exam_id=exam_id,
+            is_active=True,
+            is_completed=False
+        ).first()
+        if existing_session:
+            session['current_exam_id'] = exam_id
+            return render_template(
+                'student/cbt_test.html',
+                exam=exam,
+                current_user=current_user
+            )
 
         # Store exam_id in session for the test page
         session['current_exam_id'] = exam_id
@@ -434,10 +509,12 @@ def student_route(app):
         if not access['success']:
             return jsonify({"success": False, "message": access['error_message']}), 403
 
-        # Get questions for this exam (matching subject and class_room)
-        questions_query = Question.query.filter_by(
+        # Get questions for this exam (matching subject, class, and term)
+        from services.question_service import get_questions_for_exam
+        questions_query = get_questions_for_exam(
             subject_id=exam.subject_id,
-            class_room_id=exam.class_room_id
+            class_room_id=exam.class_room_id,
+            term_id=exam.school_term_id
         )
 
         # Get all available questions first
@@ -447,12 +524,7 @@ def student_route(app):
         if not all_questions:
             return jsonify({
                 "success": False,
-                "message": f"No questions found for {exam.subject.subject_name} in {exam.class_room.class_room_name}",
-                "debug_info": {
-                    "subject_id": exam.subject_id,
-                    "class_room_id": exam.class_room_id,
-                    "total_questions_in_db": Question.query.count()
-                }
+                "message": "No questions available for this exam. Please contact your teacher."
             }), 404
 
         # Apply number_of_questions limit if specified
@@ -481,8 +553,7 @@ def student_route(app):
                 options_data.append({
                     'id': option.id,
                     'text': option.text,
-                    'is_correct': option.is_correct,
-                    'order': i,  # New randomized order
+                    'order': i,
                     'has_math': getattr(option, 'has_math', False),
                     'option_image': getattr(option, 'option_image', None)
                 })
@@ -526,25 +597,84 @@ def student_route(app):
             data = request.get_json()
             answers = data.get('answers', {})
 
+            # Server-side time validation: find active session and check elapsed time
+            exam_session = ExamSession.query.filter_by(
+                student_id=current_user.id,
+                exam_id=exam_id,
+                is_active=True
+            ).first()
+
+            if not exam_session:
+                completed_session = ExamSession.query.filter_by(
+                    student_id=current_user.id,
+                    exam_id=exam_id,
+                    is_completed=True
+                ).first()
+                if completed_session:
+                    return jsonify({
+                        "success": False,
+                        "message": "You have already submitted this exam"
+                    }), 403
+                return jsonify({
+                    "success": False,
+                    "message": "No active exam session found. Please start the exam first."
+                }), 403
+
+            # Validate elapsed time against exam duration
+            if exam_session.started_at and exam.duration:
+                elapsed = (datetime.utcnow() - exam_session.started_at).total_seconds()
+                duration_seconds = exam.duration.total_seconds()
+                grace_period = 5
+                if elapsed > duration_seconds + grace_period:
+                    exam_session.is_active = False
+                    exam_session.is_completed = True
+                    exam_session.completed_at = datetime.utcnow()
+                    db.session.commit()
+                    return jsonify({
+                        "success": False,
+                        "message": "Time limit exceeded. Your exam could not be submitted."
+                    }), 403
+
             # Get questions for this exam - use same logic as get_exam_questions
             from models.question import Option
-            all_questions = Question.query.filter_by(
-                subject_id=exam.subject_id,
-                class_room_id=exam.class_room_id
+
+            # Use stored question order if available for accurate scoring
+            question_order = exam_session.get_question_order() if exam_session else []
+            if question_order:
+                questions_to_score = Question.query.filter(
+                    Question.id.in_(question_order)
             ).all()
-
-            if not all_questions:
-                return jsonify({"success": False, "message": "No questions found for this exam"}), 404
-
-            # Apply number_of_questions limit if specified (same as get_exam_questions)
-            if exam.number_of_questions and exam.number_of_questions < len(all_questions):
-                # Use the number_of_questions setting for scoring
-                # Note: We score based on submitted answers, not a specific subset
-                questions_to_score = all_questions  # Score any answered questions
-                total_questions = exam.number_of_questions  # But total is based on exam setting
+                total_questions = len(question_order) if question_order else exam.number_of_questions or len(questions_to_score)
             else:
-                questions_to_score = all_questions
-                total_questions = len(all_questions)
+                from services.question_service import get_questions_for_exam
+                all_questions = get_questions_for_exam(
+                    subject_id=exam.subject_id,
+                    class_room_id=exam.class_room_id,
+                    term_id=exam.school_term_id
+                ).all()
+
+                if not all_questions:
+                    return jsonify({"success": False, "message": "No questions found for this exam"}), 404
+
+                if exam.number_of_questions and exam.number_of_questions < len(all_questions):
+                    questions_to_score = all_questions
+                    total_questions = exam.number_of_questions
+                else:
+                    questions_to_score = all_questions
+                    total_questions = len(all_questions)
+
+            # Batch load all selected options to avoid N+1 queries
+            selected_option_ids = [
+                v for v in answers.values()
+                if v and isinstance(v, str) and len(v) > 0
+            ]
+            selected_options = {}
+            if selected_option_ids:
+                batch = Option.query.filter(
+                    Option.id.in_(selected_option_ids)
+                ).all()
+                for opt in batch:
+                    selected_options[opt.id] = opt
 
             # Calculate score - only count answers that were submitted
             correct_answers = 0
@@ -556,7 +686,7 @@ def student_route(app):
                 if student_answer:
                     # For MCQ and True/False, check if the selected option is correct
                     if question.question_type in ['mcq', 'multiple_choice', 'true_false']:
-                        selected_option = Option.query.get(student_answer)
+                        selected_option = selected_options.get(student_answer)
                         if selected_option and selected_option.is_correct:
                             correct_answers += 1
                     # For short answer, check if the answer matches (case insensitive)
@@ -625,79 +755,44 @@ def student_route(app):
             exam_record.raw_score = float(round(raw_score, 2))
             exam_record.max_score = float(exam.max_score)
             exam_record.letter_grade = str(letter_grade)
-            exam_record.started_at = datetime.utcnow()
+            exam_record.started_at = exam_session.started_at if exam_session and exam_session.started_at else datetime.utcnow()
             exam_record.submitted_at = datetime.utcnow()
             exam_record.set_answers(answers)  # Store answers as JSON
 
-            # Only save records for non-demo users (and respect save_after_completion for On-The-Go)
-            should_save = not is_demo_user
-            if exam.is_on_the_go and not exam.save_after_completion:
-                should_save = False
-            if should_save:
-                db.session.add(exam_record)
+            if not is_demo_user:
+                # Save ExamRecord only when full results should be persisted
+                if not (exam.is_on_the_go and not exam.save_after_completion):
+                    db.session.add(exam_record)
 
-                # Mark exam as completed by adding student to student_exam relationship
-                # This prevents retaking the exam
-                existing = db.session.execute(
-                    db.select(student_exam).where(
-                        (student_exam.c.student_id == current_user.id) &
-                        (student_exam.c.exam_id == exam_id)
-                    )
-                ).fetchone()
+                # Always save student_exam to lock completion and prevent retakes
+                from sqlalchemy.dialects.sqlite import insert as sqlite_insert
+                time_taken = None
+                if exam_session and exam_session.started_at:
+                    time_taken = int(
+                        (datetime.utcnow() - exam_session.started_at).total_seconds())
 
-                if not existing:
-                    # Calculate time taken (if exam session exists)
-                    time_taken = None
-                    exam_session = ExamSession.query.filter_by(
-                        student_id=current_user.id,
-                        exam_id=exam_id
-                    ).first()
-                    if exam_session and exam_session.started_at:
-                        time_taken = int(
-                            (datetime.utcnow() - exam_session.started_at).total_seconds())
-
-                    stmt = student_exam.insert().values(
-                        student_id=current_user.id,
-                        exam_id=exam_id,
-                        score=float(round(raw_score, 2)),
-                        completed_at=datetime.utcnow(),
-                        time_taken=time_taken
-                    )
-                    db.session.execute(stmt)
-                else:
-                    # Update existing record with score and completion time
-                    time_taken = None
-                    exam_session = ExamSession.query.filter_by(
-                        student_id=current_user.id,
-                        exam_id=exam_id
-                    ).first()
-                    if exam_session and exam_session.started_at:
-                        time_taken = int(
-                            (datetime.utcnow() - exam_session.started_at).total_seconds())
-
-                    stmt = student_exam.update().where(
-                        (student_exam.c.student_id == current_user.id) &
-                        (student_exam.c.exam_id == exam_id)
-                    ).values(
-                        score=float(round(raw_score, 2)),
-                        completed_at=datetime.utcnow(),
-                        time_taken=time_taken
-                    )
-                    db.session.execute(stmt)
+                stmt = sqlite_insert(student_exam).values(
+                    student_id=current_user.id,
+                    exam_id=exam_id,
+                    score=float(round(raw_score, 2)),
+                    completed_at=datetime.utcnow(),
+                    time_taken=time_taken
+                ).on_conflict_do_update(
+                    index_elements=['student_id', 'exam_id'],
+                    set_={
+                        'score': float(round(raw_score, 2)),
+                        'completed_at': datetime.utcnow(),
+                        'time_taken': time_taken
+                    }
+                )
+                db.session.execute(stmt)
 
                 db.session.commit()
-            else:
-                print(
-                    f"DEBUG: Skipping exam record save for demo user '{current_user.username}'")
 
-            # Mark exam session as completed
-            exam_session = ExamSession.query.filter_by(
-                student_id=current_user.id,
-                exam_id=exam_id,
-                is_active=True
-            ).first()
-
+            # Mark exam session as completed (reuse session from time validation)
             if exam_session:
+                # Refresh the session from DB to get latest state
+                db.session.refresh(exam_session)
                 exam_session.is_active = False
                 exam_session.is_completed = True
                 exam_session.completed_at = datetime.utcnow()
@@ -721,7 +816,6 @@ def student_route(app):
             else:
                 # Demo users always see results
                 show_results = True
-                show_results = True
 
             # Check if students can view dashboard to determine redirect URL
             from models import is_permission_active
@@ -731,6 +825,16 @@ def student_route(app):
 
             # Return response based on permission
             if show_results:
+                # Batch load selected options for results
+                result_answer_ids = [
+                    v for v in answers.values()
+                    if v and isinstance(v, str) and len(v) > 0
+                ]
+                result_options = {}
+                if result_answer_ids:
+                    for opt in Option.query.filter(Option.id.in_(result_answer_ids)).all():
+                        result_options[opt.id] = opt
+
                 # Build per-question results for feedback
                 question_results = []
                 for question in questions_to_score:
@@ -740,7 +844,7 @@ def student_route(app):
 
                     if student_answer:
                         if question.question_type in ['mcq', 'multiple_choice', 'true_false']:
-                            selected_option = Option.query.get(student_answer)
+                            selected_option = result_options.get(student_answer)
                             if selected_option and selected_option.is_correct:
                                 is_correct = True
                         elif question.question_type == 'short_answer':
@@ -761,7 +865,7 @@ def student_route(app):
                     student_answer_text = ""
                     if student_answer:
                         if question.question_type in ['mcq', 'multiple_choice', 'true_false']:
-                            selected_option = Option.query.get(student_answer)
+                            selected_option = result_options.get(student_answer)
                             if selected_option:
                                 student_answer_text = selected_option.text
                         elif question.question_type == 'short_answer':
@@ -817,28 +921,52 @@ def student_route(app):
         try:
             data = request.get_json()
             current_question_index = data.get('current_question_index', 0)
-            time_remaining = data.get('time_remaining', 0)
             answers = data.get('answers', {})
             question_order = data.get('question_order', [])
 
-            # Find or create exam session
+            # Find or create exam session (enforce one active session)
             exam_session = ExamSession.query.filter_by(
                 student_id=current_user.id,
                 exam_id=exam_id,
-                is_active=True
+                is_active=True,
+                is_completed=False
             ).first()
 
+            exam = Exam.query.get(exam_id)
             if not exam_session:
                 from services.generate_uuid import generate_uuid
                 exam_session = ExamSession()
                 exam_session.id = generate_uuid()
                 exam_session.student_id = current_user.id
                 exam_session.exam_id = exam_id
+                exam_session.started_at = datetime.utcnow()
+                exam_session.time_remaining = exam.duration.total_seconds() if exam and exam.duration else 1500
                 db.session.add(exam_session)
+            else:
+                # Compute time_remaining server-side instead of trusting client
+                if exam and exam_session.started_at and exam.duration:
+                    elapsed = (datetime.utcnow() - exam_session.started_at).total_seconds()
+                    duration_seconds = exam.duration.total_seconds()
+                    exam_session.time_remaining = max(0, int(duration_seconds - elapsed))
+                else:
+                    exam_session.time_remaining = exam.duration.total_seconds() if exam and exam.duration else 1500
+
+            # Reject save if time has expired (strict, no grace)
+            if exam and exam_session.started_at and exam.duration:
+                elapsed = (datetime.utcnow() - exam_session.started_at).total_seconds()
+                duration_seconds = exam.duration.total_seconds()
+                if elapsed > duration_seconds:
+                    exam_session.is_active = False
+                    exam_session.is_completed = True
+                    exam_session.completed_at = datetime.utcnow()
+                    db.session.commit()
+                    return jsonify({
+                        "success": False,
+                        "message": "Time limit exceeded. You can no longer save progress."
+                    }), 403
 
             # Update session data
             exam_session.current_question_index = current_question_index
-            exam_session.time_remaining = time_remaining
             exam_session.set_answers(answers)
             exam_session.set_question_order(question_order)
             exam_session.last_activity = datetime.utcnow()
@@ -848,11 +976,11 @@ def student_route(app):
             return jsonify({
                 "success": True,
                 "message": "Progress saved",
-                "session_id": exam_session.id
+                "session_id": exam_session.id,
+                "time_remaining": exam_session.time_remaining
             })
 
         except Exception as e:
-            # print(f"Error saving exam session: {str(e)}")
             db.session.rollback()
             return jsonify({"success": False, "message": "Error saving progress"}), 500
 
@@ -921,6 +1049,35 @@ def student_route(app):
             # print(f"Error completing exam session: {str(e)}")
             db.session.rollback()
             return jsonify({"success": False, "message": "Error completing session"}), 500
+
+    @app.route('/student/exam/<exam_id>/session/reset', methods=['POST'])
+    def reset_exam_session(exam_id):
+        """Invalidate old session when user chooses 'Start Fresh'"""
+        if 'user_id' not in session:
+            return jsonify({"success": False, "message": "Authentication required"}), 401
+
+        current_user = User.query.get(session['user_id'])
+        if not current_user:
+            return jsonify({"success": False, "message": "User not found"}), 404
+
+        try:
+            exam_session = ExamSession.query.filter_by(
+                student_id=current_user.id,
+                exam_id=exam_id,
+                is_active=True,
+                is_completed=False
+            ).first()
+
+            if exam_session:
+                exam_session.is_active = False
+                exam_session.is_completed = True
+                exam_session.completed_at = datetime.utcnow()
+                db.session.commit()
+
+            return jsonify({"success": True})
+        except Exception as e:
+            db.session.rollback()
+            return jsonify({"success": False, "message": "Error resetting session"}), 500
 
     @app.route('/student/test')
     def student_exams():
@@ -1050,8 +1207,7 @@ def student_route(app):
                 options_data.append({
                     'id': option.id,
                     'text': option.text,
-                    'is_correct': option.is_correct,
-                    'order': i,  # New randomized order
+                    'order': i,
                     'has_math': getattr(option, 'has_math', False),
                     'option_image': getattr(option, 'option_image', None)
                 })

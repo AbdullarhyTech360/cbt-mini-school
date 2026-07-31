@@ -2,6 +2,7 @@ document.addEventListener("DOMContentLoaded", function () {
   const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   let currentStep = 1;
   const TOTAL_STEPS = 3;
+  let registrationCount = 0;
 
   // Elements
   const els = {
@@ -25,6 +26,8 @@ document.addEventListener("DOMContentLoaded", function () {
     registerSubmit: document.getElementById("register-submit"),
     registerBtnText: document.getElementById("register-btn-text"),
     registerBtnSpinner: document.getElementById("register-btn-spinner"),
+    generalError: document.getElementById("general_error"),
+    generalErrorText: document.getElementById("general_error_text"),
     alertUsername: document.getElementById("alert_username"),
     alertName: document.getElementById("alert_name"),
     alertContent: document.getElementById("alert_content"),
@@ -42,6 +45,51 @@ document.addEventListener("DOMContentLoaded", function () {
     password: document.getElementById("password_status"),
     confirmPassword: document.getElementById("confirm_password_status"),
   };
+
+  function updateRegistrationCounter() {
+    var badge = document.getElementById('reg-count-badge');
+    if (!badge) {
+      badge = document.createElement('div');
+      badge.id = 'reg-count-badge';
+      badge.className = 'text-xs text-gray-500 dark:text-gray-400 text-center mt-2';
+      var container = document.querySelector('.max-w-sm');
+      if (container) container.appendChild(badge);
+    }
+    badge.textContent = registrationCount > 0
+      ? registrationCount + ' student' + (registrationCount > 1 ? 's' : '') + ' registered this session'
+      : '';
+  }
+
+  function resetForm(keepRoleAndClass) {
+    if (keepRoleAndClass === undefined) keepRoleAndClass = true;
+    [els.firstName, els.lastName, els.registerNumber, els.password, els.confirmPassword].forEach(function (f) { if (f) f.value = ''; });
+    if (els.gender) els.gender.value = '';
+    if (els.dob) els.dob.value = '';
+    if (els.imageInput) els.imageInput.value = '';
+    if (els.imagePreview) {
+      els.imagePreview.classList.add('hidden');
+      els.imagePreview.src = '';
+    }
+    if (els.fileUploadZone) {
+      var zoneText = els.fileUploadZone.querySelector('p');
+      if (zoneText) zoneText.textContent = 'Drag & drop or browse';
+    }
+    if (els.strengthBar) els.strengthBar.style.width = '0%';
+    if (els.strengthLabel) els.strengthLabel.textContent = '';
+    updateMatch();
+    Object.keys(status).forEach(function (k) {
+      if (status[k]) status[k].innerHTML = '';
+    });
+    if (els.generalError) els.generalError.classList.add('hidden');
+    if (els.generalErrorText) els.generalErrorText.textContent = '';
+
+    if (!keepRoleAndClass) {
+      if (els.role) els.role.value = '';
+      if (els.classRoom) els.classRoom.value = '';
+    }
+
+    showStep(1);
+  }
 
   function debounce(fn, delay) {
     let timer;
@@ -93,9 +141,9 @@ document.addEventListener("DOMContentLoaded", function () {
   // Set status helper
   function setStatus(el, message, isError) {
     if (isError) {
-      el.innerHTML = `<span class="material-symbols-outlined text-sm text-red-500">error</span><span class="text-red-500">${message}</span>`;
+      el.innerHTML = `<span class="material-symbols-outlined text-sm text-red-500" aria-hidden="true">error</span><span class="text-red-500">${message}</span>`;
     } else if (message) {
-      el.innerHTML = `<span class="material-symbols-outlined text-sm text-green-500 animate-checkmark">check_circle</span><span class="text-green-500">${message}</span>`;
+      el.innerHTML = `<span class="material-symbols-outlined text-sm text-green-500 animate-checkmark" aria-hidden="true">check_circle</span><span class="text-green-500">${message}</span>`;
     } else {
       el.innerHTML = "";
     }
@@ -322,6 +370,8 @@ document.addEventListener("DOMContentLoaded", function () {
       const dot = document.getElementById(`step-${i}-dot`);
       if (el) el.classList.toggle("hidden", i !== step);
       if (dot) {
+        dot.setAttribute("aria-selected", i === step ? "true" : "false");
+        dot.setAttribute("tabindex", i === step ? "0" : "-1");
         if (i < step) {
           dot.className = "w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-300 bg-green-500 text-white shadow-md shadow-green-500/30";
           dot.textContent = "✓";
@@ -337,6 +387,10 @@ document.addEventListener("DOMContentLoaded", function () {
       if (prog) prog.style.width = step > i ? "100%" : "0%";
     }
     currentStep = step;
+    setTimeout(function() {
+      var firstInput = document.querySelector('#step-' + step + '-fields input, #step-' + step + '-fields select, #step-' + step + '-fields button');
+      if (firstInput) firstInput.focus();
+    }, 100);
   }
 
   // Step 1 validation
@@ -471,29 +525,78 @@ document.addEventListener("DOMContentLoaded", function () {
         els.registerBtnSpinner.classList.add("hidden");
 
         if (ok && data.success) {
+          registrationCount++;
+          updateRegistrationCounter();
           els.alertName.textContent = els.firstName.value + " " + els.lastName.value;
           els.alertUsername.textContent = data.username;
-          els.alertContent.innerHTML = `Your account has been created successfully, your username is <span class="font-semibold">${data.username}</span>. Please login to <a href="${LOGIN_URL}" class="text-primary font-semibold underline">access your account.</a>`;
+          els.alertContent.textContent = "Your account has been created successfully.";
           openModal("alert");
         } else {
           // Show server error
           const msg = data.error || data.message || "Registration failed. Please try again.";
-          const generalStatus = document.getElementById("role_status");
-          setStatus(generalStatus, msg, true);
+          els.generalErrorText.textContent = msg;
+          els.generalError.classList.remove("hidden");
         }
       })
-      .catch(() => {
+      .catch((err) => {
         els.registerSubmit.disabled = false;
         els.registerBtnText.classList.remove("hidden");
         els.registerBtnSpinner.classList.add("hidden");
-        const generalStatus = document.getElementById("role_status");
-        setStatus(generalStatus, "Network error. Please try again.", true);
+        els.generalErrorText.textContent = "Server error. Please try again.";
+        els.generalError.classList.remove("hidden");
+        console.error("Register fetch error:", err);
       });
   });
 
-  document.getElementById("close_alert").addEventListener("click", function () {
+  document.getElementById("register-another").addEventListener("click", function () {
     closeModal("alert");
-    window.location.reload();
+    resetForm(true);
+  });
+
+  document.getElementById("copy-username-btn").addEventListener("click", function () {
+    var username = els.alertUsername ? els.alertUsername.textContent : '';
+    if (!username) return;
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(username).then(function () {
+        var label = document.getElementById('copy-btn-label');
+        if (label) {
+          var orig = label.textContent;
+          label.textContent = 'Copied!';
+          setTimeout(function () { label.textContent = orig; }, 2000);
+        }
+      }).catch(function () {
+        // Fallback: select text
+        var ta = document.createElement('textarea');
+        ta.value = username;
+        ta.style.position = 'fixed';
+        ta.style.left = '-9999px';
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+        var label = document.getElementById('copy-btn-label');
+        if (label) {
+          var orig = label.textContent;
+          label.textContent = 'Copied!';
+          setTimeout(function () { label.textContent = orig; }, 2000);
+        }
+      });
+    } else {
+      var ta = document.createElement('textarea');
+      ta.value = username;
+      ta.style.position = 'fixed';
+      ta.style.left = '-9999px';
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+      var label = document.getElementById('copy-btn-label');
+      if (label) {
+        var orig = label.textContent;
+        label.textContent = 'Copied!';
+        setTimeout(function () { label.textContent = orig; }, 2000);
+      }
+    }
   });
 
   // Init step display

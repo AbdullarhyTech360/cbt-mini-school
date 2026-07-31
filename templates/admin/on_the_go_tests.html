@@ -1,0 +1,448 @@
+{% extends "admin/base.html" %}
+
+{% block title %}On-The-Go Tests - Admin Panel{% endblock %}
+
+{% block content %}
+<script src="{{ url_for('static', filename='js/components/modal.js') }}" defer></script>
+<script src="{{ url_for('static', filename='js/admin/on_the_go_tests.js') }}" defer></script>
+
+<!-- Header -->
+<div class="mb-6 md:mb-8">
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div class="flex items-center gap-3">
+            <div class="h-12 w-12 rounded-xl bg-gradient-to-br from-orange-500 to-amber-600 flex items-center justify-center shadow-lg">
+                <span class="material-symbols-outlined text-white text-2xl">bolt</span>
+            </div>
+            <div>
+                <h1 class="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white">Quick Tests</h1>
+                <p class="text-gray-600 dark:text-gray-400 text-sm">Quick, ad-hoc assessments created on the fly — no scheduling required</p>
+            </div>
+        </div>
+        <button id="toggleCreateCard"
+            class="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700 text-white rounded-xl shadow-md hover:shadow-lg transition-all duration-200 text-sm font-semibold">
+            <span class="material-symbols-outlined text-lg">add</span>
+            Create Quick Test
+        </button>
+    </div>
+</div>
+
+<!-- Stats Row -->
+<div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6" id="statsRow">
+    <div class="bg-gradient-to-br from-orange-500 to-amber-600 p-5 rounded-2xl shadow-lg">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-white/80 text-xs font-medium mb-1">Active Tests</p>
+                <p class="text-2xl font-bold text-white" id="activeCount">0</p>
+            </div>
+            <div class="h-10 w-10 rounded-xl bg-white/20 flex items-center justify-center">
+                <span class="material-symbols-outlined text-white text-xl">bolt</span>
+            </div>
+        </div>
+    </div>
+    <div class="bg-gradient-to-br from-amber-500 to-yellow-600 p-5 rounded-2xl shadow-lg">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-white/80 text-xs font-medium mb-1">Taken Today</p>
+                <p class="text-2xl font-bold text-white" id="takenToday">0</p>
+            </div>
+            <div class="h-10 w-10 rounded-xl bg-white/20 flex items-center justify-center">
+                <span class="material-symbols-outlined text-white text-xl">today</span>
+            </div>
+        </div>
+    </div>
+    <div class="bg-gradient-to-br from-orange-400 to-rose-500 p-5 rounded-2xl shadow-lg">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-white/80 text-xs font-medium mb-1">Total Created</p>
+                <p class="text-2xl font-bold text-white" id="totalCreated">0</p>
+            </div>
+            <div class="h-10 w-10 rounded-xl bg-white/20 flex items-center justify-center">
+                <span class="material-symbols-outlined text-white text-xl">bar_chart</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Inline Creation Card (hidden by default) -->
+<div id="createCard" class="hidden mb-6">
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-orange-200 dark:border-orange-800 overflow-hidden">
+        <div class="p-6">
+            <div class="flex items-center justify-between mb-6">
+                <h2 class="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                    <span class="material-symbols-outlined text-orange-500">bolt</span>
+                    Create Quick Test
+                </h2>
+                <button id="collapseCreateCard" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition">
+                    <span class="material-symbols-outlined">close</span>
+                </button>
+            </div>
+
+            <form id="createOtgForm" class="space-y-5">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    <!-- Title -->
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Test Title*</label>
+                        <input type="text" id="otgTitle" name="title" required maxlength="200"
+                            class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 outline-none transition"
+                            placeholder="e.g., Pop Quiz — Algebra">
+                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Give your quick test a descriptive name</p>
+                    </div>
+
+                    <!-- Subject -->
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Subject*</label>
+                        <select id="otgSubject" name="subject_id" required
+                            class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 outline-none transition">
+                            <option value="">Select Subject</option>
+                            {% for subject in subjects %}
+                            <option value="{{ subject.subject_id }}" data-question-count="{{ subject.questions | length }}">
+                                {{ subject.subject_name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <!-- Class (optional) -->
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Class <span class="text-gray-400 font-normal">(optional)</span></label>
+                        <select id="otgClass" name="class_room_id"
+                            class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 outline-none transition">
+                            <option value="">All Classes</option>
+                        </select>
+                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Leave empty to make available to all classes</p>
+                    </div>
+
+                    <!-- Duration -->
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Duration*</label>
+                        <div class="flex gap-3">
+                            <div class="flex-1">
+                                <input type="number" name="duration_hours" min="0" max="12" placeholder="Hours"
+                                    class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 outline-none transition">
+                            </div>
+                            <div class="flex-1">
+                                <input type="number" name="duration_minutes" id="otgDurationMinutes" min="0" max="59" placeholder="Minutes" value="30"
+                                    class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 outline-none transition">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Questions + Max Score -->
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                                # Questions
+                                <span id="otgMaxQuestions" class="text-xs text-gray-400 font-normal"></span>
+                            </label>
+                            <input type="number" name="number_of_questions" id="otgQuestionCount" min="1" placeholder="Blank = All"
+                                class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 outline-none transition">
+                            <p id="otgQuestionWarning" class="hidden text-xs text-red-600 dark:text-red-400 mt-1">
+                                No questions available. Add questions first.
+                            </p>
+                            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Leave blank to include all available questions</p>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Max Score</label>
+                            <input type="number" name="max_score" id="otgMaxScore" min="0" step="0.01" placeholder="Auto (1 mark/question)"
+                                class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 outline-none transition">
+                            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Leave blank to auto-calculate from question count</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Advanced Options -->
+                <div class="pt-2">
+                    <button type="button" id="toggleAdvanced"
+                        class="flex items-center gap-2 text-sm font-semibold text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition">
+                        <span class="material-symbols-outlined text-base transition-transform" id="advancedIcon">expand_more</span>
+                        Advanced Options
+                    </button>
+                    <div id="advancedOptions" class="hidden mt-4 p-4 bg-gray-50 dark:bg-gray-700/30 rounded-xl border border-gray-200 dark:border-gray-700 space-y-4">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <label class="text-sm font-medium text-gray-700 dark:text-gray-300">Save results after completion</label>
+                                <p class="text-xs text-gray-500 dark:text-gray-400">If disabled, students see their score once only</p>
+                            </div>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" name="save_after_completion" value="true" checked class="sr-only peer">
+                                <div class="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-gray-600 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-600 peer-checked:bg-green-500"></div>
+                            </label>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <label class="text-sm font-medium text-gray-700 dark:text-gray-300">Show feedback</label>
+                                <p class="text-xs text-gray-500 dark:text-gray-400">Show correct/incorrect per question after submission</p>
+                            </div>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" name="show_feedback" value="true" checked class="sr-only peer">
+                                <div class="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-gray-600 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-600 peer-checked:bg-green-500"></div>
+                            </label>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <label class="text-sm font-medium text-gray-700 dark:text-gray-300">Calculator</label>
+                                <p class="text-xs text-gray-500 dark:text-gray-400">Enable calculator during test</p>
+                            </div>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" name="calculator_enabled" value="true" class="sr-only peer">
+                                <div class="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-gray-600 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-600 peer-checked:bg-green-500"></div>
+                            </label>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Access Code <span class="text-gray-400 font-normal">(optional)</span></label>
+                            <input type="text" name="access_code" maxlength="10" placeholder="e.g., MATH42"
+                                class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 outline-none transition">
+                            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Students must enter this code before starting</p>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Description <span class="text-gray-400 font-normal">(optional)</span></label>
+                            <textarea name="description" rows="2"
+                                class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 outline-none transition resize-none"
+                                placeholder="Add any additional information..."></textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Submit -->
+                <div class="flex justify-end gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
+                    <button type="button" id="cancelCreate"
+                        class="px-6 py-3 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors font-semibold">
+                        Cancel
+                    </button>
+                    <button type="submit" id="createOtgBtn"
+                        class="px-6 py-3 rounded-xl bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700 text-white shadow-md hover:shadow-lg transition-all duration-200 font-semibold flex items-center gap-2">
+                        <span class="material-symbols-outlined text-lg">bolt</span>
+                        Create & Publish
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Inline Edit Card (hidden by default) -->
+<div id="editCard" class="hidden mb-6">
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-orange-200 dark:border-orange-800 overflow-hidden">
+        <div class="p-6">
+            <div class="flex items-center justify-between mb-6">
+                <h2 class="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                    <span class="material-symbols-outlined text-orange-500">edit</span>
+                    Edit Quick Test
+                </h2>
+                <button id="collapseEditCard" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition">
+                    <span class="material-symbols-outlined">close</span>
+                </button>
+            </div>
+
+            <form id="editOtgForm" class="space-y-5">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    <!-- Title -->
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Test Title*</label>
+                        <input type="text" id="editTitle" name="title" required maxlength="200"
+                            class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 outline-none transition"
+                            placeholder="e.g., Pop Quiz — Algebra">
+                    </div>
+
+                    <!-- Subject -->
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Subject*</label>
+                        <select id="editSubject" name="subject_id" required
+                            class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 outline-none transition">
+                            <option value="">Select Subject</option>
+                        </select>
+                    </div>
+
+                    <!-- Class (optional) -->
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Class <span class="text-gray-400 font-normal">(optional)</span></label>
+                        <select id="editClass" name="class_room_id"
+                            class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 outline-none transition">
+                            <option value="">All Classes</option>
+                        </select>
+                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Leave empty to make available to all classes</p>
+                    </div>
+
+                    <!-- Duration -->
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Duration*</label>
+                        <div class="flex gap-3">
+                            <div class="flex-1">
+                                <input type="number" name="duration_hours" id="editDurationHours" min="0" max="12" placeholder="Hours"
+                                    class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 outline-none transition">
+                            </div>
+                            <div class="flex-1">
+                                <input type="number" name="duration_minutes" id="editDurationMinutes" min="0" max="59" placeholder="Minutes"
+                                    class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 outline-none transition">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Questions + Max Score -->
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                                # Questions
+                                <span id="editMaxQuestions" class="text-xs text-gray-400 font-normal"></span>
+                            </label>
+                            <input type="number" name="number_of_questions" id="editQuestionCount" min="1" placeholder="Blank = All"
+                                class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 outline-none transition">
+                            <p id="editQuestionWarning" class="hidden text-xs text-red-600 dark:text-red-400 mt-1">
+                                No questions available. Add questions first.
+                            </p>
+                            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Leave blank to include all available questions</p>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Max Score</label>
+                            <input type="number" name="max_score" id="editMaxScore" min="0" step="0.01" placeholder="Auto (1 mark/question)"
+                                class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 outline-none transition">
+                            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Leave blank to auto-calculate from question count</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Advanced Options -->
+                <div class="pt-2">
+                    <button type="button" id="toggleEditAdvanced"
+                        class="flex items-center gap-2 text-sm font-semibold text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition">
+                        <span class="material-symbols-outlined text-base transition-transform" id="editAdvancedIcon">expand_more</span>
+                        Advanced Options
+                    </button>
+                    <div id="editAdvancedOptions" class="hidden mt-4 p-4 bg-gray-50 dark:bg-gray-700/30 rounded-xl border border-gray-200 dark:border-gray-700 space-y-4">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <label class="text-sm font-medium text-gray-700 dark:text-gray-300">Save results after completion</label>
+                                <p class="text-xs text-gray-500 dark:text-gray-400">If disabled, students see their score once only</p>
+                            </div>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" name="save_after_completion" id="editSaveAfterCompletion" value="true" checked class="sr-only peer">
+                                <div class="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-gray-600 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-600 peer-checked:bg-green-500"></div>
+                            </label>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <label class="text-sm font-medium text-gray-700 dark:text-gray-300">Show feedback</label>
+                                <p class="text-xs text-gray-500 dark:text-gray-400">Show correct/incorrect per question after submission</p>
+                            </div>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" name="show_feedback" id="editShowFeedback" value="true" checked class="sr-only peer">
+                                <div class="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-gray-600 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-600 peer-checked:bg-green-500"></div>
+                            </label>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <label class="text-sm font-medium text-gray-700 dark:text-gray-300">Calculator</label>
+                                <p class="text-xs text-gray-500 dark:text-gray-400">Enable calculator during test</p>
+                            </div>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" name="calculator_enabled" id="editCalculatorEnabled" value="true" class="sr-only peer">
+                                <div class="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-gray-600 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-600 peer-checked:bg-green-500"></div>
+                            </label>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Access Code <span class="text-gray-400 font-normal">(optional)</span></label>
+                            <input type="text" name="access_code" id="editAccessCode" maxlength="10" placeholder="e.g., MATH42"
+                                class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 outline-none transition">
+                            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Students must enter this code before starting</p>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Description <span class="text-gray-400 font-normal">(optional)</span></label>
+                            <textarea name="description" id="editDescription" rows="2"
+                                class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 outline-none transition resize-none"
+                                placeholder="Add any additional information..."></textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Submit -->
+                <div class="flex justify-end gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
+                    <button type="button" id="cancelEdit"
+                        class="px-6 py-3 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors font-semibold">
+                        Cancel
+                    </button>
+                    <button type="submit" id="saveEditBtn"
+                        class="px-6 py-3 rounded-xl bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700 text-white shadow-md hover:shadow-lg transition-all duration-200 font-semibold flex items-center gap-2">
+                        <span class="material-symbols-outlined text-lg">save</span>
+                        Save Changes
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Tabs: Active | History -->
+<div class="flex gap-2 mb-4 p-1 bg-gray-100 dark:bg-gray-800 rounded-xl">
+    <button id="activeTab"
+        class="tab-btn flex-1 py-2.5 px-4 rounded-lg text-center font-semibold bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm transition-all">
+        <span class="flex items-center justify-center gap-2">
+            <span class="material-symbols-outlined text-lg">bolt</span>
+            Active Tests
+        </span>
+    </button>
+    <button id="historyTab"
+        class="tab-btn flex-1 py-2.5 px-4 rounded-lg text-center font-semibold text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition-all">
+        <span class="flex items-center justify-center gap-2">
+            <span class="material-symbols-outlined text-lg">history</span>
+            History
+        </span>
+    </button>
+</div>
+
+<!-- Active Tests Section -->
+<div id="activeSection">
+    <div id="activeList" class="space-y-3">
+        <!-- Populated by JS -->
+    </div>
+    <div id="activeEmpty" class="hidden">
+        <div class="bg-white dark:bg-gray-800 rounded-2xl p-10 text-center border-2 border-dashed border-gray-300 dark:border-gray-600">
+            <div class="h-16 w-16 rounded-full bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center mx-auto mb-4">
+                <span class="material-symbols-outlined text-orange-400 text-3xl">bolt</span>
+            </div>
+            <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-2">No Active Quick Tests</h3>
+            <p class="text-sm text-gray-500 dark:text-gray-400 max-w-md mx-auto mb-6">
+                No quick tests are currently active. Create one to get started!
+            </p>
+            <button onclick="document.getElementById('toggleCreateCard').click()"
+                class="px-6 py-3 rounded-xl bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700 text-white shadow-md hover:shadow-lg transition-all duration-200 font-semibold">
+                Create Your First Quick Test
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- History Section (hidden) -->
+<div id="historySection" class="hidden">
+    <div id="historyList" class="space-y-3">
+        <!-- Populated by JS -->
+    </div>
+    <div id="historyEmpty" class="hidden">
+        <div class="bg-white dark:bg-gray-800 rounded-2xl p-10 text-center border-2 border-dashed border-gray-300 dark:border-gray-600">
+            <div class="h-16 w-16 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center mx-auto mb-4">
+                <span class="material-symbols-outlined text-gray-400 text-3xl">history</span>
+            </div>
+            <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-2">No History</h3>
+            <p class="text-sm text-gray-500 dark:text-gray-400">No finished quick tests yet.</p>
+        </div>
+    </div>
+</div>
+
+<!-- Results Modal -->
+<div id="resultsModal" class="modal hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+        <div class="sticky top-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4 flex items-center justify-between z-10">
+            <h2 class="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                <span class="material-symbols-outlined text-orange-500">analytics</span>
+                <span id="resultsModalTitle">Test Results</span>
+            </h2>
+            <button onclick="closeModal('resultsModal')"
+                class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
+                <span class="material-symbols-outlined text-gray-600 dark:text-gray-400">close</span>
+            </button>
+        </div>
+        <div class="p-6" id="resultsModalContent">
+            <!-- Populated by JS -->
+        </div>
+    </div>
+</div>
+{% endblock %}

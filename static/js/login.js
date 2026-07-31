@@ -27,10 +27,10 @@ document.addEventListener("DOMContentLoaded", function () {
 
   function setStatus(el, message, isError) {
     if (isError) {
-      el.innerHTML = `<span class="material-symbols-outlined text-sm text-red-500">error</span><span class="text-red-500">${message}</span>`;
+      el.innerHTML = `<span class="material-symbols-outlined text-sm text-red-500" aria-hidden="true">error</span><span class="text-red-500">${message}</span>`;
       el.classList.remove("text-green-500");
     } else if (message) {
-      el.innerHTML = `<span class="material-symbols-outlined text-sm text-green-500 animate-checkmark">check_circle</span><span class="text-green-500">${message}</span>`;
+      el.innerHTML = `<span class="material-symbols-outlined text-sm text-green-500 animate-checkmark" aria-hidden="true">check_circle</span><span class="text-green-500">${message}</span>`;
       el.classList.remove("text-red-500");
     } else {
       el.innerHTML = "";
@@ -74,18 +74,31 @@ document.addEventListener("DOMContentLoaded", function () {
             const currentVal = examSelect.value;
             const exams = data.upcoming_exams || [];
             examSelect.innerHTML = "";
-            const def = document.createElement("option");
-            def.value = "";
-            def.text = "Continue to Dashboard";
-            examSelect.appendChild(def);
+            if (data.can_view_dashboard !== false) {
+              const def = document.createElement("option");
+              def.value = "";
+              def.text = "Continue to Dashboard";
+              examSelect.appendChild(def);
+            }
             exams.forEach((exam) => {
               const opt = document.createElement("option");
               opt.value = exam.id;
-              opt.text = `${exam.name} - ${new Date(exam.date + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`;
+              opt.dataset.isOnTheGo = exam.is_on_the_go ? "true" : "false";
+              if (exam.is_on_the_go) {
+                opt.text = `${exam.name} - Quick Test (${exam.subject_name})`;
+              } else {
+                opt.text = `${exam.name} - ${new Date(exam.date + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`;
+              }
               examSelect.appendChild(opt);
             });
             if (currentVal && Array.from(examSelect.options).some((o) => o.value === currentVal)) {
               examSelect.value = currentVal;
+            }
+            const hint = document.getElementById("exam-hint");
+            if (hint) {
+              hint.textContent = data.can_view_dashboard === false
+                ? "Select an upcoming exam to begin"
+                : "Select an upcoming exam or continue to dashboard";
             }
             document.getElementById("exam-select-card").classList.remove("hidden");
           } else if (!isFormSubmitting) {
@@ -199,8 +212,15 @@ document.addEventListener("DOMContentLoaded", function () {
           document.cookie = "session_type=" + (remember ? "permanent" : "temporary") + (remember ? "; max-age=" + (24*60*60) : "") + "; path=/";
           if (data.role === "admin") window.location.href = "/admin/dashboard";
           else if (data.role === "staff") window.location.href = "/staff/dashboard";
-          else if (data.role === "student" && selectedExamId) window.location.href = `/student/exam/${selectedExamId}`;
-          else if (data.role === "student" && !selectedExamId) window.location.href = "/student/dashboard";
+          else if (data.role === "student" && selectedExamId) {
+            const selectedOpt = document.querySelector("#exam-select option[value='" + selectedExamId + "']");
+            const isOtg = selectedOpt && selectedOpt.dataset.isOnTheGo === "true";
+            window.location.href = isOtg ? `/student/on-the-go-tests/${selectedExamId}/start` : `/student/exam/${selectedExamId}`;
+          }
+          else if (data.role === "student" && !selectedExamId && data.can_view_dashboard !== false) window.location.href = "/student/dashboard";
+          else if (data.role === "student" && !selectedExamId && data.can_view_dashboard === false) {
+            showToast("Your dashboard access is currently disabled. Please contact your administrator.", "error");
+          }
           else showToast("Login successful", "success");
         } else {
           showToast(data.error || "Invalid credentials", "error");
@@ -246,4 +266,7 @@ document.addEventListener("DOMContentLoaded", function () {
         .catch((err) => { if (err && err.error) showToast(err.error, "error"); });
     });
   }
+
+  // Auto-focus username field on page load
+  username.focus();
 });

@@ -6,11 +6,20 @@
     <title>{{ school_info.name }} — Smart CBT for Modern Schools</title>
     <meta name="description" content="Computer-Based Testing platform for schools. Manage classes, assessments, and student progress seamlessly.">
     <link rel="stylesheet" href="{{ url_for('static', filename='dist/output.css') }}">
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <meta property="og:title" content="{{ school_info.name }} — Smart CBT for Modern Schools">
+    <meta property="og:description" content="Computer-Based Testing platform for schools. Manage classes, assessments, and student progress seamlessly.">
+    <meta property="og:type" content="website">
+    <meta name="twitter:card" content="summary_large_image">
 </head>
 <body class="bg-bg-deep text-slate-100 font-sans antialiased overflow-x-hidden transition-colors duration-300" data-theme="dark">
+
+    <a href="#main-content" class="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-[100] focus:px-4 focus:py-2 focus:bg-primary focus:text-white focus:rounded-lg focus:shadow-lg">
+        Skip to main content
+    </a>
 
     <!-- ===================== NAVIGATION ===================== -->
     <nav id="navbar" class="fixed top-0 left-0 right-0 z-50 transition-all duration-300">
@@ -18,13 +27,7 @@
             <div class="flex items-center justify-between h-16 lg:h-20">
                 <!-- Logo -->
                 <a href="{{ url_for('index') }}" class="flex items-center gap-3 shrink-0">
-                    {% if school_info.logo_url %}
-                    <img src="{{ school_info.logo_url }}" alt="School Logo" class="h-9 w-9 rounded-lg object-cover" />
-                    {% else %}
-                    <div class="h-9 w-9 rounded-lg bg-gradient-to-br from-primary to-accent flex items-center justify-center text-white font-extrabold text-sm">
-                        {{ (school_info.name[:2] if school_info and school_info.name else 'SC')|upper }}
-                    </div>
-                    {% endif %}
+                    <img src="{{ school_info.logo_url }}" alt="School Logo" class="h-9 w-9 rounded-lg object-cover" onerror="this.onerror=null;this.src='{{ url_for('static', filename='default-logo.svg') }}'" />
                     <span class="text-lg font-bold nav-text hidden sm:block">{{ school_info.name }}</span>
                 </a>
 
@@ -52,6 +55,10 @@
                                 <svg class="dropdown-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
                                 Reviews
                             </a>
+                            <a href="#faq" class="mobile-nav-link" role="menuitem">
+                                <svg class="dropdown-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                FAQ
+                            </a>
                             <div class="dropdown-divider"></div>
                             <button id="theme-toggle-desktop" class="theme-toggle-dropdown" role="menuitem" aria-label="Toggle theme">
                                 <svg class="icon-moon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/></svg>
@@ -75,12 +82,13 @@
         </div>
 
         <!-- Mobile menu -->
-        <div id="mobile-menu" class="hidden md:hidden backdrop-blur-xl border-t border-white/5 mobile-menu-bg">
+        <div id="mobile-menu" class="mobile-menu-panel fixed inset-x-0 top-16 bottom-0 md:hidden backdrop-blur-xl border-t border-white/5 mobile-menu-bg overflow-y-auto">
             <div class="px-4 py-4 space-y-1">
                 <a href="#features" class="block px-3 py-2.5 rounded-lg text-sm font-medium nav-link-secondary hover:bg-white/5 transition mobile-nav-link">Features</a>
                 <a href="#how-it-works" class="block px-3 py-2.5 rounded-lg text-sm font-medium nav-link-secondary hover:bg-white/5 transition mobile-nav-link">How It Works</a>
                 <a href="#gallery" class="block px-3 py-2.5 rounded-lg text-sm font-medium nav-link-secondary hover:bg-white/5 transition mobile-nav-link">Gallery</a>
                 <a href="#testimonials" class="block px-3 py-2.5 rounded-lg text-sm font-medium nav-link-secondary hover:bg-white/5 transition mobile-nav-link">Reviews</a>
+                <a href="#faq" class="block px-3 py-2.5 rounded-lg text-sm font-medium nav-link-secondary hover:bg-white/5 transition mobile-nav-link">FAQ</a>
                 <div class="h-px bg-white/5 my-2"></div>
                 <button id="theme-toggle-mobile" class="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm font-medium nav-link-secondary hover:bg-white/5 transition" aria-label="Toggle theme">
                     <svg class="icon-moon w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/></svg>
@@ -93,7 +101,7 @@
     </nav>
 
     <!-- ===================== HERO SECTION ===================== -->
-    <section class="hero-mesh relative min-h-screen flex items-center pt-20 lg:pt-0 overflow-hidden">
+    <section id="main-content" class="hero-mesh relative min-h-screen flex items-center pt-20 lg:pt-0 overflow-hidden">
         <!-- Floating orbs -->
         <div class="floating-shape w-80 h-80 bg-primary/20 -top-20 -left-20 animate-float"></div>
         <div class="floating-shape w-[500px] h-[500px] bg-accent/15 top-1/4 -right-40 animate-float-slow"></div>
@@ -105,7 +113,7 @@
                 <div class="reveal">
                     <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full hero-badge bg-primary/10 text-primary text-sm font-semibold mb-6">
                         <span class="w-2 h-2 rounded-full bg-primary animate-pulse-soft"></span>
-                        Trusted by 500+ Schools
+                        Built for Modern Schools
                     </div>
 
                     <h1 class="hero-title text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight leading-[1.1]">
@@ -129,7 +137,7 @@
                     </div>
 
                     <!-- Trust indicators -->
-                    <div class="mt-10 flex items-center gap-6 text-sm text-slate-500">
+                    <div class="mt-10 flex items-center gap-6 text-sm text-slate-400">
                         <div class="flex items-center gap-1.5">
                             <svg class="w-4 h-4 text-success" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
                             No credit card required
@@ -138,10 +146,52 @@
                             <svg class="w-4 h-4 text-success" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
                             Free for small schools
                         </div>
+                        <div class="flex items-center gap-1.5">
+                            <svg class="w-4 h-4 text-success" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M2.166 4.999A11.954 11.954 0 0010 1.944 11.954 11.954 0 0017.834 5c.11.65.166 1.32.166 2.001 0 5.225-3.34 9.67-8 11.317C5.34 16.67 2 12.225 2 7c0-.682.057-1.35.166-2.001zm11.541 3.708a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
+                            SSL Encrypted
+                        </div>
                     </div>
                 </div>
 
-                <!-- Right: Mock CBT Interface -->
+                <!-- Mobile: Compact Mock CBT -->
+                <div class="reveal lg:hidden mt-8">
+                    <div class="mock-exam glass rounded-2xl p-4 shadow-glow-blue max-w-sm mx-auto">
+                        <div class="flex items-center justify-between mb-3">
+                            <div class="flex items-center gap-2">
+                                <div class="w-2.5 h-2.5 rounded-full bg-success"></div>
+                                <span class="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">Live Exam</span>
+                            </div>
+                            <div class="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-primary/15 text-primary text-[10px] font-bold">
+                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                45:22
+                            </div>
+                        </div>
+                        <div class="w-full h-1 bg-white/5 rounded-full mb-3">
+                            <div class="h-full bg-gradient-to-r from-primary to-accent rounded-full" style="width: 35%"></div>
+                        </div>
+                        <div class="bg-white/5 rounded-xl p-3 mb-3">
+                            <div class="text-[10px] font-bold text-primary mb-1">Question 7 of 20</div>
+                            <p class="text-xs font-medium text-white leading-relaxed">What is the primary function of the CPU?</p>
+                        </div>
+                        <div class="space-y-1.5">
+                            <div class="flex items-center gap-2 p-2 rounded-lg bg-white/3">
+                                <div class="w-5 h-5 rounded-full bg-white/10 flex items-center justify-center text-slate-400 text-[10px] font-bold shrink-0">A</div>
+                                <span class="text-xs text-slate-300">Store data permanently</span>
+                            </div>
+                            <div class="flex items-center gap-2 p-2 rounded-lg bg-primary/10 ring-1 ring-primary">
+                                <div class="w-5 h-5 rounded-full bg-primary flex items-center justify-center text-white text-[10px] font-bold shrink-0">B</div>
+                                <span class="text-xs text-white">Process instructions</span>
+                                <svg class="w-3 h-3 text-primary ml-auto shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+                            </div>
+                            <div class="flex items-center gap-2 p-2 rounded-lg bg-white/3">
+                                <div class="w-5 h-5 rounded-full bg-white/10 flex items-center justify-center text-slate-400 text-[10px] font-bold shrink-0">C</div>
+                                <span class="text-xs text-slate-300">Display visual output</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Desktop: Full Mock CBT Interface -->
                 <div class="reveal hidden lg:block">
                     <div class="mock-exam glass rounded-3xl p-6 shadow-glow-blue max-w-md ml-auto">
                         <!-- Mock exam header -->
@@ -166,14 +216,14 @@
                         </div>
                         <!-- Options -->
                         <div class="space-y-2">
-                            <div class="mock-option-selected flex items-center gap-3 p-3 rounded-xl bg-primary/10 ring-2 ring-primary cursor-pointer">
-                                <div class="w-6 h-6 rounded-full bg-primary flex items-center justify-center text-white text-xs font-bold shrink-0">A</div>
-                                <span class="text-sm text-white">Store data permanently</span>
-                                <svg class="w-4 h-4 text-primary ml-auto shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
-                            </div>
                             <div class="mock-option flex items-center gap-3 p-3 rounded-xl bg-white/3 hover:bg-white/5 transition cursor-pointer">
-                                <div class="w-6 h-6 rounded-full bg-white/10 flex items-center justify-center text-slate-400 text-xs font-bold shrink-0">B</div>
-                                <span class="text-sm text-slate-300">Process instructions and data</span>
+                                <div class="w-6 h-6 rounded-full bg-white/10 flex items-center justify-center text-slate-400 text-xs font-bold shrink-0">A</div>
+                                <span class="text-sm text-slate-300">Store data permanently</span>
+                            </div>
+                            <div class="mock-option-selected flex items-center gap-3 p-3 rounded-xl bg-primary/10 ring-2 ring-primary cursor-pointer">
+                                <div class="w-6 h-6 rounded-full bg-primary flex items-center justify-center text-white text-xs font-bold shrink-0">B</div>
+                                <span class="text-sm text-white">Process instructions and data</span>
+                                <svg class="w-4 h-4 text-primary ml-auto shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
                             </div>
                             <div class="mock-option flex items-center gap-3 p-3 rounded-xl bg-white/3 hover:bg-white/5 transition cursor-pointer">
                                 <div class="w-6 h-6 rounded-full bg-white/10 flex items-center justify-center text-slate-400 text-xs font-bold shrink-0">C</div>
@@ -197,17 +247,17 @@
         <!-- Trusted by strip -->
         <div class="absolute bottom-0 left-0 right-0 trusted-strip bg-white/[0.02] backdrop-blur-sm">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-                <div class="flex items-center justify-center gap-8 sm:gap-12 text-slate-500 text-sm font-medium flex-wrap">
-                    <span class="opacity-50">Trusted by leading schools</span>
-                    <span class="hidden sm:inline">Lagos Academy</span>
+                <div class="flex items-center justify-center gap-8 sm:gap-12 text-slate-400 text-sm font-medium flex-wrap">
+                    <span class="opacity-50">Trusted by schools across Nigeria</span>
+                    <span class="hidden sm:inline">Lagos</span>
                     <span class="text-white/10">|</span>
-                    <span class="hidden sm:inline">Sunrise International</span>
+                    <span class="hidden sm:inline">Abuja</span>
                     <span class="text-white/10">|</span>
-                    <span class="hidden sm:inline">Greenfield College</span>
+                    <span class="hidden sm:inline">Port Harcourt</span>
                     <span class="text-white/10 hidden sm:inline">|</span>
-                    <span class="hidden md:inline">Royal Foundation</span>
+                    <span class="hidden md:inline">Ibadan</span>
                     <span class="text-white/10 hidden md:inline">|</span>
-                    <span class="hidden lg:inline">Crescent Schools</span>
+                    <span class="hidden lg:inline">Kano</span>
                 </div>
             </div>
         </div>
@@ -218,19 +268,19 @@
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="stats-grid grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 stagger-children">
                 <div class="reveal glass rounded-2xl p-6 text-center hover:shadow-glow-blue transition-all duration-300">
-                    <div class="text-3xl sm:text-4xl font-extrabold text-primary" data-count="500">0</div>
-                    <div class="text-sm text-slate-400 mt-1 font-medium">Schools</div>
+                    <div class="text-3xl sm:text-4xl font-extrabold text-primary" data-count="6" data-suffix="+">0</div>
+                    <div class="text-sm text-slate-400 mt-1 font-medium">Schools Onboarded</div>
                 </div>
                 <div class="reveal glass rounded-2xl p-6 text-center hover:shadow-glow-purple transition-all duration-300">
-                    <div class="text-3xl sm:text-4xl font-extrabold text-accent" data-count="50000">0</div>
+                    <div class="text-3xl sm:text-4xl font-extrabold text-accent" data-count="500" data-suffix="+">0</div>
                     <div class="text-sm text-slate-400 mt-1 font-medium">Exams Taken</div>
                 </div>
                 <div class="reveal glass rounded-2xl p-6 text-center hover:shadow-glow-teal transition-all duration-300">
-                    <div class="text-3xl sm:text-4xl font-extrabold text-accent-teal" data-count="10000">0</div>
+                    <div class="text-3xl sm:text-4xl font-extrabold text-accent-teal" data-count="200" data-suffix="+">0</div>
                     <div class="text-sm text-slate-400 mt-1 font-medium">Students</div>
                 </div>
                 <div class="reveal glass rounded-2xl p-6 text-center hover:shadow-glow-blue transition-all duration-300">
-                    <div class="text-3xl sm:text-4xl font-extrabold text-success" data-count="99" data-suffix=".9%">0</div>
+                    <div class="text-3xl sm:text-4xl font-extrabold text-success" data-count="99.9" data-suffix="%">0</div>
                     <div class="text-sm text-slate-400 mt-1 font-medium">Uptime</div>
                 </div>
             </div>
@@ -414,46 +464,108 @@
             <div class="grid grid-cols-1 md:grid-cols-3 gap-5 stagger-children">
                 <!-- Review 1 -->
                 <div class="reveal card-dark rounded-2xl p-7">
-                    <div class="star-rating text-sm mb-4">&#9733;&#9733;&#9733;&#9733;&#9733;</div>
+                    <div class="star-rating text-sm mb-4" role="img" aria-label="5 out of 5 stars">&#9733;&#9733;&#9733;&#9733;&#9733;</div>
                     <p class="text-slate-300 leading-relaxed mb-6">
                         "CBT Mini School transformed how we conduct exams. Our teachers save hours every week on grading, and students love the instant feedback. The report card generation alone is worth it."
                     </p>
                     <div class="flex items-center gap-3">
-                        <img src="https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?w=80&h=80&fit=crop&crop=face&auto=format" alt="Mrs. Adebayo" class="w-11 h-11 rounded-full object-cover" loading="lazy" onerror="this.outerHTML='<div class=\'w-11 h-11 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center text-white font-bold text-sm\'>FA</div>'">
+                        <div class="w-11 h-11 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center text-white font-bold text-sm">FA</div>
                         <div>
                             <div class="font-bold text-sm text-white">Mrs. Folake Adebayo</div>
-                            <div class="text-xs text-slate-500">Principal, Lagoon Academy</div>
+                            <div class="text-xs text-slate-400">School Administrator</div>
                         </div>
                     </div>
                 </div>
 
                 <!-- Review 2 -->
                 <div class="reveal card-dark rounded-2xl p-7">
-                    <div class="star-rating text-sm mb-4">&#9733;&#9733;&#9733;&#9733;&#9733;</div>
+                    <div class="star-rating text-sm mb-4" role="img" aria-label="5 out of 5 stars">&#9733;&#9733;&#9733;&#9733;&#9733;</div>
                     <p class="text-slate-300 leading-relaxed mb-6">
-                        "The question bank feature is incredible. We've built a library of over 10,000 questions across all subjects. Bulk upload from Excel makes it so easy to maintain."
+                        "The question bank feature is incredible. We've built a library of questions across all subjects. Bulk upload from Excel makes it so easy to maintain."
                     </p>
                     <div class="flex items-center gap-3">
-                        <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=80&h=80&fit=crop&crop=face&auto=format" alt="Mr. Okonkwo" class="w-11 h-11 rounded-full object-cover" loading="lazy" onerror="this.outerHTML='<div class=\'w-11 h-11 rounded-full bg-gradient-to-br from-accent to-purple-600 flex items-center justify-center text-white font-bold text-sm\'>CO</div>'">
+                        <div class="w-11 h-11 rounded-full bg-gradient-to-br from-accent to-purple-600 flex items-center justify-center text-white font-bold text-sm">CO</div>
                         <div>
                             <div class="font-bold text-sm text-white">Mr. Chidi Okonkwo</div>
-                            <div class="text-xs text-slate-500">VP Academics, Sunrise International</div>
+                            <div class="text-xs text-slate-400">VP Academics</div>
                         </div>
                     </div>
                 </div>
 
                 <!-- Review 3 -->
                 <div class="reveal card-dark rounded-2xl p-7">
-                    <div class="star-rating text-sm mb-4">&#9733;&#9733;&#9733;&#9733;&#9733;</div>
+                    <div class="star-rating text-sm mb-4" role="img" aria-label="5 out of 5 stars">&#9733;&#9733;&#9733;&#9733;&#9733;</div>
                     <p class="text-slate-300 leading-relaxed mb-6">
                         "As a parent, I appreciate being able to see my child's performance in real-time. The attendance tracking and instant result notifications give me peace of mind."
                     </p>
                     <div class="flex items-center gap-3">
-                        <img src="https://images.unsplash.com/photo-1580489944761-15a19d654956?w=80&h=80&fit=crop&crop=face&auto=format" alt="Mrs. Ibrahim" class="w-11 h-11 rounded-full object-cover" loading="lazy" onerror="this.outerHTML='<div class=\'w-11 h-11 rounded-full bg-gradient-to-br from-accent-teal to-teal-600 flex items-center justify-center text-white font-bold text-sm\'>HI</div>'">
+                        <div class="w-11 h-11 rounded-full bg-gradient-to-br from-accent-teal to-teal-600 flex items-center justify-center text-white font-bold text-sm">HI</div>
                         <div>
                             <div class="font-bold text-sm text-white">Mrs. Halima Ibrahim</div>
-                            <div class="text-xs text-slate-500">Parent, Greenfield College</div>
+                            <div class="text-xs text-slate-400">Parent</div>
                         </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ===================== FAQ ===================== -->
+    <section id="faq" class="py-20 lg:py-28 section-surface bg-bg-surface">
+        <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center mb-16 reveal">
+                <div class="inline-flex px-3 py-1 rounded-full text-xs font-semibold bg-primary/10 text-primary mb-4">FAQ</div>
+                <h2 class="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-white">
+                    Frequently Asked Questions
+                </h2>
+                <p class="mt-4 text-lg text-slate-400">
+                    Everything you need to know about getting started.
+                </p>
+            </div>
+            <div class="space-y-4">
+                <div class="faq-item card-dark rounded-2xl overflow-hidden">
+                    <button class="faq-toggle w-full flex items-center justify-between p-6 text-left" aria-expanded="false">
+                        <span class="text-base font-semibold text-white pr-4">Is CBT Mini School free to use?</span>
+                        <svg class="faq-icon w-5 h-5 text-slate-400 shrink-0 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                    </button>
+                    <div class="faq-answer hidden px-6 pb-6 text-sm text-slate-400 leading-relaxed">
+                        Yes! Small schools can use CBT Mini School for free. We offer premium plans for larger schools that need advanced features like custom report templates, priority support, and API access.
+                    </div>
+                </div>
+                <div class="faq-item card-dark rounded-2xl overflow-hidden">
+                    <button class="faq-toggle w-full flex items-center justify-between p-6 text-left" aria-expanded="false">
+                        <span class="text-base font-semibold text-white pr-4">How long does it take to set up?</span>
+                        <svg class="faq-icon w-5 h-5 text-slate-400 shrink-0 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                    </button>
+                    <div class="faq-answer hidden px-6 pb-6 text-sm text-slate-400 leading-relaxed">
+                        Most schools are up and running within 15 minutes. Simply register, add your classes and students, and you're ready to create and administer exams.
+                    </div>
+                </div>
+                <div class="faq-item card-dark rounded-2xl overflow-hidden">
+                    <button class="faq-toggle w-full flex items-center justify-between p-6 text-left" aria-expanded="false">
+                        <span class="text-base font-semibold text-white pr-4">Can students take exams on their phones?</span>
+                        <svg class="faq-icon w-5 h-5 text-slate-400 shrink-0 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                    </button>
+                    <div class="faq-answer hidden px-6 pb-6 text-sm text-slate-400 leading-relaxed">
+                        Yes! CBT Mini School works on any device with a web browser — phones, tablets, laptops, and desktops. No app installation required.
+                    </div>
+                </div>
+                <div class="faq-item card-dark rounded-2xl overflow-hidden">
+                    <button class="faq-toggle w-full flex items-center justify-between p-6 text-left" aria-expanded="false">
+                        <span class="text-base font-semibold text-white pr-4">How does automatic grading work?</span>
+                        <svg class="faq-icon w-5 h-5 text-slate-400 shrink-0 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                    </button>
+                    <div class="faq-answer hidden px-6 pb-6 text-sm text-slate-400 leading-relaxed">
+                        When students submit their exams, CBT Mini School automatically grades objective questions (multiple choice, true/false) and instantly publishes results. Essay questions can be graded manually by teachers.
+                    </div>
+                </div>
+                <div class="faq-item card-dark rounded-2xl overflow-hidden">
+                    <button class="faq-toggle w-full flex items-center justify-between p-6 text-left" aria-expanded="false">
+                        <span class="text-base font-semibold text-white pr-4">Is my school's data secure?</span>
+                        <svg class="faq-icon w-5 h-5 text-slate-400 shrink-0 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                    </button>
+                    <div class="faq-answer hidden px-6 pb-6 text-sm text-slate-400 leading-relaxed">
+                        Absolutely. All data is encrypted in transit and at rest. We use industry-standard security practices and regular backups to keep your school's data safe.
                     </div>
                 </div>
             </div>
@@ -490,18 +602,23 @@
             <div class="grid grid-cols-1 md:grid-cols-3 gap-10 lg:gap-16">
                 <div>
                     <div class="flex items-center gap-3 mb-4">
-                        {% if school_info.logo_url %}
-                        <img src="{{ school_info.logo_url }}" alt="School Logo" class="h-9 w-9 rounded-lg object-cover" />
-                        {% else %}
-                        <div class="h-9 w-9 rounded-lg bg-gradient-to-br from-primary to-accent flex items-center justify-center text-white font-extrabold text-sm">
-                            {{ (school_info.name[:2] if school_info and school_info.name else 'SC')|upper }}
-                        </div>
-                        {% endif %}
+                        <img src="{{ school_info.logo_url }}" alt="School Logo" class="h-9 w-9 rounded-lg object-cover" onerror="this.onerror=null;this.src='{{ url_for('static', filename='default-logo.svg') }}'" />
                         <span class="text-lg font-bold">{{ school_info.name }}</span>
                     </div>
                     <p class="text-sm text-white/40 leading-relaxed max-w-xs">
                         Empowering schools with modern, computer-based testing and comprehensive academic management tools.
                     </p>
+                    <div class="flex items-center gap-3 mt-5">
+                        <a href="#" class="w-9 h-9 rounded-lg bg-white/5 flex items-center justify-center text-white/40 hover:text-white hover:bg-white/10 transition" aria-label="Twitter">
+                            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+                        </a>
+                        <a href="#" class="w-9 h-9 rounded-lg bg-white/5 flex items-center justify-center text-white/40 hover:text-white hover:bg-white/10 transition" aria-label="LinkedIn">
+                            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
+                        </a>
+                        <a href="#" class="w-9 h-9 rounded-lg bg-white/5 flex items-center justify-center text-white/40 hover:text-white hover:bg-white/10 transition" aria-label="Facebook">
+                            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+                        </a>
+                    </div>
                 </div>
 
                 <div>
@@ -512,6 +629,7 @@
                         <li><a href="#features" class="text-sm text-white/50 hover:text-white transition">Features</a></li>
                         <li><a href="#how-it-works" class="text-sm text-white/50 hover:text-white transition">How It Works</a></li>
                         <li><a href="#testimonials" class="text-sm text-white/50 hover:text-white transition">Reviews</a></li>
+                        <li><a href="#faq" class="text-sm text-white/50 hover:text-white transition">FAQ</a></li>
                     </ul>
                 </div>
 
@@ -544,6 +662,10 @@
         <div class="footer-divider border-t border-white/5">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5 flex flex-col sm:flex-row items-center justify-between gap-3">
                 <div class="text-xs text-white/30">&copy; {{ school_info.name }}. All rights reserved.</div>
+                <div class="flex items-center gap-4 text-xs text-white/30">
+                    <a href="#" class="hover:text-white/50 transition">Privacy Policy</a>
+                    <a href="#" class="hover:text-white/50 transition">Terms of Service</a>
+                </div>
                 <div class="text-xs text-white/30">Powered by <span class="font-semibold text-white/50">CBT Mini School</span></div>
             </div>
         </div>
@@ -623,10 +745,10 @@
         var navbar = document.getElementById('navbar');
         function updateNav() {
             if (window.scrollY > 50) {
-                navbar.classList.add('bg-bg-deep/80', 'backdrop-blur-xl', 'shadow-lg', 'shadow-black/20');
+                navbar.classList.add('bg-nav-scrolled');
                 navbar.classList.remove('bg-transparent');
             } else {
-                navbar.classList.remove('bg-bg-deep/80', 'backdrop-blur-xl', 'shadow-lg', 'shadow-black/20');
+                navbar.classList.remove('bg-nav-scrolled');
                 navbar.classList.add('bg-transparent');
             }
         }
@@ -637,11 +759,11 @@
         var menuBtn = document.getElementById('mobile-menu-btn');
         var mobileMenu = document.getElementById('mobile-menu');
         menuBtn.addEventListener('click', function() {
-            mobileMenu.classList.toggle('hidden');
+            mobileMenu.classList.toggle('is-open');
         });
         document.querySelectorAll('.mobile-nav-link').forEach(function(link) {
             link.addEventListener('click', function() {
-                mobileMenu.classList.add('hidden');
+                mobileMenu.classList.remove('is-open');
                 if (exploreDropdown) exploreDropdown.classList.remove('is-open');
             });
         });
@@ -652,8 +774,10 @@
                 var target = document.querySelector(this.getAttribute('href'));
                 if (target) {
                     e.preventDefault();
-                    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                    mobileMenu.classList.add('hidden');
+                    var navHeight = document.getElementById('navbar').offsetHeight;
+                    var targetPosition = target.getBoundingClientRect().top + window.pageYOffset - navHeight;
+                    window.scrollTo({ top: targetPosition, behavior: 'smooth' });
+                    mobileMenu.classList.remove('is-open');
                     if (exploreDropdown) exploreDropdown.classList.remove('is-open');
                 }
             });
@@ -672,21 +796,41 @@
             document.querySelectorAll('.reveal').forEach(function(el) { el.classList.add('visible'); });
         }
 
+        // --- FAQ accordion ---
+        document.querySelectorAll('.faq-toggle').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                var item = btn.closest('.faq-item');
+                var answer = item.querySelector('.faq-answer');
+                var icon = item.querySelector('.faq-icon');
+                var isOpen = !answer.classList.contains('hidden');
+                document.querySelectorAll('.faq-answer').forEach(function(a) { a.classList.add('hidden'); });
+                document.querySelectorAll('.faq-icon').forEach(function(i) { i.style.transform = ''; });
+                document.querySelectorAll('.faq-toggle').forEach(function(t) { t.setAttribute('aria-expanded', 'false'); });
+                if (!isOpen) {
+                    answer.classList.remove('hidden');
+                    icon.style.transform = 'rotate(180deg)';
+                    btn.setAttribute('aria-expanded', 'true');
+                }
+            });
+        });
+
         // --- Counter animation ---
         var counterObserver = new IntersectionObserver(function(entries) {
             entries.forEach(function(entry) {
                 if (!entry.isIntersecting) return;
                 var el = entry.target;
-                var target = parseInt(el.getAttribute('data-count'));
-                var suffix = el.getAttribute('data-suffix') || '+';
-                var duration = 1500;
-                var startTime = null;
-                function step(timestamp) {
-                    if (!startTime) startTime = timestamp;
-                    var progress = Math.min((timestamp - startTime) / duration, 1);
-                    var eased = 1 - Math.pow(1 - progress, 3);
-                    var current = Math.floor(eased * target);
-                    el.textContent = (target >= 1000 ? current.toLocaleString() : current) + suffix;
+                    var target = parseFloat(el.getAttribute('data-count'));
+                    var suffix = el.getAttribute('data-suffix') || '+';
+                    var isDecimal = target % 1 !== 0;
+                    var duration = 1500;
+                    var startTime = null;
+                    function step(timestamp) {
+                        if (!startTime) startTime = timestamp;
+                        var progress = Math.min((timestamp - startTime) / duration, 1);
+                        var eased = 1 - Math.pow(1 - progress, 3);
+                        var current = eased * target;
+                        var display = isDecimal ? current.toFixed(1) : Math.floor(current);
+                        el.textContent = (target >= 1000 && !isDecimal ? Math.floor(current).toLocaleString() : display) + suffix;
                     if (progress < 1) requestAnimationFrame(step);
                 }
                 requestAnimationFrame(step);

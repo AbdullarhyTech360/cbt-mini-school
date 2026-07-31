@@ -13,13 +13,9 @@
 
   <div class="w-full max-w-md space-y-6 card-enter">
     <div class="flex flex-col items-center gap-3">
-      {% if school_info.logo_url %}
-      <img src="{{ school_info.logo_url }}" alt="School Logo" class="h-16 w-16 rounded-xl object-cover ring-2 ring-primary/20 shadow-lg animate-fade-in-up" />
-      {% else %}
-      <div class="h-16 w-16 rounded-xl bg-gradient-to-br from-primary to-blue-600 flex items-center justify-center text-white font-extrabold text-xl shadow-lg animate-fade-in-up">
-        {{ (school_info.name[:2] if school_info and school_info.name else 'SC')|upper }}
-      </div>
-      {% endif %}
+      <a href="{{ url_for('index') }}" class="block transition-transform duration-200 hover:scale-105 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-gray-900 rounded-xl">
+        <img src="{{ school_info.logo_url }}" alt="School Logo" class="h-16 w-16 rounded-xl object-cover ring-2 ring-primary/20 shadow-lg animate-fade-in-up" onerror="this.onerror=null;this.src='{{ url_for('static', filename='default-logo.svg') }}'" />
+      </a>
       <h1 class="text-2xl font-extrabold text-gray-900 dark:text-white animate-fade-in-up" style="animation-delay:0.05s">{{ school_info.name }}</h1>
       <p class="text-sm text-gray-500 dark:text-gray-400 animate-fade-in-up" style="animation-delay:0.1s">Welcome back — sign in to continue</p>
     </div>
@@ -36,7 +32,7 @@
               id="username" name="username" placeholder="Enter your username" required=""
               type="text" autocomplete="username" />
           </div>
-          <p class="text-sm mt-1 flex items-center gap-1" id="username_status"></p>
+          <p class="text-sm mt-1 flex items-center gap-1" id="username_status" aria-live="polite"></p>
         </div>
 
         <div class="flex flex-col">
@@ -51,7 +47,7 @@
               <span class="material-symbols-outlined text-xl">visibility</span>
             </button>
           </div>
-          <p class="text-sm mt-1 flex items-center gap-1" id="password_status"></p>
+          <p class="text-sm mt-1 flex items-center gap-1" id="password_status" aria-live="polite"></p>
         </div>
 
         <div id="exam-select-card" class="hidden flex flex-col animate-slide-down">
@@ -61,7 +57,7 @@
             <select
               class="form-input input-with-icon flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:border-primary focus:ring-2 focus:ring-primary/20 h-13 p-[14px] text-base font-normal leading-normal outline-none transition appearance-none"
               id="exam-select" name="exam-select">
-              <option value="" selected>Continue to Dashboard</option>
+              <option value="" selected></option>
               {% for exam in upcoming_exams %}
               <option value="{{ exam.id }}">{{ exam.name }} - {{ exam.date.strftime('%b %d, %Y') }}</option>
               {% endfor %}
@@ -70,7 +66,7 @@
               <span class="material-symbols-outlined text-gray-400">arrow_drop_down</span>
             </div>
           </div>
-          <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Select an upcoming exam or continue to dashboard</p>
+          <p id="exam-hint" class="text-xs text-gray-500 dark:text-gray-400 mt-1">Select an upcoming exam or continue to dashboard</p>
         </div>
 
         <div class="flex items-center justify-between">
@@ -119,21 +115,29 @@
 <script src="{{ url_for('static', filename='js/login.js') }}"></script>
 <script>
   (function() {
+    // Show flash messages as toasts
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          (function() {
+            const toast = document.getElementById('toast');
+            if (toast) {
+              toast.textContent = {{ message|tojson|safe }};
+              toast.style.background = '{{ "#ef4444" if category == "error" else "#1173d4" }}';
+              toast.style.opacity = '1';
+              clearTimeout(toast._t);
+              toast._t = setTimeout(function() { toast.style.opacity = '0'; }, 5000);
+            }
+          })();
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    // Pre-fill username from registration success (skip validation — resolves on blur or submit)
     const params = new URLSearchParams(window.location.search);
-    const denied = params.get('denied');
-    if (denied) {
-      const toast = document.getElementById('toast');
-      if (toast) {
-        toast.textContent = denied;
-        toast.style.background = '#ef4444';
-        toast.style.opacity = '1';
-        clearTimeout(toast._t);
-        toast._t = setTimeout(function() { toast.style.opacity = '0'; }, 5000);
-      }
-      // Clean the URL so refreshing won't re-show the toast
-      if (window.history.replaceState) {
-        window.history.replaceState({}, document.title, window.location.pathname);
-      }
+    const username = params.get('username');
+    if (username) {
+      document.getElementById('username').value = username;
     }
   })();
 </script>

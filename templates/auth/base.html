@@ -5,6 +5,7 @@
   <meta charset="utf-8" />
   <meta content="width=device-width, initial-scale=1.0" name="viewport" />
   <title>{% block title %}CBT Minischool{% endblock %}</title>
+  <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
   <link href="{{ url_for('static', filename='dist/output.css') }}" rel="stylesheet">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   <style>
@@ -155,36 +156,26 @@
 </head>
 
 <body class="bg-white dark:bg-[#0f1419] font-sans antialiased">
-  <div class="relative flex min-h-screen w-full flex-col bg-white dark:bg-[#0f1419] overflow-x-hidden bg-subtle-pattern">
-    <button id="themeToggle" type="button" class="fixed top-4 right-4 z-50 flex items-center justify-center h-10 w-10 rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:shadow-lg hover:scale-105 active:scale-95 transition-all duration-200 text-gray-600 dark:text-gray-300 shadow-sm" aria-label="Toggle theme">
-      <span class="material-symbols-outlined text-xl">dark_mode</span>
-    </button>
+  {% block slim_header %}
+  <header class="fixed top-0 left-0 right-0 z-40 h-14 bg-white/80 dark:bg-gray-900/60 backdrop-blur-md border-b border-gray-200 dark:border-gray-800">
+    <div class="max-w-7xl mx-auto px-4 h-full flex items-center justify-between">
+      <a href="{{ url_for('index') }}" class="flex items-center gap-2 hover:opacity-80 transition-opacity">
+        <img src="{{ school_info.logo_url }}" alt="" class="h-7 w-7 rounded-lg object-cover" onerror="this.onerror=null;this.src='{{ url_for('static', filename='default-logo.svg') }}'" />
+        <span class="text-sm font-semibold text-gray-700 dark:text-gray-300">{{ school_info.name }}</span>
+      </a>
+      <a href="{{ url_for('index') }}" class="flex size-10 shrink-0 items-center justify-center rounded-lg text-gray-400 dark:text-gray-500 hover:text-primary dark:hover:text-primary hover:bg-gray-100 dark:hover:bg-gray-800 transition" aria-label="Back to home page">
+        <span class="material-symbols-outlined text-2xl">home</span>
+      </a>
+    </div>
+  </header>
+  {% endblock %}
+  <div class="relative flex min-h-screen w-full flex-col bg-white dark:bg-[#0f1419] overflow-x-hidden bg-subtle-pattern pt-14">
     {% block content %}
     {% endblock %}
   </div>
 
   {% block scripts %}
   {% endblock %}
-
-  <script>
-    (function() {
-      var html = document.documentElement;
-      var btn = document.getElementById("themeToggle");
-      var icon = btn && btn.querySelector("span");
-      function update() {
-        var isDark = html.classList.contains("dark");
-        if (icon) icon.textContent = isDark ? "light_mode" : "dark_mode";
-      }
-      if (btn) {
-        btn.addEventListener("click", function() {
-          html.classList.toggle("dark");
-          localStorage.theme = html.classList.contains("dark") ? "dark" : "light";
-          update();
-        });
-      }
-      update();
-    })();
-  </script>
 </body>
 
 </html>

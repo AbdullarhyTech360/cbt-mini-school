@@ -1,6 +1,32 @@
 @import "tailwindcss";
 @custom-variant dark (&:where(.dark, .dark *));
 
+/* 
+  SAFELIST: These classes are constructed dynamically in Jinja2 templates via
+  {{ color }} variables (blue, purple, green, orange, teal, red) and would be
+  purged by Tailwind's JIT compiler if not explicitly listed here.
+*/
+.from-blue-100, .to-blue-200, .from-purple-100, .to-purple-200,
+.from-green-100, .to-green-200, .from-orange-100, .to-orange-200,
+.from-teal-100, .to-teal-200, .from-red-100, .to-red-200,
+.from-blue-50, .to-blue-100, .from-purple-50, .to-purple-100,
+.from-green-50, .to-green-100, .from-orange-50, .to-orange-100,
+.from-teal-50, .to-teal-100, .from-red-50, .to-red-100,
+.from-blue-500, .to-blue-600, .from-purple-500, .to-purple-600,
+.from-green-500, .to-green-600, .from-orange-500, .to-orange-600,
+.from-teal-500, .to-teal-600, .from-red-500, .to-red-600,
+.text-blue-700, .text-purple-700, .text-green-700, .text-orange-700, .text-teal-700, .text-red-700,
+.dark\:from-blue-900\/30, .dark\:to-blue-800\/30,
+.dark\:from-purple-900\/30, .dark\:to-purple-800\/30,
+.dark\:from-green-900\/30, .dark\:to-green-800\/30,
+.dark\:from-orange-900\/30, .dark\:to-orange-800\/30,
+.dark\:from-teal-900\/30, .dark\:to-teal-800\/30,
+.dark\:from-red-900\/30, .dark\:to-red-800\/30,
+.dark\:text-blue-300, .dark\:text-purple-300, .dark\:text-green-300, .dark\:text-orange-300, .dark\:text-teal-300, .dark\:text-red-300,
+.border-blue-200, .border-purple-200, .border-green-200, .border-orange-200, .border-teal-200, .border-red-200,
+.dark\:border-blue-700, .dark\:border-purple-700, .dark\:border-green-700, .dark\:border-orange-700, .dark\:border-teal-700, .dark\:border-red-700,
+.bg-blue-500, .bg-purple-500, .bg-green-500, .bg-orange-500, .bg-teal-500, .bg-red-500 { }
+
 /* Local Material Symbols */
 @font-face {
   font-family: "Material Symbols Outlined";
@@ -224,7 +250,6 @@ html:not(.dark) .theme-toggle .icon-moon { display: none; opacity: 0; transform:
   transition: opacity 0.2s ease, transform 0.2s ease, visibility 0.2s;
   z-index: 60;
 }
-.explore-dropdown:hover .explore-dropdown-menu,
 .explore-dropdown.is-open .explore-dropdown-menu {
   opacity: 1;
   visibility: visible;
@@ -289,16 +314,54 @@ html:not(.dark) body {
   background: #f6f7f8;
   color: #1e293b;
 }
-html:not(.dark) .text-white { color: #0f172a; }
-html:not(.dark) .text-slate-100 { color: #334155; }
-html:not(.dark) .text-slate-200 { color: #334155; }
-html:not(.dark) .text-slate-300 { color: #334155; }
-html:not(.dark) .text-slate-400 { color: #475569; }
-html:not(.dark) .text-slate-500 { color: #64748b; }
+/* ── Mobile menu animation ── */
+.mobile-menu-panel {
+  transform: translateY(-100%);
+  opacity: 0;
+  pointer-events: none;
+  transition: transform 0.3s ease, opacity 0.3s ease;
+}
+.mobile-menu-panel.is-open {
+  transform: translateY(0);
+  opacity: 1;
+  pointer-events: auto;
+}
+/* ── Light mode: scoped to landing page containers ── */
+html:not(.dark) .hero-mesh .text-white,
+html:not(.dark) .section-deep .text-white,
+html:not(.dark) .card-dark .text-white,
+html:not(.dark) .mock-exam .text-white,
+html:not(.dark) .stats-grid .text-white,
+html:not(.dark) .trusted-strip .text-white { color: #0f172a; }
+html:not(.dark) .hero-mesh .text-slate-100,
+html:not(.dark) .section-deep .text-slate-100,
+html:not(.dark) .card-dark .text-slate-100 { color: #334155; }
+html:not(.dark) .hero-mesh .text-slate-200,
+html:not(.dark) .section-deep .text-slate-200,
+html:not(.dark) .card-dark .text-slate-200 { color: #334155; }
+html:not(.dark) .hero-mesh .text-slate-300,
+html:not(.dark) .section-deep .text-slate-300,
+html:not(.dark) .card-dark .text-slate-300 { color: #334155; }
+html:not(.dark) .hero-mesh .text-slate-400,
+html:not(.dark) .section-deep .text-slate-400,
+html:not(.dark) .card-dark .text-slate-400 { color: #475569; }
+html:not(.dark) .hero-mesh .text-slate-500,
+html:not(.dark) .section-deep .text-slate-500,
+html:not(.dark) .card-dark .text-slate-500 { color: #64748b; }
 
 /* ── Light mode: navigation ── */
+#navbar.bg-nav-scrolled {
+  background: rgba(12, 18, 34, 0.8);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  box-shadow: 0 4px 32px rgba(0,0,0,0.2);
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+}
 html:not(.dark) #navbar.bg-nav-scrolled {
   background: rgba(246,247,248,0.92);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  box-shadow: 0 4px 32px rgba(0,0,0,0.06);
   border-bottom: 1px solid rgba(0,0,0,0.06);
 }
 
@@ -325,9 +388,13 @@ html:not(.dark) .hero-badge {
   color: #2563eb;
 }
 
-/* ── Light mode: section headings ── */
-html:not(.dark) section h2 { color: #0f172a; }
-html:not(.dark) section h3 { color: #1e293b; }
+/* ── Light mode: section headings (scoped to landing page) ── */
+html:not(.dark) .hero-mesh h2,
+html:not(.dark) .section-deep h2,
+html:not(.dark) .section-surface h2 { color: #0f172a; }
+html:not(.dark) .hero-mesh h3,
+html:not(.dark) .section-deep h3,
+html:not(.dark) .section-surface h3 { color: #1e293b; }
 
 /* ── Light mode: stats ── */
 html:not(.dark) .stats-grid .glass {
@@ -428,13 +495,24 @@ html:not(.dark) .theme-toggle-dropdown:hover { background: rgba(0,0,0,0.04); col
   50% { transform: translateY(-12px); }
 }
 
-/* ── Light mode: separator & misc ── */
-html:not(.dark) .text-white\/10 { color: rgba(0,0,0,0.15); }
-html:not(.dark) .text-white\/30 { color: rgba(0,0,0,0.4); }
-html:not(.dark) .text-white\/40 { color: rgba(0,0,0,0.5); }
-html:not(.dark) .text-white\/50 { color: rgba(0,0,0,0.55); }
-html:not(.dark) .text-white\/60 { color: rgba(0,0,0,0.65); }
-html:not(.dark) .text-white\/80 { color: rgba(0,0,0,0.75); }
+/* ── Light mode: separator & misc (scoped to landing page) ── */
+html:not(.dark) .mock-exam .text-white\/10,
+html:not(.dark) .section-deep .text-white\/10,
+html:not(.dark) .hero-mesh .text-white\/10 { color: rgba(0,0,0,0.15); }
+html:not(.dark) .bg-footer .text-white\/30,
+html:not(.dark) .section-deep .text-white\/30,
+html:not(.dark) .hero-mesh .text-white\/30 { color: rgba(0,0,0,0.4); }
+html:not(.dark) .bg-footer .text-white\/40,
+html:not(.dark) .section-deep .text-white\/40,
+html:not(.dark) .hero-mesh .text-white\/40 { color: rgba(0,0,0,0.5); }
+html:not(.dark) .bg-footer .text-white\/50,
+html:not(.dark) .section-deep .text-white\/50,
+html:not(.dark) .hero-mesh .text-white\/50 { color: rgba(0,0,0,0.55); }
+html:not(.dark) .gallery-card .text-white\/60,
+html:not(.dark) .section-deep .text-white\/60,
+html:not(.dark) .hero-mesh .text-white\/60 { color: rgba(0,0,0,0.65); }
+html:not(.dark) .section-deep .text-white\/80,
+html:not(.dark) .hero-mesh .text-white\/80 { color: rgba(0,0,0,0.75); }
 html:not(.dark) .bg-white\/3 { background: rgba(0,0,0,0.03); }
 html:not(.dark) .bg-white\/5 { background: rgba(0,0,0,0.04); }
 html:not(.dark) .bg-white\/\[0\.02\] { background: rgba(0,0,0,0.02); }

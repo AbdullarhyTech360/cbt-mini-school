@@ -2,14 +2,14 @@
 <html lang="en">
 
 <head>
+    <script>if(localStorage.theme==="dark"||(!localStorage.theme&&window.matchMedia("(prefers-color-scheme:dark)").matches))document.documentElement.classList.add("dark")</script>
     <meta charset="utf-8" />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
     <title>Student Dashboard</title>
     <link href="{{ url_for('static', filename='dist/output.css') }}" rel="stylesheet">
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
     <script src="{{ url_for('static', filename='js/student/dashboard.js') }}" defer></script>
-    <!-- Removed Google Fonts CDN for Material Symbols -->
-    <!-- <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet" /> -->
-    <!-- Removed preload tags to prevent warnings about unused preloaded resources -->
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet" />
     <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet" />
     <style>
         body {
@@ -162,6 +162,59 @@
             </div>
             {% endif %}
 
+            <!-- Quick Tests Section -->
+            <div class="mb-8">
+                <h2 class="text-2xl font-bold text-gray-900 dark:text-white mb-4">Quick Tests</h2>
+                {% if available_otg_tests %}
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {% for test in available_otg_tests %}
+                    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md hover:shadow-lg transition-shadow duration-200 overflow-hidden">
+                        <div class="p-6">
+                            <div class="flex items-start justify-between mb-4">
+                                <div class="flex items-center flex-1">
+                                    <div class="p-2 bg-gradient-to-br from-orange-500 to-amber-600 rounded-lg mr-3">
+                                        <span class="material-symbols-outlined text-white text-2xl">bolt</span>
+                                    </div>
+                                    <div class="flex-1">
+                                        <h3 class="text-lg font-bold text-gray-900 dark:text-white">{{ test.title }}</h3>
+                                        <p class="text-sm text-gray-500 dark:text-gray-400">{{ test.subject.subject_name if test.subject else 'N/A' }}</p>
+                                    </div>
+                                </div>
+                                {% if test.access_code_required %}
+                                <span class="px-3 py-1 text-xs font-semibold text-blue-800 bg-blue-100 dark:bg-blue-900 dark:text-blue-200 rounded-full whitespace-nowrap ml-2">Code</span>
+                                {% endif %}
+                            </div>
+                            <div class="space-y-2 mb-4">
+                                <div class="flex items-center text-sm text-gray-700 dark:text-gray-300">
+                                    <span class="material-symbols-outlined text-lg mr-2 text-gray-500 dark:text-gray-400">schedule</span>
+                                    <span>{{ test.duration_label if test.duration_label else 'No limit' }}</span>
+                                </div>
+                                <div class="flex items-center text-sm text-gray-700 dark:text-gray-300">
+                                    <span class="material-symbols-outlined text-lg mr-2 text-gray-500 dark:text-gray-400">quiz</span>
+                                    <span>{{ test.number_of_questions or 'All' }} questions</span>
+                                </div>
+                                <div class="flex items-center text-sm text-gray-700 dark:text-gray-300">
+                                    <span class="material-symbols-outlined text-lg mr-2 text-gray-500 dark:text-gray-400">grade</span>
+                                    <span>Max: {{ test.max_score }}</span>
+                                </div>
+                            </div>
+                            <a href="/student/on-the-go-tests/{{ test.id }}/start"
+                               class="block w-full text-center bg-gradient-to-r from-orange-500 to-amber-600 text-white font-semibold py-3 rounded-lg hover:from-orange-600 hover:to-amber-700 transition-all duration-200 hover:shadow-md">
+                                Start Quick Test
+                            </a>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-8 text-center">
+                    <span class="material-symbols-outlined text-6xl text-gray-300 dark:text-gray-600 mb-4">bolt</span>
+                    <h3 class="text-xl font-semibold text-gray-900 dark:text-white mb-2">No Quick Tests Available</h3>
+                    <p class="text-gray-600 dark:text-gray-400">There are no quick tests available right now. Check back later!</p>
+                </div>
+                {% endif %}
+            </div>
+
             <!-- Demo Question Bank Section -->
             <div class="mb-8">
                 <h2 class="text-2xl font-bold text-gray-900 dark:text-white mb-4">Practice Resources</h2>
@@ -247,7 +300,6 @@
                                     </button>
                                     {% else %}
                                     <a href="{{ url_for('exam_details', exam_id=exam.id) }}" 
-                                    disabled
                                        class="block w-full text-center bg-gradient-to-r from-blue-500 to-blue-600 text-white font-semibold py-3 rounded-lg hover:from-blue-600 hover:to-blue-700 transition-all duration-200 hover:shadow-md">
                                         View Details & Start
                                     </a>
@@ -339,19 +391,6 @@
             {% endif %}
         </div>
     </main>
-    <script>
-    (function() {
-        if (sessionStorage.getItem('session_active')) return;
-        var cookies = document.cookie.split(';');
-        for (var i = 0; i < cookies.length; i++) {
-            var parts = cookies[i].trim().split('=');
-            if (parts[0] === 'session_type' && parts[1] === 'permanent') return;
-        }
-        fetch('/logout', { method: 'POST' }).then(function() {
-            window.location.href = '/login';
-        });
-    })();
-    </script>
 </body>
 
 </html>

@@ -2,10 +2,12 @@
 <html lang="en">
 
 <head>
+    <script>if(localStorage.theme==="dark"||(!localStorage.theme&&window.matchMedia("(prefers-color-scheme:dark)").matches))document.documentElement.classList.add("dark")</script>
     <meta charset="utf-8" />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
     <title>Demo Question Bank - Student Portal</title>
     <link href="{{ url_for('static', filename='dist/output.css') }}" rel="stylesheet">
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
     <!-- Removed Google Fonts CDN for Material Symbols -->
     <!-- <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet" /> -->
     <!-- Removed preload tags to prevent warnings about unused preloaded resources -->
@@ -190,19 +192,7 @@
     </div>
         </div>
     </main>
-    <script>
-    (function() {
-        if (sessionStorage.getItem('session_active')) return;
-        var cookies = document.cookie.split(';');
-        for (var i = 0; i < cookies.length; i++) {
-            var parts = cookies[i].trim().split('=');
-            if (parts[0] === 'session_type' && parts[1] === 'permanent') return;
-        }
-        fetch('/logout', { method: 'POST' }).then(function() {
-            window.location.href = '/login';
-        });
-    })();
-    </script>
+
 </body>
 
 </html>

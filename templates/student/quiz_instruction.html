@@ -2,10 +2,12 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <script>if(localStorage.theme==="dark"||(!localStorage.theme&&window.matchMedia("(prefers-color-scheme:dark)").matches))document.documentElement.classList.add("dark")</script>
     <meta charset="utf-8" />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
     <title>Quiz Instructions - {{ exam.name if exam else 'Quiz' }}</title>
     <link href="{{ url_for('static', filename='dist/output.css') }}" rel="stylesheet">
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
     <style>
         body {
@@ -79,9 +81,7 @@
                 <span class="material-symbols-outlined text-gray-700 dark:text-gray-200 text-xl">arrow_back</span>
             </button>
             <div class="flex items-center gap-2">
-                {% if school_info.logo_url %}
-                <img src="{{ school_info.logo_url }}" alt="School Logo" class="w-7 h-7 rounded-md object-cover">
-                {% endif %}
+                <img src="{{ school_info.logo_url }}" alt="School Logo" class="w-7 h-7 rounded-md object-cover" onerror="this.onerror=null;this.src='{{ url_for('static', filename='default-logo.svg') }}'">
                 <h1 class="text-gray-900 dark:text-white text-base font-bold whitespace-nowrap">{{ school_info.name if school_info and school_info.name else 'School' }}</h1>
                 <span class="px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 rounded">CBT</span>
             </div>
@@ -295,18 +295,5 @@
             </div>
         </div>
     </footer>
-    <script>
-    (function() {
-        if (sessionStorage.getItem('session_active')) return;
-        var cookies = document.cookie.split(';');
-        for (var i = 0; i < cookies.length; i++) {
-            var parts = cookies[i].trim().split('=');
-            if (parts[0] === 'session_type' && parts[1] === 'permanent') return;
-        }
-        fetch('/logout', { method: 'POST' }).then(function() {
-            window.location.href = '/login';
-        });
-    })();
-    </script>
 </body>
 </html>

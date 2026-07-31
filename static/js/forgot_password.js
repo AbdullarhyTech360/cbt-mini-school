@@ -27,9 +27,9 @@ document.addEventListener("DOMContentLoaded", function () {
   // Set status helper
   function setStatus(el, message, isError) {
     if (isError) {
-      el.innerHTML = `<span class="material-symbols-outlined text-sm text-red-500">error</span><span class="text-red-500">${message}</span>`;
+      el.innerHTML = `<span class="material-symbols-outlined text-sm text-red-500" aria-hidden="true">error</span><span class="text-red-500">${message}</span>`;
     } else if (message) {
-      el.innerHTML = `<span class="material-symbols-outlined text-sm text-green-500 animate-checkmark">check_circle</span><span class="text-green-500">${message}</span>`;
+      el.innerHTML = `<span class="material-symbols-outlined text-sm text-green-500 animate-checkmark" aria-hidden="true">check_circle</span><span class="text-green-500">${message}</span>`;
     } else {
       el.innerHTML = "";
     }
@@ -208,6 +208,9 @@ document.addEventListener("DOMContentLoaded", function () {
       resetBtnSpinner.classList.add("hidden");
     }
   });
+
+  // Auto-focus username field on page load
+  usernameInput.focus();
 
   // Notification
   function showNotification(message, type) {

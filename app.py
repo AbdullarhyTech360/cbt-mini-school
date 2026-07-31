@@ -73,6 +73,7 @@ from routes.session_monitor_routes import session_monitor_routes
 from routes.staff_routes import staff_routes
 from routes.student_routes import student_route
 from routes.promotion_routes import promotion_routes
+from routes.on_the_go_routes import on_the_go_route
 
 # Conditionally import report routes based on availability
 try:
@@ -197,6 +198,7 @@ staff_routes(app)
 student_route(app)
 session_monitor_routes(app)
 promotion_routes(app)
+on_the_go_route(app)
 if report_bp:
     app.register_blueprint(report_bp)
 # Initialize the database
@@ -254,8 +256,8 @@ def inject_school_info():
         school_name = (
             school.school_name if school and school.school_name else "Your School"
         )
-        # Build logo URL if saved; else None to use template fallback
-        logo_url = None
+        # Build logo URL; fall back to default if none uploaded
+        logo_url = url_for('static', filename='default-logo.svg')
         if school and school.logo:
             # school.logo is stored as a relative path like uploads/school_logos/filename
             logo_url = f"/{school.logo.replace('static/', '')}"
@@ -272,7 +274,7 @@ def inject_school_info():
             }
         }
     except Exception:
-        return {"school_info": {"name": "Your School", "logo_url": None}}
+        return {"school_info": {"name": "Your School", "logo_url": url_for('static', filename='default-logo.svg')}}
 
 
 @app.context_processor
@@ -332,11 +334,7 @@ def serve_uploads(filepath):
     try:
         return send_from_directory(upload_dir, filepath)
     except FileNotFoundError:
-        # Log the error and return a 404
-        print(f"File not found: {filepath} in directory {upload_dir}")
-        from flask import abort
-
-        abort(404)
+        return send_from_directory(app.static_folder, "default-logo.svg")
 
 
 # Route to serve node_modules for client-side libraries

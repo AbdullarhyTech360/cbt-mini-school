@@ -56,223 +56,215 @@ def auth_routes(app):
     @rate_limit(max_requests=5, window=60, methods=["POST"])
     def register():
         if request.method == "POST":
-            # Check content type to determine how to get data
-            if request.is_json:
-                data = request.get_json(silent=True)
-            else:
-                # Handle multipart/form-data
-                data = request.form.to_dict()
-
-            if not data:
-                return jsonify({"error": "Invalid input data"}), 400
-
-            first_name = data.get("first_name")
-            last_name = data.get("last_name")
-            email = data.get("email")
-            gender = data.get("gender") or "Not specified"
-            dob_str = data.get("dob")
-            # Image handling is done separately below
-            register_number = data.get("register_number")
-            class_room_name = data.get("class_room")
-            role = data.get("role")
-            password = data.get("password")
-            confirm_password = data.get("confirm_password")
-
-            # ✅ Validate required fields based on role
-            required_fields = [first_name, last_name, dob_str, role, password]
-            if role in ["staff", "admin"]:
-                required_fields.append(email)
-            else:
-                # For students, class_room and register_number are required
-                required_fields.append(class_room_name)
-                required_fields.append(register_number)
-
-            if not all(required_fields):
-                return jsonify({"error": "All required fields must be filled"}), 400
-
-            # Validate email format for staff/admin
-            if role in ["staff", "admin"]:
-                email_regex = r'^[^\s@]+@[^\s@]+\.[^\s@]+$'
-                if not re.match(email_regex, email):
-                    return jsonify({"error": "Please enter a valid email address"}), 400
-                # Check duplicate email
-                existing_email = User.query.filter_by(email=email.lower()).first()
-                if existing_email:
-                    return jsonify({"error": "An account with this email already exists"}), 409
-
-            # ✅ Validate password strength
-            if len(password) < 4:
-                return jsonify({"error": "Password must be at least 4 characters long"}), 400
-
-            # ✅ Validate password match
-            if password != confirm_password:
-                return jsonify({"error": "Passwords do not match"}), 400
-
-            # ✅ Parse DOB
             try:
-                dob = datetime.strptime(dob_str, "%Y-%m-%d").date()
-            except Exception as e:
-                # print(e)
-                return jsonify({"message": "Invalid date format. Use YYYY-MM-DD"}), 400
+                # Check content type to determine how to get data
+                if request.is_json:
+                    data = request.get_json(silent=True)
+                else:
+                    # Handle multipart/form-data
+                    data = request.form.to_dict()
 
-            # Handle Image Upload
-            image_path = None
-            if 'image' in request.files:
-                file = request.files['image']
-                if file and file.filename:
-                    from werkzeug.utils import secure_filename
-                    import os
+                if not data:
+                    return jsonify({"error": "Invalid input data"}), 400
 
-                    original = secure_filename(file.filename)
-                    if not original:
-                        return jsonify({"error": "Invalid filename"}), 400
+                first_name = data.get("first_name")
+                last_name = data.get("last_name")
+                email = data.get("email")
+                gender = data.get("gender") or "Not specified"
+                dob_str = data.get("dob")
+                # Image handling is done separately below
+                register_number = data.get("register_number")
+                class_room_name = data.get("class_room")
+                role = data.get("role")
+                password = data.get("password")
+                confirm_password = data.get("confirm_password")
 
-                    if not allowed_image(original):
-                        return jsonify({"error": "Invalid file type. Only PNG, JPG, JPEG, GIF, and WEBP are allowed"}), 400
+                # ✅ Validate required fields based on role
+                required_fields = [first_name, last_name, dob_str, role, password]
+                if role in ["staff", "admin"]:
+                    required_fields.append(email)
+                elif role == "student":
+                    # For students, class_room and register_number are required
+                    required_fields.append(class_room_name)
+                    required_fields.append(register_number)
+                else:
+                    return jsonify({"error": "Invalid role selected"}), 400
 
-                    ext = original.rsplit('.', 1)[1].lower()
-                    unique_name = f"{uuid.uuid4().hex}.{ext}"
+                if not all(required_fields):
+                    return jsonify({"error": "All required fields must be filled"}), 400
 
-                    from utils.paths import get_profile_images_dir
-                    upload_folder = get_profile_images_dir()
+                # Validate email format for staff/admin
+                if role in ["staff", "admin"]:
+                    email_regex = r'^[^\s@]+@[^\s@]+\.[^\s@]+$'
+                    if not re.match(email_regex, email):
+                        return jsonify({"error": "Please enter a valid email address"}), 400
+                    # Check duplicate email
+                    existing_email = User.query.filter_by(email=email.lower()).first()
+                    if existing_email:
+                        return jsonify({"error": "An account with this email already exists"}), 409
 
-                    file_path = os.path.join(upload_folder, unique_name)
-                    file.save(file_path)
+                # ✅ Validate password strength
+                if len(password) < 4:
+                    return jsonify({"error": "Password must be at least 4 characters long"}), 400
 
-                    image_path = f"/uploads/profile_images/{unique_name}"
+                # ✅ Validate password match
+                if password != confirm_password:
+                    return jsonify({"error": "Passwords do not match"}), 400
 
-            # Student-specific: resolve class_room and enforce scoped register_number uniqueness
-            if role == "student":
-                class_room = ClassRoom.query.filter_by(
-                    class_room_name=class_room_name
-                ).first()
-                if not class_room:
-                    return jsonify({"error": "Class room not found"}), 400
+                    # ✅ Parse DOB
+                try:
+                    dob = datetime.strptime(dob_str, "%Y-%m-%d").date()
+                except Exception as e:
+                    return jsonify({"message": "Invalid date format. Use YYYY-MM-DD"}), 400
 
-                # Check duplicate register_number within this class only
-                existing = (
-                    User.query.filter_by(
+                # Handle Image Upload
+                image_path = None
+                if 'image' in request.files:
+                    file = request.files['image']
+                    if file and file.filename:
+                        from werkzeug.utils import secure_filename
+                        import os
+
+                        original = secure_filename(file.filename)
+                        if not original:
+                            return jsonify({"error": "Invalid filename"}), 400
+
+                        if not allowed_image(original):
+                            return jsonify({"error": "Invalid file type. Only PNG, JPG, JPEG, GIF, and WEBP are allowed"}), 400
+
+                        ext = original.rsplit('.', 1)[1].lower()
+                        unique_name = f"{uuid.uuid4().hex}.{ext}"
+
+                        from utils.paths import get_profile_images_dir
+                        upload_folder = get_profile_images_dir()
+
+                        file_path = os.path.join(upload_folder, unique_name)
+                        file.save(file_path)
+
+                        image_path = f"/uploads/profile_images/{unique_name}"
+
+                # Student-specific: resolve class_room and enforce scoped register_number uniqueness
+                if role == "student":
+                    class_room = ClassRoom.query.filter_by(
+                        class_room_name=class_room_name
+                    ).first()
+                    if not class_room:
+                        return jsonify({"error": "Class room not found"}), 400
+
+                    # Check duplicate register_number within this class only
+                    existing = (
+                        User.query.filter_by(
+                            register_number=str(register_number),
+                            class_room_id=class_room.class_room_id,
+                            role="student",
+                        ).first()
+                    )
+                    if existing:
+                        return jsonify({"error": "Register number already used in this class"}), 409
+
+                    # Generate unique username before creating the user
+                    username = User.generate_username(role=role)
+
+                    # Ensure username is unique by adding a suffix if needed
+                    base_username = username
+                    counter = 1
+                    while User.query.filter_by(username=username).first():
+                        username = f"{base_username}{counter}"
+                        counter += 1
+
+                    # Create new user
+                    user = User(
+                        id=generate_uuid(),
+                        username=username,
+                        first_name=first_name,
+                        last_name=last_name,
+                        email=email,
+                        gender=gender,
+                        dob=dob,
+                        image=image_path,
                         register_number=str(register_number),
                         class_room_id=class_room.class_room_id,
-                        role="student",
+                        role=role,
+                    )
+
+                    user.set_password(password)
+                    db.session.add(user)
+                    db.session.flush()
+
+                    student = Student(id=user.id, user_id=user.id)
+                    db.session.add(student)
+                    db.session.flush()
+                    student.admission_number = username
+                    student.admission_date = dob
+                    student.parent_name = "Not specified"
+                    student.parent_phone = "Not specified"
+                    student.parent_email = "Not specified"
+                    student.blood_group = "Not specified"
+                    student.address = "Not specified"
+
+                    from models.associations import class_subject, student_subject
+                    class_subjects = db.session.execute(
+                        db.select(class_subject.c.subject_id).where(
+                            class_subject.c.class_room_id == user.class_room_id
+                        )
+                    ).scalars().all()
+
+                    for subject_id in class_subjects:
+                        enrollment = student_subject.insert().values(
+                            student_id=user.id,
+                            subject_id=subject_id
+                        )
+                        db.session.execute(enrollment)
+
+                    db.session.commit()
+                    return jsonify({"success": True, "username": user.username}), 200
+                elif role == "staff" or role == "admin":
+                    class_room = ClassRoom.query.filter_by(
+                        class_room_name="Primary 1"
                     ).first()
-                )
-                if existing:
-                    return jsonify({"error": "Register number already used in this class"}), 409
 
-                # Generate unique username before creating the user
-                username = User.generate_username(role=role)
+                    if not class_room:
+                        class_room = ClassRoom.query.first()
 
-                # Ensure username is unique by adding a suffix if needed
-                base_username = username
-                counter = 1
-                while User.query.filter_by(username=username).first():
-                    username = f"{base_username}{counter}"
-                    counter += 1
+                    class_room_id = class_room.class_room_id if class_room else None
 
-                # Create new user
-                user = User(
-                    id=generate_uuid(),
-                    username=username,  # Set username directly in constructor
-                    first_name=first_name,
-                    last_name=last_name,
-                    email=email,
-                    gender=gender,
-                    dob=dob,
-                    image=image_path,
-                    register_number=str(register_number),
-                    class_room_id=class_room.class_room_id,
-                    role=role,
-                )
+                    total_staff = User.query.filter_by(role="staff").count()
+                    register_number = total_staff + 1
 
-                # Create a student profile linked to this user
-                user.set_password(password)
-                # print("Username: ", username)
-                db.session.add(user)
-                db.session.flush()  # Flush to get the user ID without committing
+                    username = User.generate_username(role=role)
 
-                student = Student(id=user.id, user_id=user.id)
-                # print("First Student: ", student)
-                db.session.add(student)
-                db.session.flush()
-                student.admission_number = username
-                student.admission_date = dob
-                student.parent_name = "Not specified"
-                student.parent_phone = "Not specified"
-                student.parent_email = "Not specified"
-                student.blood_group = "Not specified"
-                student.address = "Not specified"
+                    base_username = username
+                    counter = 1
+                    while User.query.filter_by(username=username).first():
+                        username = f"{base_username}{counter}"
+                        counter += 1
 
-                # Automatically enroll student in all subjects offered by their class
-                from models.associations import class_subject, student_subject
-                # Get all subjects offered by the student's class
-                class_subjects = db.session.execute(
-                    db.select(class_subject.c.subject_id).where(
-                        class_subject.c.class_room_id == user.class_room_id
+                    user = User(
+                        id=generate_uuid(),
+                        username=username,
+                        first_name=first_name,
+                        last_name=last_name,
+                        email=email,
+                        gender=gender,
+                        dob=dob,
+                        image=image_path,
+                        register_number=register_number,
+                        class_room_id=class_room_id,
+                        role=role,
                     )
-                ).scalars().all()
+                    user.set_password(password)
+                    db.session.add(user)
+                    db.session.flush()
 
-                # Enroll student in each subject
-                for subject_id in class_subjects:
-                    enrollment = student_subject.insert().values(
-                        student_id=user.id,
-                        subject_id=subject_id
-                    )
-                    db.session.execute(enrollment)
+                    teacher = Teacher(id=user.id, user_id=user.id)
+                    db.session.add(teacher)
+                    db.session.commit()
 
-                db.session.commit()
-                return jsonify({"success": True, "username": user.username}), 200
-            elif role == "staff" or role == "admin":
-                # For staff/admin, use the default class (Primary 1) or any available class
-                class_room = ClassRoom.query.filter_by(
-                    class_room_name="Primary 1"
-                ).first()
-
-                # If Primary 1 doesn't exist, get any available class
-                if not class_room:
-                    class_room = ClassRoom.query.first()
-
-                # If no class exists at all, we need to handle this gracefully
-                class_room_id = class_room.class_room_id if class_room else None
-
-                total_staff = User.query.filter_by(role="staff").count()
-                register_number = total_staff + 1
-
-                # Generate username before creating the user
-                username = User.generate_username(role=role)
-
-                # Ensure username is unique by adding a suffix if needed
-                base_username = username
-                counter = 1
-                while User.query.filter_by(username=username).first():
-                    username = f"{base_username}{counter}"
-                    counter += 1
-
-                user = User(
-                    id=generate_uuid(),
-                    username=username,  # Set username directly in constructor
-                    first_name=first_name,
-                    last_name=last_name,
-                    email=email,
-                    gender=gender,
-                    dob=dob,
-                    image=image_path,
-                    register_number=register_number,
-                    class_room_id=class_room_id,
-                    role=role,
-                )
-                # print(register_number, role)
-                # print(username)
-                user.set_password(password)
-                db.session.add(user)
-                db.session.flush()  # Flush to get the user ID without committing
-
-                # create teacher profile
-                teacher = Teacher(id=user.id, user_id=user.id)
-                # print("First Teacher: ", teacher)
-                db.session.add(teacher)
-                db.session.commit()
-            return jsonify({"success": True, "username": user.username}), 200
+                    return jsonify({"success": True, "username": user.username}), 200
+            except Exception as e:
+                db.session.rollback()
+                app.logger.error(f"Registration error: {e}")
+                return jsonify({"error": "An unexpected error occurred. Please try again."}), 500
 
         # check admin permission
         permissions = Permission.query.filter_by(
@@ -353,6 +345,9 @@ def auth_routes(app):
                 can_write_exams = is_permission_active(
                     "students_can_write_exam")
 
+                can_view_dashboard = is_permission_active(
+                    "students_can_view_dashboard")
+
                 # Fetch available exams
                 available_exams = []
                 if can_write_exams:
@@ -394,13 +389,21 @@ def auth_routes(app):
                                 Exam.subject_id.in_(enrolled_subject_ids)
                             )
 
-                        # Add time filter
+                        # Add time filter - exclude exams that have ended
                         available_exams_query = available_exams_query.filter(
                             and_(
                                 db.or_(
                                     Exam.time_ended.is_(None),
                                     Exam.time_ended > datetime.utcnow(),
                                 )
+                            )
+                        )
+
+                        # Exclude past-date exams (allow On-The-Go which are ad-hoc)
+                        available_exams_query = available_exams_query.filter(
+                            db.or_(
+                                Exam.is_on_the_go == True,
+                                Exam.date >= datetime.utcnow().date(),
                             )
                         )
 
@@ -425,11 +428,54 @@ def auth_routes(app):
                         "class_room_id": exam.class_room.class_room_id if exam.class_room else None,
                         "class_room_name": exam.class_room.class_room_name if exam.class_room else "N/A",
                         "subject_name": exam.subject.subject_name if exam.subject else "N/A",
-                        "subject_icon_name": exam.subject.icon_name if exam.subject else "book"
+                        "subject_icon_name": exam.subject.icon_name if exam.subject else "book",
+                        "is_on_the_go": exam.is_on_the_go if hasattr(exam, 'is_on_the_go') else False
                     }
                     exams_data.append(exam_data)
 
+                # Also add OnTheGoTest records
+                from models.on_the_go_test import OnTheGoTest, student_on_the_go_test
+                otg_query = OnTheGoTest.query.filter(
+                    OnTheGoTest.is_active == True,
+                    OnTheGoTest.is_finished == False,
+                )
+                if not is_demo_user and user.class_room_id:
+                    otg_query = otg_query.filter(
+                        db.or_(
+                            OnTheGoTest.class_room_id == user.class_room_id,
+                            OnTheGoTest.class_room_id.is_(None),
+                        )
+                    )
+                available_otg = otg_query.all()
+
+                completed_otg_ids = set()
+                if not is_demo_user:
+                    comp_result = db.session.execute(
+                        db.select(student_on_the_go_test.c.on_the_go_test_id).where(
+                            student_on_the_go_test.c.student_id == user.id
+                        )
+                    ).scalars().all()
+                    completed_otg_ids = set(comp_result)
+
+                for test in available_otg:
+                    if test.id not in completed_otg_ids:
+                        otg_data = {
+                            "id": test.id,
+                            "name": test.title,
+                            "exam_type": "On-The-Go",
+                            "date": None,
+                            "date_formatted": "Quick Test",
+                            "class_room_id": test.class_room_id,
+                            "class_room_name": test.class_room.class_room_name if test.class_room else "All Classes",
+                            "subject_name": test.subject.subject_name if test.subject else "N/A",
+                            "subject_icon_name": test.subject.icon_name if test.subject else "book",
+                            "is_on_the_go": True
+                        }
+                        exams_data.append(otg_data)
+
                 response_data["available_exams"] = exams_data
+
+                response_data["can_view_dashboard"] = can_view_dashboard
 
             # print(f"Login successful: user={user.username}, role={user.role}")
             return jsonify(response_data), 200
@@ -445,7 +491,7 @@ def auth_routes(app):
     @app.route("/logout", methods=["POST"])
     def logout():
         session.clear()
-        response = redirect(url_for("login"))
+        response = redirect(url_for("index"))
         response.delete_cookie("session_type")
         return response
 
@@ -521,12 +567,22 @@ def auth_routes(app):
                     from datetime import datetime
                     from models.associations import student_exam
                     from models.exam import Exam
+                    from models import is_permission_active
+
+                    # Check if student can view dashboard
+                    can_view_dashboard = is_permission_active(
+                        "students_can_view_dashboard")
+                    response_data["can_view_dashboard"] = can_view_dashboard
 
                     if is_demo_user:
-                        # Demo users get ALL active, non-finished exams
+                        # Demo users get active, non-finished, non-past exams
                         upcoming_exams = Exam.query.filter(
                             Exam.is_active == True,
-                            Exam.is_finished == False
+                            Exam.is_finished == False,
+                            db.or_(
+                                Exam.is_on_the_go == True,
+                                Exam.date >= datetime.utcnow().date(),
+                            )
                         ).order_by(Exam.date.desc()).all()
                     else:
                         # Regular students get only their class exams that are upcoming, active, and not finished
@@ -549,19 +605,62 @@ def auth_routes(app):
                             "class_room_id": exam.class_room.class_room_id if exam.class_room else None,
                             "class_room_name": exam.class_room.class_room_name if exam.class_room else "N/A",
                             "subject_name": exam.subject.subject_name if exam.subject else "N/A",
-                            "subject_icon_name": exam.subject.icon_name if exam.subject else "book"
+                            "subject_icon_name": exam.subject.icon_name if exam.subject else "book",
+                            "is_on_the_go": exam.is_on_the_go if hasattr(exam, 'is_on_the_go') else False
                         }
                         exams_data.append(exam_data)
 
+                    # Fetch available OnTheGoTest records
+                    from models.on_the_go_test import OnTheGoTest, student_on_the_go_test
+                    otg_query = OnTheGoTest.query.filter(
+                        OnTheGoTest.is_active == True,
+                        OnTheGoTest.is_finished == False,
+                    )
+                    if not is_demo_user and user.class_room_id:
+                        otg_query = otg_query.filter(
+                            db.or_(
+                                OnTheGoTest.class_room_id == user.class_room_id,
+                                OnTheGoTest.class_room_id.is_(None),
+                            )
+                        )
+                    available_otg = otg_query.all()
+
+                    # Exclude already-completed ones
+                    completed_otg_ids = set()
+                    if not is_demo_user:
+                        comp_result = db.session.execute(
+                            db.select(student_on_the_go_test.c.on_the_go_test_id).where(
+                                student_on_the_go_test.c.student_id == user.id
+                            )
+                        ).scalars().all()
+                        completed_otg_ids = set(comp_result)
+
+                    for test in available_otg:
+                        if test.id not in completed_otg_ids:
+                            otg_data = {
+                                "id": test.id,
+                                "name": test.title,
+                                "exam_type": "On-The-Go",
+                                "date": None,
+                                "date_formatted": "Quick Test",
+                                "class_room_id": test.class_room_id,
+                                "class_room_name": test.class_room.class_room_name if test.class_room else "All Classes",
+                                "subject_name": test.subject.subject_name if test.subject else "N/A",
+                                "subject_icon_name": test.subject.icon_name if test.subject else "book",
+                                "is_on_the_go": True
+                            }
+                            exams_data.append(otg_data)
+
                     response_data["upcoming_exams"] = exams_data
 
-                    # Check if student has completed a specific exam (if requested)
+                    # Check if student has completed a specific exam/test (if requested)
                     check_exam_completion = data.get("check_exam_completion")
                     if check_exam_completion:
                         if is_demo_user:
-                            # Demo users can always retake exams
                             response_data["exam_completed"] = False
                         else:
+                            # Check regular exam completion first
+                            from models.on_the_go_test import student_on_the_go_test
                             completion = db.session.execute(
                                 db.select(student_exam).where(
                                     student_exam.c.student_id == user.id,
@@ -573,7 +672,19 @@ def auth_routes(app):
                                 response_data["exam_completed"] = True
                                 response_data["message"] = "You have already completed this exam"
                             else:
-                                response_data["exam_completed"] = False
+                                # Check OTG test completion
+                                otg_completion = db.session.execute(
+                                    db.select(student_on_the_go_test).where(
+                                        student_on_the_go_test.c.student_id == user.id,
+                                        student_on_the_go_test.c.on_the_go_test_id == check_exam_completion
+                                    )
+                                ).fetchone()
+
+                                if otg_completion:
+                                    response_data["exam_completed"] = True
+                                    response_data["message"] = "You have already completed this test"
+                                else:
+                                    response_data["exam_completed"] = False
 
                 return jsonify(response_data), 200
 

@@ -58,6 +58,7 @@ exe = EXE(
     a.datas,
     [],
     name='app',
+    icon='static/favicon.ico',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,

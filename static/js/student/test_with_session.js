@@ -1,9 +1,4 @@
 document.addEventListener("DOMContentLoaded", function () {
-  console.log("🎉 CBT Test v2.0 - JavaScript Loaded Successfully!");
-  console.log(
-    "✅ Keyboard shortcuts enabled: N (next), P (previous), A/B/C/D (select options)"
-  );
-  console.log("📍 Current URL:", window.location.href);
 
   // Global variables
   let questions = [];
@@ -50,6 +45,9 @@ document.addEventListener("DOMContentLoaded", function () {
   // Get exam ID from the URL path
   const pathParts = window.location.pathname.split("/");
   const examId = pathParts[pathParts.length - 2];
+  const isOnTheGo = examData && examData.isOnTheGo;
+  const apiBasePath = isOnTheGo ? '/api/student/on-the-go-tests' : '/student/exam';
+  const redirectBasePath = isOnTheGo ? '/student/on-the-go-tests' : '/student/exam';
 
   // Initialize the test
   initTest();
@@ -225,7 +223,7 @@ document.addEventListener("DOMContentLoaded", function () {
   // Check for existing session
   async function checkForExistingSession() {
     try {
-      const response = await fetch(`/student/exam/${examId}/session/restore`);
+      const response = await fetch(`${apiBasePath}/${examId}/session/restore`);
       const data = await response.json();
 
       if (data.success && data.has_session) {
@@ -234,6 +232,14 @@ document.addEventListener("DOMContentLoaded", function () {
         if (shouldResume) {
           await restoreSession(data.session);
           hasRestoredSession = true;
+        } else {
+          // User chose "Start Fresh" - invalidate the stale session
+          // so saveProgress creates a new one with a fresh started_at
+          try {
+            await fetch(`${apiBasePath}/${examId}/session/reset`, {
+              method: "POST",
+            });
+          } catch (_) {}
         }
       }
     } catch (error) {
@@ -299,14 +305,13 @@ document.addEventListener("DOMContentLoaded", function () {
   // Fetch questions from the API
   async function fetchQuestions() {
     try {
-      const response = await fetch(`/student/exam/${examId}/questions`);
+      const response = await fetch(`${apiBasePath}/${examId}/questions`);
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
       const data = await response.json();
-      console.log("Fetched questions data:", data);
 
       if (data.success) {
         questions = data.questions;
@@ -349,10 +354,6 @@ document.addEventListener("DOMContentLoaded", function () {
     const question = questions[index];
     currentQuestionIndex = index;
 
-    console.log("Displaying question:", question);
-    console.log("Question text:", question.question_text);
-    console.log("Options:", question.options);
-
     // Update question text (sanitize to prevent XSS)
     questionText.innerHTML = typeof DOMPurify !== "undefined"
       ? DOMPurify.sanitize(question.question_text, { ADD_TAGS: ["mjx-container"], ADD_ATTR: ["class", "type", "style"] })
@@ -367,7 +368,14 @@ document.addEventListener("DOMContentLoaded", function () {
     if (question.question_image) {
       const imageContainer = document.createElement("div");
       imageContainer.className = "mt-4 mb-4";
-      imageContainer.innerHTML = `<img src="${typeof DOMPurify !== 'undefined' ? DOMPurify.sanitize(question.question_image) : question.question_image}" alt="Question image" class="max-w-full h-auto rounded-xl shadow-lg">`;
+      const img = document.createElement("img");
+      var src = question.question_image;
+      if (src.indexOf("javascript:") === -1 && src.indexOf("data:") !== 0) {
+        img.setAttribute("src", src);
+      }
+      img.className = "max-w-full h-auto rounded-xl shadow-lg";
+      img.setAttribute("alt", "Question image");
+      imageContainer.appendChild(img);
       questionText.appendChild(imageContainer);
     }
 
@@ -392,7 +400,6 @@ document.addEventListener("DOMContentLoaded", function () {
     // Add options with keyboard hints
     const optionLabels = ["A", "B", "C", "D"];
     question.options.forEach((option, idx) => {
-      console.log(`Option ${optionLabels[idx]}:`, option.text);
 
       const optionElement = document.createElement("label");
       const isSelected = studentAnswers[question.id] === option.id;
@@ -495,18 +502,13 @@ document.addEventListener("DOMContentLoaded", function () {
   function renderMath() {
     if (typeof MathJax !== "undefined") {
       if (MathJax.typesetPromise) {
-        MathJax.typesetPromise([questionContent]).catch((err) => {
-          console.log("MathJax rendering error:", err);
-        });
+        MathJax.typesetPromise([questionContent]).catch(function () {});
       } else if (MathJax.typeset) {
         try {
           MathJax.typeset([questionContent]);
-        } catch (err) {
-          console.log("MathJax rendering error:", err);
-        }
+        } catch (e) {}
       }
     } else {
-      console.log("MathJax not loaded yet, waiting...");
       setTimeout(renderMath, 100);
     }
   }
@@ -586,7 +588,7 @@ document.addEventListener("DOMContentLoaded", function () {
     try {
       const questionOrder = questions.map((q) => q.id);
 
-      const response = await fetch(`/student/exam/${examId}/session/save`, {
+      const response = await fetch(`${apiBasePath}/${examId}/session/save`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -603,7 +605,6 @@ document.addEventListener("DOMContentLoaded", function () {
       const result = await response.json();
 
       if (result.success) {
-        console.log("Progress saved successfully");
         showSaveIndicator();
       }
     } catch (error) {
@@ -677,6 +678,65 @@ document.addEventListener("DOMContentLoaded", function () {
     }
   }
 
+  // Show detailed feedback for On-The-Go tests
+  function showOtgFeedback(result) {
+    clearInterval(timerInterval);
+    clearInterval(autoSaveInterval);
+    const container = document.querySelector(".test-container") || document.body;
+
+    let questionsHtml = "";
+    if (result.question_results && result.question_results.length > 0) {
+      const qMap = {};
+      questions.forEach(function (q) { qMap[q.id] = q; });
+
+      result.question_results.forEach(function (qr, i) {
+        const q = qMap[qr.question_id];
+        const userAnswerText = qr.user_answer
+          ? (q ? (q.options.find(function (o) { return o.id === qr.user_answer; }) || {}).text || qr.user_answer : "No answer")
+          : "No answer";
+        const correctAnswerText = qr.correct_answer_id
+          ? (q ? (q.options.find(function (o) { return o.id === qr.correct_answer_id; }) || {}).text || qr.correct_answer_id : "N/A")
+          : "N/A";
+        questionsHtml += `
+          <div class="border rounded-lg p-4 ${qr.is_correct ? 'border-green-300 bg-green-50' : 'border-red-300 bg-red-50'}">
+            <div class="flex items-start gap-3">
+              <span class="material-symbols-outlined mt-0.5 ${qr.is_correct ? 'text-green-600' : 'text-red-600'}">${qr.is_correct ? 'check_circle' : 'cancel'}</span>
+              <div class="flex-1">
+                <p class="font-medium text-gray-900 mb-2">${i + 1}. ${q ? q.question_text : "Question"}</p>
+                <p class="text-sm"><span class="text-gray-500">Your answer:</span> <span class="${qr.is_correct ? 'text-green-700' : 'text-red-700'}">${userAnswerText}</span></p>
+                ${!qr.is_correct ? '<p class="text-sm"><span class="text-gray-500">Correct answer:</span> <span class="text-green-700">' + correctAnswerText + '</span></p>' : ''}
+              </div>
+            </div>
+          </div>`;
+      });
+    }
+
+    const overlay = document.createElement("div");
+    overlay.className = "fixed inset-0 z-50 flex items-start justify-center pt-8 pb-8 overflow-y-auto bg-black/50";
+    overlay.innerHTML = `
+      <div class="bg-white rounded-2xl shadow-2xl w-full max-w-3xl mx-4 overflow-hidden">
+        <div class="bg-gradient-to-r from-blue-600 to-indigo-700 px-6 py-5 text-white">
+          <div class="flex items-center justify-between">
+            <h2 class="text-xl font-bold">Test Complete!</h2>
+            <span class="text-3xl font-bold">${result.score_percentage}%</span>
+          </div>
+          <div class="mt-2 flex flex-wrap gap-4 text-sm text-blue-100">
+            <span>Score: ${result.raw_score} / ${result.max_score}</span>
+            <span>Grade: ${result.letter_grade}</span>
+            <span>Correct: ${result.correct_answers} / ${result.total_questions}</span>
+          </div>
+        </div>
+        <div class="p-6">
+          ${questionsHtml ? '<h3 class="text-lg font-semibold text-gray-900 mb-4">Review Your Answers</h3>' : ''}
+          <div class="space-y-3">${questionsHtml || '<p class="text-gray-500">No detailed feedback available for this test.</p>'}</div>
+          <div class="mt-6 flex justify-end">
+            <button onclick="this.closest('.fixed').remove(); window.location.href='${result.redirect_url || '/student/dashboard'}'" class="px-6 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-700 text-white rounded-xl font-medium hover:from-blue-700 hover:to-indigo-800 transition-all">Go to Dashboard</button>
+          </div>
+        </div>
+      </div>`;
+    document.body.appendChild(overlay);
+  }
+
   // Send quiz answers to server
   async function sendQuizAnswers() {
     try {
@@ -687,7 +747,7 @@ document.addEventListener("DOMContentLoaded", function () {
       submitBtn.innerHTML =
         '<span class="flex items-center gap-2"><span class="material-symbols-outlined animate-spin">hourglass_empty</span> Submitting...</span>';
 
-      const response = await fetch(`/student/exam/${examId}/submit`, {
+      const response = await fetch(`${apiBasePath}/${examId}/submit`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -700,17 +760,21 @@ document.addEventListener("DOMContentLoaded", function () {
       clearInterval(timerInterval);
 
       if (result.success) {
-        await fetch(`/student/exam/${examId}/session/complete`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-        });
+        if (!isOnTheGo) {
+          await fetch(`/student/exam/${examId}/session/complete`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+          });
+        }
 
         // Check if results should be shown
-        if (result.show_results) {
+        if (result.show_results && !isOnTheGo) {
           // Redirect to feedback page for detailed results
           window.location.href = `/student/exam/${examId}/feedback`;
+        } else if (result.show_results && isOnTheGo) {
+          showOtgFeedback(result);
         } else {
           showAlert({
             title: "Exam Submitted Successfully!",

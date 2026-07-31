@@ -8,6 +8,7 @@
 <script src="{{ url_for('static', filename='js/components/modal.js') }}"></script>
 <script src="{{ url_for('static', filename='js/register.js') }}"></script>
 {% endblock %}
+{% block slim_header %}{% endblock %}
 {% block content %}
 <div class="relative overflow-hidden min-h-screen">
   <div class="absolute -top-16 -right-16 h-56 w-56 rounded-full blur-3xl opacity-30 bg-gradient-to-br from-primary to-blue-600 animate-fade-in"></div>
@@ -24,23 +25,30 @@
   <div class="h-2 bg-gradient-to-r from-primary via-purple-500 via-emerald-400 to-blue-600 animate-shimmer"></div>
 
   <!-- Header -->
-  <div class="flex items-center bg-white/80 dark:bg-gray-900/60 backdrop-blur p-4 justify-between border-b border-gray-200 dark:border-gray-700">
-    <div class="text-gray-800 dark:text-gray-300 cursor-pointer flex size-12 shrink-0 items-center" role="button" onclick="window.history.back()">
-      <span class="material-symbols-outlined text-2xl">arrow_back</span>
-    </div>
+    <div class="flex items-center bg-white/80 dark:bg-gray-900/60 backdrop-blur p-4 justify-between border-b border-gray-200 dark:border-gray-700">
+      <button type="button" onclick="window.history.back()" class="text-gray-800 dark:text-gray-300 cursor-pointer flex size-12 shrink-0 items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition" aria-label="Go back">
+        <span class="material-symbols-outlined text-2xl">arrow_back</span>
+      </button>
     <h2 class="text-gray-800 dark:text-white text-lg font-bold leading-tight tracking-[-0.015em] flex-1 text-center">
       Join {{ school_info.name }} Today
     </h2>
-    <div class="size-12 shrink-0"></div>
+    <a href="{{ url_for('index') }}" class="flex size-12 shrink-0 items-center justify-center rounded-lg text-gray-400 dark:text-gray-500 hover:text-primary dark:hover:text-primary hover:bg-gray-100 dark:hover:bg-gray-800 transition" aria-label="Back to home page">
+      <span class="material-symbols-outlined text-2xl">home</span>
+    </a>
   </div>
 
   <!-- Step Progress -->
   <div class="px-4 pt-6 pb-2 max-w-sm mx-auto">
-    <div class="flex items-center justify-between">
+    <div class="flex items-center justify-between" role="tablist" aria-label="Registration steps">
       {% set steps = ["Account", "Personal", "Credentials"] %}
       {% for step in steps %}
       <div class="flex flex-col items-center gap-1.5">
         <div id="step-{{ loop.index }}-dot"
+             role="tab"
+             aria-selected="{{ 'true' if loop.index == 1 else 'false' }}"
+             aria-setsize="{{ steps|length }}"
+             aria-posinset="{{ loop.index }}"
+             tabindex="{{ '0' if loop.index == 1 else '-1' }}"
              class="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-300
                      {{ 'bg-primary text-white shadow-sm shadow-primary/20' if loop.index == 1 else 'bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400' }}">
           {{ loop.index }}
@@ -50,7 +58,7 @@
         </span>
       </div>
       {% if not loop.last %}
-      <div class="flex-1 h-0.5 mx-2 rounded bg-gray-200 dark:bg-gray-700 overflow-hidden">
+      <div class="flex-1 h-0.5 mx-2 rounded bg-gray-200 dark:bg-gray-700 overflow-hidden" aria-hidden="true">
         <div id="step-progress-{{ loop.index }}" class="h-full bg-primary transition-all duration-500" style="width:0%"></div>
       </div>
       {% endif %}
@@ -60,6 +68,10 @@
 
   <form id="register_form" class="flex flex-col gap-4 p-4 items-center">
     <div class="w-full max-w-sm space-y-4">
+      <div id="general_error" class="hidden text-sm text-red-500 flex items-center gap-1 bg-red-50 dark:bg-red-900/20 p-3 rounded-xl" aria-live="polite">
+        <span class="material-symbols-outlined text-sm" aria-hidden="true">error</span>
+        <span id="general_error_text"></span>
+      </div>
 
       <!-- Step 1: Account info (role + class + register number / email) -->
       <div id="step-1-fields" class="space-y-4 animate-fade-in-up">
@@ -75,7 +87,7 @@
               <option value="admin">Admin</option>
             </select>
           </label>
-          <p id="role_status" class="text-sm mt-1 flex items-center gap-1"></p>
+          <p id="role_status" class="text-sm mt-1 flex items-center gap-1" aria-live="polite"></p>
         </div>
 
         <div id="role-student-fields" class="space-y-4 hidden">
@@ -93,7 +105,7 @@
                 {% endfor %}
               </select>
             </label>
-            <p id="class_room_status" class="text-sm mt-1 flex items-center gap-1"></p>
+            <p id="class_room_status" class="text-sm mt-1 flex items-center gap-1" aria-live="polite"></p>
           </div>
           <div>
             <label class="flex flex-col min-w-40 flex-1">
@@ -102,7 +114,7 @@
                 class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-gray-900 dark:text-white border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 focus:border-primary focus:ring-2 focus:ring-primary/20 h-13 p-[14px] text-base font-normal leading-normal outline-none transition"
                 placeholder="Enter your register number" type="number" value="" />
             </label>
-            <p id="register_number_status" class="text-sm mt-1 flex items-center gap-1"></p>
+            <p id="register_number_status" class="text-sm mt-1 flex items-center gap-1" aria-live="polite"></p>
           </div>
         </div>
 
@@ -114,7 +126,7 @@
                 class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-gray-900 dark:text-white border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 focus:border-primary focus:ring-2 focus:ring-primary/20 h-13 p-[14px] text-base font-normal leading-normal outline-none transition"
                 placeholder="Enter your email" value="" />
             </label>
-            <p id="email_status" class="text-sm mt-1 flex items-center gap-1"></p>
+            <p id="email_status" class="text-sm mt-1 flex items-center gap-1" aria-live="polite"></p>
           </div>
         </div>
 
@@ -133,7 +145,7 @@
               class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-gray-900 dark:text-white border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 focus:border-primary focus:ring-2 focus:ring-primary/20 h-13 p-[14px] text-base font-normal leading-normal outline-none transition"
               placeholder="Enter your first name" value="" />
           </label>
-          <p id="first_name_status" class="text-sm mt-1 flex items-center gap-1"></p>
+          <p id="first_name_status" class="text-sm mt-1 flex items-center gap-1" aria-live="polite"></p>
         </div>
         <div>
           <label class="flex flex-col min-w-40 flex-1">
@@ -142,7 +154,7 @@
               class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-gray-900 dark:text-white border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 focus:border-primary focus:ring-2 focus:ring-primary/20 h-13 p-[14px] text-base font-normal leading-normal outline-none transition"
               placeholder="Enter your last name" value="" />
           </label>
-          <p id="last_name_status" class="text-sm mt-1 flex items-center gap-1"></p>
+          <p id="last_name_status" class="text-sm mt-1 flex items-center gap-1" aria-live="polite"></p>
         </div>
         <div>
           <label class="flex flex-col min-w-40 flex-1">
@@ -156,7 +168,7 @@
               <option value="other">Other</option>
             </select>
           </label>
-          <p id="gender_status" class="text-sm mt-1 flex items-center gap-1"></p>
+          <p id="gender_status" class="text-sm mt-1 flex items-center gap-1" aria-live="polite"></p>
         </div>
         <div>
           <label class="flex flex-col min-w-40 flex-1">
@@ -164,7 +176,7 @@
             <input id="dob" type="date"
               class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-gray-900 dark:text-white border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 focus:border-primary focus:ring-2 focus:ring-primary/20 h-13 p-[14px] text-base font-normal leading-normal outline-none transition" />
           </label>
-          <p id="dob_status" class="text-sm mt-1 flex items-center gap-1"></p>
+          <p id="dob_status" class="text-sm mt-1 flex items-center gap-1" aria-live="polite"></p>
         </div>
         <div>
           <label class="flex flex-col min-w-40 flex-1">
@@ -209,7 +221,7 @@
             </div>
             <p id="strength-label" class="text-xs mt-1 text-gray-400"></p>
           </label>
-          <p id="password_status" class="text-sm mt-1 flex items-center gap-1"></p>
+          <p id="password_status" class="text-sm mt-1 flex items-center gap-1" aria-live="polite"></p>
         </div>
         <div>
           <label class="flex flex-col min-w-40 flex-1 relative">
@@ -220,7 +232,7 @@
                 class="form-input input-with-icon flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-gray-900 dark:text-white border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 focus:border-primary focus:ring-2 focus:ring-primary/20 h-13 p-[14px] pr-12 text-base font-normal leading-normal outline-none transition"
                 placeholder="Confirm your password" value="" autocomplete="new-password" />
               <button type="button" class="absolute right-3.5 top-1/2 -translate-y-1/2 flex items-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors">
-                <span class="material-symbols-outlined text-xl">visibility_off</span>
+                <span class="material-symbols-outlined text-xl">visibility</span>
               </button>
             </div>
             <div class="mt-1.5 flex items-center gap-1.5" id="match-indicator">
@@ -228,7 +240,7 @@
               <span class="text-xs text-gray-400" id="match-text">Passwords must match</span>
             </div>
           </label>
-          <p id="confirm_password_status" class="text-sm mt-1 flex items-center gap-1"></p>
+          <p id="confirm_password_status" class="text-sm mt-1 flex items-center gap-1" aria-live="polite"></p>
         </div>
 
         <div class="flex gap-3">
@@ -237,12 +249,12 @@
             Back
           </button>
           <button type="submit" id="register-submit"
-            class="flex-1 bg-gradient-to-r from-primary to-blue-600 text-white font-bold py-3.5 rounded-xl hover:shadow-md hover:shadow-primary/20 hover:scale-[1.01] active:scale-[0.99] transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:scale-100">
+            class="relative flex-1 bg-gradient-to-r from-primary to-blue-600 text-white font-bold py-3.5 rounded-xl hover:shadow-md hover:shadow-primary/20 hover:scale-[1.01] active:scale-[0.99] transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:scale-100">
             <span id="register-btn-text" class="flex items-center justify-center gap-2">
               <span class="material-symbols-outlined text-xl">person_add</span>
               Create Account
             </span>
-            <span id="register-btn-spinner" class="hidden items-center justify-center gap-2">
+            <span id="register-btn-spinner" class="hidden absolute inset-0 flex items-center justify-center gap-2">
               <svg class="h-5 w-5 animate-spin text-white" fill="none" viewBox="0 0 24 24">
                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                 <path class="opacity-75" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" fill="currentColor"></path>
@@ -266,13 +278,29 @@
 {% call modal.modal(modal_id="alert", modal_title="Registration Successful") %}
 <div class="mb-4">
   <p class="text-gray-700 dark:text-gray-300 mb-3">Dear <span class="font-semibold" id="alert_name"></span>,</p>
-  <p class="text-gray-600 dark:text-gray-400" id="alert_content">Your account has been created successfully, your
-    username is <span class="font-semibold" id="alert_username"></span>. Please login to <a href="{{ url_for('login') }}" class="text-primary font-semibold underline">access your account.</a></p>
+  <div class="bg-gray-50 dark:bg-gray-800/50 rounded-xl p-4 border border-gray-200 dark:border-gray-700 mb-3">
+    <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide font-medium mb-1">Username</p>
+    <p class="text-lg font-mono font-bold text-primary" id="alert_username"></p>
+  </div>
+  <div id="alert_content" class="text-gray-600 dark:text-gray-400 text-sm"></div>
 </div>
-<button type="button" id="close_alert"
-  class="close-modal bg-primary text-white font-semibold py-3 px-6 rounded-xl hover:bg-primary/90 hover:shadow-md hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 w-full"
-  data-modal="alert">
-  Ok
-</button>
+<div class="flex flex-col gap-2">
+  <button type="button" id="register-another"
+    class="bg-primary text-white font-semibold py-3 px-6 rounded-xl hover:bg-primary/90 hover:shadow-md hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 w-full">
+    Register Another Student
+  </button>
+  <div class="flex gap-2">
+    <button type="button" id="copy-username-btn"
+      class="flex-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-semibold py-2.5 px-4 rounded-xl hover:bg-gray-200 dark:hover:bg-gray-600 transition-all duration-200 flex items-center justify-center gap-1.5 text-sm">
+      <span class="material-symbols-outlined text-lg" aria-hidden="true">content_copy</span>
+      <span id="copy-btn-label">Copy Username</span>
+    </button>
+    <a href="{{ url_for('login') }}"
+      class="flex-1 text-center bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-semibold py-2.5 px-4 rounded-xl hover:bg-gray-200 dark:hover:bg-gray-600 transition-all duration-200 text-sm flex items-center justify-center gap-1">
+      Go to Login
+      <span class="material-symbols-outlined text-lg" aria-hidden="true">arrow_forward</span>
+    </a>
+  </div>
+</div>
 {% endcall %}
 {% endblock %}

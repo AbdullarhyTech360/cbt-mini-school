@@ -323,7 +323,7 @@
         <div class="header-container">
             <div class="logo-placeholder">
                 {% if school.logo %}
-                    <img src="{{ school.logo }}" alt="School Logo">
+                    <img src="{{ school.logo }}" alt="School Logo" onerror="this.onerror=null;this.src='{{ url_for('static', filename='default-logo.svg') }}'">
                 {% else %}
                     Logo Here
                 {% endif %}
@@ -387,6 +387,10 @@
             <div class="score-row">
                 <span class="score-label">Class Average:</span>
                 <span class="score-value"></span>
+            </div>
+            <div class="score-row">
+                <span class="score-label">Pass Mark:</span>
+                <span class="score-value">{{ report_data.pass_mark|default(50) }}%</span>
             </div>
         </div>
 

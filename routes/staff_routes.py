@@ -1727,7 +1727,8 @@ def staff_routes(app):
     def staff_upload_questions(user_id):
         from models import is_permission_active
         if not is_permission_active("teachers_can_upload_questions"):
-            return redirect(url_for("staff_dashboard", denied="Question upload has been disabled by the administrator."))
+            flash("Question upload has been disabled by the administrator.", "error")
+            return redirect(url_for("staff_dashboard"))
 
         # Verify the logged-in user matches the user_id in the URL
         if session.get("user_id") != user_id:
@@ -2213,7 +2214,8 @@ def staff_routes(app):
         if not is_permission_active("teachers_can_upload_questions"):
             if request.method == "POST":
                 return jsonify({"success": False, "message": "Question upload is disabled by the administrator"}), 403
-            return redirect(url_for("staff_dashboard", denied="Question upload has been disabled by the administrator."))
+            flash("Question upload has been disabled by the administrator.", "error")
+            return redirect(url_for("staff_dashboard"))
 
         # print("Bulk Upload Questions")
         # Verify the logged-in user matches the user_id in the URL

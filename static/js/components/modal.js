@@ -1,3 +1,6 @@
+// Store last focused element for focus return
+var lastFocusedElement = null;
+
 // Open modal function
 function openModal(modalId) {
     var modal = document.getElementById(modalId);
@@ -5,6 +8,8 @@ function openModal(modalId) {
         console.error("[openModal] Modal with id '" + modalId + "' NOT found in DOM");
         return;
     }
+
+    lastFocusedElement = document.activeElement;
 
     // Apply ALL necessary styles via inline cssText — no class toggling.
     modal.style.cssText =
@@ -40,6 +45,12 @@ function closeModal(modalId) {
         document.body.style.overflow = "";
     } else {
         console.error("[closeModal] Modal with id '" + modalId + "' NOT found");
+    }
+
+    // Return focus to the element that triggered the modal
+    if (lastFocusedElement && typeof lastFocusedElement.focus === 'function') {
+        lastFocusedElement.focus();
+        lastFocusedElement = null;
     }
 }
 
@@ -157,7 +168,7 @@ window.showAlert = function (options) {
     const modal = document.getElementById('alertModal');
     const confirmBtn = document.getElementById('alertConfirmBtn');
 
-    // Apply inline styles to guarantee z-index stacking above openModal (9999)
+    // Apply inline styles
     modal.style.cssText =
         "display: flex !important; " +
         "position: fixed !important; " +
@@ -165,7 +176,7 @@ window.showAlert = function (options) {
         "left: 0 !important; " +
         "width: 100vw !important; " +
         "height: 100vh !important; " +
-        "z-index: 10000 !important; " +
+        "z-index: 9999 !important; " +
         "align-items: center !important; " +
         "justify-content: center !important; " +
         "padding: 1rem !important; " +
@@ -196,6 +207,7 @@ window.showConfirmModal = function (options) {
     const {
         title = 'Confirm Action',
         message = 'Are you sure you want to proceed?',
+        extraContent = '',
         confirmText = 'Confirm',
         cancelText = 'Cancel',
         confirmClass = 'bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700',
@@ -218,6 +230,7 @@ window.showConfirmModal = function (options) {
                 </div>
                 <div class="p-6">
                     <p class="text-gray-600 dark:text-gray-400">${message}</p>
+                    ${extraContent}
                 </div>
                 <div class="p-6 border-t border-gray-200 dark:border-gray-700 flex gap-3">
                     <button id="confirmBtn" class="flex-1 ${confirmClass} text-white font-semibold py-3 px-6 rounded-xl shadow-md hover:shadow-lg transition-all duration-200">
@@ -238,7 +251,7 @@ window.showConfirmModal = function (options) {
     const confirmBtn = document.getElementById('confirmBtn');
     const cancelBtn = document.getElementById('cancelBtn');
 
-    // Apply inline styles to guarantee z-index stacking above openModal (9999)
+    // Apply inline styles
     modal.style.cssText =
         "display: flex !important; " +
         "position: fixed !important; " +
@@ -246,16 +259,16 @@ window.showConfirmModal = function (options) {
         "left: 0 !important; " +
         "width: 100vw !important; " +
         "height: 100vh !important; " +
-        "z-index: 10000 !important; " +
+        "z-index: 9999 !important; " +
         "align-items: center !important; " +
         "justify-content: center !important; " +
         "padding: 1rem !important; " +
         "background: rgba(0,0,0,0.5) !important;";
 
     // Handle confirm
-    confirmBtn.addEventListener('click', function () {
+    confirmBtn.addEventListener('click', async function () {
+        await onConfirm();
         modal.remove();
-        onConfirm();
     });
 
     // Handle cancel

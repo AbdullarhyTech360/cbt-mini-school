@@ -447,7 +447,7 @@
   <div class="sheet" id="sheet">
 
     {% if school.logo %}
-    <div class="watermark"><img src="{{ school.logo }}" alt=""></div>
+    <div class="watermark"><img src="{{ school.logo }}" alt="" onerror="this.onerror=null;this.style.display='none'"></div>
     {% endif %}
 
     <table class="header-table">
@@ -455,7 +455,7 @@
           <td class="crest-cell">
             <div class="crest">
               {% if school.logo %}
-                <img src="{{ school.logo }}" alt="Logo">
+                <img src="{{ school.logo }}" alt="Logo" onerror="this.onerror=null;this.src='{{ url_for('static', filename='default-logo.svg') }}'">
               {% else %}
                 <svg viewBox="0 0 24 24" fill="#0B2E4A" xmlns="http://www.w3.org/2000/svg">
                   <path d="M12 12c2.7 0 4.9-2.2 4.9-4.9S14.7 2.2 12 2.2 7.1 4.4 7.1 7.1 9.3 12 12 12zm0 2.4c-3.3 0-9.8 1.6-9.8 4.9v2.4h19.6v-2.4c0-3.3-6.5-4.9-9.8-4.9z"/>
@@ -492,7 +492,7 @@
             <tr>
               <td><div class="field"><label>Sex</label><div class="val">{{ student.gender|default('')|upper }}</div></div></td>
               <td><div class="field"><label>Class Average</label><div class="val">{{ class_average|default('--', true) }}%</div></div></td>
-              <td><div class="field"><label>House</label><div class="val">{{ student.house|default('N/A', true) }}</div></div></td>
+              <td><div class="field"><label>Pass Mark</label><div class="val">{{ report_data.pass_mark|default(50) }}%</div></div></td>
             </tr>
             <tr>
               <td><div class="field"><label>Class</label><div class="val">{{ student.class_name }}</div></div></td>

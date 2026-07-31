@@ -1,0 +1,18 @@
+<svg width="100%" viewBox="0 0 300 300" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg3" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#123C69"/>
+      <stop offset="100%" stop-color="#0E8C6B"/>
+    </linearGradient>
+  </defs>
+  <rect x="0" y="0" width="300" height="300" rx="58" fill="url(#bg3)"/>
+  <path d="M 244 22 L 280 22 L 280 58 Z" fill="#FFFFFF" opacity="0.15"/>
+  <text x="150" y="205" text-anchor="middle" fill="#FFFFFF" font-size="128" font-weight="600" font-family="sans-serif">DA</text>
+  <text x="150" y="238" text-anchor="middle" fill="#2ECC71" font-size="15" font-weight="600" font-family="sans-serif" letter-spacing="4">SMS</text>
+  <g transform="translate(216,106) rotate(28)">
+    <polygon points="0,-15 36,0 0,15 -36,0" fill="#2ECC71"/>
+    <rect x="-15" y="0" width="30" height="16" rx="2.5" fill="#0E3A4D"/>
+    <line x1="26" y1="-3" x2="26" y2="20" stroke="#2ECC71" stroke-width="3" stroke-linecap="round"/>
+    <circle cx="26" cy="24" r="3.5" fill="#2ECC71"/>
+  </g>
+</svg>

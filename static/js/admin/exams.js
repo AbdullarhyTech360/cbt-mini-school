@@ -85,6 +85,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const classSelect = document.getElementById('classSelect');
     const examTypeSelect = document.getElementById('examType');
     const examNamePreview = document.getElementById('examNamePreview');
+    const schoolTermSelect = document.querySelector('select[name="school_term_id"]');
 
     // Store selected values and class options
     let selectedSubjectName = '';
@@ -164,10 +165,11 @@ document.addEventListener('DOMContentLoaded', function () {
             selectedClassName = selectedOption.dataset.className || selectedOption.text;
             updateExamNamePreview();
 
-            // Fetch question count for the selected subject and class
+            // Fetch question count for the selected subject, class, and term
+            const termId = schoolTermSelect ? schoolTermSelect.value : '';
             if (subjectId && this.value) {
                 try {
-                    const response = await fetch(`/admin/exams/question-count?subject_id=${subjectId}&class_room_id=${this.value}`);
+                    const response = await fetch(`/admin/exams/question-count?subject_id=${subjectId}&class_room_id=${this.value}&term_id=${termId}`);
                     const result = await response.json();
 
                     if (result.success) {
@@ -215,23 +217,27 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    // ========================================
-    // ON-THE-GO TEST TOGGLE (CREATE FORM)
-    // ========================================
-    const isOnTheGoCheckbox = document.getElementById('isOnTheGo');
-    const onTheGoOptions = document.getElementById('onTheGoOptions');
-    const createSchoolTerm = document.querySelector('#createExamForm select[name="school_term_id"]');
-    const createExamDate = document.querySelector('#createExamForm input[name="date"]');
-
-    if (isOnTheGoCheckbox) {
-        isOnTheGoCheckbox.addEventListener('change', function () {
-            const isOnTheGo = this.checked;
-            if (onTheGoOptions) {
-                onTheGoOptions.classList.toggle('hidden', !isOnTheGo);
+    // Refresh question count when school term changes
+    if (schoolTermSelect) {
+        schoolTermSelect.addEventListener('change', function () {
+            const classVal = classSelect ? classSelect.value : '';
+            if (subjectId && classVal && this.value) {
+                fetch(`/admin/exams/question-count?subject_id=${subjectId}&class_room_id=${classVal}&term_id=${this.value}`)
+                    .then(r => r.json())
+                    .then(result => {
+                        if (result.success) {
+                            availableQuestionCount = result.question_count;
+                            const el = document.getElementById('questionCount');
+                            if (el) {
+                                el.textContent = result.question_count;
+                                el.className = result.question_count > 0
+                                    ? 'text-green-600 dark:text-green-400 font-semibold'
+                                    : 'text-red-600 dark:text-red-400 font-semibold';
+                            }
+                        }
+                    })
+                    .catch(err => console.error('Error refreshing question count:', err));
             }
-            // Make term and date optional for On-The-Go tests
-            if (createSchoolTerm) createSchoolTerm.required = !isOnTheGo;
-            if (createExamDate) createExamDate.required = !isOnTheGo;
         });
     }
 
@@ -257,8 +263,6 @@ document.addEventListener('DOMContentLoaded', function () {
                 description: formData.get('description') || '',
                 number_of_questions: numberOfQuestions || null,
                 calculator_enabled: formData.get('calculator_enabled') === 'true',
-                is_on_the_go: formData.get('is_on_the_go') === 'true',
-                save_after_completion: formData.get('save_after_completion') === 'true',
                 show_feedback: formData.get('show_feedback') === 'true'
             };
 
@@ -293,12 +297,12 @@ document.addEventListener('DOMContentLoaded', function () {
                 hasErrors = true;
             }
 
-            if (!data.school_term_id && !data.is_on_the_go) {
+            if (!data.school_term_id) {
                 showAlert('Please select a school term', 'error');
                 hasErrors = true;
             }
 
-            if (!data.date && !data.is_on_the_go) {
+            if (!data.date) {
                 showAlert('Please select an exam date', 'error');
                 hasErrors = true;
             }
@@ -392,28 +396,41 @@ document.addEventListener('DOMContentLoaded', function () {
                 window.showConfirmModal({
                     title: 'Delete Exam',
                     message: `Are you sure you want to delete "${examName}"? This action cannot be undone.`,
+                    extraContent: `
+                        <label class="flex items-center gap-2 mt-4 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg cursor-pointer">
+                            <input type="checkbox" id="deleteQuestionsCheck" class="rounded border-gray-300 dark:border-gray-600">
+                            <span class="text-sm font-medium text-gray-600 dark:text-gray-400">Also delete all questions for this exam</span>
+                        </label>
+                    `,
                     confirmText: 'Delete',
                     confirmClass: 'bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700',
                     onConfirm: async () => {
+                        const deleteQuestions = document.getElementById('deleteQuestionsCheck')?.checked || false;
+                        console.log(`[Delete Exam] Sending DELETE: examId=${examId}, name="${examName}", delete_questions=${deleteQuestions}`);
                         try {
                             const response = await fetch(`/admin/exams/${examId}`, {
                                 method: 'DELETE',
                                 headers: {
                                     'Content-Type': 'application/json'
-                                }
+                                },
+                                body: JSON.stringify({ delete_questions: deleteQuestions })
                             });
+
+                            console.log(`[Delete Exam] Response status: ${response.status} ${response.statusText}`);
 
                             // Check if response is HTML (redirect to login) instead of JSON
                             const contentType = response.headers.get('content-type');
                             if (contentType && contentType.indexOf('text/html') !== -1) {
-                                // Redirect to login
+                                console.warn('[Delete Exam] Got HTML response — redirecting to login');
                                 window.location.href = '/login';
                                 return;
                             }
 
                             const result = await response.json();
+                            console.log(`[Delete Exam] Response body:`, result);
 
                             if (result.success) {
+                                console.log(`[Delete Exam] SUCCESS: ${result.message}`);
                                 if (window.showAlert) {
                                     window.showAlert({
                                         title: 'Success',
@@ -432,6 +449,7 @@ document.addEventListener('DOMContentLoaded', function () {
                                     }, 300);
                                 }
                             } else {
+                                console.error(`[Delete Exam] ERROR: ${result.message}`);
                                 if (window.showAlert) {
                                     window.showAlert({
                                         title: 'Error',
@@ -443,10 +461,10 @@ document.addEventListener('DOMContentLoaded', function () {
                                 }
                             }
                         } catch (error) {
-                            console.error('Error deleting exam:', error);
+                            console.error(`[Delete Exam] FETCH ERROR:`, error);
                             // Check if it's a JSON parsing error (likely HTML response)
                             if (error instanceof SyntaxError && error.message.includes('Unexpected token')) {
-                                // Redirect to login
+                                console.warn('[Delete Exam] JSON parse failed — likely session expired, redirecting to login');
                                 window.location.href = '/login';
                                 return;
                             }
@@ -465,6 +483,8 @@ document.addEventListener('DOMContentLoaded', function () {
                 });
             } else {
                 if (confirm(`Are you sure you want to delete "${examName}"? This action cannot be undone.`)) {
+                    const deleteQuestions = confirm('Also delete all questions for this exam? Click OK for Yes, Cancel for No.');
+                    console.log(`[Delete Exam fallback] Sending DELETE: examId=${examId}, name="${examName}", delete_questions=${deleteQuestions}`);
                     // Direct deletion without modal
                     (async () => {
                         try {
@@ -472,33 +492,39 @@ document.addEventListener('DOMContentLoaded', function () {
                                 method: 'DELETE',
                                 headers: {
                                     'Content-Type': 'application/json'
-                                }
+                                },
+                                body: JSON.stringify({ delete_questions: deleteQuestions })
                             });
+
+                            console.log(`[Delete Exam fallback] Response status: ${response.status} ${response.statusText}`);
 
                             // Check if response is HTML (redirect to login) instead of JSON
                             const contentType = response.headers.get('content-type');
                             if (contentType && contentType.indexOf('text/html') !== -1) {
-                                // Redirect to login
+                                console.warn('[Delete Exam fallback] Got HTML response — redirecting to login');
                                 window.location.href = '/login';
                                 return;
                             }
 
                             const result = await response.json();
+                            console.log(`[Delete Exam fallback] Response body:`, result);
 
                             if (result.success) {
+                                console.log(`[Delete Exam fallback] SUCCESS: ${result.message}`);
                                 alert(result.message);
                                 // Remove row from DOM
                                 if (row) {
                                     row.remove();
                                 }
                             } else {
+                                console.error(`[Delete Exam fallback] ERROR: ${result.message}`);
                                 alert(result.message);
                             }
                         } catch (error) {
-                            console.error('Error deleting exam:', error);
+                            console.error(`[Delete Exam fallback] FETCH ERROR:`, error);
                             // Check if it's a JSON parsing error (likely HTML response)
                             if (error instanceof SyntaxError && error.message.includes('Unexpected token')) {
-                                // Redirect to login
+                                console.warn('[Delete Exam fallback] JSON parse failed — likely session expired, redirecting to login');
                                 window.location.href = '/login';
                                 return;
                             }
@@ -755,15 +781,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
                     // Set CBT option toggles
                     document.getElementById('editCalculatorEnabled').checked = exam.calculator_enabled || false;
-                    document.getElementById('editIsOnTheGo').checked = exam.is_on_the_go || false;
                     document.getElementById('editShowFeedback').checked = exam.show_feedback !== false;
-                    document.getElementById('editSaveAfterCompletion').checked = exam.save_after_completion !== false;
-
-                    // Show/hide On-The-Go options
-                    const editOnTheGoOptions = document.getElementById('editOnTheGoOptions');
-                    if (editOnTheGoOptions) {
-                        editOnTheGoOptions.classList.toggle('hidden', !exam.is_on_the_go);
-                    }
 
                     // Set subject and class (these need special handling)
                     const subjectSelect = document.getElementById('editSubjectSelect');
@@ -941,25 +959,6 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 
-    // ========================================
-    // ON-THE-GO TEST TOGGLE (EDIT FORM)
-    // ========================================
-    const editIsOnTheGoCheckbox = document.getElementById('editIsOnTheGo');
-    const editOnTheGoOptions = document.getElementById('editOnTheGoOptions');
-    const editSchoolTerm = document.getElementById('editSchoolTerm');
-    const editExamDate = document.getElementById('editExamDate');
-
-    if (editIsOnTheGoCheckbox) {
-        editIsOnTheGoCheckbox.addEventListener('change', function () {
-            const isOnTheGo = this.checked;
-            if (editOnTheGoOptions) {
-                editOnTheGoOptions.classList.toggle('hidden', !isOnTheGo);
-            }
-            if (editSchoolTerm) editSchoolTerm.required = !isOnTheGo;
-            if (editExamDate) editExamDate.required = !isOnTheGo;
-        });
-    }
-
     // Load classes when subject is selected in edit form
     let editSubjectId = '';
     if (editSubjectSelect) {
@@ -1046,8 +1045,6 @@ document.addEventListener('DOMContentLoaded', function () {
                 description: formData.get('description') || '',
                 number_of_questions: numberOfQuestions || null,
                 calculator_enabled: document.getElementById('editCalculatorEnabled').checked,
-                is_on_the_go: document.getElementById('editIsOnTheGo').checked,
-                save_after_completion: document.getElementById('editSaveAfterCompletion').checked,
                 show_feedback: document.getElementById('editShowFeedback').checked
             };
 
@@ -1479,24 +1476,37 @@ document.addEventListener('DOMContentLoaded', function () {
             showConfirmModal({
                 title: 'Delete Finished Exam',
                 message: `Are you sure you want to permanently delete "${examName}"? This action cannot be undone and all associated data will be lost.`,
+                extraContent: `
+                    <label class="flex items-center gap-2 mt-4 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg cursor-pointer">
+                        <input type="checkbox" id="deleteQuestionsCheck" class="rounded border-gray-300 dark:border-gray-600">
+                        <span class="text-sm font-medium text-gray-600 dark:text-gray-400">Also delete all questions for this exam</span>
+                    </label>
+                `,
                 confirmText: 'Yes, Delete',
                 cancelText: 'Cancel',
                 confirmClass: 'bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700',
                 onConfirm: async function () {
+                    const deleteQuestions = document.getElementById('deleteQuestionsCheck')?.checked || false;
+                    console.log(`[Delete Finished Exam] Sending DELETE: examId=${examId}, name="${examName}", delete_questions=${deleteQuestions}`);
                     try {
                         const response = await fetch(`/admin/exams/${examId}`, {
                             method: 'DELETE',
                             headers: {
                                 'Content-Type': 'application/json'
-                            }
+                            },
+                            body: JSON.stringify({ delete_questions: deleteQuestions })
                         });
 
+                        console.log(`[Delete Finished Exam] Response status: ${response.status} ${response.statusText}`);
+
                         const data = await response.json();
+                        console.log(`[Delete Finished Exam] Response body:`, data);
 
                         if (data.success) {
+                            console.log(`[Delete Finished Exam] SUCCESS: ${data.message}`);
                             showAlert({
                                 title: 'Success',
-                                message: 'Exam deleted successfully',
+                                message: data.message,
                                 type: 'success',
                                 confirmText: 'OK'
                             });
@@ -1510,6 +1520,7 @@ document.addEventListener('DOMContentLoaded', function () {
                                 }, 300);
                             }
                         } else {
+                            console.error(`[Delete Finished Exam] ERROR: ${data.message}`);
                             showAlert({
                                 title: 'Error',
                                 message: data.message || 'Failed to delete exam',
@@ -1518,7 +1529,7 @@ document.addEventListener('DOMContentLoaded', function () {
                             });
                         }
                     } catch (error) {
-                        console.error('Error deleting exam:', error);
+                        console.error(`[Delete Finished Exam] FETCH ERROR:`, error);
                         showAlert({
                             title: 'Error',
                             message: 'An error occurred while deleting the exam',

@@ -1567,9 +1567,28 @@
                 </div>
             </details>
         </div>
-    </div>
 
-    <!-- Recent Changes -->
+        <!-- Appearance -->
+        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 border border-gray-100 dark:border-gray-700">
+            <h2 class="text-xl font-semibold text-gray-900 dark:text-white flex items-center gap-2 mb-4">
+                <span class="material-symbols-outlined text-primary">palette</span>
+                Appearance
+            </h2>
+            <div class="pt-4 border-t border-gray-200 dark:border-gray-700">
+                <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">Choose your preferred theme for the interface.</p>
+                <div class="flex gap-3">
+                    <button id="theme-light-btn" onclick="setAdminTheme('light')" class="flex-1 flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all duration-200 cursor-pointer">
+                        <span class="material-symbols-outlined text-3xl text-amber-500">light_mode</span>
+                        <span class="text-sm font-semibold text-gray-700 dark:text-gray-300">Light</span>
+                    </button>
+                    <button id="theme-dark-btn" onclick="setAdminTheme('dark')" class="flex-1 flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all duration-200 cursor-pointer">
+                        <span class="material-symbols-outlined text-3xl text-indigo-400">dark_mode</span>
+                        <span class="text-sm font-semibold text-gray-700 dark:text-gray-300">Dark</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
     <div class="lg:col-span-1">
         <div
             class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 border border-gray-100 dark:border-gray-700 sticky top-8"
@@ -1910,7 +1929,43 @@ document.getElementById("resetToDefaultBtn").addEventListener("click", function(
 
     // Load statuses on page load
     loadStatuses();
+
+    // Theme toggle active state
+    function updateThemeButtons() {
+        const isDark = document.documentElement.classList.contains("dark");
+        const lightBtn = document.getElementById("theme-light-btn");
+        const darkBtn = document.getElementById("theme-dark-btn");
+        if (lightBtn && darkBtn) {
+            lightBtn.className = isDark
+                ? "flex-1 flex flex-col items-center gap-2 p-4 rounded-xl border-2 border-gray-200 dark:border-gray-600 transition-all duration-200 cursor-pointer bg-white dark:bg-gray-700/50"
+                : "flex-1 flex flex-col items-center gap-2 p-4 rounded-xl border-2 border-primary transition-all duration-200 cursor-pointer bg-primary/5";
+            darkBtn.className = isDark
+                ? "flex-1 flex flex-col items-center gap-2 p-4 rounded-xl border-2 border-primary transition-all duration-200 cursor-pointer bg-primary/5"
+                : "flex-1 flex flex-col items-center gap-2 p-4 rounded-xl border-2 border-gray-200 dark:border-gray-600 transition-all duration-200 cursor-pointer bg-white dark:bg-gray-700/50";
+        }
+    }
+    updateThemeButtons();
 })();
+function setAdminTheme(mode) {
+    const html = document.documentElement;
+    if (mode === "dark") {
+        html.classList.add("dark");
+    } else {
+        html.classList.remove("dark");
+    }
+    localStorage.theme = mode;
+    const isDark = html.classList.contains("dark");
+    const lightBtn = document.getElementById("theme-light-btn");
+    const darkBtn = document.getElementById("theme-dark-btn");
+    if (lightBtn && darkBtn) {
+        lightBtn.className = isDark
+            ? "flex-1 flex flex-col items-center gap-2 p-4 rounded-xl border-2 border-gray-200 dark:border-gray-600 transition-all duration-200 cursor-pointer bg-white dark:bg-gray-700/50"
+            : "flex-1 flex flex-col items-center gap-2 p-4 rounded-xl border-2 border-primary transition-all duration-200 cursor-pointer bg-primary/5";
+        darkBtn.className = isDark
+            ? "flex-1 flex flex-col items-center gap-2 p-4 rounded-xl border-2 border-primary transition-all duration-200 cursor-pointer bg-primary/5"
+            : "flex-1 flex flex-col items-center gap-2 p-4 rounded-xl border-2 border-gray-200 dark:border-gray-600 transition-all duration-200 cursor-pointer bg-white dark:bg-gray-700/50";
+    }
+}
 </script>
 
 {% endblock %}

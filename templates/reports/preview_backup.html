@@ -508,7 +508,7 @@
                 
                 <header class="school-header">
                     ${school.logo ? 
-                        `<img src="${school.logo}" alt="School Logo" class="school-logo">` : 
+                        `<img src="/${school.logo.replace(/^\/+/, '')}" alt="School Logo" class="school-logo" onerror="this.onerror=null;this.src='/static/default-logo.svg'">` : 
                         `<div class="school-logo bg-purple-100 flex items-center justify-center">
                             <span class="material-symbols-outlined text-purple-600 text-2xl">school</span>
                         </div>`

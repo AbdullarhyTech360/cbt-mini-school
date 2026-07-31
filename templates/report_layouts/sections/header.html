@@ -5,7 +5,7 @@
 <div class="header-banner" style="display: table; width: 100%; padding: 10px 15px; border-radius: 6px 6px 0 0;">
     <div class="header-left" style="display: table-cell; vertical-align: middle; width: 60px;">
         {% if 'school_logo' in components and school.logo %}
-            <img src="{{ school.logo }}" class="school-logo" style="width: 50px; height: 50px; border-radius: 50%; border: 2px solid white; background: white; object-fit: contain; padding: 2px;" alt="School Logo">
+            <img src="{{ school.logo }}" class="school-logo" style="width: 50px; height: 50px; border-radius: 50%; border: 2px solid white; background: white; object-fit: contain; padding: 2px;" alt="School Logo" onerror="this.onerror=null;this.src='{{ url_for('static', filename='default-logo.svg') }}'">
         {% endif %}
     </div>
     <div class="header-center" style="display: table-cell; vertical-align: middle; padding-left: 12px;">

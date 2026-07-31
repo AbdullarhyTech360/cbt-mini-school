@@ -5,15 +5,31 @@
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
     <title>Exam Results - {{ exam.subject.subject_name if exam else 'Results' }}</title>
     <link href="{{ url_for('static', filename='dist/output.css') }}" rel="stylesheet">
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet" />
     <script>
+        window.MathJax = {
+            tex: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']],
+                processEscapes: true,
+                processEnvironments: true
+            },
+            options: {
+                skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre'],
+                ignoreHtmlClass: 'tex2jax_ignore',
+                processHtmlClass: 'tex2jax_process'
+            }
+        };
+    </script>
+    <script src="{{ url_for('static', filename='dist/mathjax/tex-mml-chtml.js') }}" id="MathJax-script"></script>
+    <script>
         // Dark mode management
         (function() {
-            const savedDarkMode = localStorage.getItem('darkMode');
-            if (savedDarkMode === 'false') {
+            const savedTheme = localStorage.getItem('theme');
+            if (savedTheme === 'light') {
                 document.documentElement.classList.remove('dark');
-            } else if (savedDarkMode === null) {
+            } else if (savedTheme === null) {
                 if (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) {
                     document.documentElement.classList.remove('dark');
                 }
@@ -40,13 +56,7 @@
         <div class="max-w-4xl mx-auto px-4 py-4">
             <div class="flex items-center justify-between">
                 <div class="flex items-center gap-3">
-                    {% if school_info.logo_url %}
-                    <img src="{{ school_info.logo_url }}" alt="School Logo" class="w-9 h-9 rounded-lg object-cover border border-gray-200 dark:border-slate-600 shadow-sm">
-                    {% else %}
-                    <div class="w-9 h-9 rounded-lg bg-gradient-to-br from-blue-600 to-blue-500 flex items-center justify-center text-white font-extrabold text-xs shadow-sm">
-                        {{ (school_info.name[:2] if school_info and school_info.name else 'SC')|upper }}
-                    </div>
-                    {% endif %}
+                    <img src="{{ school_info.logo_url }}" alt="School Logo" class="w-9 h-9 rounded-lg object-cover border border-gray-200 dark:border-slate-600 shadow-sm" onerror="this.onerror=null;this.src='{{ url_for('static', filename='default-logo.svg') }}'">
                     <div>
                         <h1 class="text-sm font-bold text-gray-900 dark:text-white leading-tight">{{ school_info.name if school_info and school_info.name else 'School' }} <span class="px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider bg-green-100 dark:bg-green-900/50 text-green-700 dark:text-green-300 rounded">Complete</span></h1>
                         <p class="text-[11px] text-gray-500 dark:text-gray-400">{{ exam.subject.subject_name if exam else '' }} &middot; {{ exam.exam_type if exam else '' }}</p>
@@ -69,7 +79,13 @@
                 </div>
             </div>
             <h2 class="text-2xl font-bold text-gray-900 dark:text-white mb-1">Your Score: {{ raw_score }} / {{ max_score }}</h2>
-            <p class="text-lg text-gray-600 dark:text-gray-400 mb-4">Grade: <span class="font-bold {% if score_percentage >= 70 %}text-green-600 dark:text-green-400{% elif score_percentage >= 50 %}text-blue-600 dark:text-blue-400{% else %}text-red-600 dark:text-red-400{% endif %}">{{ letter_grade }}</span></p>
+            <p class="text-lg text-gray-600 dark:text-gray-400 mb-2">Grade: <span class="font-bold {% if score_percentage >= 70 %}text-green-600 dark:text-green-400{% elif score_percentage >= 50 %}text-blue-600 dark:text-blue-400{% else %}text-red-600 dark:text-red-400{% endif %}">{{ letter_grade }}</span></p>
+            <div class="flex items-center justify-center gap-3 mb-4">
+                <span class="text-sm text-gray-500 dark:text-gray-400">Pass Mark: <b>{{ pass_mark }}%</b></span>
+                <span class="px-3 py-1 rounded-full text-xs font-bold {% if passed %}bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400{% else %}bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400{% endif %}">
+                    {% if passed %}PASSED{% else %}FAILED{% endif %}
+                </span>
+            </div>
             
             <div class="grid grid-cols-3 gap-4 mt-6 max-w-md mx-auto">
                 <div class="p-3 bg-green-50 dark:bg-green-900/20 rounded-xl">
@@ -152,27 +168,11 @@
     </div>
 
     <script>
-        // Render MathJax for question text
         document.addEventListener("DOMContentLoaded", function() {
             if (typeof MathJax !== "undefined" && MathJax.typesetPromise) {
-                MathJax.typesetPromise().catch(function(err) {
-                    console.log("MathJax rendering error:", err);
-                });
+                MathJax.typesetPromise().catch(function() {});
             }
         });
-    </script>
-    <script>
-    (function() {
-        if (sessionStorage.getItem('session_active')) return;
-        var cookies = document.cookie.split(';');
-        for (var i = 0; i < cookies.length; i++) {
-            var parts = cookies[i].trim().split('=');
-            if (parts[0] === 'session_type' && parts[1] === 'permanent') return;
-        }
-        fetch('/logout', { method: 'POST' }).then(function() {
-            window.location.href = '/login';
-        });
-    })();
     </script>
 </body>
 </html>

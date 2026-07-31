@@ -1,9 +1,11 @@
-from flask import render_template, session, request, jsonify, current_app, Response, stream_with_context
+import logging
+from flask import flash, redirect, render_template, request, session, jsonify, current_app, Response, stream_with_context, url_for
+
 from models import db, User, Section, School, Permission, TraitDefinition, StudentTrait
 from models.school_term import SchoolTerm
 from models.subject import Subject
 from models.exam import Exam
-from models.question import Question
+from models.question import Question, Option
 from models.assessment_type import AssessmentType
 from routes.dashboard import admin_required
 from models.class_room import ClassRoom
@@ -14,7 +16,7 @@ import calendar
 from werkzeug.utils import secure_filename
 import os
 import random
-from models.associations import teacher_classroom, teacher_subject
+from models.associations import teacher_classroom, teacher_subject, student_exam
 from models.grade import Grade
 
 from typing import List
@@ -470,7 +472,8 @@ def admin_action_route(app):
         if not is_permission_active("admins_can_upload_questions"):
             if request.method == "POST":
                 return jsonify({"success": False, "message": "Question upload is disabled by the administrator"}), 403
-            return redirect(url_for("admin_dashboard", denied="Question upload has been disabled by the administrator."))
+            flash("Question upload has been disabled by the administrator.", "error")
+            return redirect(url_for("admin_dashboard"))
 
         if request.method == "POST":
             try:
@@ -1297,7 +1300,8 @@ Include context field for tables, diagrams, formulas referenced in questions."""
         if not is_permission_active("admins_can_upload_questions"):
             if request.method == "POST":
                 return jsonify({"success": False, "message": "Question upload is disabled by the administrator"}), 403
-            return redirect(url_for("admin_dashboard", denied="Question upload has been disabled by the administrator."))
+            flash("Question upload has been disabled by the administrator.", "error")
+            return redirect(url_for("admin_dashboard"))
 
         if request.method == "POST":
             try:
@@ -1740,9 +1744,11 @@ Include context field for tables, diagrams, formulas referenced in questions."""
 
                 # Check if questions exist for this subject and class combination
                 from models.question import Question
-                question_count = Question.query.filter_by(
+                from services.question_service import get_questions_for_exam
+                question_count = get_questions_for_exam(
                     subject_id=data.get("subject_id"),
-                    class_room_id=data.get("class_room_id")
+                    class_room_id=data.get("class_room_id"),
+                    term_id=data.get("school_term_id")
                 ).count()
 
                 if question_count == 0:
@@ -1980,11 +1986,13 @@ Include context field for tables, diagrams, formulas referenced in questions."""
             if not subject_id or not class_room_id:
                 return jsonify({"success": False, "message": "Subject and class are required"}), 400
 
-            # Count questions for this subject and class combination
-            from models.question import Question
-            question_count = Question.query.filter_by(
+            # Count questions for this subject, class, and term combination
+            term_id = request.args.get("term_id")
+            from services.question_service import get_questions_for_exam
+            question_count = get_questions_for_exam(
                 subject_id=subject_id,
-                class_room_id=class_room_id
+                class_room_id=class_room_id,
+                term_id=term_id
             ).count()
 
             return jsonify({
@@ -2080,10 +2088,11 @@ Include context field for tables, diagrams, formulas referenced in questions."""
                 if number_of_questions:
                     number_of_questions = int(number_of_questions)
                     # Validate that requested number doesn't exceed available questions
-                    from models.question import Question
-                    question_count = Question.query.filter_by(
+                    from services.question_service import get_questions_for_exam
+                    question_count = get_questions_for_exam(
                         subject_id=exam.subject_id,
-                        class_room_id=exam.class_room_id
+                        class_room_id=exam.class_room_id,
+                        term_id=exam.school_term_id
                     ).count()
 
                     if number_of_questions > question_count:
@@ -2129,27 +2138,77 @@ Include context field for tables, diagrams, formulas referenced in questions."""
     @admin_required
     def delete_exam(exam_id):
         try:
-            # Debug: Print session info
-            # print(f"Session user_id: {session.get('user_id')}")
-            user = User.query.get(session["user_id"])
-            # print(f"User: {user}, Role: {user.role if user else 'None'}")
+            data = request.get_json(silent=True) or {}
+            delete_questions = data.get("delete_questions", False)
 
             exam = Exam.query.get(exam_id)
 
             if not exam:
+                logging.warning(f"[DeleteExam] Exam not found: {exam_id}")
                 return jsonify({"success": False, "message": "Exam not found"}), 404
+
+            logging.info(
+                f"[DeleteExam] Request: exam_id={exam_id}, name={exam.name}, "
+                f"exam_type={exam.exam_type}, subject_id={exam.subject_id}, "
+                f"class_room_id={exam.class_room_id}, term_id={exam.school_term_id}, "
+                f"delete_questions={delete_questions}"
+            )
+
+            # Always delete student_exam entries first (no ondelete CASCADE)
+            deleted_entries = db.session.execute(
+                student_exam.delete().where(student_exam.c.exam_id == exam_id)
+            ).rowcount
+            logging.info(f"[DeleteExam] Deleted {deleted_entries} student_exam entries")
+
+            if delete_questions:
+                from services.question_service import get_questions_for_exam
+                questions = get_questions_for_exam(
+                    subject_id=exam.subject_id,
+                    class_room_id=exam.class_room_id,
+                    term_id=exam.school_term_id
+                ).all()
+
+                question_id_list = [q.id for q in questions]
+                logging.info(
+                    f"[DeleteExam] Questions matched: {len(question_id_list)} IDs={question_id_list}"
+                )
+
+                deleted = 0
+                if question_id_list:
+                    deleted_options = Option.query.filter(
+                        Option.question_id.in_(question_id_list)
+                    ).delete(synchronize_session='fetch')
+                    deleted = Question.query.filter(
+                        Question.id.in_(question_id_list)
+                    ).delete(synchronize_session='fetch')
+                    db.session.flush()
+                    logging.info(
+                        f"[DeleteExam] Deleted: {deleted_options} options, {deleted} questions"
+                    )
+                else:
+                    logging.info("[DeleteExam] No matching questions found to delete")
 
             db.session.delete(exam)
             db.session.commit()
 
+            msg = "Exam deleted successfully"
+            parts = []
+            if delete_questions:
+                parts.append(f"{deleted} question(s) deleted")
+            if deleted_entries:
+                parts.append(f"{deleted_entries} student record(s) removed")
+            if parts:
+                msg += f" ({', '.join(parts)})"
+
+            logging.info(f"[DeleteExam] Success: {msg}")
             return (
-                jsonify({"success": True, "message": "Exam deleted successfully"}),
+                jsonify({"success": True, "message": msg}),
                 200,
             )
 
         except Exception as e:
             db.session.rollback()
-            # print(f"Error deleting exam: {str(e)}")
+            logging.error(f"[DeleteExam] Error: {str(e)}", exc_info=True)
             return (
                 jsonify(
                     {"success": False,
@@ -5434,9 +5493,10 @@ Include context field for tables, diagrams, formulas referenced in questions."""
             if not exam:
                 return jsonify({"success": False, "message": "Exam not found"}), 404
 
-            # Mark exam as finished
+            # Mark exam as finished and set time_ended
             exam.is_finished = True
-            exam.is_active = False  # Also deactivate when finished
+            exam.is_active = False
+            exam.time_ended = datetime.utcnow()
             db.session.commit()
 
             return jsonify({
@@ -5447,7 +5507,6 @@ Include context field for tables, diagrams, formulas referenced in questions."""
 
         except Exception as e:
             db.session.rollback()
-            # print(f"Error finishing exam: {str(e)}")
             return jsonify({"success": False, "message": str(e)}), 500
 
     @app.route("/admin/exam/<exam_id>/unfinish", methods=["POST"])
@@ -5459,9 +5518,10 @@ Include context field for tables, diagrams, formulas referenced in questions."""
             if not exam:
                 return jsonify({"success": False, "message": "Exam not found"}), 404
 
-            # Unfinish the exam
+            # Unfinish the exam and clear time_ended
             exam.is_finished = False
-            exam.is_active = True  # Make it active again
+            exam.is_active = True
+            exam.time_ended = None
             db.session.commit()
 
             return jsonify({
@@ -5473,7 +5533,6 @@ Include context field for tables, diagrams, formulas referenced in questions."""
 
         except Exception as e:
             db.session.rollback()
-            # print(f"Error unfinishing exam: {str(e)}")
             return jsonify({"success": False, "message": str(e)}), 500
 
     # ===============================

@@ -10,7 +10,7 @@ import uuid
 from datetime import date, datetime
 from functools import wraps
 
-from flask import Blueprint, jsonify, render_template, request, send_file, session
+from flask import Blueprint, jsonify, render_template, request, send_file, session, url_for
 
 from models import db, TraitDefinition
 from models.assessment_type import AssessmentType
@@ -1956,13 +1956,14 @@ def get_class_list_data():
                 entry["address"] = student.address if student else ""
             student_list.append(entry)
 
+        default_logo = url_for('static', filename='default-logo.svg')
         metadata = {
             "class_name": class_room.class_room_name if class_room else "N/A",
             "total_students": len(students),
             "school_name": school.school_name if school else "",
             "school_address": school.address if school else "",
             "school_motto": school.motto if school else "",
-            "school_logo": school.logo if school else "",
+            "school_logo": school.logo if school and school.logo else default_logo,
         }
 
         return jsonify({"success": True, "students": student_list, "metadata": metadata})
@@ -3121,13 +3122,14 @@ def get_result_recording_sheet():
                 "admission_number": student.admission_number if student else "",
             })
 
+        default_logo = url_for('static', filename='default-logo.svg')
         metadata = {
             "class_name": class_room.class_room_name if class_room else "N/A",
             "total_students": len(students),
             "school_name": school.school_name if school else "",
             "school_address": school.address if school else "",
             "school_motto": school.motto if school else "",
-            "school_logo": school.logo if school else "",
+            "school_logo": school.logo if school and school.logo else default_logo,
             "term_name": f"{term.term_name} - {term.academic_session}" if term else "N/A",
         }
 
@@ -3473,13 +3475,14 @@ def download_recording_sheet_pdf():
                 "admission_number": student.admission_number if student else "",
             })
 
+        default_logo = url_for('static', filename='default-logo.svg')
         metadata = {
             "class_name": class_room.class_room_name if class_room else "N/A",
             "total_students": len(students),
             "school_name": school.school_name if school else "",
             "school_address": school.address if school else "",
             "school_motto": school.motto if school else "",
-            "school_logo": school.logo if school else "",
+            "school_logo": school.logo if school and school.logo else default_logo,
             "term_name": f"{term.term_name} - {term.academic_session}" if term else "N/A",
         }
 

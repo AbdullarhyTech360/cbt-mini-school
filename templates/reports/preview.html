@@ -993,10 +993,10 @@
                 <header class="school-header">
                     ${
                       school.logo
-                        ? `<img src="/static/${school.logo.replace(
+                        ? `<img src="/${school.logo.replace(
                             /^static\//,
                             ""
-                          )}" alt="School Logo" class="school-logo">`
+                          )}" alt="School Logo" class="school-logo" onerror="this.onerror=null;this.src='/static/default-logo.svg'">`
                         : `<div class="school-logo" style="background-color: #ede9fe; display: flex; align-items: center; justify-content: center;">
                             <span style="font-size: 24px;">🏫</span>
                         </div>`
