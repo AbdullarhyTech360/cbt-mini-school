@@ -24,3 +24,7 @@ css = "npx tailwindcss -i ./app/static/css/input.css -o ./static/dist/output.css
 # Consolidated CSS compilation and Material Symbols font management
 css-with-fonts = "node scripts/watch-fonts.js"
 dev = "npx concurrently -n FLASK,TAILWIND,FONTS -c blue,green,yellow \"pdm run flask\" \"pdm run css\" \"pdm run css-with-fonts\""
+[dependency-groups]
+dev = [
+    "pre-commit>=4.6.1",
+]
