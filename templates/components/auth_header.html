@@ -1,0 +1,7 @@
+<!-- Auth Header Component Macro -->
+{% macro switch_button(href, icon, label) -%}
+<a href="{{ href }}" class="hidden sm:flex h-10 shrink-0 items-center gap-1 rounded-lg px-3 text-sm font-semibold text-primary hover:bg-primary/10 transition" aria-label="{{ label }}">
+  <span class="material-symbols-outlined text-xl">{{ icon }}</span>
+  <span>{{ label }}</span>
+</a>
+{%- endmacro %}

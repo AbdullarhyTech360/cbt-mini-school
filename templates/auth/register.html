@@ -1,6 +1,18 @@
 {% extends 'auth/base.html' %}
 {% import "components/modal.html" as modal with context %}
+{% from 'components/auth_header.html' import switch_button %}
 {% block title %}Register - {{ school_info.name }}{% endblock %}
+{% block auth_header_left %}
+      <button type="button" onclick="window.history.back()" class="flex size-10 shrink-0 items-center justify-center rounded-lg text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition" aria-label="Go back">
+        <span class="material-symbols-outlined text-2xl">arrow_back</span>
+      </button>
+{% endblock %}
+{% block auth_header_title %}
+      <h2 class="text-gray-800 dark:text-white text-base font-bold leading-tight tracking-[-0.015em] text-center truncate">Join {{ school_info.name }} Today</h2>
+{% endblock %}
+{% block auth_header_switch %}
+      {{ switch_button(url_for('login'), 'login', 'Login') }}
+{% endblock %}
 {% block scripts %}
 <script>
   const LOGIN_URL = "{{ url_for('login') }}";
@@ -8,7 +20,6 @@
 <script src="{{ url_for('static', filename='js/components/modal.js') }}"></script>
 <script src="{{ url_for('static', filename='js/register.js') }}"></script>
 {% endblock %}
-{% block slim_header %}{% endblock %}
 {% block content %}
 <div class="relative overflow-hidden min-h-screen">
   <div class="absolute -top-16 -right-16 h-56 w-56 rounded-full blur-3xl opacity-30 bg-gradient-to-br from-primary to-blue-600 animate-fade-in"></div>
@@ -21,22 +32,6 @@
   <span class="material-symbols-outlined watermark-icon" style="font-size:120px;opacity:0.03;top:40%;right:8%;--r:-10deg;color:#10b981;animation:watermarkFloat 8s ease-in-out infinite 0.7s">lightbulb</span>
 
   <div class="relative z-10">
-  <!-- Accent bar -->
-  <div class="h-2 bg-gradient-to-r from-primary via-purple-500 via-emerald-400 to-blue-600 animate-shimmer"></div>
-
-  <!-- Header -->
-    <div class="flex items-center bg-white/80 dark:bg-gray-900/60 backdrop-blur p-4 justify-between border-b border-gray-200 dark:border-gray-700">
-      <button type="button" onclick="window.history.back()" class="text-gray-800 dark:text-gray-300 cursor-pointer flex size-12 shrink-0 items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition" aria-label="Go back">
-        <span class="material-symbols-outlined text-2xl">arrow_back</span>
-      </button>
-    <h2 class="text-gray-800 dark:text-white text-lg font-bold leading-tight tracking-[-0.015em] flex-1 text-center">
-      Join {{ school_info.name }} Today
-    </h2>
-    <a href="{{ url_for('index') }}" class="flex size-12 shrink-0 items-center justify-center rounded-lg text-gray-400 dark:text-gray-500 hover:text-primary dark:hover:text-primary hover:bg-gray-100 dark:hover:bg-gray-800 transition" aria-label="Back to home page">
-      <span class="material-symbols-outlined text-2xl">home</span>
-    </a>
-  </div>
-
   <!-- Step Progress -->
   <div class="px-4 pt-6 pb-2 max-w-sm mx-auto">
     <div class="flex items-center justify-between" role="tablist" aria-label="Registration steps">

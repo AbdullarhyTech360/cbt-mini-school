@@ -1,3 +1,4 @@
+{% import "components/auth_header.html" as auth_header %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -157,15 +158,30 @@
 
 <body class="bg-white dark:bg-[#0f1419] font-sans antialiased">
   {% block slim_header %}
-  <header class="fixed top-0 left-0 right-0 z-40 h-14 bg-white/80 dark:bg-gray-900/60 backdrop-blur-md border-b border-gray-200 dark:border-gray-800">
-    <div class="max-w-7xl mx-auto px-4 h-full flex items-center justify-between">
-      <a href="{{ url_for('index') }}" class="flex items-center gap-2 hover:opacity-80 transition-opacity">
-        <img src="{{ school_info.logo_url }}" alt="" class="h-7 w-7 rounded-lg object-cover" onerror="this.onerror=null;this.src='{{ url_for('static', filename='default-logo.svg') }}'" />
-        <span class="text-sm font-semibold text-gray-700 dark:text-gray-300">{{ school_info.name }}</span>
-      </a>
-      <a href="{{ url_for('index') }}" class="flex size-10 shrink-0 items-center justify-center rounded-lg text-gray-400 dark:text-gray-500 hover:text-primary dark:hover:text-primary hover:bg-gray-100 dark:hover:bg-gray-800 transition" aria-label="Back to home page">
-        <span class="material-symbols-outlined text-2xl">home</span>
-      </a>
+  <header class="fixed top-0 left-0 right-0 z-40">
+    <div class="relative h-14 bg-white/80 dark:bg-gray-900/60 backdrop-blur-md border-b border-gray-200 dark:border-gray-800">
+      <div class="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-primary via-purple-500 via-emerald-400 to-blue-600 animate-shimmer"></div>
+      <div class="max-w-7xl mx-auto px-4 h-full flex items-center justify-between">
+        <div class="flex items-center min-w-0">
+          {% block auth_header_left %}
+          <a href="{{ url_for('index') }}" class="flex items-center gap-2 min-w-0 hover:opacity-80 transition-opacity">
+            <img src="{{ school_info.logo_url }}" alt="" class="h-7 w-7 rounded-lg object-cover" onerror="this.onerror=null;this.src='{{ url_for('static', filename='default-logo.svg') }}'" />
+            <span class="text-sm font-semibold text-gray-700 dark:text-gray-300 truncate">{{ school_info.name }}</span>
+          </a>
+          {% endblock %}
+        </div>
+        <div class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 max-w-[55%] overflow-hidden px-2">
+          {% block auth_header_title %}{% endblock %}
+        </div>
+        <div class="flex items-center gap-1 sm:gap-2">
+          {% block auth_header_switch %}
+          {{ auth_header.switch_button(url_for('register'), 'person_add', 'Register') }}
+          {% endblock %}
+          <a href="{{ url_for('index') }}" class="flex size-10 shrink-0 items-center justify-center rounded-lg text-gray-400 dark:text-gray-500 hover:text-primary dark:hover:text-primary hover:bg-gray-100 dark:hover:bg-gray-800 transition" aria-label="Back to home page">
+            <span class="material-symbols-outlined text-2xl">home</span>
+          </a>
+        </div>
+      </div>
     </div>
   </header>
   {% endblock %}
