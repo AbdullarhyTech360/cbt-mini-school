@@ -38,6 +38,8 @@ git branch -d feat/add-question-bank
 
 ## Habits
 
+- **Always ask before committing.** After finishing a task, ask the user how
+  they want to commit — **never commit unless the user approves**.
 - **Commit when a logical unit of work passes** — not at end of day.
 - **One concern per commit.** If unrelated edits are mixed, stage selectively:
   `git add -p`.
