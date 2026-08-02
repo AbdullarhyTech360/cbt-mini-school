@@ -1,0 +1,14 @@
+# <type>(<scope>): <subject>
+#
+# type:    feat | fix | refactor | chore | style | docs | test | perf | build | ci | revert
+# scope:   optional, lowercase, e.g. (auth), (report), (migrations)
+# subject: imperative, lowercase, <= 72 chars, no trailing period
+#
+# Examples:
+#   feat(auth): add password reset flow
+#   fix(report): correct class average calculation
+#   refactor(routes): extract admin actions into modules
+#   chore: bump pdm.lock dependencies
+#
+# Body (optional, blank line after subject):
+#   Explain the *why*, not the *what*. Reference issue numbers when relevant.

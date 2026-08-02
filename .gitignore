@@ -28,8 +28,6 @@ static/uploads/*
 !static/uploads/.gitkeep
 !static/uploads/school_logos/.gitkeep
 
-/AGENTS.md
-
 # License system — NEVER commit these
 private_key.pem
 license.lic
@@ -37,3 +35,8 @@ license.lic
 /.*
 .opencode
 /instance
+
+# Versioned dotfiles & docs (negations of the rules above)
+!/.gitmessage
+!/.githooks/
+!/AGENTS.md
