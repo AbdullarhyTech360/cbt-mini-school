@@ -398,13 +398,154 @@ def on_the_go_route(app):
 
     # ─── API: Delete test ────────────────────────────────────────────
 
+    def _get_otg_question_sets(test):
+        """Classify questions matched by an On-The-Go test into shared vs exclusive.
+
+        A question is "shared" when another assessment still uses it:
+          - an existing normal Exam owns it (via exam_type_id), or matches its
+            subject + class + term scope, or
+          - another On-The-Go test matches it (same subject, overlapping class).
+
+        Returns matched/exclusive/shared id lists plus the other assessments
+        that reference shared questions (for user messaging).
+        """
+        from models.exam import Exam
+
+        query = Question.query.filter_by(subject_id=test.subject_id)
+        if test.class_room_id:
+            query = query.filter_by(class_room_id=test.class_room_id)
+        matched = query.all()
+        matched_ids = [q.id for q in matched]
+
+        if not matched_ids:
+            return {
+                "matched_ids": [],
+                "exclusive_ids": [],
+                "shared_ids": [],
+                "other_assessments": [],
+            }
+
+        # Normal exams that own any matched question via exam_type_id.
+        owned_exam_ids = {q.exam_type_id for q in matched if q.exam_type_id}
+        exam_by_id = {}
+        if owned_exam_ids:
+            for e in Exam.query.filter(Exam.id.in_(owned_exam_ids)).all():
+                exam_by_id[e.id] = e
+
+        # Normal exams matching a matched question's subject + class + term.
+        term_class_pairs = {(q.class_room_id, q.term_id) for q in matched}
+        scope_exams = []
+        if term_class_pairs:
+            scope_exams = Exam.query.filter(
+                Exam.subject_id == test.subject_id,
+                db.or_(
+                    *[
+                        db.and_(
+                            Exam.class_room_id == c,
+                            Exam.school_term_id == t,
+                        )
+                        for c, t in term_class_pairs
+                    ]
+                ),
+            ).all()
+            for e in scope_exams:
+                exam_by_id.setdefault(e.id, e)
+
+        # Other On-The-Go tests with the same subject scope.
+        other_otg = OnTheGoTest.query.filter(
+            OnTheGoTest.id != test.id,
+            OnTheGoTest.subject_id == test.subject_id,
+        ).all()
+
+        shared = set()
+        other_assessments = {}
+
+        def matches_scope_exam(q):
+            return any(
+                e.class_room_id == q.class_room_id
+                and e.school_term_id == q.term_id
+                for e in scope_exams
+            )
+
+        def matches_other_otg(q):
+            return any(
+                t.class_room_id is None or t.class_room_id == q.class_room_id
+                for t in other_otg
+            )
+
+        for q in matched:
+            if q.exam_type_id in exam_by_id:
+                shared.add(q.id)
+                other_assessments.setdefault(
+                    q.exam_type_id,
+                    {
+                        "type": "exam",
+                        "id": q.exam_type_id,
+                        "name": exam_by_id[q.exam_type_id].name,
+                    },
+                )
+                continue
+            if matches_scope_exam(q):
+                shared.add(q.id)
+                for e in scope_exams:
+                    if e.class_room_id == q.class_room_id and e.school_term_id == q.term_id:
+                        other_assessments.setdefault(
+                            e.id,
+                            {"type": "exam", "id": e.id, "name": e.name},
+                        )
+                        break
+                continue
+            if matches_other_otg(q):
+                shared.add(q.id)
+                for t in other_otg:
+                    if t.class_room_id is None or t.class_room_id == q.class_room_id:
+                        other_assessments.setdefault(
+                            t.id,
+                            {"type": "otg", "id": t.id, "name": t.title},
+                        )
+                        break
+
+        return {
+            "matched_ids": matched_ids,
+            "exclusive_ids": [i for i in matched_ids if i not in shared],
+            "shared_ids": [i for i in matched_ids if i in shared],
+            "other_assessments": list(other_assessments.values()),
+        }
+
+    @app.route("/api/admin/on-the-go-tests/<test_id>/delete-preview")
+    @admin_required
+    def api_on_the_go_delete_preview(test_id):
+        """Preview what deleting a test would do to its questions."""
+        test = OnTheGoTest.query.get(test_id)
+        if not test:
+            return jsonify({"success": False, "message": "Test not found"}), 404
+
+        sets = _get_otg_question_sets(test)
+        return jsonify({
+            "success": True,
+            "matched": len(sets["matched_ids"]),
+            "exclusive": len(sets["exclusive_ids"]),
+            "shared": len(sets["shared_ids"]),
+            "other_assessments": sets["other_assessments"],
+        })
+
     @app.route("/api/admin/on-the-go-tests/<test_id>", methods=["DELETE"])
     @admin_required
     def api_delete_on_the_go_test(test_id):
-        """Delete an On-The-Go test and cascade all related data."""
+        """Delete an On-The-Go test with optional question cleanup.
+
+        `delete_questions` mode:
+          - "none"     (default): delete the test only, keep all questions
+          - "unshared" : also delete questions not used by other assessments
+          - "all"      : also delete every matched question, even shared ones
+        """
         try:
             data = request.get_json(silent=True) or {}
-            delete_questions = data.get("delete_questions", False)
+            mode = data.get("delete_questions", "none")
+            if mode is True:
+                mode = "all"
+            if mode not in ("none", "unshared", "all"):
+                mode = "none"
 
             test = OnTheGoTest.query.get(test_id)
             if not test:
@@ -416,18 +557,23 @@ def on_the_go_route(app):
             session_count = OnTheGoTestSession.query.filter_by(on_the_go_test_id=test_id).count()
 
             deleted_questions = 0
-            if delete_questions:
-                query = Question.query.filter_by(subject_id=test.subject_id)
-                if test.class_room_id:
-                    query = query.filter_by(class_room_id=test.class_room_id)
-                question_ids = [q.id for q in query.all()]
+            skipped_questions = 0
+            other_assessments = []
+            if mode != "none":
+                sets = _get_otg_question_sets(test)
+                other_assessments = sets["other_assessments"]
+                if mode == "unshared":
+                    target_ids = sets["exclusive_ids"]
+                    skipped_questions = len(sets["shared_ids"])
+                else:
+                    target_ids = sets["matched_ids"]
 
-                if question_ids:
+                if target_ids:
                     Option.query.filter(
-                        Option.question_id.in_(question_ids)
+                        Option.question_id.in_(target_ids)
                     ).delete(synchronize_session='fetch')
                     deleted_questions = Question.query.filter(
-                        Question.id.in_(question_ids)
+                        Question.id.in_(target_ids)
                     ).delete(synchronize_session='fetch')
                     db.session.flush()
 
@@ -436,8 +582,12 @@ def on_the_go_route(app):
 
             msg = "Test deleted"
             parts = []
-            if delete_questions:
+            if deleted_questions:
                 parts.append(f"{deleted_questions} question(s) deleted")
+            if skipped_questions:
+                parts.append(f"{skipped_questions} skipped (used by other assessments)")
+            if mode == "all" and other_assessments:
+                parts.append(f"{len(other_assessments)} other assessment(s) affected")
             if result_count:
                 parts.append(f"{result_count} student record(s) removed")
             if session_count:
@@ -447,7 +597,10 @@ def on_the_go_route(app):
 
             return jsonify({
                 "success": True,
-                "message": msg
+                "message": msg,
+                "deleted_questions": deleted_questions,
+                "skipped_questions": skipped_questions,
+                "other_assessments": other_assessments,
             })
 
         except Exception as e:
