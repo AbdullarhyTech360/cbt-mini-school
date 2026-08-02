@@ -164,12 +164,17 @@ document.addEventListener('DOMContentLoaded', function () {
     return res.json();
   }
 
-  async function deleteTest(testId, deleteQuestions) {
+  async function deleteTest(testId, mode) {
     const res = await fetch('/api/admin/on-the-go-tests/' + testId, {
       method: 'DELETE',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ delete_questions: deleteQuestions })
+      body: JSON.stringify({ delete_questions: mode })
     });
+    return res.json();
+  }
+
+  async function fetchDeletePreview(testId) {
+    const res = await fetch('/api/admin/on-the-go-tests/' + testId + '/delete-preview');
     return res.json();
   }
 
@@ -422,24 +427,94 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Delete
     document.querySelectorAll('.delete-otg-btn').forEach(btn => {
-      btn.addEventListener('click', function () {
+      btn.addEventListener('click', async function () {
         const testId = this.dataset.testId;
         const title = this.dataset.testTitle;
+        let preview = null;
+        try {
+          const res = await fetchDeletePreview(testId);
+          if (res.success) preview = res;
+        } catch (err) {
+          preview = null;
+        }
+
+        const previewHtml = preview
+          ? `
+            <div class="mt-4 p-3 bg-gray-100 dark:bg-gray-700/50 rounded-lg text-sm">
+              <p class="text-gray-600 dark:text-gray-300">${preview.matched} question(s) match this test.</p>
+              <p class="text-gray-500 dark:text-gray-400 mt-1">
+                ${preview.exclusive} exclusive · ${preview.shared} shared with other assessments
+              </p>
+              ${preview.other_assessments.length ? `
+                <p class="text-amber-600 dark:text-amber-400 mt-1">Also used by: ${preview.other_assessments.map(a => a.name).join(', ')}</p>
+              ` : ''}
+            </div>
+          `
+          : '';
+
+        const unsharedHelp = preview
+          ? (preview.exclusive ? `Delete the ${preview.exclusive} question(s) only this test uses.` : 'No exclusive questions to delete.')
+          : 'Only delete questions no other assessment uses.';
+        const allHelp = preview
+          ? `Delete all ${preview.matched} question(s), even those ${preview.shared ? 'still used by other assessments' : 'belonging to this subject'}.`
+          : 'Delete every matching question, even shared ones.';
+
         showConfirmModal({
           title: 'Delete Quick Test',
           message: `Delete "${title}" and all associated results? This cannot be undone.`,
           extraContent: `
-            <label class="flex items-center gap-2 mt-4 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg cursor-pointer">
-              <input type="checkbox" id="deleteOtgQuestionsCheck" class="rounded border-gray-300 dark:border-gray-600">
-              <span class="text-sm font-medium text-gray-600 dark:text-gray-400">Also delete all questions for this test</span>
-            </label>
+            ${previewHtml}
+            <div class="mt-4 space-y-2">
+              <label class="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg cursor-pointer">
+                <input type="radio" name="deleteOtgMode" value="none" checked class="rounded-full">
+                <span>
+                  <span class="block text-sm font-medium text-gray-700 dark:text-gray-300">Delete test only</span>
+                  <span class="block text-xs text-gray-500 dark:text-gray-400">Keep all questions in the bank.</span>
+                </span>
+              </label>
+              <label class="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg cursor-pointer">
+                <input type="radio" name="deleteOtgMode" value="unshared" class="rounded-full">
+                <span>
+                  <span class="block text-sm font-medium text-gray-700 dark:text-gray-300">Delete test + exclusive questions</span>
+                  <span class="block text-xs text-gray-500 dark:text-gray-400">${unsharedHelp}</span>
+                </span>
+              </label>
+              <label class="flex items-center gap-3 p-3 bg-red-50 dark:bg-red-900/30 rounded-lg cursor-pointer">
+                <input type="radio" name="deleteOtgMode" value="all" class="rounded-full">
+                <span>
+                  <span class="block text-sm font-medium text-red-700 dark:text-red-300">Delete test + ALL questions</span>
+                  <span class="block text-xs text-red-500 dark:text-red-400">${allHelp}</span>
+                </span>
+              </label>
+            </div>
           `,
           confirmText: 'Delete',
           confirmClass: 'bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700',
           onConfirm: async () => {
+            const mode = document.querySelector('input[name="deleteOtgMode"]:checked')?.value || 'none';
+
+            if (mode === 'all') {
+              showConfirmModal({
+                title: 'Delete ALL Questions?',
+                message: `This will permanently delete every question matching "${title}", including ones still used by other assessments. This cannot be undone.`,
+                confirmText: 'Yes, Delete All',
+                confirmClass: 'bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800',
+                onConfirm: async () => {
+                  try {
+                    const result = await deleteTest(testId, mode);
+                    if (!result.success) throw new Error(result.message);
+                    showAlert({ title: 'Success', message: result.message, type: 'success' });
+                    loadTests();
+                  } catch (err) {
+                    showAlert({ title: 'Error', message: err.message, type: 'error' });
+                  }
+                }
+              });
+              return;
+            }
+
             try {
-              const deleteQuestions = document.getElementById('deleteOtgQuestionsCheck')?.checked || false;
-              const result = await deleteTest(testId, deleteQuestions);
+              const result = await deleteTest(testId, mode);
               if (!result.success) throw new Error(result.message);
               showAlert({ title: 'Success', message: result.message, type: 'success' });
               loadTests();
