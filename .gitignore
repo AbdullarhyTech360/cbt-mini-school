@@ -35,6 +35,7 @@ license.lic
 /.*
 .opencode
 /instance
+/.pdm-python
 
 # Versioned dotfiles & docs (negations of the rules above)
 !/.gitmessage
